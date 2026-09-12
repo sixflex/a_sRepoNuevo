@@ -1,0 +1,145 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{% block title %}Portal A+S{% endblock %}</title>
+
+    <!-- Bootstrap -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+
+    <!-- CSS propio -->
+    <link
+        rel="stylesheet"
+        href="{% static 'css/styles.css' %}">
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+
+            <a class="navbar-brand" href="{% url 'core:inicio' %}">
+                Portal A+S
+            </a>
+
+            <button
+                class="navbar-toggler"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#navbarPrincipal">
+
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div
+                class="collapse navbar-collapse"
+                id="navbarPrincipal">
+
+                <ul class="navbar-nav ms-auto">
+
+                    <li class="nav-item">
+                        <a
+                            class="nav-link"
+                            href="{% url 'core:inicio' %}">
+                            Inicio
+                        </a>
+                    </li>
+
+                </ul>
+
+            </div>
+
+        </div>
+    </nav>
+
+
+    <div class="container-fluid">
+        <div class="row">
+
+            <!-- SIDEBAR -->
+            <aside class="col-md-3 col-lg-2 bg-light border-end sidebar py-4">
+
+                <h6 class="text-muted px-3">
+                    MENÚ
+                </h6>
+
+                <ul class="nav flex-column">
+
+                    <li class="nav-item">
+                        <a
+                            class="nav-link"
+                            href="{% url 'core:inicio' %}">
+                            Inicio
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            Proyectos
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            Socios Comunitarios
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            Encuestas
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            Reportes
+                        </a>
+                    </li>
+
+                </ul>
+
+            </aside>
+
+
+            <!-- CONTENIDO PRINCIPAL -->
+            <main class="col-md-9 col-lg-10 py-4">
+
+                {% block content %}
+                {% endblock %}
+
+            </main>
+
+        </div>
+    </div>
+
+
+    <!-- FOOTER -->
+    <footer class="border-top py-3">
+        <div class="container text-center text-muted">
+
+            Portal Integrado de Aprendizaje + Servicio
+
+        </div>
+    </footer>
+
+
+    <!-- Bootstrap JS -->
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js">
+    </script>
+
+    <!-- JavaScript propio -->
+    <script src="{% static 'js/app.js' %}"></script>
+
+</body>
+
+</html>

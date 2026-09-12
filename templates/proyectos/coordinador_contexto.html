@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid py-2">
+    <div class="row justify-content-center">
+        <div class="col-12 col-xl-10">
+            
+            <!-- Panel Principal del Coordinador -->
+            <div class="card shadow-sm mb-4 border-0">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="card-title mb-0 fw-bold text-secondary">
+                        <i class="bi bi-gear-wide-connected me-2 text-primary"></i>
+                        Paso 1: Configurar Contexto Académico (Coordinador)
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <form id="contextForm" onsubmit="return false;">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-semibold">Sede</label>
+                                <input type="text" id="sede" class="form-control" value="Sede Santiago" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-semibold">Campus</label>
+                                <input type="text" id="campus" class="form-control" value="Campus Providencia" required>
+                            </div>
+
+                            <div class="col-12 col-md-3">
+                                <label class="form-label fw-semibold">Año</label>
+                                <input type="number" id="anio" class="form-control" value="2026" required>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label fw-semibold">Período</label>
+                                <select id="periodo" class="form-select" required>
+                                    <option value="2026-2" selected>Segundo Semestre (2026-2)</option>
+                                    <option value="2026-1">Primer Semestre (2026-1)</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-semibold">Carrera</label>
+                                <input type="text" id="carrera" class="form-control" value="Ingeniería Civil Informática" required>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label class="form-label fw-semibold">Asignatura</label>
+                                <input type="text" id="asignatura" class="form-control" value="Consultoría en Informática" required>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label fw-semibold">NRC</label>
+                                <input type="text" id="nrc" class="form-control" value="45021" required>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label fw-semibold">Sección</label>
+                                <input type="text" id="seccion" class="form-control" value="Sec 1" required>
+                            </div>
+
+                            <div class="col-12 col-md-8">
+                                <label class="form-label fw-semibold">Docente Titular (Ficticio)</label>
+                                <input type="text" id="docente" class="form-control" value="Prof. René Morales" required>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label fw-semibold">Correo Docente</label>
+                                <input type="email" id="docenteEmail" class="form-control" value="rene.morales@cloud.uautonoma.cl" required>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-top text-end">
+                            <button type="button" id="btnGenerar" class="btn btn-primary px-4 fw-semibold" onclick="generarEnlaceContextual()">
+                                <i class="bi bi-link-45deg me-1"></i> Generar Enlace Demostrable
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tarjeta de Enlace Generado (Se muestra al hacer click) -->
+            <div id="enlaceResultCard" class="card shadow-sm border-success d-none mb-4">
+                <div class="card-body p-4 text-center">
+                    <span class="badge bg-success mb-2 px-3 py-2 fs-6">
+                        <i class="bi bi-check-circle me-1"></i> Contexto Listo para Pruebas
+                    </span>
+                    <h5 class="fw-bold mt-2">Enlace Contextual Creado Exitosamente</h5>
+                    <p class="text-muted small">Este enlace inyecta automáticamente los parámetros requeridos por la tarea sin permitir su modificación:</p>
+                    
+                    <div class="input-group mb-3 max-w-lg mx-auto">
+                        <input type="text" id="generatedUrlInput" class="form-control bg-light" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copiarEnlace()">
+                            <i class="bi bi-clipboard"></i> Copiar
+                        </button>
+                        <a id="btnAbrirFormulario" href="#" class="btn btn-success fw-semibold" target="_blank">
+                            <i class="bi bi-box-arrow-up-right me-1"></i> Abrir Formulario
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Script inyectado directamente para garantizar ejecución -->
+<script>
+function generarEnlaceContextual() {
+    const params = new URLSearchParams({
+        campus: document.getElementById('campus').value,
+        sede: document.getElementById('sede').value,
+        anio: document.getElementById('anio').value,
+        periodo: document.getElementById('periodo').value,
+        carrera: document.getElementById('carrera').value,
+        asignatura: document.getElementById('asignatura').value,
+        nrc: document.getElementById('nrc').value,
+        seccion: document.getElementById('seccion').value,
+        docente: document.getElementById('docente').value
+    });
+
+    const url = window.location.origin + "/proyectos/formulario-prueba/?" + params.toString();
+    
+    document.getElementById('generatedUrlInput').value = url;
+    document.getElementById('btnAbrirFormulario').href = url;
+    
+    const resultCard = document.getElementById('enlaceResultCard');
+    resultCard.classList.remove('d-none');
+    resultCard.scrollIntoView({ behavior: 'smooth' });
+}
+
+function copiarEnlace() {
+    const input = document.getElementById('generatedUrlInput');
+    input.select();
+    navigator.clipboard.writeText(input.value);
+    alert('Enlace copiado al portapapeles.');
+}
+</script>
+{% endblock %}
