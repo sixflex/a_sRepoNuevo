@@ -1,0 +1,17 @@
+<!-- Menú Fijo en Escritorio -->
+<aside class="sidebar-desktop d-none d-lg-block bg-white border-end">
+    <div class="p-3">
+        {% include 'components/sidebar_menu.html' %}
+    </div>
+</aside>
+
+<!-- Menú Desplegable (Offcanvas) en Móvil -->
+<div class="offcanvas offcanvas-start d-lg-none" tabindex="-1" id="sidebarOffcanvas">
+    <div class="offcanvas-header bg-light border-bottom">
+        <h5 class="offcanvas-title">Menú de Navegación</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+        {% include 'components/sidebar_menu.html' %}
+    </div>
+</div>

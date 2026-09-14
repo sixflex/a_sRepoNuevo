@@ -1,0 +1,30 @@
+<ul class="nav nav-pills flex-column mb-auto">
+    {% if role == 'coordinacion' %}
+        <li class="nav-item mb-1">
+            <a href="#" class="nav-link active">
+                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a href="#" class="nav-link text-dark">
+                <i class="bi bi-folder me-2"></i> Gestión Proyectos
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a href="#" class="nav-link text-dark">
+                <i class="bi bi-building me-2"></i> Socios Comunitarios
+            </a>
+        </li>
+    {% elif role == 'docente' %}
+        <li class="nav-item mb-1">
+            <a href="#" class="nav-link active">
+                <i class="bi bi-journal-bookmark me-2"></i> Mis Secciones
+            </a>
+        </li>
+        <li class="nav-item mb-1">
+            <a href="#" class="nav-link text-dark">
+                <i class="bi bi-file-earmark-arrow-up me-2"></i> Carga de Evidencias
+            </a>
+        </li>
+    {% endif %}
+</ul>
