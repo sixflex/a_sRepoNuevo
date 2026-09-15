@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>
+    Panel Docente
+</h1>
+
+<h2>
+    Mis secciones
+</h2>
+
+{% for seccion in secciones %}
+
+    <p>
+
+        <a href="{% url 'core:detalle_seccion' seccion.id %}">
+            {{ seccion.nombre }}
+            -
+            NRC {{ seccion.nrc }}
+        </a>
+
+    </p>
+
+{% empty %}
+
+    <p>
+        No tienes secciones asignadas.
+    </p>
+
+{% endfor %}
+
+{% endblock %}

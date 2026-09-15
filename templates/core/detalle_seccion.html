@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>
+    {{ seccion.nombre }}
+</h1>
+
+<p>
+    NRC:
+    {{ seccion.nrc }}
+</p>
+
+<p>
+    Docente:
+    {{ seccion.docente.username }}
+</p>
+
+{% endblock %}
