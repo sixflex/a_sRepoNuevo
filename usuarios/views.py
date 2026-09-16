@@ -1,3 +1,6 @@
-from django.shortcuts import render
+from django.contrib.auth.views import LoginView
 
-# Create your views here.
+
+class LoginTemporalView(LoginView):
+    template_name = "usuarios/login.html"
+    redirect_authenticated_user = True
