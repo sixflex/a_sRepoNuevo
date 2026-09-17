@@ -70,7 +70,7 @@ WSGI_APPLICATION = "portal_as.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-print("DB_PASSWORD =", repr(os.getenv("DB_PASSWORD")))
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
