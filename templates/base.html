@@ -7,7 +7,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>{% block title %}Portal A+S{% endblock %}</title>
+    <title>
+        {% block title %}Portal A+S{% endblock %}
+    </title>
 
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -19,7 +21,11 @@
 <body>
 
     <!-- NAVBAR -->
+<<<<<<< HEAD
     <nav class="navbar navbar-expand-lg navbar-dark" style="background-color:#0d6efd;">
+=======
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-sistema">
+>>>>>>> origin/develop
         <div class="container-fluid">
 
             <a class="navbar-brand fw-bold" href="{% url 'core:inicio' %}">
@@ -28,6 +34,7 @@
 
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarPrincipal">
                 <span class="navbar-toggler-icon"></span>
+
             </button>
 
             <div class="collapse navbar-collapse" id="navbarPrincipal">
@@ -38,6 +45,50 @@
                             Inicio
                         </a>
                     </li>
+                    {% if user.is_authenticated %}
+
+                        <li class="nav-item">
+                            <span class="nav-link text-white">
+                                {{ user.username }}
+                            </span>
+                        </li>
+
+                        <li class="nav-item">
+
+                            <form
+                                method="post"
+                                action="{% url 'usuarios:logout' %}"
+                                class="d-inline">
+
+                                {% csrf_token %}
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-link nav-link text-white">
+
+                                    Cerrar sesión
+
+                                </button>
+
+                            </form>
+
+                        </li>
+
+                    {% else %}
+
+                        <li class="nav-item">
+
+                            <a
+                                class="nav-link"
+                                href="{% url 'usuarios:login' %}">
+
+                                Iniciar sesión
+
+                            </a>
+
+                        </li>
+
+                    {% endif %}
 
                 </ul>
             </div>
@@ -49,13 +100,21 @@
     <div class="container-fluid">
         <div class="row">
 
-            <!-- SIDEBAR -->
-            <aside class="col-md-3 col-lg-2 bg-light border-end sidebar py-4">
+            {% if user.is_authenticated %}
 
+<<<<<<< HEAD
                 <h6 class="text-muted px-3">MENÚ</h6>
+=======
+                <!-- SIDEBAR -->
+                <aside
+                    class="col-md-3 col-lg-2 bg-light border-end sidebar py-4">
+>>>>>>> origin/develop
 
-                <ul class="nav flex-column">
+                    <h6 class="text-muted px-3">
+                        MENÚ
+                    </h6>
 
+<<<<<<< HEAD
                     <!-- INICIO -->
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'core:inicio' %}">
@@ -131,37 +190,103 @@
                             Proyectos
                         </a>
                     </li>
+=======
+                    <ul class="nav flex-column">
 
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">
-                            Socios Comunitarios
-                        </a>
-                    </li>
+                        <li class="nav-item">
+>>>>>>> origin/develop
 
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">
-                            Encuestas
-                        </a>
-                    </li>
+                            <a
+                                class="nav-link"
+                                href="{% url 'core:inicio' %}">
 
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">
-                            Reportes
-                        </a>
-                    </li>
+                                Inicio
 
-                </ul>
+                            </a>
 
-            </aside>
+                        </li>
 
 
-            <!-- CONTENIDO PRINCIPAL -->
-            <main class="col-md-9 col-lg-10 py-4">
+                        {% if user.groups.all.0.name == "Coordinador" %}
 
-                {% block content %}
-                {% endblock %}
+                            <li class="nav-item">
 
-            </main>
+                                <a
+                                    class="nav-link"
+                                    href="{% url 'core:coordinacion' %}">
+
+                                    Coordinación
+
+                                </a>
+
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">
+                                    Proyectos
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">
+                                    Socios Comunitarios
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">
+                                    Encuestas
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">
+                                    Reportes
+                                </a>
+                            </li>
+
+                        {% endif %}
+
+
+                        {% if user.groups.all.0.name == "Docente" %}
+
+                            <li class="nav-item">
+
+                                <a
+                                    class="nav-link"
+                                    href="{% url 'core:docente' %}">
+
+                                    Mis secciones
+
+                                </a>
+
+                            </li>
+
+                        {% endif %}
+
+                    </ul>
+
+                </aside>
+
+                <!-- CONTENIDO -->
+                <main class="col-md-9 col-lg-10 py-4">
+
+                    {% block content %}
+                    {% endblock %}
+
+                </main>
+
+            {% else %}
+
+                <!-- CONTENIDO SIN SESIÓN -->
+                <main class="col-12 py-4">
+
+                    {% block unauthenticated_content %}
+                    {% endblock %}
+
+                </main>
+
+            {% endif %}
 
         </div>
     </div>
@@ -169,18 +294,21 @@
 
     <!-- FOOTER -->
     <footer class="border-top py-3">
+
         <div class="container text-center text-muted">
             Portal Integrado de Aprendizaje + Servicio
         </div>
+
     </footer>
 
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- JavaScript propio -->
+    <!-- JS propio -->
     <script src="{% static 'js/app.js' %}"></script>
 
+<<<<<<< HEAD
     <!-- ESTILO PERSONAL -->
     <style>
         .btn-rojo {
@@ -205,5 +333,7 @@
         }
     </style>
 
+=======
+>>>>>>> origin/develop
 </body>
 </html>

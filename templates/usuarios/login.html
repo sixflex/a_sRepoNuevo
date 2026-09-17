@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}
+Inicio de sesión | Portal A+S
+{% endblock %}
+
+
+{% block unauthenticated_content %}
+
+<div class="container">
+
+    <div class="row justify-content-center">
+
+        <div class="col-md-5 col-lg-4">
+
+            <div class="card shadow-sm">
+
+                <div class="card-body">
+
+                    <h2 class="mb-3">
+                        Inicio de sesión
+                    </h2>
+
+                    <p class="text-muted">
+                        Acceso temporal para desarrollo.
+                    </p>
+
+                    <form method="post">
+
+                        {% csrf_token %}
+
+                        {{ form.as_p }}
+
+                        <button
+                            type="submit"
+                            class="btn btn-sistema w-100">
+
+                            Iniciar sesión
+
+                        </button>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
