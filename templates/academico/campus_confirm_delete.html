@@ -1,0 +1,10 @@
+<h1>Eliminar Campus</h1>
+
+<p>¿Seguro que quieres eliminar {{ campus.nombre }}?</p>
+
+<form method="POST">
+  {% csrf_token %}
+  <button type="submit">Sí, eliminar</button>
+</form>
+
+<a href="{% url 'campus_list' %}">Cancelar</a>

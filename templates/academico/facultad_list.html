@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestión de Facultades{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h2 class="fw-bold mb-1">Gestión de Facultades</h2>
+            <p class="text-muted mb-0">
+                Administra las facultades registradas en el sistema.
+            </p>
+        </div>
+
+        <a href="{% url 'facultad_create' %}"
+           class="btn btn-rojo">
+            + Crear Facultad
+        </a>
+
+    </div>
+
+
+    <div class="card shadow-sm border-0">
+
+        <div class="card-body">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for facultad in facultades %}
+
+                        <tr>
+
+                            <td class="fw-semibold">
+                                {{ facultad.nombre }}
+                            </td>
+
+                            <td class="text-center">
+
+                                <a href="{% url 'facultad_update' facultad.id %}"
+                                   class="btn btn-sm btn-outline-secondary me-1">
+                                    Editar
+                                </a>
+
+                                <a href="{% url 'facultad_delete' facultad.id %}"
+                                   class="btn btn-sm btn-outline-danger">
+                                    Eliminar
+                                </a>
+
+                            </td>
+
+                        </tr>
+
+                        {% empty %}
+
+                        <tr>
+                            <td colspan="2"
+                                class="text-center text-muted py-4">
+                                No hay facultades registradas.
+                            </td>
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="mt-4">
+
+        <a href="{% url 'home' %}"
+           class="btn btn-outline-secondary">
+            ← Volver a Gestión Académica
+        </a>
+
+    </div>
+
+</div>
+
+{% endblock %}

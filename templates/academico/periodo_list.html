@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestión de Periodos{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h2 class="fw-bold mb-1">Gestión de Periodos</h2>
+
+            <p class="text-muted mb-0">
+                Administra los periodos académicos registrados en el sistema.
+            </p>
+        </div>
+
+        <a href="{% url 'periodo_create' %}"
+           class="btn btn-rojo">
+            + Crear Periodo
+        </a>
+
+    </div>
+
+
+    <div class="card shadow-sm border-0">
+
+        <div class="card-body">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead>
+                        <tr>
+                            <th>Año</th>
+                            <th>Tipo</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for periodo in periodos %}
+
+                        <tr>
+
+                            <td class="fw-semibold">
+                                {{ periodo.anio }}
+                            </td>
+
+                            <td>
+                                {{ periodo.tipo }}
+                            </td>
+
+                            <td class="text-center">
+
+                                <a href="{% url 'periodo_update' periodo.id %}"
+                                   class="btn btn-sm btn-outline-secondary me-1">
+                                    Editar
+                                </a>
+
+                                <a href="{% url 'periodo_delete' periodo.id %}"
+                                   class="btn btn-sm btn-outline-danger">
+                                    Eliminar
+                                </a>
+
+                            </td>
+
+                        </tr>
+
+                        {% empty %}
+
+                        <tr>
+                            <td colspan="3"
+                                class="text-center text-muted py-4">
+                                No hay periodos registrados.
+                            </td>
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="mt-4">
+        <a href="{% url 'home' %}"
+           class="btn btn-outline-secondary">
+            ← Volver a Gestión Académica
+        </a>
+    </div>
+
+</div>
+
+{% endblock %}
