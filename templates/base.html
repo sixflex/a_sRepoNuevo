@@ -21,11 +21,7 @@
 <body>
 
     <!-- NAVBAR -->
-<<<<<<< HEAD
-    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color:#0d6efd;">
-=======
     <nav class="navbar navbar-expand-lg navbar-dark navbar-sistema">
->>>>>>> origin/develop
         <div class="container-fluid">
 
             <a class="navbar-brand fw-bold" href="{% url 'core:inicio' %}">
@@ -102,99 +98,17 @@
 
             {% if user.is_authenticated %}
 
-<<<<<<< HEAD
-                <h6 class="text-muted px-3">MENÚ</h6>
-=======
                 <!-- SIDEBAR -->
                 <aside
                     class="col-md-3 col-lg-2 bg-light border-end sidebar py-4">
->>>>>>> origin/develop
 
                     <h6 class="text-muted px-3">
                         MENÚ
                     </h6>
 
-<<<<<<< HEAD
-                    <!-- INICIO -->
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'core:inicio' %}">
-                             Inicio
-                        </a>
-                    </li>
-
-<!-- SECCIÓN ACADÉMICA -->
-<li class="nav-item mt-3">
-    <span class="text-muted px-3 small">ACADÉMICO</span>
-</li>
-
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'home' %}">
-        Gestión Académica
-    </a>
-</li>
-
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'campus_list' %}">
-        Campus
-    </a>
-</li>
-
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'sede_list' %}">
-        Sedes
-    </a>
-</li>
-
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'facultad_list' %}">
-        Facultades
-    </a>
-</li>
-
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'carrera_list' %}">
-        Carreras
-    </a>
-</li>
-
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'asignatura_list' %}">
-        Asignaturas
-    </a>
-</li>
-
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'seccion_list' %}">
-        Secciones / NRC
-    </a>
-</li>
-
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'docente_list' %}">
-        Docentes
-    </a>
-</li>
-
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'periodo_list' %}">
-        Periodos
-    </a>
-</li>
-                    <!-- OTROS -->
-                    <li class="nav-item mt-3">
-                        <span class="text-muted px-3 small">GENERAL</span>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">
-                            Proyectos
-                        </a>
-                    </li>
-=======
                     <ul class="nav flex-column">
 
                         <li class="nav-item">
->>>>>>> origin/develop
 
                             <a
                                 class="nav-link"
@@ -308,32 +222,5 @@
     <!-- JS propio -->
     <script src="{% static 'js/app.js' %}"></script>
 
-<<<<<<< HEAD
-    <!-- ESTILO PERSONAL -->
-    <style>
-        .btn-rojo {
-            background-color: #DA291C;
-            color: white;
-            border: none;
-        }
-
-        .btn-rojo:hover {
-            background-color: #b71c1c;
-            color: white;
-        }
-
-        .sidebar .nav-link {
-            color: #333;
-            font-weight: 500;
-        }
-
-        .sidebar .nav-link:hover {
-            background-color: #f1f1f1;
-            border-radius: 5px;
-        }
-    </style>
-
-=======
->>>>>>> origin/develop
 </body>
 </html>
