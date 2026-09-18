@@ -1,13 +1,183 @@
 {% extends "base.html" %}
 
+{% block title %}
+Coordinación A+S
+{% endblock %}
+
 {% block content %}
 
-<h1>
-    Panel de Coordinación
-</h1>
+<div class="container-fluid px-4">
 
-<p>
-    Acceso autorizado para Coordinador A+S.
-</p>
+    <div class="mb-4">
+
+        <h2 class="fw-bold mb-1">
+            Panel de Coordinación
+        </h2>
+
+        <p class="text-muted mb-0">
+            Administración y seguimiento del Portal A+S.
+        </p>
+
+    </div>
+
+
+    <div class="row g-4">
+
+
+        <!-- GESTIÓN ACADÉMICA -->
+        <div class="col-md-6 col-xl-4">
+
+            <div class="card shadow-sm border-0 h-100">
+
+                <div class="card-body p-4">
+
+                    <h5 class="fw-bold">
+                        Gestión Académica
+                    </h5>
+
+                    <p class="text-muted">
+                        Administra sedes, campus, facultades,
+                        carreras, asignaturas, docentes,
+                        períodos y secciones.
+                    </p>
+
+                    <a
+                        href="{% url 'home' %}"
+                        class="btn btn-rojo">
+
+                        Ir a Gestión Académica
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- PLANIFICACIÓN -->
+        <div class="col-md-6 col-xl-4">
+
+            <div class="card shadow-sm border-0 h-100">
+
+                <div class="card-body p-4">
+
+                    <h5 class="fw-bold">
+                        Planificación Académica
+                    </h5>
+
+                    <p class="text-muted">
+                        Consulta las secciones registradas
+                        y localízalas mediante filtros.
+                    </p>
+
+                    <a
+                        href="{% url 'planificacion_list' %}"
+                        class="btn btn-rojo">
+
+                        Consultar Planificación
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- SOCIOS -->
+        <div class="col-md-6 col-xl-4">
+
+            <div class="card shadow-sm border-0 h-100">
+
+                <div class="card-body p-4">
+
+                    <h5 class="fw-bold">
+                        Socios Comunitarios
+                    </h5>
+
+                    <p class="text-muted">
+                        Gestión e historial de Socios Comunitarios.
+                    </p>
+
+                    <button
+                        class="btn btn-outline-secondary"
+                        disabled>
+
+                        Próximamente
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- FORMULARIOS -->
+        <div class="col-md-6 col-xl-4">
+
+            <div class="card shadow-sm border-0 h-100">
+
+                <div class="card-body p-4">
+
+                    <h5 class="fw-bold">
+                        Formularios
+                    </h5>
+
+                    <p class="text-muted">
+                        Administración de formularios A+S.
+                    </p>
+
+                    <button
+                        class="btn btn-outline-secondary"
+                        disabled>
+
+                        Próximamente
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- REPORTES -->
+        <div class="col-md-6 col-xl-4">
+
+            <div class="card shadow-sm border-0 h-100">
+
+                <div class="card-body p-4">
+
+                    <h5 class="fw-bold">
+                        Reportes
+                    </h5>
+
+                    <p class="text-muted">
+                        Indicadores, históricos y exportaciones.
+                    </p>
+
+                    <button
+                        class="btn btn-outline-secondary"
+                        disabled>
+
+                        Próximamente
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
 
 {% endblock %}

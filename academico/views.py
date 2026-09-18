@@ -11,14 +11,16 @@ from .models import (
 )
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from usuarios.decorators import coordinador_required
 
 
 #crud campus
+@coordinador_required
 def campus_list(request):
     campus = Campus.objects.all()
     return render(request, 'academico/campus_list.html', {'campus': campus})
 
-
+@coordinador_required
 def campus_create(request):
     error = None
 
@@ -43,6 +45,7 @@ def campus_create(request):
         }
     )
 
+@coordinador_required
 def campus_update(request, pk):
     campus = get_object_or_404(Campus, pk=pk)
     error = None
@@ -69,12 +72,13 @@ def campus_update(request, pk):
         }
     )
 
-
+@coordinador_required
 def campus_delete(request, pk):
     campus = get_object_or_404(Campus, pk=pk)
     campus.delete()
     return redirect('campus_list')
 
+@coordinador_required
 def home(request):
     return render(request, 'academico/home.html')
 
@@ -82,12 +86,14 @@ def home(request):
 #crud sede
 
 # LISTAR
+@coordinador_required
 def sede_list(request):
     sedes = Sede.objects.select_related('campus').all()
     return render(request, 'academico/sede_list.html', {'sedes': sedes})
 
 
 # CREAR
+@coordinador_required
 def sede_create(request):
     campus = Campus.objects.all()
     error = None
@@ -121,6 +127,7 @@ def sede_create(request):
 
 
 # EDITAR
+@coordinador_required
 def sede_update(request, pk):
     sede = get_object_or_404(Sede, pk=pk)
     campus = Campus.objects.all()
@@ -157,6 +164,7 @@ def sede_update(request, pk):
 
 
 # ELIMINAR
+@coordinador_required
 def sede_delete(request, pk):
     sede = get_object_or_404(Sede, pk=pk)
     if request.method == 'POST':
@@ -167,6 +175,7 @@ def sede_delete(request, pk):
 #----------------------------------------------------------------------------------
 #CRUD FACULTADES
 
+@coordinador_required
 def facultad_list(request):
     facultades = Facultad.objects.all()
     return render(
@@ -175,7 +184,7 @@ def facultad_list(request):
         {'facultades': facultades}
     )
 
-
+@coordinador_required
 def facultad_create(request):
     error = None
 
@@ -194,6 +203,7 @@ def facultad_create(request):
         {'error': error}
     )
 
+@coordinador_required
 def facultad_update(request, pk):
     facultad = get_object_or_404(Facultad, pk=pk)
     error = None
@@ -220,6 +230,7 @@ def facultad_update(request, pk):
         }
     )
 
+@coordinador_required
 def facultad_delete(request, pk):
     facultad = get_object_or_404(Facultad, pk=pk)
 
@@ -236,6 +247,7 @@ def facultad_delete(request, pk):
 #------------------------------------------------------------------------------------
 # CRUD CARRERAS
 
+@coordinador_required
 def carrera_list(request):
     carreras = Carrera.objects.select_related('facultad').all()
 
@@ -245,7 +257,7 @@ def carrera_list(request):
         {'carreras': carreras}
     )
 
-
+@coordinador_required
 def carrera_create(request):
     facultades = Facultad.objects.all()
     error = None
@@ -283,6 +295,7 @@ def carrera_create(request):
         }
     )
 
+@coordinador_required
 def carrera_update(request, pk):
     carrera = get_object_or_404(Carrera, pk=pk)
     facultades = Facultad.objects.all()
@@ -321,7 +334,7 @@ def carrera_update(request, pk):
         }
     )
 
-
+@coordinador_required
 def carrera_delete(request, pk):
     carrera = get_object_or_404(Carrera, pk=pk)
 
@@ -337,8 +350,7 @@ def carrera_delete(request, pk):
 #-----------------------------------------------------------
 # CRUD ASIGNATURAS
 
-
-
+@coordinador_required
 def asignatura_list(request):
     asignaturas = Asignatura.objects.select_related('carrera').all()
 
@@ -348,7 +360,7 @@ def asignatura_list(request):
         {'asignaturas': asignaturas}
     )
 
-
+@coordinador_required
 def asignatura_create(request):
     carreras = Carrera.objects.all()
 
@@ -372,7 +384,7 @@ def asignatura_create(request):
         {'carreras': carreras}
     )
 
-
+@coordinador_required
 def asignatura_update(request, pk):
     asignatura = get_object_or_404(Asignatura, pk=pk)
     carreras = Carrera.objects.all()
@@ -399,7 +411,7 @@ def asignatura_update(request, pk):
         }
     )
 
-
+@coordinador_required
 def asignatura_delete(request, pk):
     asignatura = get_object_or_404(Asignatura, pk=pk)
 
@@ -417,6 +429,7 @@ def asignatura_delete(request, pk):
 # CRUD SECCIONES / NRC
 # =========================
 
+@coordinador_required
 def seccion_list(request):
     secciones = Seccion.objects.select_related(
         'asignatura',
@@ -431,7 +444,7 @@ def seccion_list(request):
         {'secciones': secciones}
     )
 
-
+@coordinador_required
 def seccion_create(request):
     asignaturas = Asignatura.objects.all()
     docentes = Docente.objects.all()
@@ -481,7 +494,7 @@ def seccion_create(request):
         }
     )
 
-
+@coordinador_required
 def seccion_update(request, pk):
     seccion = get_object_or_404(Seccion, pk=pk)
 
@@ -541,7 +554,7 @@ def seccion_update(request, pk):
         }
     )
 
-
+@coordinador_required
 def seccion_delete(request, pk):
     seccion = get_object_or_404(Seccion, pk=pk)
 
@@ -559,6 +572,7 @@ def seccion_delete(request, pk):
 # CRUD DOCENTES
 # =========================
 
+@coordinador_required
 def docente_list(request):
     docentes = Docente.objects.all()
 
@@ -568,7 +582,7 @@ def docente_list(request):
         {'docentes': docentes}
     )
 
-
+@coordinador_required
 def docente_create(request):
     error = None
 
@@ -605,6 +619,7 @@ def docente_create(request):
         }
     )
 
+@coordinador_required
 def docente_update(request, pk):
     docente = get_object_or_404(Docente, pk=pk)
     error = None
@@ -631,7 +646,7 @@ def docente_update(request, pk):
         }
     )
 
-
+@coordinador_required
 def docente_delete(request, pk):
     docente = get_object_or_404(Docente, pk=pk)
 
@@ -649,6 +664,7 @@ def docente_delete(request, pk):
 # CRUD PERIODOS
 # =========================
 
+@coordinador_required
 def periodo_list(request):
     periodos = Periodo.objects.all().order_by('-anio', 'tipo')
 
@@ -658,7 +674,7 @@ def periodo_list(request):
         {'periodos': periodos}
     )
 
-
+@coordinador_required
 def periodo_create(request):
     error = None
 
@@ -698,6 +714,7 @@ def periodo_create(request):
         }
     )
 
+@coordinador_required
 def periodo_update(request, pk):
     periodo = get_object_or_404(Periodo, pk=pk)
     error = None
@@ -728,7 +745,7 @@ def periodo_update(request, pk):
         }
     )
 
-
+@coordinador_required
 def periodo_delete(request, pk):
     periodo = get_object_or_404(Periodo, pk=pk)
 
@@ -740,4 +757,129 @@ def periodo_delete(request, pk):
         request,
         'academico/periodo_confirm_delete.html',
         {'periodo': periodo}
+    )
+
+# =========================================================
+# CONSULTA DE PLANIFICACIÓN ACADÉMICA
+# =========================================================
+
+@coordinador_required
+def planificacion_list(request):
+
+    secciones = (
+        Seccion.objects
+        .select_related(
+            "asignatura",
+            "asignatura__carrera",
+            "asignatura__carrera__facultad",
+            "docente",
+            "periodo",
+            "sede",
+            "sede__campus",
+        )
+        .all()
+    )
+
+    # ================================
+    # Parámetros de filtros
+    # ================================
+
+    periodo_id = request.GET.get("periodo")
+    carrera_id = request.GET.get("carrera")
+    asignatura_id = request.GET.get("asignatura")
+    nrc = request.GET.get("nrc", "").strip()
+    docente_id = request.GET.get("docente")
+
+    # ================================
+    # Filtros combinables
+    # ================================
+
+    if periodo_id:
+        secciones = secciones.filter(
+            periodo_id=periodo_id
+        )
+
+    if carrera_id:
+        secciones = secciones.filter(
+            asignatura__carrera_id=carrera_id
+        )
+
+    if asignatura_id:
+        secciones = secciones.filter(
+            asignatura_id=asignatura_id
+        )
+
+    if nrc:
+        secciones = secciones.filter(
+            nrc__icontains=nrc
+        )
+
+    if docente_id:
+        secciones = secciones.filter(
+            docente_id=docente_id
+        )
+
+    secciones = secciones.order_by(
+        "-periodo__anio",
+        "periodo__tipo",
+        "asignatura__nombre",
+        "nrc",
+    )
+
+    context = {
+        "secciones": secciones,
+
+        "periodos": Periodo.objects
+        .all()
+        .order_by("-anio", "tipo"),
+
+        "carreras": Carrera.objects
+        .all()
+        .order_by("nombre"),
+
+        "asignaturas": Asignatura.objects
+        .all()
+        .order_by("nombre"),
+
+        "docentes": Docente.objects
+        .all()
+        .order_by("nombre"),
+
+        "filtros": {
+            "periodo": periodo_id or "",
+            "carrera": carrera_id or "",
+            "asignatura": asignatura_id or "",
+            "nrc": nrc,
+            "docente": docente_id or "",
+        },
+    }
+
+    return render(
+        request,
+        "academico/planificacion_list.html",
+        context,
+    )
+
+@coordinador_required
+def planificacion_detail(request, pk):
+
+    seccion = get_object_or_404(
+        Seccion.objects.select_related(
+            "asignatura",
+            "asignatura__carrera",
+            "asignatura__carrera__facultad",
+            "docente",
+            "periodo",
+            "sede",
+            "sede__campus",
+        ),
+        pk=pk,
+    )
+
+    return render(
+        request,
+        "academico/planificacion_detail.html",
+        {
+            "seccion": seccion,
+        },
     )

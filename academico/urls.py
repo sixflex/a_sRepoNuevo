@@ -28,7 +28,10 @@ urlpatterns = [
     path('asignaturas/crear/', views.asignatura_create, name='asignatura_create'),
     path('asignaturas/editar/<int:pk>/', views.asignatura_update, name='asignatura_update'),
     path('asignaturas/eliminar/<int:pk>/', views.asignatura_delete, name='asignatura_delete'),
-     # Secciones / NRC
+    # Planificación
+    path('planificacion/', views.planificacion_list, name='planificacion_list'),
+    path('planificacion/<int:pk>/', views.planificacion_detail,name='planificacion_detail'),
+    # Secciones / NRC
     path('secciones/', views.seccion_list, name='seccion_list'),
     path('secciones/crear/', views.seccion_create, name='seccion_create'),
     path('secciones/editar/<int:pk>/', views.seccion_update, name='seccion_update'),
