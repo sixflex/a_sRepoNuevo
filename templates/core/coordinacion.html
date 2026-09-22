@@ -1,52 +1,136 @@
 {% extends "base.html" %}
 
 {% block title %}
-Coordinación A+S
+Dashboard Coordinación | Portal A+S
 {% endblock %}
 
 {% block content %}
 
-<div class="container-fluid px-4">
+<div class="container-fluid">
 
+    <!-- TÍTULO -->
     <div class="mb-4">
+        <h1 class="h3 fw-bold">
+            Dashboard de Coordinación A+S
+        </h1>
 
-        <h2 class="fw-bold mb-1">
-            Panel de Coordinación
-        </h2>
-
-        <p class="text-muted mb-0">
-            Administración y seguimiento del Portal A+S.
+        <p class="text-muted mb-2">
+            Resumen general de la gestión académica.
         </p>
+
+        {% if periodo_actual %}
+            <span class="badge bg-secondary">
+                Período actual: {{ periodo_actual }}
+            </span>
+        {% endif %}
+    </div>
+
+
+    <!-- TARJETAS DE RESUMEN -->
+    <div class="row g-3 mb-4">
+
+        <!-- SECCIONES -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card shadow-sm border-0 h-100">
+
+                <div class="card-body">
+                    <p class="text-muted mb-2">
+                        Secciones activas
+                    </p>
+
+                    <h2 class="fw-bold mb-0">
+                        {{ total_secciones }}
+                    </h2>
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- DOCENTES -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card shadow-sm border-0 h-100">
+
+                <div class="card-body">
+                    <p class="text-muted mb-2">
+                        Docentes
+                    </p>
+
+                    <h2 class="fw-bold mb-0">
+                        {{ total_docentes }}
+                    </h2>
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- ASIGNATURAS -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card shadow-sm border-0 h-100">
+
+                <div class="card-body">
+                    <p class="text-muted mb-2">
+                        Asignaturas activas
+                    </p>
+
+                    <h2 class="fw-bold mb-0">
+                        {{ total_asignaturas }}
+                    </h2>
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- PERIODOS -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card shadow-sm border-0 h-100">
+
+                <div class="card-body">
+                    <p class="text-muted mb-2">
+                        Períodos académicos
+                    </p>
+
+                    <h2 class="fw-bold mb-0">
+                        {{ total_periodos }}
+                    </h2>
+                </div>
+
+            </div>
+        </div>
 
     </div>
 
 
-    <div class="row g-4">
+    <!-- ACCESOS -->
+    <h2 class="h5 fw-bold mb-3">
+        Accesos principales
+    </h2>
 
+    <div class="row g-3">
 
         <!-- GESTIÓN ACADÉMICA -->
-        <div class="col-md-6 col-xl-4">
+        <div class="col-12 col-lg-6">
 
             <div class="card shadow-sm border-0 h-100">
 
-                <div class="card-body p-4">
+                <div class="card-body">
 
-                    <h5 class="fw-bold">
-                        Gestión Académica
-                    </h5>
+                    <h3 class="h5 fw-bold">
+                        Gestión académica
+                    </h3>
 
                     <p class="text-muted">
-                        Administra sedes, campus, facultades,
-                        carreras, asignaturas, docentes,
-                        períodos y secciones.
+                        Consulta y administra la información académica
+                        necesaria para el desarrollo de A+S.
                     </p>
 
                     <a
-                        href="{% url 'home' %}"
-                        class="btn btn-rojo">
-
-                        Ir a Gestión Académica
-
+                        href="{% url 'proyectos:coordinador_contexto' %}"
+                        class="btn btn-primary"
+                    >
+                        Ir a gestión académica
                     </a>
 
                 </div>
@@ -57,118 +141,27 @@ Coordinación A+S
 
 
         <!-- PLANIFICACIÓN -->
-        <div class="col-md-6 col-xl-4">
+        <div class="col-12 col-lg-6">
 
             <div class="card shadow-sm border-0 h-100">
 
-                <div class="card-body p-4">
+                <div class="card-body">
 
-                    <h5 class="fw-bold">
-                        Planificación Académica
-                    </h5>
+                    <h3 class="h5 fw-bold">
+                        Planificación A+S
+                    </h3>
 
                     <p class="text-muted">
-                        Consulta las secciones registradas
-                        y localízalas mediante filtros.
+                        Accede a la información utilizada para organizar
+                        y planificar las actividades A+S.
                     </p>
 
                     <a
-                        href="{% url 'planificacion_list' %}"
-                        class="btn btn-rojo">
-
-                        Consultar Planificación
-
+                        href="{% url 'core:planificacion_coordinacion' %}"
+                        class="btn btn-outline-primary"
+                    >
+                        Ir a planificación
                     </a>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <!-- SOCIOS -->
-        <div class="col-md-6 col-xl-4">
-
-            <div class="card shadow-sm border-0 h-100">
-
-                <div class="card-body p-4">
-
-                    <h5 class="fw-bold">
-                        Socios Comunitarios
-                    </h5>
-
-                    <p class="text-muted">
-                        Gestión e historial de Socios Comunitarios.
-                    </p>
-
-                    <button
-                        class="btn btn-outline-secondary"
-                        disabled>
-
-                        Próximamente
-
-                    </button>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <!-- FORMULARIOS -->
-        <div class="col-md-6 col-xl-4">
-
-            <div class="card shadow-sm border-0 h-100">
-
-                <div class="card-body p-4">
-
-                    <h5 class="fw-bold">
-                        Formularios
-                    </h5>
-
-                    <p class="text-muted">
-                        Administración de formularios A+S.
-                    </p>
-
-                    <button
-                        class="btn btn-outline-secondary"
-                        disabled>
-
-                        Próximamente
-
-                    </button>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <!-- REPORTES -->
-        <div class="col-md-6 col-xl-4">
-
-            <div class="card shadow-sm border-0 h-100">
-
-                <div class="card-body p-4">
-
-                    <h5 class="fw-bold">
-                        Reportes
-                    </h5>
-
-                    <p class="text-muted">
-                        Indicadores, históricos y exportaciones.
-                    </p>
-
-                    <button
-                        class="btn btn-outline-secondary"
-                        disabled>
-
-                        Próximamente
-
-                    </button>
 
                 </div>
 

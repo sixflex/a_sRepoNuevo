@@ -1,9 +1,8 @@
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
 from proyectos.models import Seccion
-
 Usuario = get_user_model()
 
 class Command(BaseCommand):
