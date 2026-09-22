@@ -1,9 +1,11 @@
-from django.contrib.auth.models import Group, User
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.test import TestCase
 from django.urls import reverse
 
 from proyectos.models import Seccion
 
+Usuario = get_user_model()
 
 class PermisosTest(TestCase):
 
@@ -17,7 +19,7 @@ class PermisosTest(TestCase):
             name="Docente"
         )
 
-        self.coordinador = User.objects.create_user(
+        self.coordinador = Usuario.objects.create_user(
             username="coordinador",
             password="test1234",
         )
@@ -26,7 +28,7 @@ class PermisosTest(TestCase):
             self.grupo_coordinador
         )
 
-        self.docente1 = User.objects.create_user(
+        self.docente1 = Usuario.objects.create_user(
             username="docente1",
             password="test1234",
         )
@@ -35,7 +37,7 @@ class PermisosTest(TestCase):
             self.grupo_docente
         )
 
-        self.docente2 = User.objects.create_user(
+        self.docente2 = Usuario.objects.create_user(
             username="docente2",
             password="test1234",
         )

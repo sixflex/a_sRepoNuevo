@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block title %}Formulario Docente{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-8 col-md-10">
+
+            <div class="card shadow-sm border-0">
+
+                <!-- ENCABEZADO -->
+                <div class="card-header bg-white border-bottom py-3">
+
+                    <h4 class="mb-1 fw-bold">
+                        {% if docente %}
+                            Editar Docente
+                        {% else %}
+                            Nuevo Docente
+                        {% endif %}
+                    </h4>
+
+                    <p class="text-muted mb-0 small">
+                        Ingresa los datos correspondientes al docente.
+                    </p>
+
+                </div>
+
+
+                <!-- CONTENIDO -->
+                <div class="card-body p-4">
+
+                    <!-- MENSAJE DE VALIDACIÓN -->
+                    {% if error %}
+                        <div class="alert alert-danger" role="alert">
+                            {{ error }}
+                        </div>
+                    {% endif %}
+
+
+                    <form method="POST" novalidate>
+
+                        {% csrf_token %}
+
+                        <!-- NOMBRE -->
+                        <div class="mb-3">
+
+                            <label for="nombre"
+                                   class="form-label fw-semibold">
+                                Nombre del docente
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="nombre"
+                                name="nombre"
+                                placeholder="Ej: Juan Pérez"
+                                value="{{ docente.nombre|default:'' }}"
+                                required>
+
+                        </div>
+
+
+                        <!-- CORREO -->
+                        <div class="mb-4">
+
+                            <label for="correo"
+                                   class="form-label fw-semibold">
+                                Correo electrónico
+                            </label>
+
+                            <input
+                                type="email"
+                                class="form-control"
+                                id="correo"
+                                name="correo"
+                                placeholder="Ej: juan.perez@correo.cl"
+                                value="{{ docente.correo|default:'' }}"
+                                required>
+
+                            <div class="form-text">
+                                Ingresa un correo electrónico válido.
+                            </div>
+
+                        </div>
+
+
+                        <!-- BOTONES -->
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <a href="{% url 'docente_list' %}"
+                               class="btn btn-outline-secondary">
+                                ← Volver
+                            </a>
+
+                            <button type="submit"
+                                    class="btn btn-rojo px-4">
+                                Guardar
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

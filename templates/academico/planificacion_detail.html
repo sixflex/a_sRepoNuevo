@@ -1,0 +1,181 @@
+<!-- PLANIFICACIÓN ACADÉMICA -->
+{% extends "base.html" %}
+
+{% block title %}
+Detalle de Planificación | Portal A+S
+{% endblock %}
+
+
+{% block content %}
+
+<div class="container-fluid px-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h2 class="fw-bold mb-1">
+                Detalle de Planificación
+            </h2>
+
+            <p class="text-muted mb-0">
+                Información académica de la sección seleccionada.
+            </p>
+
+        </div>
+
+        <a
+            href="{% url 'planificacion_list' %}"
+            class="btn btn-outline-secondary">
+
+            ← Volver a planificación
+
+        </a>
+
+    </div>
+
+
+    <div class="card shadow-sm border-0">
+
+        <div class="card-body p-4">
+
+            <div class="row g-4">
+
+                <div class="col-md-6">
+
+                    <small class="text-muted">
+                        Período
+                    </small>
+
+                    <p class="fw-semibold mb-0">
+                        {{ seccion.periodo }}
+                    </p>
+
+                </div>
+
+
+                <div class="col-md-6">
+
+                    <small class="text-muted">
+                        Facultad
+                    </small>
+
+                    <p class="fw-semibold mb-0">
+                        {{ seccion.asignatura.carrera.facultad.nombre|default:"—" }}
+                    </p>
+
+                </div>
+
+
+                <div class="col-md-6">
+
+                    <small class="text-muted">
+                        Carrera
+                    </small>
+
+                    <p class="fw-semibold mb-0">
+                        {{ seccion.asignatura.carrera.nombre }}
+                    </p>
+
+                </div>
+
+
+                <div class="col-md-6">
+
+                    <small class="text-muted">
+                        Asignatura
+                    </small>
+
+                    <p class="fw-semibold mb-0">
+                        {{ seccion.asignatura.nombre }}
+                    </p>
+
+                </div>
+
+
+                <div class="col-md-6">
+
+                    <small class="text-muted">
+                        NRC
+                    </small>
+
+                    <p class="fw-semibold mb-0">
+                        {{ seccion.nrc }}
+                    </p>
+
+                </div>
+
+
+                <div class="col-md-6">
+
+                    <small class="text-muted">
+                        Sección
+                    </small>
+
+                    <p class="text-muted mb-0">
+                        Pendiente de incorporar al modelo académico
+                    </p>
+
+                </div>
+
+
+                <div class="col-md-6">
+
+                    <small class="text-muted">
+                        Docente
+                    </small>
+
+                    <p class="fw-semibold mb-0">
+                        {{ seccion.docente.nombre }}
+                    </p>
+
+                </div>
+
+
+                <div class="col-md-6">
+
+                    <small class="text-muted">
+                        Correo docente
+                    </small>
+
+                    <p class="fw-semibold mb-0">
+                        {{ seccion.docente.correo }}
+                    </p>
+
+                </div>
+
+
+                <div class="col-md-6">
+
+                    <small class="text-muted">
+                        Sede
+                    </small>
+
+                    <p class="fw-semibold mb-0">
+                        {{ seccion.sede.nombre }}
+                    </p>
+
+                </div>
+
+
+                <div class="col-md-6">
+
+                    <small class="text-muted">
+                        Campus
+                    </small>
+
+                    <p class="fw-semibold mb-0">
+                        {{ seccion.sede.campus.nombre }}
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

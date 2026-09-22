@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestión de Carreras{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h2 class="fw-bold mb-1">Gestión de Carreras</h2>
+            <p class="text-muted mb-0">
+                Administra las carreras y sus facultades asociadas.
+            </p>
+        </div>
+
+        <a href="{% url 'carrera_create' %}"
+           class="btn btn-rojo">
+            + Crear Carrera
+        </a>
+
+    </div>
+
+
+    <div class="card shadow-sm border-0">
+
+        <div class="card-body">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Facultad</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for carrera in carreras %}
+
+                        <tr>
+
+                            <td class="fw-semibold">
+                                {{ carrera.nombre }}
+                            </td>
+
+                            <td>
+                                {% if carrera.facultad %}
+                                    {{ carrera.facultad.nombre }}
+                                {% else %}
+                                    <span class="text-muted">
+                                        Sin facultad
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-center">
+
+                                <a href="{% url 'carrera_update' carrera.id %}"
+                                   class="btn btn-sm btn-outline-secondary me-1">
+                                    Editar
+                                </a>
+
+                                <a href="{% url 'carrera_delete' carrera.id %}"
+                                   class="btn btn-sm btn-outline-danger">
+                                    Eliminar
+                                </a>
+
+                            </td>
+
+                        </tr>
+
+                        {% empty %}
+
+                        <tr>
+                            <td colspan="3"
+                                class="text-center text-muted py-4">
+                                No hay carreras registradas.
+                            </td>
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="mt-4">
+        <a href="{% url 'home' %}"
+           class="btn btn-outline-secondary">
+            ← Volver a Gestión Académica
+        </a>
+    </div>
+
+</div>
+
+{% endblock %}

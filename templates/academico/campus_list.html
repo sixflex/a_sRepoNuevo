@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestión de Campus{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <!-- TÍTULO Y BOTÓN -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Gestión de Campus</h2>
+            <p class="text-muted mb-0">
+                Administra los campus registrados en el sistema.
+            </p>
+        </div>
+
+        <a href="{% url 'campus_create' %}" class="btn btn-rojo">
+            + Crear Campus
+        </a>
+    </div>
+
+
+    <!-- TABLA -->
+    <div class="card shadow-sm border-0">
+
+        <div class="card-body">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Dirección</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for c in campus %}
+
+                        <tr>
+
+                            <td class="fw-semibold">
+                                {{ c.nombre }}
+                            </td>
+
+                            <td>
+                                {{ c.direccion }}
+                            </td>
+
+                            <td class="text-center">
+
+                                <a href="{% url 'campus_update' c.id %}"
+                                   class="btn btn-sm btn-outline-secondary me-1">
+                                    Editar
+                                </a>
+
+                                <a href="{% url 'campus_delete' c.id %}"
+                                   class="btn btn-sm btn-outline-danger">
+                                    Eliminar
+                                </a>
+
+                            </td>
+
+                        </tr>
+
+                        {% empty %}
+
+                        <tr>
+                            <td colspan="3"
+                                class="text-center text-muted py-4">
+
+                                No hay campus registrados.
+
+                            </td>
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- VOLVER -->
+    <div class="mt-4">
+
+        <a href="{% url 'home' %}"
+           class="btn btn-outline-secondary">
+
+            ← Volver a Gestión Académica
+
+        </a>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}Formulario Campus{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+
+            <div class="card shadow-sm border-0">
+
+                <div class="card-header bg-white border-bottom py-3">
+
+                    <h4 class="mb-1 fw-bold">
+                        {% if campus %}
+                            Editar Campus
+                        {% else %}
+                            Nuevo Campus
+                        {% endif %}
+                    </h4>
+
+                    <p class="text-muted mb-0 small">
+                        Ingresa los datos correspondientes al campus.
+                    </p>
+
+                </div>
+
+                <div class="card-body p-4">
+
+                    <!-- VALIDACIÓN -->
+                    {% if error %}
+                        <div class="alert alert-danger" role="alert">
+                            {{ error }}
+                        </div>
+                    {% endif %}
+
+                    <form method="POST">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+
+                            <label for="nombre"
+                                   class="form-label fw-semibold">
+                                Nombre del campus
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="nombre"
+                                name="nombre"
+                                placeholder="Ej: Campus Providencia"
+                                value="{{ campus.nombre|default:'' }}">
+
+                        </div>
+
+                        <div class="mb-4">
+
+                            <label for="direccion"
+                                   class="form-label fw-semibold">
+                                Dirección
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="direccion"
+                                name="direccion"
+                                placeholder="Ej: Avenida Pedro de Valdivia 425"
+                                value="{{ campus.direccion|default:'' }}">
+
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <a href="{% url 'campus_list' %}"
+                               class="btn btn-outline-secondary">
+                                ← Volver
+                            </a>
+
+                            <button type="submit"
+                                    class="btn btn-rojo px-4">
+                                Guardar
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+
+{% endblock %}

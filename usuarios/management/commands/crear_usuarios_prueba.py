@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
 from proyectos.models import Seccion
-User = get_user_model()
+Usuario = get_user_model()
 
 class Command(BaseCommand):
 
@@ -20,7 +20,7 @@ class Command(BaseCommand):
             name="Docente"
         )
 
-        coordinador, creado = User.objects.get_or_create(
+        coordinador, creado = Usuario.objects.get_or_create(
             username="coordinador"
         )
 
@@ -31,7 +31,7 @@ class Command(BaseCommand):
             coordinador_group
         )
 
-        docente1, _ = User.objects.get_or_create(
+        docente1, _ = Usuario.objects.get_or_create(
             username="docente1"
         )
 
@@ -42,7 +42,7 @@ class Command(BaseCommand):
             docente_group
         )
 
-        docente2, _ = User.objects.get_or_create(
+        docente2, _ = Usuario.objects.get_or_create(
             username="docente2"
         )
 

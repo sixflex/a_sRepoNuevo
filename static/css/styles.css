@@ -54,3 +54,14 @@ body {
 main {
     min-height: 70vh;
 }
+
+.btn-rojo {
+    background-color: #8B0000;
+    color: white;
+    border: none;
+}
+
+.btn-rojo:hover {
+    background-color: #5e0000;
+    color: white;
+}
