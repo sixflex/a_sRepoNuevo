@@ -14,4 +14,6 @@ urlpatterns = [
     path("docente/", views.panel_docente, name="docente",),
     
     path("secciones/<int:seccion_id>/", views.detalle_seccion, name="detalle_seccion",),
+
+    path("coordinacion/planificacion/", views.planificacion_coordinacion, name="planificacion_coordinacion",),
 ]
