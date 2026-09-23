@@ -11,6 +11,7 @@
 
             <div class="card shadow-sm border-0">
 
+                <!-- ENCABEZADO -->
                 <div class="card-header bg-white border-bottom py-3">
 
                     <h4 class="mb-1 fw-bold">
@@ -23,24 +24,40 @@
 
                 </div>
 
-
+                <!-- CONTENIDO -->
                 <div class="card-body p-4">
 
-                    <div class="alert alert-danger">
+                    <div class="alert alert-danger" role="alert">
 
                         <h5 class="alert-heading fw-bold">
                             ¿Estás seguro?
                         </h5>
 
-                        <p class="mb-0">
+                        <p class="mb-2">
                             Estás a punto de eliminar la carrera
                             <strong>{{ carrera.nombre }}</strong>.
-                            Esta acción no se puede deshacer.
+                        </p>
+
+                        {% if carrera.codigo %}
+                            <p class="mb-2">
+                                Código:
+                                <strong>{{ carrera.codigo }}</strong>
+                            </p>
+                        {% endif %}
+
+                        <p class="mb-2">
+                            Facultad:
+                            <strong>{{ carrera.facultad.nombre }}</strong>
+                        </p>
+
+                        <p class="mb-0">
+                            Esta acción no se puede deshacer y puede afectar
+                            registros académicos asociados a esta carrera.
                         </p>
 
                     </div>
 
-
+                    <!-- BOTONES -->
                     <form method="POST">
                         {% csrf_token %}
 

@@ -12,6 +12,7 @@
 
             <div class="card shadow-sm border-0">
 
+                <!-- ENCABEZADO -->
                 <div class="card-header bg-white border-bottom py-3">
 
                     <h4 class="mb-1 fw-bold">
@@ -25,23 +26,60 @@
                 </div>
 
 
+                <!-- CONTENIDO -->
                 <div class="card-body p-4">
 
-                    <div class="alert alert-danger">
+                    <div class="alert alert-danger" role="alert">
 
                         <h5 class="alert-heading fw-bold">
                             ¿Estás seguro?
                         </h5>
 
-                        <p class="mb-0">
+                        <p class="mb-2">
                             Estás a punto de eliminar la asignatura
                             <strong>{{ asignatura.nombre }}</strong>.
-                            Esta acción no se puede deshacer.
+                        </p>
+
+                        {% if asignatura.codigo %}
+                            <p class="mb-2">
+                                Código:
+                                <strong>{{ asignatura.codigo }}</strong>
+                            </p>
+                        {% endif %}
+
+                        <div class="mb-2">
+                            <span class="fw-semibold">
+                                Carreras asociadas:
+                            </span>
+
+                            <div class="mt-2">
+
+                                {% for carrera in asignatura.carreras.all %}
+
+                                    <span class="badge bg-light text-dark border me-1 mb-1">
+                                        {{ carrera.nombre }}
+                                    </span>
+
+                                {% empty %}
+
+                                    <span class="text-muted">
+                                        Sin carreras asociadas
+                                    </span>
+
+                                {% endfor %}
+
+                            </div>
+                        </div>
+
+                        <p class="mb-0 mt-3">
+                            Esta acción no se puede deshacer y eliminará
+                            las asociaciones de esta asignatura con sus carreras.
                         </p>
 
                     </div>
 
 
+                    <!-- FORMULARIO -->
                     <form method="POST">
 
                         {% csrf_token %}

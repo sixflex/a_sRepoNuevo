@@ -6,6 +6,7 @@
 
 <div class="container mt-4">
 
+    <!-- TÍTULO Y BOTÓN -->
     <div class="d-flex justify-content-between align-items-center mb-4">
 
         <div>
@@ -24,6 +25,7 @@
     </div>
 
 
+    <!-- TABLA -->
     <div class="card shadow-sm border-0">
 
         <div class="card-body">
@@ -36,6 +38,10 @@
                         <tr>
                             <th>Año</th>
                             <th>Tipo</th>
+                            <th>Nombre</th>
+                            <th>Fecha inicio</th>
+                            <th>Fecha término</th>
+                            <th>Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
@@ -46,14 +52,85 @@
 
                         <tr>
 
+                            <!-- AÑO -->
                             <td class="fw-semibold">
                                 {{ periodo.anio }}
                             </td>
 
+
+                            <!-- TIPO -->
                             <td>
                                 {{ periodo.tipo }}
                             </td>
 
+
+                            <!-- NOMBRE -->
+                            <td>
+                                {{ periodo.nombre }}
+                            </td>
+
+
+                            <!-- FECHA INICIO -->
+                            <td>
+
+                                {% if periodo.fecha_inicio %}
+                                    {{ periodo.fecha_inicio|date:"d/m/Y" }}
+                                {% else %}
+                                    <span class="text-muted">
+                                        Sin fecha
+                                    </span>
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- FECHA FIN -->
+                            <td>
+
+                                {% if periodo.fecha_fin %}
+                                    {{ periodo.fecha_fin|date:"d/m/Y" }}
+                                {% else %}
+                                    <span class="text-muted">
+                                        Sin fecha
+                                    </span>
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- ESTADO -->
+                            <td>
+
+                                {% if periodo.estado == "Activo" %}
+
+                                    <span class="badge bg-success">
+                                        Activo
+                                    </span>
+
+                                {% elif periodo.estado == "Finalizado" %}
+
+                                    <span class="badge bg-secondary">
+                                        Finalizado
+                                    </span>
+
+                                {% elif periodo.estado == "Planificado" %}
+
+                                    <span class="badge bg-warning text-dark">
+                                        Planificado
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="badge bg-light text-dark border">
+                                        {{ periodo.estado }}
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- ACCIONES -->
                             <td class="text-center">
 
                                 <a href="{% url 'periodo_update' periodo.id %}"
@@ -73,10 +150,14 @@
                         {% empty %}
 
                         <tr>
-                            <td colspan="3"
+
+                            <td colspan="7"
                                 class="text-center text-muted py-4">
+
                                 No hay periodos registrados.
+
                             </td>
+
                         </tr>
 
                         {% endfor %}
@@ -92,11 +173,16 @@
     </div>
 
 
+    <!-- VOLVER -->
     <div class="mt-4">
+
         <a href="{% url 'home' %}"
            class="btn btn-outline-secondary">
+
             ← Volver a Gestión Académica
+
         </a>
+
     </div>
 
 </div>

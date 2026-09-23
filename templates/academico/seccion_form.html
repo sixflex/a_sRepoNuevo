@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 
-{% block title %}Formulario Sección{% endblock %}
+{% block title %}
+    {% if seccion %}Editar Sección{% else %}Nueva Sección{% endif %}
+{% endblock %}
 
 {% block content %}
 
@@ -8,10 +10,11 @@
 
     <div class="row justify-content-center">
 
-        <div class="col-lg-8 col-md-10">
+        <div class="col-lg-9 col-md-11">
 
             <div class="card shadow-sm border-0">
 
+                <!-- ENCABEZADO -->
                 <div class="card-header bg-white border-bottom py-3">
 
                     <h4 class="mb-1 fw-bold">
@@ -29,39 +32,152 @@
                 </div>
 
 
+                <!-- CONTENIDO -->
                 <div class="card-body p-4">
 
                     {% if error %}
-                        <div class="alert alert-danger">
+                        <div class="alert alert-danger" role="alert">
                             {{ error }}
                         </div>
                     {% endif %}
 
 
-                    <form method="POST">
+                    <form method="POST" novalidate>
 
                         {% csrf_token %}
 
 
-                        <!-- NRC -->
+                        <!-- NRC Y NÚMERO DE SECCIÓN -->
+                        <div class="row">
+
+                            <!-- NRC -->
+                            <div class="col-md-6 mb-3">
+
+                                <label for="nrc"
+                                       class="form-label fw-semibold">
+                                    NRC
+                                </label>
+
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="nrc"
+                                    name="nrc"
+                                    maxlength="20"
+                                    placeholder="Ej: 12345"
+                                    value="{{ seccion.nrc|default:'' }}"
+                                    required>
+
+                                <div class="form-text">
+                                    El NRC debe ser único dentro del periodo académico.
+                                </div>
+
+                            </div>
+
+
+                            <!-- SECCIÓN -->
+                            <div class="col-md-6 mb-3">
+
+                                <label for="seccion"
+                                       class="form-label fw-semibold">
+                                    Sección
+                                </label>
+
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="seccion"
+                                    name="seccion"
+                                    maxlength="20"
+                                    placeholder="Ej: 001"
+                                    value="{{ seccion.seccion|default:'' }}"
+                                    required>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- PERIODO -->
                         <div class="mb-3">
 
-                            <label for="nrc"
+                            <label for="periodo"
                                    class="form-label fw-semibold">
-                                NRC
+                                Periodo académico
                             </label>
 
-                            <input
-                                type="text"
-                                class="form-control"
-                                id="nrc"
-                                name="nrc"
-                                placeholder="Ej: 12345"
-                                value="{{ seccion.nrc|default:'' }}"
+                            <select
+                                class="form-select"
+                                id="periodo"
+                                name="periodo"
                                 required>
 
+                                <option value=""
+                                        disabled
+                                        {% if not seccion %}selected{% endif %}>
+                                    Seleccione un periodo
+                                </option>
+
+                                {% for periodo in periodos %}
+
+                                    <option
+                                        value="{{ periodo.id }}"
+                                        {% if seccion and seccion.periodo_id == periodo.id %}
+                                            selected
+                                        {% endif %}>
+
+                                        {{ periodo.anio }} -
+                                        {{ periodo.tipo }} -
+                                        {{ periodo.nombre }}
+
+                                    </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- CAMPUS -->
+                        <div class="mb-3">
+
+                            <label for="campus"
+                                   class="form-label fw-semibold">
+                                Campus
+                            </label>
+
+                            <select
+                                class="form-select"
+                                id="campus"
+                                name="campus"
+                                required>
+
+                                <option value=""
+                                        disabled
+                                        {% if not seccion %}selected{% endif %}>
+                                    Seleccione un campus
+                                </option>
+
+                                {% for campus in campus_list %}
+
+                                    <option
+                                        value="{{ campus.id }}"
+                                        {% if seccion and seccion.campus_id == campus.id %}
+                                            selected
+                                        {% endif %}>
+
+                                        {{ campus.nombre }}
+                                        - {{ campus.sede.nombre }}
+
+                                    </option>
+
+                                {% endfor %}
+
+                            </select>
+
                             <div class="form-text">
-                                El NRC debe ser único para cada sección.
+                                El campus determina la sede donde se imparte la sección.
                             </div>
 
                         </div>
@@ -81,21 +197,27 @@
                                 name="asignatura"
                                 required>
 
-                                <option value="" disabled
-                                    {% if not seccion %}selected{% endif %}>
+                                <option value=""
+                                        disabled
+                                        {% if not seccion %}selected{% endif %}>
                                     Seleccione una asignatura
                                 </option>
 
                                 {% for asignatura in asignaturas %}
 
-                                <option value="{{ asignatura.id }}"
-                                    {% if seccion and seccion.asignatura_id == asignatura.id %}
-                                        selected
-                                    {% endif %}>
+                                    <option
+                                        value="{{ asignatura.id }}"
+                                        {% if seccion and seccion.asignatura_id == asignatura.id %}
+                                            selected
+                                        {% endif %}>
 
-                                    {{ asignatura.nombre }}
+                                        {% if asignatura.codigo %}
+                                            {{ asignatura.codigo }} -
+                                        {% endif %}
 
-                                </option>
+                                        {{ asignatura.nombre }}
+
+                                    </option>
 
                                 {% endfor %}
 
@@ -104,117 +226,181 @@
                         </div>
 
 
-                        <!-- DOCENTE -->
+                        <!-- CARRERAS -->
                         <div class="mb-3">
 
-                            <label for="docente"
+                            <label for="carreras"
                                    class="form-label fw-semibold">
-                                Docente
+                                Carreras asociadas
                             </label>
 
                             <select
                                 class="form-select"
-                                id="docente"
-                                name="docente"
+                                id="carreras"
+                                name="carreras"
+                                multiple
+                                size="6"
                                 required>
 
-                                <option value="" disabled
-                                    {% if not seccion %}selected{% endif %}>
-                                    Seleccione un docente
-                                </option>
+                                {% for carrera in carreras %}
+
+                                    <option
+                                        value="{{ carrera.id }}"
+                                        {% if carrera.id in carreras_seleccionadas %}
+                                            selected
+                                        {% endif %}>
+
+                                        {% if carrera.codigo %}
+                                            {{ carrera.codigo }} -
+                                        {% endif %}
+
+                                        {{ carrera.nombre }}
+
+                                    </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                            <div class="form-text">
+                                Puedes seleccionar una o varias carreras.
+                                Mantén presionada la tecla Ctrl para seleccionar varias.
+                            </div>
+
+                        </div>
+
+
+                        <!-- DOCENTES -->
+                        <div class="mb-3">
+
+                            <label for="docentes"
+                                   class="form-label fw-semibold">
+                                Docentes asociados
+                            </label>
+
+                            <select
+                                class="form-select"
+                                id="docentes"
+                                name="docentes"
+                                multiple
+                                size="6"
+                                required>
 
                                 {% for docente in docentes %}
 
-                                <option value="{{ docente.id }}"
-                                    {% if seccion and seccion.docente_id == docente.id %}
-                                        selected
-                                    {% endif %}>
+                                    <option
+                                        value="{{ docente.id }}"
+                                        {% if docente.id in docentes_seleccionados %}
+                                            selected
+                                        {% endif %}>
 
-                                    {{ docente.nombre }}
+                                        {{ docente.nombres }}
+                                        {{ docente.apellidos }}
+                                        - {{ docente.rut }}
 
-                                </option>
-
-                                {% endfor %}
-
-                            </select>
-
-                        </div>
-
-
-                        <!-- PERIODO -->
-                        <div class="mb-3">
-
-                            <label for="periodo"
-                                   class="form-label fw-semibold">
-                                Periodo
-                            </label>
-
-                            <select
-                                class="form-select"
-                                id="periodo"
-                                name="periodo"
-                                required>
-
-                                <option value="" disabled
-                                    {% if not seccion %}selected{% endif %}>
-                                    Seleccione un periodo
-                                </option>
-
-                                {% for periodo in periodos %}
-
-                                <option value="{{ periodo.id }}"
-                                    {% if seccion and seccion.periodo_id == periodo.id %}
-                                        selected
-                                    {% endif %}>
-
-                                    {{ periodo }}
-
-                                </option>
+                                    </option>
 
                                 {% endfor %}
 
                             </select>
 
+                            <div class="form-text">
+                                Puedes asociar uno o varios docentes a la sección.
+                            </div>
+
                         </div>
 
 
-                        <!-- SEDE -->
+                        <!-- JORNADA Y ESTADO -->
+                        <div class="row">
+
+                            <!-- JORNADA -->
+                            <div class="col-md-6 mb-3">
+
+                                <label for="jornada"
+                                       class="form-label fw-semibold">
+                                    Jornada
+                                </label>
+
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="jornada"
+                                    name="jornada"
+                                    maxlength="40"
+                                    placeholder="Ej: Diurna"
+                                    value="{{ seccion.jornada|default:'' }}">
+
+                            </div>
+
+
+                            <!-- ESTADO -->
+                            <div class="col-md-6 mb-3">
+
+                                <label for="estado"
+                                       class="form-label fw-semibold">
+                                    Estado
+                                </label>
+
+                                <select
+                                    class="form-select"
+                                    id="estado"
+                                    name="estado"
+                                    required>
+
+                                    <option value=""
+                                            disabled
+                                            {% if not seccion %}selected{% endif %}>
+                                        Seleccione un estado
+                                    </option>
+
+                                    <option value="Planificada"
+                                        {% if seccion.estado == "Planificada" %}selected{% endif %}>
+                                        Planificada
+                                    </option>
+
+                                    <option value="Activa"
+                                        {% if seccion.estado == "Activa" %}selected{% endif %}>
+                                        Activa
+                                    </option>
+
+                                    <option value="Finalizada"
+                                        {% if seccion.estado == "Finalizada" %}selected{% endif %}>
+                                        Finalizada
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- HORARIO -->
                         <div class="mb-4">
 
-                            <label for="sede"
+                            <label for="horario"
                                    class="form-label fw-semibold">
-                                Sede
+                                Horario
                             </label>
 
-                            <select
-                                class="form-select"
-                                id="sede"
-                                name="sede"
-                                required>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="horario"
+                                name="horario"
+                                maxlength="160"
+                                placeholder="Ej: Lunes y miércoles 10:00 - 11:30"
+                                value="{{ seccion.horario|default:'' }}">
 
-                                <option value="" disabled
-                                    {% if not seccion %}selected{% endif %}>
-                                    Seleccione una sede
-                                </option>
-
-                                {% for sede in sedes %}
-
-                                <option value="{{ sede.id }}"
-                                    {% if seccion and seccion.sede_id == sede.id %}
-                                        selected
-                                    {% endif %}>
-
-                                    {{ sede.nombre }} - {{ sede.ciudad }}
-
-                                </option>
-
-                                {% endfor %}
-
-                            </select>
+                            <div class="form-text">
+                                Puedes ingresar una descripción del horario de la sección.
+                            </div>
 
                         </div>
 
 
+                        <!-- BOTONES -->
                         <div class="d-flex justify-content-between align-items-center">
 
                             <a href="{% url 'seccion_list' %}"
@@ -224,7 +410,13 @@
 
                             <button type="submit"
                                     class="btn btn-rojo px-4">
-                                Guardar
+
+                                {% if seccion %}
+                                    Guardar cambios
+                                {% else %}
+                                    Guardar
+                                {% endif %}
+
                             </button>
 
                         </div>

@@ -12,6 +12,7 @@
 
             <div class="card shadow-sm border-0">
 
+                <!-- ENCABEZADO -->
                 <div class="card-header bg-white border-bottom py-3">
 
                     <h4 class="mb-1 fw-bold">
@@ -25,23 +26,41 @@
                 </div>
 
 
+                <!-- CONTENIDO -->
                 <div class="card-body p-4">
 
-                    <div class="alert alert-danger">
+                    <div class="alert alert-danger" role="alert">
 
                         <h5 class="alert-heading fw-bold">
                             ¿Estás seguro?
                         </h5>
 
-                        <p class="mb-0">
+                        <p class="mb-2">
                             Estás a punto de eliminar al docente
-                            <strong>{{ docente.nombre }}</strong>.
-                            Esta acción no se puede deshacer.
+                            <strong>
+                                {{ docente.nombres }} {{ docente.apellidos }}
+                            </strong>.
+                        </p>
+
+                        <p class="mb-2">
+                            RUT:
+                            <strong>{{ docente.rut }}</strong>
+                        </p>
+
+                        <p class="mb-2">
+                            Correo institucional:
+                            <strong>{{ docente.correo_institucional }}</strong>
+                        </p>
+
+                        <p class="mb-0">
+                            Esta acción no se puede deshacer y puede afectar
+                            las asociaciones académicas del docente con las secciones.
                         </p>
 
                     </div>
 
 
+                    <!-- FORMULARIO -->
                     <form method="POST">
 
                         {% csrf_token %}
