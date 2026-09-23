@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}
+Planificación A+S | Portal A+S
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+    <div class="mb-4">
+        <h1 class="h3 fw-bold">
+            Planificación A+S
+        </h1>
+
+        <p class="text-muted">
+            Espacio de planificación académica para las actividades A+S.
+        </p>
+    </div>
+
+
+    <div class="card shadow-sm border-0">
+
+        <div class="card-body">
+
+            <h2 class="h5 fw-bold">
+                Planificación académica
+            </h2>
+
+            <p class="text-muted">
+                Desde esta sección se podrá organizar y consultar
+                la planificación asociada a los períodos y actividades A+S.
+            </p>
+
+            <a
+                href="{% url 'core:coordinacion' %}"
+                class="btn btn-outline-secondary"
+            >
+                Volver al dashboard
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

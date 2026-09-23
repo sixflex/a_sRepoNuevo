@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}Formulario Asignatura{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-8 col-md-10">
+
+            <div class="card shadow-sm border-0">
+
+                <div class="card-header bg-white border-bottom py-3">
+
+                    <h4 class="mb-1 fw-bold">
+                        {% if asignatura %}
+                            Editar Asignatura
+                        {% else %}
+                            Nueva Asignatura
+                        {% endif %}
+                    </h4>
+
+                    <p class="text-muted mb-0 small">
+                        Ingresa los datos de la asignatura y selecciona la carrera a la que pertenece.
+                    </p>
+
+                </div>
+
+
+                <div class="card-body p-4">
+
+                    <form method="POST">
+
+                        {% csrf_token %}
+
+
+                        <!-- NOMBRE -->
+                        <div class="mb-3">
+
+                            <label for="nombre"
+                                   class="form-label fw-semibold">
+                                Nombre de la asignatura
+                            </label>
+
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="nombre"
+                                name="nombre"
+                                placeholder="Ej: Programación I"
+                                value="{{ asignatura.nombre|default:'' }}"
+                                required>
+
+                        </div>
+
+
+                        <!-- CARRERA -->
+                        <div class="mb-4">
+
+                            <label for="carrera"
+                                   class="form-label fw-semibold">
+                                Carrera
+                            </label>
+
+                            <select
+                                class="form-select"
+                                id="carrera"
+                                name="carrera"
+                                required>
+
+                                <option value=""
+                                        disabled
+                                        {% if not asignatura %}selected{% endif %}>
+                                    Seleccione una carrera
+                                </option>
+
+                                {% for carrera in carreras %}
+
+                                <option
+                                    value="{{ carrera.id }}"
+                                    {% if asignatura and asignatura.carrera_id == carrera.id %}
+                                        selected
+                                    {% endif %}>
+
+                                    {{ carrera.nombre }}
+
+                                </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                            <div class="form-text">
+                                Selecciona la carrera a la que pertenece esta asignatura.
+                            </div>
+
+                        </div>
+
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <a href="{% url 'asignatura_list' %}"
+                               class="btn btn-outline-secondary">
+                                ← Volver
+                            </a>
+
+                            <button type="submit"
+                                    class="btn btn-rojo px-4">
+                                Guardar
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -90,3 +90,10 @@ conda activate portal_as
 
 - Si se agregan nuevas dependencias, actualizar `requirements.txt`.
 - Cuando esté disponible el repositorio oficial, el trabajo se realizará utilizando las ramas `main`, `develop` y `feature`.
+
+### Cada integrante trabaja en su rama personal. Cuando termina su tarea, hace un Pull Request de su rama hacia develop. Ahí se integran todos los cambios del sprint y ustedes prueban que el proyecto funcione completo.
+### Cuando ya terminó el sprint y develop está estable, recién hacen un Pull Request de develop hacia main.
+### Entonces:
+### rama personal = trabajo de cada integrante
+### develop = unión de todo el trabajo del sprint
+#### main = versión estable/final 

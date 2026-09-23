@@ -1,9 +1,42 @@
+:root {
+    --color-primary: #f01e0f;
+    --color-primary-rgb: 240, 30, 15;
+    --color-primary-dark: #77160f;
+    --color-secondary: #344054;
+    --color-accent: #f79009;
+    --color-surface: #f8f9fa;
+    --color-text: #1d2939;
+
+    --bs-primary: var(--color-primary);
+    --bs-primary-rgb: var(--color-primary-rgb);
+    --bs-secondary: var(--color-secondary);
+    --bs-secondary-rgb: 52, 64, 84;
+}
+
 body {
-    background-color: #f8f9fa;
+    background-color: var(--color-surface);
+    color: var(--color-text);
 }
 
 .navbar-brand {
     font-weight: bold;
+}
+
+.navbar-sistema {
+    background-color: var(--color-primary) !important;
+}
+
+.btn-sistema {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+}
+
+.btn-sistema:hover,
+.btn-sistema:focus {
+    background-color: var(--color-primary-dark);
+    border-color: var(--color-primary-dark);
+    color: #fff;
 }
 
 .sidebar {
@@ -11,13 +44,24 @@ body {
 }
 
 .sidebar .nav-link {
-    color: #333;
+    color: var(--color-text);
 }
 
 .sidebar .nav-link:hover {
-    background-color: #e9ecef;
+    background-color: rgba(var(--color-primary-rgb), 0.1);
 }
 
 main {
     min-height: 70vh;
+}
+
+.btn-rojo {
+    background-color: #8B0000;
+    color: white;
+    border: none;
+}
+
+.btn-rojo:hover {
+    background-color: #5e0000;
+    color: white;
 }

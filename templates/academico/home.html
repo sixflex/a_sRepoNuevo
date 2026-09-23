@@ -1,0 +1,339 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestión Académica{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+
+    <!-- ENCABEZADO -->
+    <div class="mb-5">
+        <h2 class="fw-bold text-dark mb-1">
+            Gestión Académica
+        </h2>
+
+        <p class="text-muted mb-0">
+            Administra la estructura académica del sistema.
+        </p>
+    </div>
+
+
+    <!-- ============================== -->
+    <!-- ESTRUCTURA INSTITUCIONAL -->
+    <!-- ============================== -->
+
+    <div class="mb-5">
+
+        <div class="d-flex align-items-center mb-3">
+            <h5 class="fw-bold mb-0">
+                Estructura institucional
+            </h5>
+        </div>
+
+        <p class="text-muted small mb-4">
+            Administración de campus, sedes y facultades.
+        </p>
+
+
+        <div class="row g-4">
+
+            <!-- CAMPUS -->
+            <div class="col-lg-4 col-md-6">
+
+                <div class="card shadow-sm border-0 h-100">
+
+                    <div class="card-body p-4">
+
+                        <h5 class="fw-bold">
+                            Campus
+                        </h5>
+
+                        <p class="text-muted">
+                            Administra los campus registrados en el sistema.
+                        </p>
+
+                        <a href="{% url 'campus_list' %}"
+                           class="btn btn-rojo w-100">
+                            Administrar Campus
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- SEDES -->
+            <div class="col-lg-4 col-md-6">
+
+                <div class="card shadow-sm border-0 h-100">
+
+                    <div class="card-body p-4">
+
+                        <h5 class="fw-bold">
+                            Sedes
+                        </h5>
+
+                        <p class="text-muted">
+                            Administra las sedes asociadas a los campus.
+                        </p>
+
+                        <a href="{% url 'sede_list' %}"
+                           class="btn btn-rojo w-100">
+                            Administrar Sedes
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- FACULTADES -->
+            <div class="col-lg-4 col-md-6">
+
+                <div class="card shadow-sm border-0 h-100">
+
+                    <div class="card-body p-4">
+
+                        <h5 class="fw-bold">
+                            Facultades
+                        </h5>
+
+                        <p class="text-muted">
+                            Administra las facultades de la institución.
+                        </p>
+
+                        <a href="{% url 'facultad_list' %}"
+                           class="btn btn-rojo w-100">
+                            Administrar Facultades
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <hr class="my-5">
+
+
+    <!-- ============================== -->
+    <!-- ESTRUCTURA ACADÉMICA -->
+    <!-- ============================== -->
+
+    <div class="mb-5">
+
+        <h5 class="fw-bold mb-2">
+            Estructura académica
+        </h5>
+
+        <p class="text-muted small mb-4">
+            Administración de carreras, asignaturas y secciones.
+        </p>
+
+
+        <div class="row g-4">
+
+            <!-- CARRERAS -->
+            <div class="col-lg-4 col-md-6">
+
+                <div class="card shadow-sm border-0 h-100">
+
+                    <div class="card-body p-4">
+
+                        <h5 class="fw-bold">
+                            Carreras
+                        </h5>
+
+                        <p class="text-muted">
+                            Administra las carreras asociadas a facultades.
+                        </p>
+
+                        <a href="{% url 'carrera_list' %}"
+                           class="btn btn-rojo w-100">
+                            Administrar Carreras
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ASIGNATURAS -->
+            <div class="col-lg-4 col-md-6">
+
+                <div class="card shadow-sm border-0 h-100">
+
+                    <div class="card-body p-4">
+
+                        <h5 class="fw-bold">
+                            Asignaturas
+                        </h5>
+
+                        <p class="text-muted">
+                            Administra las asignaturas asociadas a carreras.
+                        </p>
+
+                        <a href="{% url 'asignatura_list' %}"
+                           class="btn btn-rojo w-100">
+                            Administrar Asignaturas
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- SECCIONES -->
+            <div class="col-lg-4 col-md-6">
+
+                <div class="card shadow-sm border-0 h-100">
+
+                    <div class="card-body p-4">
+
+                        <h5 class="fw-bold">
+                            Secciones / NRC
+                        </h5>
+
+                        <p class="text-muted">
+                            Administra las secciones y sus NRC.
+                        </p>
+
+                        <a href="{% url 'seccion_list' %}"
+                           class="btn btn-rojo w-100">
+                            Administrar Secciones
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- PLANIFICACIÓN ACADÉMICA -->
+            <div class="col-lg-4 col-md-6">
+
+                <div class="card shadow-sm border-0 h-100">
+
+                    <div class="card-body p-4">
+
+                        <h5 class="fw-bold">
+                            Planificación Académica
+                        </h5>
+
+                        <p class="text-muted">
+                            Consulta la planificación registrada
+                            y localiza secciones mediante filtros.
+                        </p>
+
+                        <a
+                            href="{% url 'planificacion_list' %}"
+                            class="btn btn-rojo w-100">
+
+                            Consultar Planificación
+
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <hr class="my-5">
+
+
+    <!-- ============================== -->
+    <!-- CONFIGURACIÓN ACADÉMICA -->
+    <!-- ============================== -->
+
+    <div class="mb-4">
+
+        <h5 class="fw-bold mb-2">
+            Configuración académica
+        </h5>
+
+        <p class="text-muted small mb-4">
+            Administración de docentes y periodos académicos.
+        </p>
+
+
+        <div class="row g-4">
+
+            <!-- DOCENTES -->
+            <div class="col-lg-4 col-md-6">
+
+                <div class="card shadow-sm border-0 h-100">
+
+                    <div class="card-body p-4">
+
+                        <h5 class="fw-bold">
+                            Docentes
+                        </h5>
+
+                        <p class="text-muted">
+                            Administra los docentes asociados a las secciones.
+                        </p>
+
+                        <a href="{% url 'docente_list' %}"
+                           class="btn btn-rojo w-100">
+                            Administrar Docentes
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- PERIODOS -->
+            <div class="col-lg-4 col-md-6">
+
+                <div class="card shadow-sm border-0 h-100">
+
+                    <div class="card-body p-4">
+
+                        <h5 class="fw-bold">
+                            Periodos
+                        </h5>
+
+                        <p class="text-muted">
+                            Administra los periodos académicos del sistema.
+                        </p>
+
+                        <a href="{% url 'periodo_list' %}"
+                           class="btn btn-rojo w-100">
+                            Administrar Periodos
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
