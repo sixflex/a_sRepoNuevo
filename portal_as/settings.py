@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'reportes',
     'academico',
     'campus',
+    'planificacion',
 ]
 
 MIDDLEWARE = [
