@@ -1,8 +1,9 @@
 from django.contrib import admin
-from django.urls import path
-from core.views import inicio  # <--- Importa la vista
+from django.urls import path, include
+from core.views import validar_planificacion_view
 
 urlpatterns = [
+    path('', include('core.urls')),
     path('admin/', admin.site.urls),
-    path('', inicio, name='inicio'),  # <--- Agrega la ruta raíz
+    path('coordinacion/validar-planificacion/', validar_planificacion_view, name='validar_planificacion'),
 ]
