@@ -1,11 +1,16 @@
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
-from proyectos.models import Seccion
+
 from usuarios.permissions import es_coordinador, es_docente
 from usuarios.decorators import coordinador_required, docente_required
-from .models import Docente, PeriodoAcademico
-from academico.models import Asignatura, Seccion as SeccionAcademica
+
+from academico.models import (
+    Asignatura,
+    Docente,
+    PeriodoAcademico,
+    Seccion,
+)
 
 @login_required
 def inicio(request):
@@ -22,18 +27,26 @@ def inicio(request):
 @coordinador_required
 def panel_coordinacion(request):
 
-    total_secciones = SeccionAcademica.objects.filter(estado=True).count()
-    total_docentes = Docente.objects.count()
+    total_secciones = Seccion.objects.filter(
+        estado__iexact="Activo"
+    ).count()
 
-    total_asignaturas = Asignatura.objects.filter(estado=True).count()
+    total_docentes = Docente.objects.filter(
+        activo=True
+    ).count()
 
-    total_periodos = PeriodoAcademico.objects.filter(estado=True).count()
+    total_asignaturas = Asignatura.objects.filter(
+        activo=True
+    ).count()
+
+    total_periodos = PeriodoAcademico.objects.filter(
+        estado__iexact="Activo"
+    ).count()
 
     periodo_actual = (
         PeriodoAcademico.objects
-        .filter(estado=True)
-        .select_related("anio")
-        .order_by("-anio__numero", "-id")
+        .filter(estado__iexact="Activo")
+        .order_by("-anio", "-id")
         .first()
     )
 
@@ -45,20 +58,34 @@ def panel_coordinacion(request):
         "periodo_actual": periodo_actual,
     }
 
-    return render(request,"core/coordinacion.html",contexto,)
+    return render(
+        request,
+        "core/coordinacion.html",
+        contexto,
+    )
+
 
 @coordinador_required
 def planificacion_coordinacion(request):
+
     return render(
         request,
         "core/planificacion_coordinacion.html",
     )
 
+
 @docente_required
 def panel_docente(request):
 
-    secciones = Seccion.objects.filter(
-        docente=request.user
+    secciones = (
+        Seccion.objects
+        .filter(docentes__usuario=request.user)
+        .select_related(
+            "asignatura",
+            "periodo",
+            "campus",
+        )
+        .distinct()
     )
 
     return render(
@@ -74,7 +101,13 @@ def panel_docente(request):
 def detalle_seccion(request, seccion_id):
 
     seccion = get_object_or_404(
-        Seccion,
+        Seccion.objects
+        .select_related(
+            "asignatura",
+            "periodo",
+            "campus",
+        )
+        .prefetch_related("docentes"),
         id=seccion_id,
     )
 
@@ -83,7 +116,11 @@ def detalle_seccion(request, seccion_id):
 
     elif es_docente(request.user):
 
-        if seccion.docente != request.user:
+        pertenece_al_docente = seccion.docentes.filter(
+            usuario=request.user
+        ).exists()
+
+        if not pertenece_al_docente:
             raise PermissionDenied
 
     else:
