@@ -6,6 +6,7 @@
 
 <div class="container mt-4">
 
+    <!-- ENCABEZADO -->
     <div class="d-flex justify-content-between align-items-center mb-4">
 
         <div>
@@ -26,6 +27,7 @@
     </div>
 
 
+    <!-- TABLA -->
     <div class="card shadow-sm border-0">
 
         <div class="card-body">
@@ -37,10 +39,13 @@
                     <thead>
                         <tr>
                             <th>NRC</th>
+                            <th>Sección</th>
                             <th>Asignatura</th>
-                            <th>Docente</th>
                             <th>Periodo</th>
-                            <th>Sede</th>
+                            <th>Campus / Sede</th>
+                            <th>Carreras</th>
+                            <th>Docentes</th>
+                            <th>Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
@@ -51,37 +56,148 @@
 
                         <tr>
 
+                            <!-- NRC -->
                             <td class="fw-bold">
                                 {{ seccion.nrc }}
                             </td>
 
+
+                            <!-- SECCIÓN -->
                             <td>
+                                {{ seccion.seccion }}
+                            </td>
+
+
+                            <!-- ASIGNATURA -->
+                            <td>
+
+                                {% if seccion.asignatura.codigo %}
+                                    <span class="fw-semibold">
+                                        {{ seccion.asignatura.codigo }}
+                                    </span>
+                                    <br>
+                                {% endif %}
+
                                 {{ seccion.asignatura.nombre }}
+
                             </td>
 
+
+                            <!-- PERIODO -->
                             <td>
-                                {{ seccion.docente.nombre }}
+                                {{ seccion.periodo.anio }}
+                                <br>
+                                <span class="text-muted small">
+                                    {{ seccion.periodo.tipo }}
+                                </span>
                             </td>
 
+
+                            <!-- CAMPUS / SEDE -->
                             <td>
-                                {{ seccion.periodo }}
+
+                                <span class="fw-semibold">
+                                    {{ seccion.campus.nombre }}
+                                </span>
+
+                                <br>
+
+                                <span class="text-muted small">
+                                    {{ seccion.campus.sede.nombre }}
+                                </span>
+
                             </td>
 
+
+                            <!-- CARRERAS -->
                             <td>
-                                {{ seccion.sede.nombre }}
+
+                                {% for carrera in seccion.carreras.all %}
+
+                                    <span class="badge bg-light text-dark border mb-1">
+                                        {{ carrera.nombre }}
+                                    </span>
+
+                                {% empty %}
+
+                                    <span class="text-muted small">
+                                        Sin carreras
+                                    </span>
+
+                                {% endfor %}
+
                             </td>
 
+
+                            <!-- DOCENTES -->
+                            <td>
+
+                                {% for docente in seccion.docentes.all %}
+
+                                    <div class="mb-1">
+                                        {{ docente.nombres }}
+                                        {{ docente.apellidos }}
+                                    </div>
+
+                                {% empty %}
+
+                                    <span class="text-muted small">
+                                        Sin docentes
+                                    </span>
+
+                                {% endfor %}
+
+                            </td>
+
+
+                            <!-- ESTADO -->
+                            <td>
+
+                                {% if seccion.estado == "Activa" %}
+
+                                    <span class="badge bg-success">
+                                        Activa
+                                    </span>
+
+                                {% elif seccion.estado == "Planificada" %}
+
+                                    <span class="badge bg-warning text-dark">
+                                        Planificada
+                                    </span>
+
+                                {% elif seccion.estado == "Finalizada" %}
+
+                                    <span class="badge bg-secondary">
+                                        Finalizada
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="badge bg-light text-dark border">
+                                        {{ seccion.estado }}
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- ACCIONES -->
                             <td class="text-center">
 
-                                <a href="{% url 'seccion_update' seccion.id %}"
-                                   class="btn btn-sm btn-outline-secondary me-1">
-                                    Editar
-                                </a>
+                                <div class="d-flex justify-content-center gap-1">
 
-                                <a href="{% url 'seccion_delete' seccion.id %}"
-                                   class="btn btn-sm btn-outline-danger">
-                                    Eliminar
-                                </a>
+                                    <a href="{% url 'seccion_update' seccion.id %}"
+                                       class="btn btn-sm btn-outline-secondary">
+                                        Editar
+                                    </a>
+
+                                    <a href="{% url 'seccion_delete' seccion.id %}"
+                                       class="btn btn-sm btn-outline-danger">
+                                        Eliminar
+                                    </a>
+
+                                </div>
 
                             </td>
 
@@ -90,10 +206,14 @@
                         {% empty %}
 
                         <tr>
-                            <td colspan="6"
+
+                            <td colspan="9"
                                 class="text-center text-muted py-4">
+
                                 No hay secciones registradas.
+
                             </td>
+
                         </tr>
 
                         {% endfor %}
@@ -109,11 +229,16 @@
     </div>
 
 
+    <!-- VOLVER -->
     <div class="mt-4">
+
         <a href="{% url 'home' %}"
            class="btn btn-outline-secondary">
+
             ← Volver a Gestión Académica
+
         </a>
+
     </div>
 
 </div>

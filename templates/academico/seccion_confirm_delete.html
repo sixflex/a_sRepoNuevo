@@ -12,6 +12,7 @@
 
             <div class="card shadow-sm border-0">
 
+                <!-- ENCABEZADO -->
                 <div class="card-header bg-white border-bottom py-3">
 
                     <h4 class="mb-1 fw-bold">
@@ -25,23 +26,111 @@
                 </div>
 
 
+                <!-- CONTENIDO -->
                 <div class="card-body p-4">
 
-                    <div class="alert alert-danger">
+                    <div class="alert alert-danger" role="alert">
 
                         <h5 class="alert-heading fw-bold">
                             ¿Estás seguro?
                         </h5>
 
-                        <p class="mb-0">
+                        <p>
                             Estás a punto de eliminar la sección con NRC
                             <strong>{{ seccion.nrc }}</strong>.
-                            Esta acción no se puede deshacer.
+                        </p>
+
+                        <hr>
+
+                        <!-- INFORMACIÓN DE LA SECCIÓN -->
+
+                        <p class="mb-2">
+                            <strong>Sección:</strong>
+                            {{ seccion.seccion }}
+                        </p>
+
+                        <p class="mb-2">
+                            <strong>Asignatura:</strong>
+
+                            {% if seccion.asignatura.codigo %}
+                                {{ seccion.asignatura.codigo }} -
+                            {% endif %}
+
+                            {{ seccion.asignatura.nombre }}
+                        </p>
+
+                        <p class="mb-2">
+                            <strong>Periodo:</strong>
+                            {{ seccion.periodo.anio }} -
+                            {{ seccion.periodo.tipo }}
+                        </p>
+
+                        <p class="mb-2">
+                            <strong>Campus:</strong>
+                            {{ seccion.campus.nombre }}
+                        </p>
+
+                        <p class="mb-2">
+                            <strong>Sede:</strong>
+                            {{ seccion.campus.sede.nombre }}
+                        </p>
+
+
+                        <!-- CARRERAS -->
+                        <div class="mb-2">
+
+                            <strong>Carreras:</strong>
+
+                            {% for carrera in seccion.carreras.all %}
+
+                                <span class="badge bg-light text-dark border">
+                                    {{ carrera.nombre }}
+                                </span>
+
+                            {% empty %}
+
+                                <span class="text-muted">
+                                    Sin carreras asociadas
+                                </span>
+
+                            {% endfor %}
+
+                        </div>
+
+
+                        <!-- DOCENTES -->
+                        <div class="mb-3">
+
+                            <strong>Docentes:</strong>
+
+                            {% for docente in seccion.docentes.all %}
+
+                                <span class="badge bg-light text-dark border">
+                                    {{ docente.nombres }}
+                                    {{ docente.apellidos }}
+                                </span>
+
+                            {% empty %}
+
+                                <span class="text-muted">
+                                    Sin docentes asociados
+                                </span>
+
+                            {% endfor %}
+
+                        </div>
+
+                        <hr>
+
+                        <p class="mb-0">
+                            Esta acción no se puede deshacer. También se eliminarán
+                            las asociaciones de esta sección con sus carreras y docentes.
                         </p>
 
                     </div>
 
 
+                    <!-- FORMULARIO -->
                     <form method="POST">
 
                         {% csrf_token %}

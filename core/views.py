@@ -4,8 +4,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from proyectos.models import Seccion
 from usuarios.permissions import es_coordinador, es_docente
 from usuarios.decorators import coordinador_required, docente_required
-from .models import (Asignatura,Docente,PeriodoAcademico,Seccion as SeccionAcademica,)
-
+from .models import Docente, PeriodoAcademico
+from academico.models import Asignatura, Seccion as SeccionAcademica
 
 @login_required
 def inicio(request):
