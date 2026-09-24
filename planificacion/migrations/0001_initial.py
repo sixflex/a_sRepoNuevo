@@ -10,8 +10,8 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('academico', '0003_facultad_carrera_facultad'),
-    ]
+    ('academico', '0001_initial'),
+]
 
     operations = [
         migrations.CreateModel(
