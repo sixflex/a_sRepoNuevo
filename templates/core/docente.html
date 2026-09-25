@@ -15,7 +15,7 @@
     <p>
 
         <a href="{% url 'core:detalle_seccion' seccion.id %}">
-            {{ seccion.nombre }}
+            {{ seccion.asignatura.nombre }}
             -
             NRC {{ seccion.nrc }}
         </a>

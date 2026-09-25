@@ -16,4 +16,6 @@ urlpatterns = [
     path("secciones/<int:seccion_id>/", views.detalle_seccion, name="detalle_seccion",),
 
     path("coordinacion/planificacion/", views.planificacion_coordinacion, name="planificacion_coordinacion",),
+
+    path("coordinacion/planificacion/<int:planificacion_id>/", views.detalle_planificacion_coordinacion, name="detalle_planificacion_coordinacion",),
 ]
