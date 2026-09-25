@@ -67,12 +67,29 @@ def panel_coordinacion(request):
 
 @coordinador_required
 def planificacion_coordinacion(request):
+    from planificacion.models import Planificacion
+
+    planificaciones = (
+        Planificacion.objects
+        .select_related(
+            "enlace",
+            "campus__sede",
+            "periodo",
+            "unidad_carrera",
+        )
+        .prefetch_related("filas")
+        .order_by("-fecha_envio", "-id")
+    )
+
+    contexto = {
+        "planificaciones": planificaciones,
+    }
 
     return render(
         request,
         "core/planificacion_coordinacion.html",
+        contexto,
     )
-
 
 @docente_required
 def panel_docente(request):
@@ -132,4 +149,33 @@ def detalle_seccion(request, seccion_id):
         {
             "seccion": seccion,
         },
+    )
+
+@coordinador_required
+def detalle_planificacion_coordinacion(request, planificacion_id):
+    from planificacion.models import Planificacion
+
+    planificacion = get_object_or_404(
+        Planificacion.objects
+        .select_related(
+            "enlace",
+            "campus__sede",
+            "periodo",
+            "unidad_carrera",
+        )
+        .prefetch_related("filas"),
+        id=planificacion_id,
+    )
+
+    filas = planificacion.filas.all().order_by("id")
+
+    contexto = {
+        "planificacion": planificacion,
+        "filas": filas,
+    }
+
+    return render(
+        request,
+        "core/detalle_planificacion_coordinacion.html",
+        contexto,
     )

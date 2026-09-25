@@ -13,24 +13,24 @@
                     </div>
                     <h3 class="fw-bold text-danger">Enlace de Planificación Vencido o Inactivo</h3>
                     <p class="text-muted mt-2">
-                        El plazo establecido para este enlace expiró el <strong>{{ enlace.fecha_expiracion|date:"d/m/Y" }}</strong>.
+                        El plazo establecido para este enlace expiró el <strong>{{ enlace.fecha_vencimiento|date:"d/m/Y" }}</strong>.
                     </p>
                     <p class="small text-secondary">
                         Si requiere ingresar la planificación académica fuera de plazo, comuníquese con la Coordinación A+S de su sede.
                     </p>
                 </div>
             {% else %}
-                <!-- Formulario Habilitado -->
+                
                 <div class="card border-0 shadow-sm border-start border-4 border-primary mb-4">
                     <div class="card-body">
                         <span class="badge bg-primary mb-2">Formulario Oficial de Planificación A+S</span>
                         <h5 class="fw-bold mb-1">Bienvenido(a), {{ enlace.destinatario_nombre }}</h5>
-                        <p class="text-muted small mb-2">Destinatario: {{ enlace.get_destinatario_tipo_display }} | Plazo de respuesta: {{ enlace.fecha_expiracion|date:"d/m/Y" }}</p>
+                        <p class="text-muted small mb-2">Destinatario: {{ enlace.get_destinatario_tipo_display }}|Plazo de respuesta: {{ enlace.fecha_vencimiento|date:"d/m/Y" }}</p>
                         <div class="row g-2 small border-top pt-2 mt-2">
-                            <div class="col-6 col-md-3"><strong>Sede:</strong> {{ enlace.sede }}</div>
-                            <div class="col-6 col-md-3"><strong>Campus:</strong> {{ enlace.campus }}</div>
-                            <div class="col-6 col-md-3"><strong>Período:</strong> {{ enlace.periodo }}</div>
-                            <div class="col-6 col-md-3"><strong>Carrera:</strong> {{ enlace.carrera }}</div>
+                            <div class="col-6 col-md-3"><strong>Sede:</strong>{{ enlace.campus.sede.nombre }}</div>
+                            <div class="col-6 col-md-3"><strong>Campus:</strong>{{ enlace.campus.nombre }}</div>
+                            <div class="col-6 col-md-3"><strong>Período:</strong>{{ enlace.periodo.nombre }}</div>
+                            <div class="col-6 col-md-3"><strong>Carrera:</strong>{{ enlace.carrera.nombre }}</div>
                         </div>
                     </div>
                 </div>

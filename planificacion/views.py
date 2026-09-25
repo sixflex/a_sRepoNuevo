@@ -1,51 +1,121 @@
-from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.db import transaction
-from .models import PlanificacionAS
-from .forms import PlanificacionASFormSet
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+
+from .forms import FilaPlanificacionFormSet
+from .models import (
+    FilaPlanificacion,
+    Planificacion,
+    PlanificacionEnlace,
+)
 
 def formulario_tabular_as(request, token):
-   
-    registro_base = get_object_or_404(PlanificacionAS, token_acceso=token)
-    carrera_contexto = registro_base.carrera
+    enlace = get_object_or_404(
+        PlanificacionEnlace.objects.select_related(
+            "campus__sede",
+            "carrera",
+            "periodo",
+        ),
+        token=token,
+    )
 
-    queryset = PlanificacionAS.objects.filter(token_acceso=token)
+    vigente = (
+        enlace.activo
+        and enlace.fecha_vencimiento >= timezone.now()
+    )
 
-    if request.method == 'POST':
-        formset = PlanificacionASFormSet(request.POST, queryset=queryset)
-        
+    if not vigente:
+        return render(
+            request,
+            "planificacion/formulario_tabular.html",
+            {
+                "enlace": enlace,
+                "vigente": False,
+            },
+        )
+
+    planificacion, _ = Planificacion.objects.get_or_create(
+        enlace=enlace,
+        defaults={
+            "campus": enlace.campus,
+            "periodo": enlace.periodo,
+            "unidad_carrera": enlace.carrera,
+            "destinatario_correo": enlace.destinatario_correo,
+            "vence_en": enlace.fecha_vencimiento,
+            "estado": "BORRADOR",
+        },
+    )
+
+    queryset = FilaPlanificacion.objects.filter(
+        planificacion=planificacion
+    ).order_by("id")
+
+    if request.method == "POST":
+        formset = FilaPlanificacionFormSet(
+            request.POST,
+            queryset=queryset,
+        )
+
         if formset.is_valid():
-            estado_guardado = 'FINAL' if 'enviar_final' in request.POST else 'BORRADOR'
-            
+            estado_guardado = (
+                "FINAL"
+                if "enviar_final" in request.POST
+                else "BORRADOR"
+            )
+
             with transaction.atomic():
-            
                 instancias = formset.save(commit=False)
-                
-                # 2. Guardar instancias modificadas/nuevas con sus datos contextuales
+
                 for instancia in instancias:
-                    instancia.carrera = carrera_contexto
-                    instancia.token_acceso = token
-                    instancia.estado_registro = estado_guardado
+                    instancia.planificacion = planificacion
                     instancia.save()
 
-                # 3. Eliminar físicamente las filas marcadas para borrar
                 for obj in formset.deleted_objects:
                     obj.delete()
 
-                # 4. Actualizar el estado de los registros existentes que no cambiaron
-                # (Garantiza que al presionar 'Enviar Final' todo el lote cambie de estado)
-                ids_eliminados = [obj.pk for obj in formset.deleted_objects if obj.pk]
-                queryset.exclude(id__in=ids_eliminados).update(estado_registro=estado_guardado)
+                planificacion.estado = estado_guardado
 
-                formset.save_m2m()
+                if estado_guardado == "FINAL":
+                    planificacion.fecha_envio = timezone.now()
 
-            messages.success(request, f"Planificación guardada exitosamente como {estado_guardado}.")
-            return redirect('planificacion:formulario_tabular_as', token=token)
+                planificacion.save(
+                    update_fields=[
+                        "estado",
+                        "fecha_envio",
+                    ]
+                )
+
+            if estado_guardado == "FINAL":
+                messages.success(
+                    request,
+                    "Planificación enviada correctamente.",
+                )
+            else:
+                messages.success(
+                    request,
+                    "Borrador guardado correctamente.",
+                )
+
+            return redirect(
+                "planificacion:formulario_tabular_as",
+                token=token,
+            )
+
     else:
-        formset = PlanificacionASFormSet(queryset=queryset)
+        formset = FilaPlanificacionFormSet(
+            queryset=queryset
+        )
 
-    return render(request, 'planificacion/formulario_tabular.html', {
-        'formset': formset,
-        'carrera': carrera_contexto,
-        'token': token,
-    })
+    return render(
+        request,
+        "planificacion/formulario_tabular.html",
+        {
+            "formset": formset,
+            "planificacion": planificacion,
+            "enlace": enlace,
+            "carrera": enlace.carrera,
+            "vigente": True,
+            "token": token,
+        },
+    )
