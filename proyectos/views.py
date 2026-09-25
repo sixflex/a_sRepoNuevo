@@ -5,9 +5,11 @@ from usuarios.decorators import coordinador_required
 from planificacion.models import PlanificacionEnlace
 from academico.models import Campus, Carrera, PeriodoAcademico
 
+@coordinador_required
 def coordinador_contexto(request):
     return render(request, 'proyectos/coordinador_contexto.html')
 
+@coordinador_required
 def formulario_prueba(request):
     return render(request, 'proyectos/formulario_prueba.html')
 
@@ -76,6 +78,7 @@ def gestionar_enlaces_planificacion(request):
         'periodos': periodos,
         'hoy': hoy,
     })
+
 
 def formulario_planificacion_docente(request, token):
     enlace = get_object_or_404(
