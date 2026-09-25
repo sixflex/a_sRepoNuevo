@@ -37,6 +37,13 @@ INSTALLED_APPS = [
     'academico',
     'campus',
     'planificacion',
+    "rutas",
+    "archivos",
+    "cartas",
+    "comunicaciones",
+    "publico",
+    "auditoria",
+    "historicos",
 ]
 
 MIDDLEWARE = [

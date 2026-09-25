@@ -5,7 +5,7 @@ from django.db import models
 class Sede(models.Model):
     nombre = models.CharField(max_length=120, unique=True)
     ciudad = models.CharField(max_length=120, null=True, blank=True)
-    activo = models.BooleanField(default=True)
+    activo = models.BooleanField()
 
     def __str__(self):
         return self.nombre
@@ -14,125 +14,23 @@ class Sede(models.Model):
 class Campus(models.Model):
     sede = models.ForeignKey(
         Sede,
-        on_delete=models.CASCADE,
-        related_name="campus"
+        on_delete=models.PROTECT,
+        related_name="campus",
     )
     nombre = models.CharField(max_length=120)
     direccion = models.CharField(max_length=255, null=True, blank=True)
-    activo = models.BooleanField(default=True)
+    activo = models.BooleanField()
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
                 fields=["sede", "nombre"],
-                name="unique_campus_sede_nombre"
+                name="unique_campus_sede_nombre",
             )
         ]
 
     def __str__(self):
         return f"{self.nombre} - {self.sede.nombre}"
-
-
-class Facultad(models.Model):
-    codigo = models.CharField(
-        max_length=30,
-        unique=True,
-        null=True,
-        blank=True
-    )
-    nombre = models.CharField(max_length=160)
-    activo = models.BooleanField(default=True)
-
-    def __str__(self):
-        return self.nombre
-
-
-class Carrera(models.Model):
-    facultad = models.ForeignKey(
-        Facultad,
-        on_delete=models.CASCADE,
-        related_name="carreras"
-    )
-    codigo = models.CharField(
-        max_length=30,
-        unique=True,
-        null=True,
-        blank=True
-    )
-    nombre = models.CharField(max_length=180)
-    activo = models.BooleanField(default=True)
-
-    def __str__(self):
-        return self.nombre
-
-
-class Asignatura(models.Model):
-    codigo = models.CharField(
-        max_length=30,
-        unique=True,
-        null=True,
-        blank=True
-    )
-    nombre = models.CharField(max_length=180)
-    activo = models.BooleanField(default=True)
-
-    carreras = models.ManyToManyField(
-        Carrera,
-        through="AsignaturaCarrera",
-        related_name="asignaturas"
-    )
-
-    def __str__(self):
-        if self.codigo:
-            return f"{self.codigo} - {self.nombre}"
-        return self.nombre
-
-
-class AsignaturaCarrera(models.Model):
-    asignatura = models.ForeignKey(
-        Asignatura,
-        on_delete=models.CASCADE,
-        related_name="asignatura_carreras"
-    )
-    carrera = models.ForeignKey(
-        Carrera,
-        on_delete=models.CASCADE,
-        related_name="asignatura_carreras"
-    )
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["asignatura", "carrera"],
-                name="unique_asignatura_carrera"
-            )
-        ]
-
-    def __str__(self):
-        return f"{self.asignatura} - {self.carrera}"
-
-
-class Docente(models.Model):
-    usuario = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="perfil_docente"
-    )
-    rut = models.CharField(max_length=12, unique=True)
-    nombres = models.CharField(max_length=120)
-    apellidos = models.CharField(max_length=120)
-    correo_institucional = models.EmailField(unique=True)
-    telefono = models.CharField(
-        max_length=30,
-        null=True,
-        blank=True
-    )
-    activo = models.BooleanField(default=True)
-
-    def __str__(self):
-        return f"{self.nombres} {self.apellidos}"
 
 
 class PeriodoAcademico(models.Model):
@@ -147,7 +45,7 @@ class PeriodoAcademico(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["anio", "tipo", "nombre"],
-                name="unique_periodo_academico"
+                name="unique_periodo_academico",
             )
         ]
 
@@ -155,61 +53,210 @@ class PeriodoAcademico(models.Model):
         return self.nombre
 
 
-class Seccion(models.Model):
-    periodo = models.ForeignKey(
-        PeriodoAcademico,
-        on_delete=models.CASCADE,
-        related_name="secciones"
+class Facultad(models.Model):
+    codigo = models.CharField(
+        max_length=60,
+        unique=True,
+        null=True,
+        blank=True,
     )
-    campus = models.ForeignKey(
-        Campus,
-        on_delete=models.CASCADE,
-        related_name="secciones"
+    nombre = models.CharField(max_length=160)
+    activo = models.BooleanField()
+
+    def __str__(self):
+        return self.nombre
+
+
+class Carrera(models.Model):
+    facultad = models.ForeignKey(
+        Facultad,
+        on_delete=models.PROTECT,
+        related_name="carreras",
     )
+    codigo = models.CharField(
+        max_length=30,
+        unique=True,
+        null=True,
+        blank=True,
+    )
+    nombre = models.CharField(max_length=180)
+    activo = models.BooleanField()
+
+    def __str__(self):
+        return self.nombre
+
+
+class UnidadAcademica(models.Model):
+    facultad = models.ForeignKey(
+        Facultad,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="unidades_academicas",
+    )
+
+    carrera = models.ForeignKey(
+        Carrera,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="unidades_academicas",
+    )
+
+    tipo = models.CharField(max_length=40)
+
+    nombre = models.CharField(max_length=180)
+
+    correo_oficial = models.CharField(
+        max_length=254,
+        null=True,
+        blank=True,
+    )
+
+    activo = models.BooleanField()
+
+    def __str__(self):
+        return self.nombre
+
+
+class Asignatura(models.Model):
+    codigo = models.CharField(
+    max_length=30,
+    unique=True,
+    null=True,
+    blank=True,
+    )
+    nombre = models.CharField(max_length=180)
+    activo = models.BooleanField()
+
+    carreras = models.ManyToManyField(
+        Carrera,
+        through="AsignaturaCarrera",
+        related_name="asignaturas",
+    )
+
+    def __str__(self):
+        return f"{self.codigo} - {self.nombre}"
+
+
+class AsignaturaCarrera(models.Model):
     asignatura = models.ForeignKey(
         Asignatura,
         on_delete=models.CASCADE,
-        related_name="secciones"
+        related_name="asignatura_carreras",
+    )
+    carrera = models.ForeignKey(
+        Carrera,
+        on_delete=models.CASCADE,
+        related_name="asignatura_carreras",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["asignatura", "carrera"],
+                name="unique_asignatura_carrera",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.asignatura} - {self.carrera}"
+
+
+class Docente(models.Model):
+    usuario = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="perfil_docente",
+    )
+
+    rut = models.CharField(
+        max_length=12,
+        unique=True,
+    )
+
+    nombres = models.CharField(max_length=120)
+
+    apellidos = models.CharField(max_length=120)
+
+    correo_institucional = models.CharField(
+        max_length=254,
+        unique=True,
+    )
+
+    telefono = models.CharField(
+        max_length=30,
+        null=True,
+        blank=True,
+    )
+
+    activo = models.BooleanField()
+
+    def __str__(self):
+        return f"{self.nombres} {self.apellidos}"
+
+
+class Seccion(models.Model):
+    periodo = models.ForeignKey(
+        PeriodoAcademico,
+        on_delete=models.PROTECT,
+        related_name="secciones",
+    )
+
+    campus = models.ForeignKey(
+        Campus,
+        on_delete=models.PROTECT,
+        related_name="secciones",
+    )
+
+    asignatura = models.ForeignKey(
+        Asignatura,
+        on_delete=models.PROTECT,
+        related_name="secciones",
     )
 
     nrc = models.CharField(max_length=20)
+
     seccion = models.CharField(max_length=20)
 
     jornada = models.CharField(
         max_length=40,
         null=True,
-        blank=True
+        blank=True,
     )
+
     horario = models.CharField(
         max_length=160,
         null=True,
-        blank=True
+        blank=True,
     )
 
     estado = models.CharField(max_length=20)
 
     fecha_consolidacion = models.DateTimeField(
         null=True,
-        blank=True
+        blank=True,
     )
 
     carreras = models.ManyToManyField(
         Carrera,
         through="SeccionCarrera",
-        related_name="secciones"
+        related_name="secciones",
     )
 
     docentes = models.ManyToManyField(
         Docente,
         through="SeccionDocente",
-        related_name="secciones"
+        related_name="secciones",
     )
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
                 fields=["periodo", "nrc"],
-                name="unique_periodo_nrc"
+                name="unique_periodo_nrc",
             )
         ]
 
@@ -221,33 +268,36 @@ class SeccionCarrera(models.Model):
     seccion = models.ForeignKey(
         Seccion,
         on_delete=models.CASCADE,
-        related_name="seccion_carreras"
+        related_name="seccion_carreras",
     )
+
     carrera = models.ForeignKey(
         Carrera,
         on_delete=models.CASCADE,
-        related_name="seccion_carreras"
+        related_name="seccion_carreras",
     )
 
     nivel = models.CharField(
         max_length=30,
         null=True,
-        blank=True
+        blank=True,
     )
+
     declaracion_as = models.BooleanField(
         null=True,
-        blank=True
+        blank=True,
     )
+
     estudiantes_planificados = models.IntegerField(
         null=True,
-        blank=True
+        blank=True,
     )
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
                 fields=["seccion", "carrera"],
-                name="unique_seccion_carrera"
+                name="unique_seccion_carrera",
             )
         ]
 
@@ -259,29 +309,31 @@ class SeccionDocente(models.Model):
     seccion = models.ForeignKey(
         Seccion,
         on_delete=models.CASCADE,
-        related_name="seccion_docentes"
+        related_name="seccion_docentes",
     )
+
     docente = models.ForeignKey(
         Docente,
         on_delete=models.CASCADE,
-        related_name="seccion_docentes"
+        related_name="seccion_docentes",
     )
 
     tipo_contrato = models.CharField(
         max_length=80,
         null=True,
-        blank=True
+        blank=True,
     )
+
     capacitado_as = models.BooleanField(
         null=True,
-        blank=True
+        blank=True,
     )
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
                 fields=["seccion", "docente"],
-                name="unique_seccion_docente"
+                name="unique_seccion_docente",
             )
         ]
 

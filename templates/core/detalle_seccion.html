@@ -3,8 +3,13 @@
 {% block content %}
 
 <h1>
-    {{ seccion.nombre }}
+    {{ seccion.asignatura.nombre }}
 </h1>
+
+<p>
+    Sección:
+    {{ seccion.seccion }}
+</p>
 
 <p>
     NRC:
@@ -12,8 +17,22 @@
 </p>
 
 <p>
-    Docente:
-    {{ seccion.docente.username }}
+    Período:
+    {{ seccion.periodo.nombre }}
+</p>
+
+<p>
+    Campus:
+    {{ seccion.campus.nombre }}
+</p>
+
+<p>
+    Docente{% if seccion.docentes.count != 1 %}s{% endif %}:
+    {% for docente in seccion.docentes.all %}
+        {{ docente.nombres }} {{ docente.apellidos }}{% if not forloop.last %}, {% endif %}
+    {% empty %}
+        Sin docente asignado
+    {% endfor %}
 </p>
 
 {% endblock %}

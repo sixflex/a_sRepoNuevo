@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block content %}
+{% block content_public %}
 <div class="container-fluid mt-4 mb-5">
     <div class="row">
         <div class="col-12">
@@ -43,22 +43,21 @@
                                     {{ hidden }}
                                 {% endfor %}
                                 
-                                <td class="text-center">{{ form.declaracion_as }}</td>
+                                <td class="text-center">{{ form.declara_as }}</td>
                                 <td>{{ form.nrc }}</td>
-                                <td>{{ form.campus }}</td>
-                                <td>{{ form.seccion }}</td>
+                                <td>{{ enlace.campus.nombre }}</td>
+                                <td>{{ form.codigo_seccion }}</td>
                                 <td>{{ form.asignatura }}</td>
                                 <td>{{ form.nivel }}</td>
                                 <td>{{ form.horario }}</td>
-                                <td>{{ form.estudiantes_planificados }}</td>
-                                <td>{{ form.docente }}</td>
+                                <td>{{ form.estudiantes }}</td>
+                                <td>{{ form.datos_docente }}</td>
                                 <td class="text-center">
                                     {% if form.instance.pk %}
                                         {{ form.DELETE }}
                                     {% endif %}
                                 </td>
                             </tr>
-                            <!-- Fila de errores por si hay fallos de validación -->
                             {% if form.errors %}
                             <tr>
                                 <td colspan="10" class="text-danger bg-light">
