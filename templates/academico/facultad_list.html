@@ -6,10 +6,12 @@
 
 <div class="container mt-4">
 
+    <!-- TÍTULO Y BOTÓN -->
     <div class="d-flex justify-content-between align-items-center mb-4">
 
         <div>
             <h2 class="fw-bold mb-1">Gestión de Facultades</h2>
+
             <p class="text-muted mb-0">
                 Administra las facultades registradas en el sistema.
             </p>
@@ -23,6 +25,7 @@
     </div>
 
 
+    <!-- TABLA -->
     <div class="card shadow-sm border-0">
 
         <div class="card-body">
@@ -33,7 +36,9 @@
 
                     <thead>
                         <tr>
+                            <th>Código</th>
                             <th>Nombre</th>
+                            <th>Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
@@ -44,10 +49,47 @@
 
                         <tr>
 
+                            <!-- CÓDIGO -->
+                            <td>
+                                {% if facultad.codigo %}
+                                    <span class="fw-semibold">
+                                        {{ facultad.codigo }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">
+                                        Sin código
+                                    </span>
+                                {% endif %}
+                            </td>
+
+
+                            <!-- NOMBRE -->
                             <td class="fw-semibold">
                                 {{ facultad.nombre }}
                             </td>
 
+
+                            <!-- ESTADO -->
+                            <td>
+
+                                {% if facultad.activo %}
+
+                                    <span class="badge bg-success">
+                                        Activa
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="badge bg-secondary">
+                                        Inactiva
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- ACCIONES -->
                             <td class="text-center">
 
                                 <a href="{% url 'facultad_update' facultad.id %}"
@@ -67,9 +109,11 @@
                         {% empty %}
 
                         <tr>
-                            <td colspan="2"
+                            <td colspan="4"
                                 class="text-center text-muted py-4">
+
                                 No hay facultades registradas.
+
                             </td>
                         </tr>
 
@@ -86,11 +130,14 @@
     </div>
 
 
+    <!-- VOLVER -->
     <div class="mt-4">
 
         <a href="{% url 'home' %}"
            class="btn btn-outline-secondary">
+
             ← Volver a Gestión Académica
+
         </a>
 
     </div>

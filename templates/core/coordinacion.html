@@ -1,183 +1,271 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+{% load static %}
 
-{% block title %}
-Coordinación A+S
-{% endblock %}
+{% block title %}Dashboard de Coordinación A+S | Universidad Autónoma de Chile{% endblock %}
 
 {% block content %}
+<style>
+    :root {
+        --ua-red: #C8232C;
+        --ua-red-hover: #A71C23;
+        --ua-card-bg: #FFFFFF;
+        --ua-border: #E5E7EB;
+        --ua-text-dark: #111827;
+        --ua-text-muted: #6B7280;
+    }
 
-<div class="container-fluid px-4">
+    .coord-header {
+        margin-bottom: 2rem;
+    }
+    .coord-title {
+        font-weight: 800;
+        color: var(--ua-text-dark);
+        font-size: 1.8rem;
+        letter-spacing: -0.02em;
+    }
+    .coord-subtitle {
+        color: var(--ua-text-muted);
+        font-size: 0.95rem;
+    }
 
-    <div class="mb-4">
+    /* Cards de Métricas Rápidas */
+    .metric-card {
+        background: var(--ua-card-bg);
+        border: 1px solid var(--ua-border);
+        border-radius: 10px;
+        padding: 1.25rem 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+    .metric-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--ua-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.25rem;
+    }
+    .metric-number {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--ua-text-dark);
+        line-height: 1.1;
+    }
+    .metric-icon-box {
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
+        background-color: #FDEDEE;
+        color: var(--ua-red);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+    }
 
-        <h2 class="fw-bold mb-1">
-            Panel de Coordinación
-        </h2>
+    /* Cards de Módulos Operativos */
+    .module-card {
+        background: var(--ua-card-bg);
+        border: 1px solid var(--ua-border);
+        border-radius: 12px;
+        padding: 1.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .module-badge {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--ua-red);
+        background: #FDEDEE;
+        padding: 4px 10px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        display: inline-block;
+        margin-bottom: 0.75rem;
+    }
+    .module-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--ua-text-dark);
+        margin-bottom: 0.5rem;
+    }
+    .module-desc {
+        font-size: 0.92rem;
+        color: var(--ua-text-muted);
+        line-height: 1.5;
+        margin-bottom: 1.5rem;
+    }
+    .btn-ua-action {
+        background-color: var(--ua-red);
+        color: #FFFFFF;
+        font-weight: 600;
+        font-size: 0.88rem;
+        padding: 9px 18px;
+        border-radius: 6px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: none;
+        transition: background-color 0.15s ease;
+        width: fit-content;
+    }
+    .btn-ua-action:hover {
+        background-color: var(--ua-red-hover);
+        color: #FFFFFF;
+    }
+    .btn-ua-outline-action {
+        background-color: transparent;
+        color: #374151;
+        border: 1px solid #D1D5DB;
+        font-weight: 600;
+        font-size: 0.88rem;
+        padding: 9px 18px;
+        border-radius: 6px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.15s ease;
+        width: fit-content;
+    }
+    .btn-ua-outline-action:hover {
+        background-color: #F3F4F6;
+        color: var(--ua-red);
+        border-color: var(--ua-red);
+    }
+</style>
 
-        <p class="text-muted mb-0">
-            Administración y seguimiento del Portal A+S.
-        </p>
-
+<div class="container-fluid py-2">
+    <!-- Encabezado de Sección -->
+    <div class="coord-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h2 class="coord-title mb-1">Panel de Coordinación A+S</h2>
+            <p class="coord-subtitle mb-0">Resumen operativo, seguimiento semestral y enlaces institucionales.</p>
+        </div>
+        <div>
+            <span class="badge bg-white border text-secondary px-3 py-2 rounded-2 fw-semibold">
+                <i class="bi bi-geo-alt-fill text-danger me-1"></i> Sede Santiago · Providencia
+            </span>
+        </div>
     </div>
 
+    <!-- 1. Métricas Principales (Grid de 4 Cards) -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="metric-card">
+                <div>
+                    <div class="metric-label">Secciones activas</div>
+                    <div class="metric-number">{{ total_secciones|default:"0" }}</div>
+                </div>
+                <div class="metric-icon-box">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                </div>
+            </div>
+        </div>
 
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="metric-card">
+                <div>
+                    <div class="metric-label">Docentes</div>
+                    <div class="metric-number">{{ total_docentes|default:"0" }}</div>
+                </div>
+                <div class="metric-icon-box">
+                    <i class="bi bi-person-badge"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="metric-card">
+                <div>
+                    <div class="metric-label">Asignaturas activas</div>
+                    <div class="metric-number">{{ total_asignaturas|default:"0" }}</div>
+                </div>
+                <div class="metric-icon-box">
+                    <i class="bi bi-book"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="metric-card">
+                <div>
+                    <div class="metric-label">Períodos académicos</div>
+                    <div class="metric-number">{{ total_periodos|default:"1" }}</div>
+                </div>
+                <div class="metric-icon-box">
+                    <i class="bi bi-calendar3"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Accesos Operativos Principales -->
+    <h4 class="fw-bold mb-3" style="font-size: 1.25rem; color: #111827;">Gestión Operativa</h4>
     <div class="row g-4">
-
-
-        <!-- GESTIÓN ACADÉMICA -->
-        <div class="col-md-6 col-xl-4">
-
-            <div class="card shadow-sm border-0 h-100">
-
-                <div class="card-body p-4">
-
-                    <h5 class="fw-bold">
-                        Gestión Académica
-                    </h5>
-
-                    <p class="text-muted">
-                        Administra sedes, campus, facultades,
-                        carreras, asignaturas, docentes,
-                        períodos y secciones.
-                    </p>
-
-                    <a
-                        href="{% url 'home' %}"
-                        class="btn btn-rojo">
-
-                        Ir a Gestión Académica
-
+        <!-- Gestión Académica -->
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="module-card">
+                <div>
+                    <span class="module-badge">Curricular</span>
+                    <h5 class="module-title">Gestión Académica</h5>
+                    <p class="module-desc">Consulta y administra la información curricular de asignaturas, secciones y nóminas requeridas para el desarrollo del programa A+S.</p>
+                </div>
+                <div>
+                    <a href="{% url 'home' %}" class="btn-ua-action">
+                        Ir a gestión académica <i class="bi bi-arrow-right"></i>
                     </a>
-
                 </div>
-
             </div>
-
         </div>
 
-
-        <!-- PLANIFICACIÓN -->
-        <div class="col-md-6 col-xl-4">
-
-            <div class="card shadow-sm border-0 h-100">
-
-                <div class="card-body p-4">
-
-                    <h5 class="fw-bold">
-                        Planificación Académica
-                    </h5>
-
-                    <p class="text-muted">
-                        Consulta las secciones registradas
-                        y localízalas mediante filtros.
-                    </p>
-
-                    <a
-                        href="{% url 'planificacion_list' %}"
-                        class="btn btn-rojo">
-
-                        Consultar Planificación
-
+        <!-- Planificación Académica (Sprint 2 - Enlaces de Dirección/Secretaría) -->
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="module-card border-top border-4 border-danger">
+                <div>
+                    <span class="module-badge">Planificación</span>
+                    <h5 class="module-title">Enlaces de Planificación</h5>
+                    <p class="module-desc">Genera enlaces individuales con vigencia para Dirección de Carrera y Secretaría de Estudios (SP2-T05).</p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{% url 'proyectos:gestionar_enlaces' %}" class="btn-ua-action">
+                        <i class="bi bi-link-45deg"></i> Gestionar enlaces
                     </a>
-
+                    <a href="{% url 'core:planificacion_coordinacion' %}" class="btn-ua-outline-action">
+                        Ver registros
+                    </a>
+                    </a>
                 </div>
-
             </div>
-
         </div>
 
-
-        <!-- SOCIOS -->
-        <div class="col-md-6 col-xl-4">
-
-            <div class="card shadow-sm border-0 h-100">
-
-                <div class="card-body p-4">
-
-                    <h5 class="fw-bold">
-                        Socios Comunitarios
-                    </h5>
-
-                    <p class="text-muted">
-                        Gestión e historial de Socios Comunitarios.
-                    </p>
-
-                    <button
-                        class="btn btn-outline-secondary"
-                        disabled>
-
-                        Próximamente
-
-                    </button>
-
+        <!-- Flujo Demostrable / Formularios -->
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="module-card">
+                <div>
+                    <span class="module-badge">Evaluación</span>
+                    <h5 class="module-title">Entorno Demostrable A+S</h5>
+                    <p class="module-desc">Configuración contextual y simulación de carga de proyectos y socios comunitarios para comisiones evaluadoras.</p>
                 </div>
-
-            </div>
-
-        </div>
-
-
-        <!-- FORMULARIOS -->
-        <div class="col-md-6 col-xl-4">
-
-            <div class="card shadow-sm border-0 h-100">
-
-                <div class="card-body p-4">
-
-                    <h5 class="fw-bold">
-                        Formularios
-                    </h5>
-
-                    <p class="text-muted">
-                        Administración de formularios A+S.
-                    </p>
-
-                    <button
-                        class="btn btn-outline-secondary"
-                        disabled>
-
-                        Próximamente
-
-                    </button>
-
+                <div>
+                    <a href="{% url 'proyectos:coordinador_contexto' %}" class="btn-ua-outline-action">
+                        Configurar contexto <i class="bi bi-sliders"></i>
+                    </a>
                 </div>
-
             </div>
-
         </div>
-
-
-        <!-- REPORTES -->
-        <div class="col-md-6 col-xl-4">
-
-            <div class="card shadow-sm border-0 h-100">
-
-                <div class="card-body p-4">
-
-                    <h5 class="fw-bold">
-                        Reportes
-                    </h5>
-
-                    <p class="text-muted">
-                        Indicadores, históricos y exportaciones.
-                    </p>
-
-                    <button
-                        class="btn btn-outline-secondary"
-                        disabled>
-
-                        Próximamente
-
-                    </button>
-
-                </div>
-
-            </div>
-
-        </div>
-
     </div>
-
 </div>
-
 {% endblock %}

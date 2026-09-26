@@ -4,11 +4,11 @@
 Planificación Académica | Portal A+S
 {% endblock %}
 
-
 {% block content %}
 
 <div class="container-fluid px-4">
 
+    <!-- ENCABEZADO -->
     <div class="mb-4">
 
         <h2 class="fw-bold mb-1">
@@ -35,18 +35,14 @@ Planificación Académica | Portal A+S
                     <!-- PERIODO -->
                     <div class="col-md-4 col-lg-2">
 
-                        <label
-                            for="periodo"
-                            class="form-label fw-semibold">
-
+                        <label for="periodo"
+                               class="form-label fw-semibold">
                             Período
-
                         </label>
 
-                        <select
-                            id="periodo"
-                            name="periodo"
-                            class="form-select">
+                        <select id="periodo"
+                                name="periodo"
+                                class="form-select">
 
                             <option value="">
                                 Todos
@@ -60,7 +56,8 @@ Planificación Académica | Portal A+S
                                         selected
                                     {% endif %}>
 
-                                    {{ periodo }}
+                                    {{ periodo.anio }} -
+                                    {{ periodo.tipo }}
 
                                 </option>
 
@@ -74,18 +71,14 @@ Planificación Académica | Portal A+S
                     <!-- CARRERA -->
                     <div class="col-md-4 col-lg-2">
 
-                        <label
-                            for="carrera"
-                            class="form-label fw-semibold">
-
+                        <label for="carrera"
+                               class="form-label fw-semibold">
                             Carrera
-
                         </label>
 
-                        <select
-                            id="carrera"
-                            name="carrera"
-                            class="form-select">
+                        <select id="carrera"
+                                name="carrera"
+                                class="form-select">
 
                             <option value="">
                                 Todas
@@ -113,18 +106,14 @@ Planificación Académica | Portal A+S
                     <!-- ASIGNATURA -->
                     <div class="col-md-4 col-lg-2">
 
-                        <label
-                            for="asignatura"
-                            class="form-label fw-semibold">
-
+                        <label for="asignatura"
+                               class="form-label fw-semibold">
                             Asignatura
-
                         </label>
 
-                        <select
-                            id="asignatura"
-                            name="asignatura"
-                            class="form-select">
+                        <select id="asignatura"
+                                name="asignatura"
+                                class="form-select">
 
                             <option value="">
                                 Todas
@@ -137,6 +126,10 @@ Planificación Académica | Portal A+S
                                     {% if filtros.asignatura == asignatura.id|stringformat:"s" %}
                                         selected
                                     {% endif %}>
+
+                                    {% if asignatura.codigo %}
+                                        {{ asignatura.codigo }} -
+                                    {% endif %}
 
                                     {{ asignatura.nombre }}
 
@@ -152,18 +145,14 @@ Planificación Académica | Portal A+S
                     <!-- DOCENTE -->
                     <div class="col-md-4 col-lg-2">
 
-                        <label
-                            for="docente"
-                            class="form-label fw-semibold">
-
+                        <label for="docente"
+                               class="form-label fw-semibold">
                             Docente
-
                         </label>
 
-                        <select
-                            id="docente"
-                            name="docente"
-                            class="form-select">
+                        <select id="docente"
+                                name="docente"
+                                class="form-select">
 
                             <option value="">
                                 Todos
@@ -177,7 +166,8 @@ Planificación Académica | Portal A+S
                                         selected
                                     {% endif %}>
 
-                                    {{ docente.nombre }}
+                                    {{ docente.nombres }}
+                                    {{ docente.apellidos }}
 
                                 </option>
 
@@ -191,12 +181,9 @@ Planificación Académica | Portal A+S
                     <!-- NRC -->
                     <div class="col-md-4 col-lg-2">
 
-                        <label
-                            for="nrc"
-                            class="form-label fw-semibold">
-
+                        <label for="nrc"
+                               class="form-label fw-semibold">
                             NRC
-
                         </label>
 
                         <input
@@ -211,24 +198,16 @@ Planificación Académica | Portal A+S
 
 
                     <!-- BOTONES -->
-                    <div
-                        class="col-md-4 col-lg-2
-                               d-flex align-items-end gap-2">
+                    <div class="col-md-4 col-lg-2 d-flex align-items-end gap-2">
 
-                        <button
-                            type="submit"
-                            class="btn btn-primary">
-
+                        <button type="submit"
+                                class="btn btn-rojo">
                             Filtrar
-
                         </button>
 
-                        <a
-                            href="{% url 'planificacion_list' %}"
-                            class="btn btn-outline-secondary">
-
+                        <a href="{% url 'planificacion_list' %}"
+                           class="btn btn-outline-secondary">
                             Limpiar
-
                         </a>
 
                     </div>
@@ -249,22 +228,20 @@ Planificación Académica | Portal A+S
 
             <div class="table-responsive">
 
-                <table
-                    class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0">
 
                     <thead>
 
                         <tr>
-
                             <th>Período</th>
                             <th>Carrera</th>
                             <th>Asignatura</th>
                             <th>NRC</th>
                             <th>Sección</th>
                             <th>Docente</th>
-                            <th>Sede</th>
-                            <th>Acción</th>
-
+                            <th>Campus / Sede</th>
+                            <th>Estado</th>
+                            <th class="text-center">Acción</th>
                         </tr>
 
                     </thead>
@@ -276,47 +253,149 @@ Planificación Académica | Portal A+S
 
                             <tr>
 
+                                <!-- PERIODO -->
                                 <td>
-                                    {{ seccion.periodo }}
+
+                                    <span class="fw-semibold">
+                                        {{ seccion.periodo.anio }}
+                                    </span>
+
+                                    <br>
+
+                                    <span class="text-muted small">
+                                        {{ seccion.periodo.tipo }}
+                                    </span>
+
                                 </td>
 
+
+                                <!-- CARRERAS -->
                                 <td>
-                                    {{ seccion.asignatura.carrera.nombre }}
+
+                                    {% for carrera in seccion.carreras.all %}
+
+                                        <span class="badge bg-light text-dark border mb-1">
+                                            {{ carrera.nombre }}
+                                        </span>
+
+                                    {% empty %}
+
+                                        <span class="text-muted small">
+                                            Sin carreras
+                                        </span>
+
+                                    {% endfor %}
+
                                 </td>
 
+
+                                <!-- ASIGNATURA -->
                                 <td>
+
+                                    {% if seccion.asignatura.codigo %}
+
+                                        <span class="fw-semibold">
+                                            {{ seccion.asignatura.codigo }}
+                                        </span>
+
+                                        <br>
+
+                                    {% endif %}
+
                                     {{ seccion.asignatura.nombre }}
+
                                 </td>
 
+
+                                <!-- NRC -->
                                 <td class="fw-semibold">
                                     {{ seccion.nrc }}
                                 </td>
 
+
+                                <!-- SECCIÓN -->
                                 <td>
-                                    <span
-                                        class="text-muted"
-                                        title="Campo pendiente de definición en el modelo académico">
-                                        —
+                                    {{ seccion.seccion }}
+                                </td>
+
+
+                                <!-- DOCENTES -->
+                                <td>
+
+                                    {% for docente in seccion.docentes.all %}
+
+                                        <div>
+                                            {{ docente.nombres }}
+                                            {{ docente.apellidos }}
+                                        </div>
+
+                                    {% empty %}
+
+                                        <span class="text-muted small">
+                                            Sin docentes
+                                        </span>
+
+                                    {% endfor %}
+
+                                </td>
+
+
+                                <!-- CAMPUS / SEDE -->
+                                <td>
+
+                                    <span class="fw-semibold">
+                                        {{ seccion.campus.nombre }}
                                     </span>
+
+                                    <br>
+
+                                    <span class="text-muted small">
+                                        {{ seccion.campus.sede.nombre }}
+                                    </span>
+
                                 </td>
 
+
+                                <!-- ESTADO -->
                                 <td>
-                                    {{ seccion.docente.nombre }}
+
+                                    {% if seccion.estado == "Activa" %}
+
+                                        <span class="badge bg-success">
+                                            Activa
+                                        </span>
+
+                                    {% elif seccion.estado == "Planificada" %}
+
+                                        <span class="badge bg-warning text-dark">
+                                            Planificada
+                                        </span>
+
+                                    {% elif seccion.estado == "Finalizada" %}
+
+                                        <span class="badge bg-secondary">
+                                            Finalizada
+                                        </span>
+
+                                    {% else %}
+
+                                        <span class="badge bg-light text-dark border">
+                                            {{ seccion.estado }}
+                                        </span>
+
+                                    {% endif %}
+
                                 </td>
 
-                                <td>
-                                    {{ seccion.sede.nombre }}
-                                </td>
 
                                 <!-- ACCIÓN -->
-                                <td>
-                                    <a
-                                        href="{% url 'planificacion_detail' seccion.id %}"
-                                        class="btn btn-sm btn-outline-primary">
+                                <td class="text-center">
 
+                                    <a href="{% url 'planificacion_detail' seccion.id %}"
+                                       class="btn btn-sm btn-outline-primary">
                                         Ver detalle
-
                                     </a>
+
                                 </td>
 
                             </tr>
@@ -325,8 +404,7 @@ Planificación Académica | Portal A+S
 
                             <tr>
 
-                                <td
-                                    colspan="8"
+                                <td colspan="9"
                                     class="text-center text-muted py-4">
 
                                     No se encontraron registros
@@ -347,6 +425,19 @@ Planificación Académica | Portal A+S
         </div>
 
     </div>
+    <!-- FIN CARD RESULTADOS -->
+
+
+    <!-- VOLVER -->
+    <div class="mt-4 mb-4">
+
+        <a href="{% url 'home' %}"
+           class="btn btn-outline-secondary">
+            ← Volver a Gestión Académica
+        </a>
+
+    </div>
+
 
 </div>
 

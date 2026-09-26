@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 
-{% block title %}Formulario Campus{% endblock %}
+{% block title %}
+    {% if campus %}Editar Campus{% else %}Nuevo Campus{% endif %}
+{% endblock %}
 
 {% block content %}
 
@@ -11,6 +13,7 @@
 
             <div class="card shadow-sm border-0">
 
+                <!-- ENCABEZADO -->
                 <div class="card-header bg-white border-bottom py-3">
 
                     <h4 class="mb-1 fw-bold">
@@ -22,11 +25,12 @@
                     </h4>
 
                     <p class="text-muted mb-0 small">
-                        Ingresa los datos correspondientes al campus.
+                        Ingresa los datos del campus y selecciona la sede a la que pertenece.
                     </p>
 
                 </div>
 
+                <!-- CONTENIDO -->
                 <div class="card-body p-4">
 
                     <!-- VALIDACIÓN -->
@@ -39,6 +43,43 @@
                     <form method="POST">
                         {% csrf_token %}
 
+                        <!-- SEDE -->
+                        <div class="mb-3">
+
+                            <label for="sede"
+                                   class="form-label fw-semibold">
+                                Sede
+                            </label>
+
+                            <select
+                                class="form-select"
+                                id="sede"
+                                name="sede"
+                                required>
+
+                                <option value="">
+                                    Seleccione una sede
+                                </option>
+
+                                {% for s in sedes %}
+                                    <option
+                                        value="{{ s.id }}"
+                                        {% if campus and campus.sede_id == s.id %}
+                                            selected
+                                        {% endif %}>
+                                        {{ s.nombre }}
+                                    </option>
+                                {% endfor %}
+
+                            </select>
+
+                            <div class="form-text">
+                                Selecciona la sede a la que pertenece este campus.
+                            </div>
+
+                        </div>
+
+                        <!-- NOMBRE -->
                         <div class="mb-3">
 
                             <label for="nombre"
@@ -52,11 +93,13 @@
                                 id="nombre"
                                 name="nombre"
                                 placeholder="Ej: Campus Providencia"
-                                value="{{ campus.nombre|default:'' }}">
+                                value="{{ campus.nombre|default:'' }}"
+                                required>
 
                         </div>
 
-                        <div class="mb-4">
+                        <!-- DIRECCIÓN -->
+                        <div class="mb-3">
 
                             <label for="direccion"
                                    class="form-label fw-semibold">
@@ -73,6 +116,33 @@
 
                         </div>
 
+                        <!-- ACTIVO -->
+                        <div class="mb-4">
+
+                            <div class="form-check">
+
+                                <input
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    id="activo"
+                                    name="activo"
+                                    {% if not campus or campus.activo %}checked{% endif %}>
+
+                                <label
+                                    class="form-check-label fw-semibold"
+                                    for="activo">
+                                    Campus activo
+                                </label>
+
+                            </div>
+
+                            <div class="form-text">
+                                Indica si el campus se encuentra disponible en el sistema.
+                            </div>
+
+                        </div>
+
+                        <!-- BOTONES -->
                         <div class="d-flex justify-content-between align-items-center">
 
                             <a href="{% url 'campus_list' %}"
@@ -80,9 +150,16 @@
                                 ← Volver
                             </a>
 
-                            <button type="submit"
-                                    class="btn btn-rojo px-4">
-                                Guardar
+                            <button
+                                type="submit"
+                                class="btn btn-rojo px-4">
+
+                                {% if campus %}
+                                    Guardar cambios
+                                {% else %}
+                                    Guardar
+                                {% endif %}
+
                             </button>
 
                         </div>
@@ -94,9 +171,9 @@
             </div>
 
         </div>
+
     </div>
 
 </div>
-
 
 {% endblock %}

@@ -24,22 +24,23 @@
 
 
                 <!-- CONTENIDO -->
-                <div class="card-body p-4">
+                <div class="alert alert-danger" role="alert">
 
-                    <div class="alert alert-danger" role="alert">
+    <h5 class="alert-heading fw-bold">
+        ¿Estás seguro?
+    </h5>
 
-                        <h5 class="alert-heading fw-bold">
-                            ¿Estás seguro?
-                        </h5>
+    <p class="mb-2">
+        Estás a punto de eliminar la sede
+        <strong>{{ sede.nombre }}</strong>.
+    </p>
 
-                        <p class="mb-0">
-                            Estás a punto de eliminar la sede
-                            <strong>{{ sede.nombre }}</strong>.
-                            Esta acción no se puede deshacer.
-                        </p>
+    <p class="mb-0">
+        Esta acción no se puede deshacer y puede eliminar
+        los campus asociados a esta sede.
+    </p>
 
-                    </div>
-
+</div>
 
                     <!-- BOTONES -->
                     <form method="POST">

@@ -10,12 +10,14 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold mb-1">Gestión de Sedes</h2>
+
             <p class="text-muted mb-0">
-                Administra las sedes asociadas a cada campus.
+                Administra las sedes disponibles en el sistema.
             </p>
         </div>
 
-        <a href="{% url 'sede_create' %}" class="btn btn-rojo">
+        <a href="{% url 'sede_create' %}"
+           class="btn btn-rojo">
             + Nueva Sede
         </a>
     </div>
@@ -34,7 +36,7 @@
                         <tr>
                             <th>Nombre</th>
                             <th>Ciudad</th>
-                            <th>Campus</th>
+                            <th>Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
@@ -45,18 +47,36 @@
 
                         <tr>
 
+                            <!-- NOMBRE -->
                             <td class="fw-semibold">
                                 {{ s.nombre }}
                             </td>
 
+                            <!-- CIUDAD -->
                             <td>
-                                {{ s.ciudad }}
+                                {% if s.ciudad %}
+                                    {{ s.ciudad }}
+                                {% else %}
+                                    <span class="text-muted">
+                                        Sin especificar
+                                    </span>
+                                {% endif %}
                             </td>
 
+                            <!-- ESTADO -->
                             <td>
-                                {{ s.campus.nombre }}
+                                {% if s.activo %}
+                                    <span class="badge bg-success">
+                                        Activa
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">
+                                        Inactiva
+                                    </span>
+                                {% endif %}
                             </td>
 
+                            <!-- ACCIONES -->
                             <td class="text-center">
 
                                 <a href="{% url 'sede_update' s.id %}"

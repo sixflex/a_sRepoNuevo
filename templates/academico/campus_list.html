@@ -8,16 +8,20 @@
 
     <!-- TÍTULO Y BOTÓN -->
     <div class="d-flex justify-content-between align-items-center mb-4">
+
         <div>
             <h2 class="fw-bold mb-1">Gestión de Campus</h2>
+
             <p class="text-muted mb-0">
-                Administra los campus registrados en el sistema.
+                Administra los campus y las sedes a las que pertenecen.
             </p>
         </div>
 
-        <a href="{% url 'campus_create' %}" class="btn btn-rojo">
+        <a href="{% url 'campus_create' %}"
+           class="btn btn-rojo">
             + Crear Campus
         </a>
+
     </div>
 
 
@@ -33,7 +37,9 @@
                     <thead>
                         <tr>
                             <th>Nombre</th>
+                            <th>Sede</th>
                             <th>Dirección</th>
+                            <th>Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
@@ -44,14 +50,53 @@
 
                         <tr>
 
+                            <!-- NOMBRE -->
                             <td class="fw-semibold">
                                 {{ c.nombre }}
                             </td>
 
+
+                            <!-- SEDE -->
                             <td>
-                                {{ c.direccion }}
+                                {{ c.sede.nombre }}
                             </td>
 
+
+                            <!-- DIRECCIÓN -->
+                            <td>
+
+                                {% if c.direccion %}
+                                    {{ c.direccion }}
+                                {% else %}
+                                    <span class="text-muted">
+                                        Sin especificar
+                                    </span>
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- ESTADO -->
+                            <td>
+
+                                {% if c.activo %}
+
+                                    <span class="badge bg-success">
+                                        Activo
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="badge bg-secondary">
+                                        Inactivo
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- ACCIONES -->
                             <td class="text-center">
 
                                 <a href="{% url 'campus_update' c.id %}"
@@ -71,12 +116,14 @@
                         {% empty %}
 
                         <tr>
-                            <td colspan="3"
+
+                            <td colspan="5"
                                 class="text-center text-muted py-4">
 
                                 No hay campus registrados.
 
                             </td>
+
                         </tr>
 
                         {% endfor %}

@@ -6,10 +6,12 @@
 
 <div class="container mt-4">
 
+    <!-- TÍTULO Y BOTÓN -->
     <div class="d-flex justify-content-between align-items-center mb-4">
 
         <div>
             <h2 class="fw-bold mb-1">Gestión de Carreras</h2>
+
             <p class="text-muted mb-0">
                 Administra las carreras y sus facultades asociadas.
             </p>
@@ -23,6 +25,7 @@
     </div>
 
 
+    <!-- TABLA -->
     <div class="card shadow-sm border-0">
 
         <div class="card-body">
@@ -33,8 +36,10 @@
 
                     <thead>
                         <tr>
+                            <th>Código</th>
                             <th>Nombre</th>
                             <th>Facultad</th>
+                            <th>Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
@@ -45,20 +50,59 @@
 
                         <tr>
 
+                            <!-- CÓDIGO -->
+                            <td>
+
+                                {% if carrera.codigo %}
+
+                                    <span class="fw-semibold">
+                                        {{ carrera.codigo }}
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="text-muted">
+                                        Sin código
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- NOMBRE -->
                             <td class="fw-semibold">
                                 {{ carrera.nombre }}
                             </td>
 
+
+                            <!-- FACULTAD -->
                             <td>
-                                {% if carrera.facultad %}
-                                    {{ carrera.facultad.nombre }}
-                                {% else %}
-                                    <span class="text-muted">
-                                        Sin facultad
-                                    </span>
-                                {% endif %}
+                                {{ carrera.facultad.nombre }}
                             </td>
 
+
+                            <!-- ESTADO -->
+                            <td>
+
+                                {% if carrera.activo %}
+
+                                    <span class="badge bg-success">
+                                        Activa
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="badge bg-secondary">
+                                        Inactiva
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <!-- ACCIONES -->
                             <td class="text-center">
 
                                 <a href="{% url 'carrera_update' carrera.id %}"
@@ -78,10 +122,14 @@
                         {% empty %}
 
                         <tr>
-                            <td colspan="3"
+
+                            <td colspan="5"
                                 class="text-center text-muted py-4">
+
                                 No hay carreras registradas.
+
                             </td>
+
                         </tr>
 
                         {% endfor %}
@@ -97,11 +145,16 @@
     </div>
 
 
+    <!-- VOLVER -->
     <div class="mt-4">
+
         <a href="{% url 'home' %}"
            class="btn btn-outline-secondary">
+
             ← Volver a Gestión Académica
+
         </a>
+
     </div>
 
 </div>

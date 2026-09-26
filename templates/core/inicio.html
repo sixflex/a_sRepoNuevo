@@ -1,1 +1,640 @@
-ECHO est� activado.
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<!-- Google Fonts: Inter y Montserrat para tipografía exacta del mockup -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+
+<style>
+    /* Ocultar barra superior genérica del layout base solo en la portada */
+    header, .navbar-dark.bg-danger {
+        display: none !important;
+    }
+
+    :root {
+        --ua-red: #C8232C;
+        --ua-red-hover: #A71C23;
+        --ua-light-red-bg: #FDEDEE;
+        --ua-text-title: #111827;
+        --ua-text-body: #4B5563;
+        --ua-text-muted: #6B7280;
+        --ua-border: #E5E7EB;
+        --ua-card-bg: #FFFFFF;
+        --ua-page-bg: #F9FAFB;
+    }
+
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        background-color: var(--ua-page-bg) !important;
+        color: var(--ua-text-body) !important;
+        margin: 0;
+        padding: 0;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Inter', sans-serif !important;
+        font-weight: 700;
+        color: var(--ua-text-title);
+    }
+
+    /* 1. Navbar Oficial UA */
+    .ua-navbar {
+        background: #FFFFFF;
+        border-bottom: 1px solid var(--ua-border);
+        padding: 12px 0;
+    }
+    .ua-search-input {
+        background-color: #F3F4F6;
+        border-radius: 9999px;
+        border: 1px solid transparent;
+        font-size: 0.9rem;
+        padding-left: 2.75rem;
+        transition: all 0.2s ease;
+    }
+    .ua-search-input:focus {
+        background-color: #FFFFFF;
+        border-color: #D1D5DB;
+        box-shadow: 0 0 0 3px rgba(200, 35, 44, 0.15);
+    }
+    .ua-nav-link {
+        font-size: 0.92rem;
+        font-weight: 500;
+        color: #374151;
+        text-decoration: none;
+        transition: color 0.15s ease;
+    }
+    .ua-nav-link:hover {
+        color: var(--ua-red);
+    }
+    .ua-nav-link.active {
+        color: var(--ua-red);
+        font-weight: 600;
+    }
+
+    /* 2. Hero Section */
+    .ua-hero {
+        position: relative;
+        background: #FFFFFF;
+        padding: 60px 0 50px 0;
+        text-align: center;
+        overflow: hidden;
+    }
+    .ua-hero::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: radial-gradient(circle at center, rgba(200, 35, 44, 0.03) 0%, rgba(255,255,255,0) 70%);
+        pointer-events: none;
+    }
+    .ua-badge-model {
+        background-color: #FDF2F2;
+        color: var(--ua-red);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 6px 14px;
+        border-radius: 4px;
+        display: inline-block;
+        margin-bottom: 18px;
+    }
+    .ua-hero-title {
+        font-size: 3rem;
+        font-weight: 800;
+        color: #111827;
+        margin-bottom: 8px;
+        letter-spacing: -0.02em;
+    }
+    .ua-hero-subtitle {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--ua-red);
+        margin-bottom: 16px;
+    }
+    .ua-hero-desc {
+        color: var(--ua-text-muted);
+        font-size: 1.05rem;
+        max-width: 650px;
+        margin: 0 auto 28px auto;
+    }
+    .btn-ua-hero {
+        background-color: var(--ua-red);
+        color: #FFFFFF;
+        font-weight: 700;
+        font-size: 0.85rem;
+        letter-spacing: 0.04em;
+        padding: 12px 28px;
+        border-radius: 6px;
+        border: none;
+        text-transform: uppercase;
+        transition: background-color 0.15s ease;
+    }
+    .btn-ua-hero:hover {
+        background-color: var(--ua-red-hover);
+        color: #FFFFFF;
+    }
+
+    /* 3. Cards Estilo Figma */
+    .mockup-card {
+        background: #FFFFFF;
+        border: 1px solid #EEF0F2;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .icon-bubble {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        background-color: var(--ua-light-red-bg);
+        color: var(--ua-red);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+    }
+    .list-action-item {
+        display: flex;
+        align-items: center;
+        color: #374151;
+        font-size: 0.93rem;
+        font-weight: 500;
+        text-decoration: none;
+        padding: 9px 0;
+        transition: color 0.15s ease;
+    }
+    .list-action-item:hover {
+        color: var(--ua-red);
+    }
+    .list-action-item i {
+        color: var(--ua-red);
+        font-size: 0.8rem;
+        margin-right: 12px;
+        font-weight: bold;
+    }
+    .btn-ua-outline-tag {
+        color: var(--ua-red);
+        border: 1.5px solid var(--ua-red);
+        background: transparent;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        padding: 8px 16px;
+        border-radius: 6px;
+        text-transform: uppercase;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.15s ease;
+    }
+    .btn-ua-outline-tag:hover {
+        background: var(--ua-red);
+        color: #FFFFFF;
+    }
+
+    /* 4. Métricas y Estadísticas */
+    .metric-bubble {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--ua-light-red-bg);
+        color: var(--ua-red);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.95rem;
+        margin-bottom: 6px;
+    }
+    .macro-number {
+        color: var(--ua-red);
+        font-size: 2.1rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    /* 5. Noticias y Documentos */
+    .news-card-img {
+        height: 190px;
+        object-fit: cover;
+        width: 100%;
+    }
+    .news-date {
+        font-size: 0.78rem;
+        color: var(--ua-text-muted);
+        font-weight: 500;
+    }
+    .doc-card {
+        background: #FFFFFF;
+        border: 1px solid #EEF0F2;
+        border-radius: 8px;
+        padding: 14px 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        text-decoration: none;
+        transition: border-color 0.15s ease;
+    }
+    .doc-card:hover {
+        border-color: #D1D5DB;
+    }
+
+    /* 6. Footer Oficial */
+    .ua-footer {
+        background-color: #16181B;
+        color: #9CA3AF;
+        font-size: 0.9rem;
+        padding: 60px 0 25px 0;
+    }
+    .ua-footer-title {
+        color: #FFFFFF;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 18px;
+    }
+    .ua-footer-link {
+        color: #9CA3AF;
+        text-decoration: none;
+        display: block;
+        margin-bottom: 10px;
+        transition: color 0.15s ease;
+    }
+    .ua-footer-link:hover {
+        color: #FFFFFF;
+    }
+</style>
+
+<!-- ============================================================ -->
+<!-- 1. BARRA DE NAVEGACIÓN SUPERIOR (OFICIAL UA)                 -->
+<!-- ============================================================ -->
+<nav class="ua-navbar sticky-top">
+    <div class="container d-flex align-items-center justify-content-between">
+        <!-- Logo Institucional Oficial UA (Escudo y Tipografía) -->
+        <a href="{% url 'core:inicio' %}" class="d-flex align-items-center text-decoration-none">
+            <div class="d-flex align-items-stretch" style="height: 52px;">
+                <!-- Escudo Rojo UA Oficial SVG -->
+                <div style="background-color: #C8232C; width: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px; border-radius: 3px 0 0 3px;">
+                    <span style="color: rgba(255,255,255,0.7); font-size: 5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">DUC IN ALTUM</span>
+                    <span style="color: #FFFFFF; font-size: 19px; font-weight: 900; font-family: 'Inter', sans-serif; line-height: 1.1;">UA</span>
+                </div>
+                <!-- Bloque Gris Tipográfico Oficial -->
+                <div style="background-color: #2F3235; color: #FFFFFF; display: flex; flex-direction: column; justify-content: center; padding: 0 12px; border-radius: 0 3px 3px 0;">
+                    <div style="font-size: 10px; font-weight: 800; letter-spacing: 0.8px; line-height: 1.15; text-transform: uppercase;">UNIVERSIDAD</div>
+                    <div style="font-size: 10px; font-weight: 800; letter-spacing: 0.8px; line-height: 1.15; text-transform: uppercase;">AUTONOMA</div>
+                    <div style="font-size: 7.5px; font-weight: 500; letter-spacing: 1.4px; line-height: 1.15; text-transform: uppercase; color: #D1D5DB;">DE CHILE</div>
+                </div>
+            </div>
+        </a>
+
+        <!-- Barra de Búsqueda Central del Mockup -->
+        <div class="d-none d-md-block position-relative" style="width: 440px;">
+            <i class="bi bi-search position-absolute top-50 translate-middle-y text-muted" style="left: 18px;"></i>
+            <input type="text" class="form-control ua-search-input w-100" placeholder="Buscar proyectos, carreras, documentos...">
+        </div>
+
+        <!-- Enlaces de Navegación -->
+        <div class="d-flex align-items-center gap-4">
+            <a href="{% url 'core:inicio' %}" class="ua-nav-link active">Portal Público</a>
+            <a href="{% url 'usuarios:login' %}" class="ua-nav-link">Inicio de Sesión</a>
+            <a href="#" class="ua-nav-link">Ayuda</a>
+        </div>
+    </div>
+</nav>
+
+<!-- ============================================================ -->
+<!-- 2. HERO PRINCIPAL A+S                                         -->
+<!-- ============================================================ -->
+<section class="ua-hero">
+    <div class="container position-relative">
+        <span class="ua-badge-model">MODELO EDUCATIVO A+S</span>
+        <h1 class="ua-hero-title">Vinculación con el Medio UA</h1>
+        <div class="ua-hero-subtitle">Aprendizaje + Servicio (A+S)</div>
+        <p class="ua-hero-desc">Conectando la academia con las comunidades de Chile</p>
+        <a href="#proyectos" class="btn btn-ua-hero shadow-sm">
+            EXPLORAR PROYECTOS
+        </a>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 3. ACCESOS DIRECTOS (ESTUDIANTES Y SOCIOS)                   -->
+<!-- ============================================================ -->
+<section class="container py-5">
+    <h3 class="fw-bold mb-4" style="font-size: 1.4rem;">Accesos Directos</h3>
+    <div class="row g-4">
+        <!-- Tarjeta Estudiantes -->
+        <div class="col-12 col-md-6">
+            <div class="mockup-card p-4 h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="icon-bubble">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <h4 class="mb-0 fw-bold" style="font-size: 1.25rem;">Portal Estudiantes</h4>
+                    </div>
+                    <div class="py-2">
+                        <a href="{% url 'proyectos:formulario_prueba' %}" class="list-action-item">
+                            <i class="bi bi-chevron-right"></i> Solicitar Carta de Presentación
+                        </a>
+                        <a href="{% url 'proyectos:formulario_prueba' %}" class="list-action-item">
+                            <i class="bi bi-chevron-right"></i> Registrar Socio Comunitario
+                        </a>
+                        <a href="#" class="list-action-item">
+                            <i class="bi bi-chevron-right"></i> Encuesta de Evaluación A+S
+                        </a>
+                        <a href="#" class="list-action-item">
+                            <i class="bi bi-chevron-right"></i> Consultar Estado de Trámites
+                        </a>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 pt-3 flex-wrap">
+                    <a href="#documentos" class="btn-ua-outline-tag">FORMATOS OFICIALES</a>
+                    <a href="#documentos" class="btn-ua-outline-tag">GUÍAS METODOLÓGICAS</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta Socios Comunitarios -->
+        <div class="col-12 col-md-6">
+            <div class="mockup-card p-4 h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="icon-bubble">
+                            <i class="bi bi-handshake-fill"></i>
+                        </div>
+                        <h4 class="mb-0 fw-bold" style="font-size: 1.25rem;">Portal Socios Comunitarios</h4>
+                    </div>
+                    <div class="py-2">
+                        <a href="#" class="list-action-item">
+                            <i class="bi bi-chevron-right"></i> Postulación vía Formulario
+                        </a>
+                        <a href="#" class="list-action-item">
+                            <i class="bi bi-chevron-right"></i> Catálogo de Proyectos Disponibles
+                        </a>
+                        <a href="#" class="list-action-item">
+                            <i class="bi bi-chevron-right"></i> Confirmar Asistencia a Reunión
+                        </a>
+                        <a href="#" class="list-action-item">
+                            <i class="bi bi-chevron-right"></i> Encuesta de Satisfacción
+                        </a>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 pt-3 flex-wrap">
+                    <a href="#" class="btn-ua-outline-tag">OFERTAS SEMESTRALES</a>
+                    <a href="#" class="btn-ua-outline-tag">PROYECTOS ICÓNICOS</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 4. IMPACTO TERRITORIAL Y MÉTRICAS (MOCKUP EXACTO)             -->
+<!-- ============================================================ -->
+<section id="proyectos" class="container pb-5">
+    <div class="mb-3">
+        <h3 class="fw-bold mb-1" style="font-size: 1.4rem;">Nuestro Impacto Territorial</h3>
+        <p class="text-muted small mb-0">Visualiza los proyectos activos de Vinculación con el Medio y A+S en las distintas comunas</p>
+    </div>
+
+    <!-- Mapa Simulado Calibrado -->
+    <div class="mockup-card overflow-hidden mb-3 position-relative" style="height: 380px; background: #e6edf2;">
+        <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1600&auto=format&fit=crop" 
+             alt="Mapa Territorial Santiago" 
+             style="width: 100%; height: 100%; object-fit: cover; opacity: 0.55; filter: contrast(1.15);">
+        
+        <!-- Puntos simulados de calor territorial -->
+        <div style="position: absolute; top: 40%; left: 45%; width: 140px; height: 140px; background: radial-gradient(circle, rgba(200,35,44,0.65) 0%, rgba(245,158,11,0.4) 50%, rgba(255,255,255,0) 75%); border-radius: 50%;"></div>
+        <div style="position: absolute; top: 32%; left: 55%; width: 180px; height: 180px; background: radial-gradient(circle, rgba(245,158,11,0.7) 0%, rgba(239,68,68,0.4) 45%, rgba(255,255,255,0) 75%); border-radius: 50%;"></div>
+        <div style="position: absolute; top: 50%; left: 48%; width: 90px; height: 90px; background: radial-gradient(circle, rgba(200,35,44,0.8) 0%, rgba(255,255,255,0) 70%); border-radius: 50%;"></div>
+
+        <div class="position-absolute bottom-0 start-0 m-3 px-3 py-2 bg-white rounded-2 shadow-sm border small fw-semibold text-secondary">
+            <i class="bi bi-geo-alt-fill text-danger me-1"></i> Sede Santiago · Providencia / El Llano Subercaseaux
+        </div>
+    </div>
+
+    <!-- 3 Cards de Métricas Inferiores -->
+    <div class="row g-3">
+        <div class="col-12 col-md-4">
+            <div class="mockup-card p-3 text-center">
+                <div class="metric-bubble"><i class="bi bi-mortarboard-fill"></i></div>
+                <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">1,250+</div>
+                <div class="text-muted small">Estudiantes Participantes</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="mockup-card p-3 text-center">
+                <div class="metric-bubble"><i class="bi bi-geo-alt-fill"></i></div>
+                <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">85</div>
+                <div class="text-muted small">Comunas Alcanzadas</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="mockup-card p-3 text-center">
+                <div class="metric-bubble"><i class="bi bi-layers-fill"></i></div>
+                <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">320</div>
+                <div class="text-muted small">Proyectos Ejecutados</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 5. CIFRAS MACRO DEL PROGRAMA A+S                             -->
+<!-- ============================================================ -->
+<section class="container pb-5">
+    <h3 class="fw-bold mb-3" style="font-size: 1.35rem;">Cifras Macro del Programa A+S</h3>
+    <div class="row g-3">
+        <div class="col-6 col-md-3">
+            <div class="mockup-card p-4 d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="macro-number">156</div>
+                    <div class="text-muted small mt-1">Total Asignaturas A+S</div>
+                </div>
+                <i class="bi bi-book fs-3 text-muted opacity-50"></i>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="mockup-card p-4 d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="macro-number">42</div>
+                    <div class="text-muted small mt-1">Carreras Participantes</div>
+                </div>
+                <i class="bi bi-award fs-3 text-muted opacity-50"></i>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="mockup-card p-4 d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="macro-number">8</div>
+                    <div class="text-muted small mt-1">Facultades Involucradas</div>
+                </div>
+                <i class="bi bi-shield fs-3 text-muted opacity-50"></i>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="mockup-card p-4 d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="macro-number">95</div>
+                    <div class="text-muted small mt-1">Socios Comunitarios Activos</div>
+                </div>
+                <i class="bi bi-briefcase fs-3 text-muted opacity-50"></i>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 6. NOTICIAS Y RECURSOS                                       -->
+<!-- ============================================================ -->
+<section class="container pb-5">
+    <h3 class="fw-bold mb-3" style="font-size: 1.35rem;">Noticias y Recursos</h3>
+    <div class="row g-4">
+        <!-- Noticia 1 -->
+        <div class="col-12 col-md-4">
+            <div class="mockup-card h-100 overflow-hidden d-flex flex-column">
+                <img src="https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=600&auto=format&fit=crop" class="news-card-img" alt="Reunión UA">
+                <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
+                    <div>
+                        <div class="news-date mb-2">14 Mar, 2025</div>
+                        <h5 class="fw-bold mb-2" style="font-size: 1.05rem;">Lanzamiento de Proyectos de Vinculación con el Medio UA 2025</h5>
+                        <p class="text-muted small mb-3">La Universidad Autónoma de Chile oficializa el inicio de los proyectos A+S con una participación récord de socios comunitarios locales.</p>
+                    </div>
+                    <a href="#" class="text-danger fw-semibold small text-decoration-none">Leer más &gt;</a>
+                </div>
+            </div>
+        </div>
+        <!-- Noticia 2 -->
+        <div class="col-12 col-md-4">
+            <div class="mockup-card h-100 overflow-hidden d-flex flex-column">
+                <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?q=80&w=600&auto=format&fit=crop" class="news-card-img" alt="Salud UA">
+                <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
+                    <div>
+                        <div class="news-date mb-2">10 Mar, 2025</div>
+                        <h5 class="fw-bold mb-2" style="font-size: 1.05rem;">Estudiantes de Salud UA impactan positivamente en comunas vulnerables</h5>
+                        <p class="text-muted small mb-3">Operativos integrales de salud liderados bajo la metodología A+S logran excelente recepción por parte de juntas vecinales territoriales.</p>
+                    </div>
+                    <a href="#" class="text-danger fw-semibold small text-decoration-none">Leer más &gt;</a>
+                </div>
+            </div>
+        </div>
+        <!-- Noticia 3 -->
+        <div class="col-12 col-md-4">
+            <div class="mockup-card h-100 overflow-hidden d-flex flex-column">
+                <img src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=600&auto=format&fit=crop" class="news-card-img" alt="Guía A+S">
+                <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
+                    <div>
+                        <div class="news-date mb-2">05 Mar, 2025</div>
+                        <h5 class="fw-bold mb-2" style="font-size: 1.05rem;">Nueva Guía de Buenas Prácticas Metodológicas A+S</h5>
+                        <p class="text-muted small mb-3">Publicamos el documento integrador que asiste a los académicos en la formulación de evaluaciones con enfoque de servicio comunitario.</p>
+                    </div>
+                    <a href="#" class="text-danger fw-semibold small text-decoration-none">Leer más &gt;</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 7. DOCUMENTOS DESCARGABLES                                   -->
+<!-- ============================================================ -->
+<section id="documentos" class="container pb-5">
+    <h3 class="fw-bold mb-3" style="font-size: 1.35rem;">Documentos Descargables</h3>
+    <div class="row g-3">
+        <div class="col-12 col-md-3">
+            <a href="#" class="doc-card">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="bi bi-file-earmark-pdf text-danger fs-4"></i>
+                    <div>
+                        <div class="fw-semibold text-dark small">Guía de Reflexión A+S</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">PDF (1.2 MB)</div>
+                    </div>
+                </div>
+                <i class="bi bi-download text-muted"></i>
+            </a>
+        </div>
+        <div class="col-12 col-md-3">
+            <a href="#" class="doc-card">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="bi bi-file-earmark-pdf text-danger fs-4"></i>
+                    <div>
+                        <div class="fw-semibold text-dark small">Reglamento A+S</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">PDF (1.2 MB)</div>
+                    </div>
+                </div>
+                <i class="bi bi-download text-muted"></i>
+            </a>
+        </div>
+        <div class="col-12 col-md-3">
+            <a href="#" class="doc-card">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="bi bi-file-earmark-pdf text-danger fs-4"></i>
+                    <div>
+                        <div class="fw-semibold text-dark small">Infografía del Modelo</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">PDF (1.2 MB)</div>
+                    </div>
+                </div>
+                <i class="bi bi-download text-muted"></i>
+            </a>
+        </div>
+        <div class="col-12 col-md-3">
+            <a href="#" class="doc-card">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="bi bi-file-earmark-pdf text-danger fs-4"></i>
+                    <div>
+                        <div class="fw-semibold text-dark small">Formato Convenio</div>
+                        <div class="text-muted" style="font-size: 0.72rem;">PDF (1.2 MB)</div>
+                    </div>
+                </div>
+                <i class="bi bi-download text-muted"></i>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 8. FOOTER OFICIAL UA                                         -->
+<!-- ============================================================ -->
+<footer class="ua-footer">
+    <div class="container">
+        <div class="row g-4 pb-4">
+            <div class="col-12 col-md-5">
+                <!-- Logo versión Footer -->
+                <div class="d-flex align-items-stretch mb-3" style="height: 48px; width: fit-content;">
+                    <div style="background-color: #C8232C; width: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3px; border-radius: 3px 0 0 3px;">
+                        <span style="color: rgba(255,255,255,0.7); font-size: 4px; font-weight: 700; letter-spacing: 0.5px;">DUC IN ALTUM</span>
+                        <span style="color: #FFFFFF; font-size: 16px; font-weight: 900; line-height: 1.1;">UA</span>
+                    </div>
+                    <div style="background-color: #383B3E; color: #FFFFFF; display: flex; flex-direction: column; justify-content: center; padding: 0 12px; border-radius: 0 3px 3px 0;">
+                        <div style="font-size: 9px; font-weight: 800; letter-spacing: 0.8px; line-height: 1.15;">UNIVERSIDAD AUTONOMA</div>
+                        <div style="font-size: 7px; font-weight: 500; letter-spacing: 1.2px; line-height: 1.15; color: #9CA3AF;">DE CHILE</div>
+                    </div>
+                </div>
+                <p class="small text-muted pe-md-4">
+                    Portal Integrado de Gestión e Información A+S. Fortaleciendo el aprendizaje de nuestros estudiantes mediante el servicio activo a nuestras comunidades.
+                </p>
+            </div>
+            <div class="col-4 col-md-2">
+                <div class="ua-footer-title">PORTAL</div>
+                <a href="{% url 'core:inicio' %}" class="ua-footer-link">Inicio</a>
+                <a href="#proyectos" class="ua-footer-link">Proyectos</a>
+            </div>
+            <div class="col-4 col-md-2">
+                <div class="ua-footer-title">ACCESOS</div>
+                <a href="{% url 'proyectos:formulario_prueba' %}" class="ua-footer-link">Estudiantes</a>
+                <a href="#" class="ua-footer-link">Socios</a>
+            </div>
+            <div class="col-4 col-md-3">
+                <div class="ua-footer-title">CONTACTO</div>
+                <div class="small text-muted mb-2">contacto@uautonoma.cl</div>
+                <div class="small text-muted">+56 2 2303 6000</div>
+            </div>
+        </div>
+        <div class="border-top border-secondary pt-3 mt-2 d-flex justify-content-between flex-wrap text-muted small" style="border-color: #26292D !important; font-size: 0.78rem;">
+            <div>Política de Protección de Datos (Ley 19.628)</div>
+            <div>© 2026 Universidad Autónoma de Chile. Todos los derechos reservados.</div>
+        </div>
+    </div>
+</footer>
+{% endblock %}
