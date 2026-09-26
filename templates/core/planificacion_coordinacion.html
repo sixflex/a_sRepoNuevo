@@ -1,121 +1,104 @@
 {% extends "base.html" %}
 
 {% block title %}
-Planificación A+S | Portal A+S
+Planificaciones recibidas | Portal A+S
 {% endblock %}
 
 {% block content %}
 
 <div class="container-fluid">
-
     <div class="mb-4">
-        <h1 class="h3 fw-bold">Planificación A+S</h1>
-
+        <h1 class="h3 fw-bold">Planificaciones recibidas</h1>
         <p class="text-muted">
-            Consulta las planificaciones académicas recibidas para las actividades A+S.
+            Formularios enviados mediante enlaces individuales de planificación A+S.
         </p>
     </div>
 
     <div class="card shadow-sm border-0">
         <div class="card-body">
 
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                    <h2 class="h5 fw-bold mb-1">
-                        Planificaciones recibidas
-                    </h2>
-
-                    <p class="text-muted mb-0">
-                        Planificaciones enviadas mediante los enlaces de planificación.
-                    </p>
-                </div>
-            </div>
-
             {% if planificaciones %}
-
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-
-                    <thead class="table-light">
-                        <tr>
-                            <th>Carrera</th>
-                            <th>Campus</th>
-                            <th>Período</th>
-                            <th>Destinatario</th>
-                            <th>Filas</th>
-                            <th>Estado</th>
-                            <th>Fecha de envío</th>
-                            <th>Acción</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-
-                        {% for planificacion in planificaciones %}
-
-                        <tr>
-                            <td>
-                                {{ planificacion.unidad_carrera.nombre }}
-                            </td>
-
-                            <td>
-                                {{ planificacion.campus.nombre }}
-                            </td>
-
-                            <td>
-                                {{ planificacion.periodo.nombre }}
-                            </td>
-
-                            <td>
-                                {{ planificacion.destinatario_correo }}
-                            </td>
-
-                            <td>
-                                {{ planificacion.filas.count }}
-                            </td>
-
-                            <td>
-                                {% if planificacion.estado == "FINAL" %}
-                                    <span class="badge bg-success">
-                                        Enviada
-                                    </span>
-                                {% else %}
-                                    <span class="badge bg-secondary">
-                                        Borrador
-                                    </span>
-                                {% endif %}
-                            </td>
-
-                            <td>
-                                {% if planificacion.fecha_envio %}
-                                    {{ planificacion.fecha_envio|date:"d/m/Y H:i" }}
-                                {% else %}
-                                    —
-                                {% endif %}
-                            </td>
-                            <td>
-                                <a
-                                    href="{% url 'core:detalle_planificacion_coordinacion' planificacion.id %}"
-                                    class="btn btn-sm btn-outline-primary"
-                                >
-                                    Ver detalle
-                                </a>
-                            </td>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Unidad</th>
+                                <th>Sede / Campus</th>
+                                <th>Período</th>
+                                <th>Destinatario</th>
+                                <th>Filas</th>
+                                <th>Estado</th>
+                                <th>Fecha envío final</th>
+                                <th>Acción</th>
                             </tr>
+                        </thead>
 
-                        {% endfor %}
+                        <tbody>
+                            {% for planificacion in planificaciones %}
+                                <tr>
+                                    <td>
+                                        {{ planificacion.enlace.unidad_academica.nombre }}
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ planificacion.enlace.unidad_academica.tipo }}
+                                        </small>
+                                    </td>
 
-                    </tbody>
+                                    <td>
+                                        {{ planificacion.enlace.campus.sede.nombre }}
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ planificacion.enlace.campus.nombre }}
+                                        </small>
+                                    </td>
 
-                </table>
-            </div>
+                                    <td>
+                                        {{ planificacion.enlace.periodo.nombre }}
+                                    </td>
 
+                                    <td>
+                                        {{ planificacion.enlace.destinatario_nombre }}
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ planificacion.enlace.destinatario_correo }}
+                                        </small>
+                                    </td>
+
+                                    <td>{{ planificacion.filas_recibidas }}</td>
+
+                                    <td>
+                                        {% if planificacion.estado == "FINAL" %}
+                                            <span class="badge bg-success">Enviada</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Borrador</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        {% if planificacion.fecha_envio_final %}
+                                            {{ planificacion.fecha_envio_final|date:"d/m/Y H:i" }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        <a
+                                            href="{% url 'core:detalle_planificacion_coordinacion' planificacion.id %}"
+                                            class="btn btn-sm btn-outline-primary"
+                                        >
+                                            Ver detalle
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             {% else %}
-
-                <div class="alert alert-light border mt-3">
+                <div class="alert alert-light border">
                     Aún no existen planificaciones registradas.
                 </div>
-
             {% endif %}
 
             <div class="mt-4">
@@ -126,10 +109,8 @@ Planificación A+S | Portal A+S
                     Volver al dashboard
                 </a>
             </div>
-
         </div>
     </div>
-
 </div>
 
 {% endblock %}

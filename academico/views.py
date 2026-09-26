@@ -51,48 +51,6 @@ def sede_create(request):
     if request.method == "POST":
         nombre = request.POST.get("nombre", "").strip()
         ciudad = request.POST.get("ciudad", "").strip()
-
-        if not nombre:
-            error = "El nombre de la sede es obligatorio."
-
-        elif Sede.objects.filter(nombre__iexact=nombre).exists():
-            error = "Ya existe una sede con ese nombre."
-
-        else:
-            Sede.objects.create(
-                nombre=nombre,
-                ciudad=ciudad or None,
-            )
-
-            return redirect("sede_list")
-
-    return render(
-        request,
-        "academico/sede_form.html",
-        {
-            "error": error,
-        },
-    )
-
-
-@coordinador_required
-def sede_list(request):
-    sedes = Sede.objects.all().order_by("nombre")
-
-    return render(
-        request,
-        "academico/sede_list.html",
-        {"sedes": sedes},
-    )
-
-
-@coordinador_required
-def sede_create(request):
-    error = None
-
-    if request.method == "POST":
-        nombre = request.POST.get("nombre", "").strip()
-        ciudad = request.POST.get("ciudad", "").strip()
         activo = request.POST.get("activo") == "on"
 
         if not nombre:

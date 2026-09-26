@@ -15,60 +15,44 @@ Detalle de Planificación | Portal A+S
         </p>
     </div>
 
-    <!-- DATOS GENERALES -->
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body">
-
-            <h2 class="h5 fw-bold mb-3">
-                Información general
-            </h2>
+            <h2 class="h5 fw-bold mb-3">Información general</h2>
 
             <div class="row">
-
                 <div class="col-md-4 mb-3">
-                    <strong>Carrera</strong>
+                    <strong>Unidad académica</strong>
                     <div>
-                        {{ planificacion.unidad_carrera.nombre }}
+                        {{ planificacion.enlace.unidad_academica.nombre }}
                     </div>
+                    <small class="text-muted">
+                        {{ planificacion.enlace.unidad_academica.tipo }}
+                    </small>
                 </div>
 
                 <div class="col-md-4 mb-3">
                     <strong>Campus</strong>
-                    <div>
-                        {{ planificacion.campus.nombre }}
-                    </div>
+                    <div>{{ planificacion.enlace.campus.nombre }}</div>
                 </div>
 
                 <div class="col-md-4 mb-3">
                     <strong>Sede</strong>
-                    <div>
-                        {{ planificacion.campus.sede.nombre }}
-                    </div>
+                    <div>{{ planificacion.enlace.campus.sede.nombre }}</div>
                 </div>
 
                 <div class="col-md-4 mb-3">
                     <strong>Período</strong>
-                    <div>
-                        {{ planificacion.periodo.nombre }}
-                    </div>
+                    <div>{{ planificacion.enlace.periodo.nombre }}</div>
                 </div>
 
                 <div class="col-md-4 mb-3">
                     <strong>Destinatario</strong>
-                    <div>
-                        {% if planificacion.enlace %}
-                            {{ planificacion.enlace.destinatario_nombre }}
-                        {% else %}
-                            —
-                        {% endif %}
-                    </div>
+                    <div>{{ planificacion.enlace.destinatario_nombre }}</div>
                 </div>
 
                 <div class="col-md-4 mb-3">
                     <strong>Correo</strong>
-                    <div>
-                        {{ planificacion.destinatario_correo }}
-                    </div>
+                    <div>{{ planificacion.enlace.destinatario_correo }}</div>
                 </div>
 
                 <div class="col-md-4 mb-3">
@@ -85,108 +69,120 @@ Detalle de Planificación | Portal A+S
                 <div class="col-md-4 mb-3">
                     <strong>Fecha de envío</strong>
                     <div>
-                        {% if planificacion.fecha_envio %}
-                            {{ planificacion.fecha_envio|date:"d/m/Y H:i" }}
+                        {% if planificacion.fecha_envio_final %}
+                            {{ planificacion.fecha_envio_final|date:"d/m/Y H:i" }}
                         {% else %}
                             —
                         {% endif %}
                     </div>
                 </div>
 
+                <div class="col-md-4 mb-3">
+                    <strong>Resumen</strong>
+                    <div>
+                        Recibidas: {{ planificacion.filas_recibidas }} ·
+                        Aceptadas: {{ planificacion.filas_aceptadas }} ·
+                        Observadas: {{ planificacion.filas_observadas }}
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-
-    <!-- FILAS DE LA PLANIFICACIÓN -->
     <div class="card shadow-sm border-0">
-
         <div class="card-body">
-
-            <h2 class="h5 fw-bold mb-3">
-                Secciones informadas
-            </h2>
+            <h2 class="h5 fw-bold mb-3">Secciones informadas</h2>
 
             {% if filas %}
-
                 <div class="table-responsive">
-
-                    <table class="table table-hover align-middle">
-
+                    <table class="table table-hover align-middle small">
                         <thead class="table-light">
                             <tr>
+                                <th>Fila</th>
+                                <th>Facultad</th>
+                                <th>Carrera</th>
                                 <th>A+S</th>
                                 <th>NRC</th>
+                                <th>Campus</th>
                                 <th>Sección</th>
                                 <th>Asignatura</th>
                                 <th>Nivel</th>
+                                <th>Jornada</th>
                                 <th>Horario</th>
                                 <th>Estudiantes</th>
-                                <th>Docente</th>
+                                <th>Posible SC</th>
+                                <th>Docentes</th>
                                 <th>Validación</th>
                             </tr>
                         </thead>
 
                         <tbody>
-
                             {% for fila in filas %}
-
                                 <tr>
-
+                                    <td>{{ fila.numero_fila }}</td>
+                                    <td>{{ fila.facultad_texto|default:"—" }}</td>
+                                    <td>{{ fila.carrera_texto|default:"—" }}</td>
                                     <td>
-                                        {% if fila.declara_as %}
+                                        {% if fila.declaracion_as is True %}
                                             Sí
-                                        {% else %}
+                                        {% elif fila.declaracion_as is False %}
                                             No
+                                        {% else %}
+                                            —
                                         {% endif %}
                                     </td>
-
                                     <td>{{ fila.nrc }}</td>
+                                    <td>{{ fila.campus_texto|default:"—" }}</td>
+                                    <td>{{ fila.seccion }}</td>
+                                    <td>{{ fila.asignatura_texto }}</td>
+                                    <td>{{ fila.nivel|default:"—" }}</td>
+                                    <td>{{ fila.jornada|default:"—" }}</td>
+                                    <td>{{ fila.horario|default:"—" }}</td>
+                                    <td>{{ fila.estudiantes_planificados|default:"—" }}</td>
+                                    <td>{{ fila.posible_socio_texto|default:"—" }}</td>
 
                                     <td>
-                                        {{ fila.codigo_seccion }}
+                                        {% for docente in fila.docentes.all %}
+                                            <div class="mb-2">
+                                                <strong>{{ docente.nombre|default:"Sin nombre" }}</strong>
+                                                {% if docente.rut %}
+                                                    · {{ docente.rut }}
+                                                {% endif %}
+                                                <br>
+                                                <small class="text-muted">
+                                                    {{ docente.correo|default:"Sin correo" }}
+                                                    {% if docente.tipo_contrato %}
+                                                        · {{ docente.tipo_contrato }}
+                                                    {% endif %}
+                                                    {% if docente.telefono %}
+                                                        · {{ docente.telefono }}
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                        {% empty %}
+                                            —
+                                        {% endfor %}
                                     </td>
 
                                     <td>
-                                        {{ fila.asignatura }}
-                                    </td>
+                                        {{ fila.estado_validacion|default:"PENDIENTE" }}
 
-                                    <td>
-                                        {{ fila.nivel }}
+                                        {% for error in fila.errores.all %}
+                                            <div class="text-danger small mt-1">
+                                                {{ error.campo|default:"Fila" }}:
+                                                {{ error.mensaje }}
+                                            </div>
+                                        {% endfor %}
                                     </td>
-
-                                    <td>
-                                        {{ fila.horario }}
-                                    </td>
-
-                                    <td>
-                                        {{ fila.estudiantes }}
-                                    </td>
-
-                                    <td>
-                                        {{ fila.datos_docente|default:"—" }}
-                                    </td>
-
-                                    <td>
-                                        {{ fila.get_estado_validacion_display }}
-                                    </td>
-
                                 </tr>
-
                             {% endfor %}
-
                         </tbody>
-
                     </table>
-
                 </div>
-
             {% else %}
-
                 <div class="alert alert-light border">
                     Esta planificación no contiene secciones informadas.
                 </div>
-
             {% endif %}
 
             <div class="mt-4">
@@ -197,11 +193,8 @@ Detalle de Planificación | Portal A+S
                     Volver a planificaciones
                 </a>
             </div>
-
         </div>
-
     </div>
-
 </div>
 
 {% endblock %}

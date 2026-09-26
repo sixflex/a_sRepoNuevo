@@ -12,9 +12,9 @@ from academico.models import (
     Seccion,
 )
 
+
 @login_required
 def inicio(request):
-
     if es_coordinador(request.user):
         return redirect("core:coordinacion")
 
@@ -26,7 +26,6 @@ def inicio(request):
 
 @coordinador_required
 def panel_coordinacion(request):
-
     total_secciones = Seccion.objects.filter(
         estado__iexact="Activo"
     ).count()
@@ -50,18 +49,16 @@ def panel_coordinacion(request):
         .first()
     )
 
-    contexto = {
-        "total_secciones": total_secciones,
-        "total_docentes": total_docentes,
-        "total_asignaturas": total_asignaturas,
-        "total_periodos": total_periodos,
-        "periodo_actual": periodo_actual,
-    }
-
     return render(
         request,
         "core/coordinacion.html",
-        contexto,
+        {
+            "total_secciones": total_secciones,
+            "total_docentes": total_docentes,
+            "total_asignaturas": total_asignaturas,
+            "total_periodos": total_periodos,
+            "periodo_actual": periodo_actual,
+        },
     )
 
 
@@ -73,27 +70,31 @@ def planificacion_coordinacion(request):
         Planificacion.objects
         .select_related(
             "enlace",
-            "campus__sede",
-            "periodo",
-            "unidad_carrera",
+            "enlace__campus",
+            "enlace__campus__sede",
+            "enlace__periodo",
+            "enlace__unidad_academica",
+            "enlace__unidad_academica__facultad",
+            "enlace__unidad_academica__carrera",
         )
-        .prefetch_related("filas")
-        .order_by("-fecha_envio", "-id")
+        .prefetch_related(
+            "filas__docentes",
+            "filas__errores",
+        )
+        .order_by("-fecha_envio_final", "-id")
     )
-
-    contexto = {
-        "planificaciones": planificaciones,
-    }
 
     return render(
         request,
         "core/planificacion_coordinacion.html",
-        contexto,
+        {
+            "planificaciones": planificaciones,
+        },
     )
+
 
 @docente_required
 def panel_docente(request):
-
     secciones = (
         Seccion.objects
         .filter(docentes__usuario=request.user)
@@ -101,6 +102,7 @@ def panel_docente(request):
             "asignatura",
             "periodo",
             "campus",
+            "campus__sede",
         )
         .distinct()
     )
@@ -116,13 +118,13 @@ def panel_docente(request):
 
 @login_required
 def detalle_seccion(request, seccion_id):
-
     seccion = get_object_or_404(
         Seccion.objects
         .select_related(
             "asignatura",
             "periodo",
             "campus",
+            "campus__sede",
         )
         .prefetch_related("docentes"),
         id=seccion_id,
@@ -132,7 +134,6 @@ def detalle_seccion(request, seccion_id):
         pass
 
     elif es_docente(request.user):
-
         pertenece_al_docente = seccion.docentes.filter(
             usuario=request.user
         ).exists()
@@ -151,31 +152,43 @@ def detalle_seccion(request, seccion_id):
         },
     )
 
+
 @coordinador_required
-def detalle_planificacion_coordinacion(request, planificacion_id):
+def detalle_planificacion_coordinacion(
+    request,
+    planificacion_id,
+):
     from planificacion.models import Planificacion
 
     planificacion = get_object_or_404(
         Planificacion.objects
         .select_related(
             "enlace",
-            "campus__sede",
-            "periodo",
-            "unidad_carrera",
+            "enlace__campus",
+            "enlace__campus__sede",
+            "enlace__periodo",
+            "enlace__unidad_academica",
+            "enlace__unidad_academica__facultad",
+            "enlace__unidad_academica__carrera",
         )
-        .prefetch_related("filas"),
+        .prefetch_related(
+            "filas__docentes",
+            "filas__errores",
+        ),
         id=planificacion_id,
     )
 
-    filas = planificacion.filas.all().order_by("id")
-
-    contexto = {
-        "planificacion": planificacion,
-        "filas": filas,
-    }
+    filas = (
+        planificacion.filas.all()
+        .prefetch_related("docentes", "errores")
+        .order_by("numero_fila", "id")
+    )
 
     return render(
         request,
         "core/detalle_planificacion_coordinacion.html",
-        contexto,
+        {
+            "planificacion": planificacion,
+            "filas": filas,
+        },
     )
