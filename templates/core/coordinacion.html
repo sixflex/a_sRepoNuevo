@@ -246,25 +246,48 @@
                     <a href="{% url 'core:planificacion_coordinacion' %}" class="btn-ua-outline-action">
                         Ver registros
                     </a>
-                    </a>
                 </div>
             </div>
         </div>
 
         <!-- Flujo Demostrable / Formularios -->
+        <!-- CONSULTA DE PLANIFICACIÓN ACADÉMICA -->
         <div class="col-12 col-md-6 col-xl-4">
+
             <div class="module-card">
+
                 <div>
-                    <span class="module-badge">Evaluación</span>
-                    <h5 class="module-title">Entorno Demostrable A+S</h5>
-                    <p class="module-desc">Configuración contextual y simulación de carga de proyectos y socios comunitarios para comisiones evaluadoras.</p>
+
+                    <span class="module-badge">
+                        Consulta
+                    </span>
+
+                    <h5 class="module-title">
+                        Planificación Académica
+                    </h5>
+
+                    <p class="module-desc">
+                        Consulta las secciones académicas registradas
+                        y filtra por período, carrera, asignatura,
+                        NRC y docente.
+                    </p>
+
                 </div>
+
                 <div>
-                    <a href="{% url 'proyectos:coordinador_contexto' %}" class="btn-ua-outline-action">
-                        Configurar contexto <i class="bi bi-sliders"></i>
+
+                    <a href="{% url 'planificacion_list' %}"
+                    class="btn-ua-action">
+
+                        <i class="bi bi-search"></i>
+                        Consultar planificación
+
                     </a>
+
                 </div>
+
             </div>
+
         </div>
     </div>
 </div>

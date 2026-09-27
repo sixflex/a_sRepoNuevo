@@ -238,3 +238,70 @@ class PermisosTestCase(TestCase):
             response.status_code,
             302,
         )
+
+    def test_docente_no_puede_acceder_gestion_academica(self):
+        self.client.force_login(self.docente1_usuario)
+
+        response = self.client.get(
+            reverse("home")
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+
+    def test_docente_no_puede_acceder_planificacion_academica(self):
+        self.client.force_login(self.docente1_usuario)
+
+        response = self.client.get(
+            reverse("planificacion_list")
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+
+    def test_coordinador_puede_acceder_planificacion_academica(self):
+        self.client.force_login(self.coordinador)
+
+        response = self.client.get(
+            reverse("planificacion_list")
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+
+    def test_usuario_sin_rol_no_puede_entrar_al_portal_interno(self):
+        User = get_user_model()
+
+        usuario = User.objects.create_user(
+            username="sin_rol",
+            password="Prueba1234",
+        )
+
+        self.client.force_login(usuario)
+
+        response = self.client.get(
+            reverse("core:inicio")
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+
+    def test_anonimo_no_accede_a_planificacion_academica(self):
+        response = self.client.get(
+            reverse("planificacion_list")
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(
+            reverse("usuarios:login"),
+            response.url,
+        )
+
+    def test_docente_no_puede_gestionar_enlaces_planificacion(self):
+        self.client.force_login(self.docente1_usuario)
+
+        response = self.client.get(
+            reverse("proyectos:gestionar_enlaces")
+        )
+
+        self.assertEqual(response.status_code, 403)
