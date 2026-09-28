@@ -1,0 +1,557 @@
+<!-- PLANIFICACIÓN ACADÉMICA -->
+{% extends "base.html" %}
+
+{% block title %}
+Detalle de Planificación | Portal A+S
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-4">
+
+    <!-- ENCABEZADO -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h2 class="fw-bold mb-1">
+                Detalle de Planificación
+            </h2>
+
+            <p class="text-muted mb-0">
+                Información académica de la sección seleccionada.
+            </p>
+
+        </div>
+
+        <a href="{% url 'planificacion_list' %}"
+           class="btn btn-outline-secondary">
+            ← Volver a planificación
+        </a>
+
+    </div>
+
+
+    <!-- INFORMACIÓN GENERAL -->
+    <div class="card shadow-sm border-0 mb-4">
+
+        <div class="card-header bg-white border-bottom py-3">
+
+            <h5 class="fw-bold mb-0">
+                Información de la sección
+            </h5>
+
+        </div>
+
+        <div class="card-body p-4">
+
+            <div class="row g-4">
+
+                <!-- PERIODO -->
+                <div class="col-md-6">
+
+                    <small class="text-muted">
+                        Período
+                    </small>
+
+                    <p class="fw-semibold mb-0">
+                        {{ seccion.periodo.anio }} -
+                        {{ seccion.periodo.tipo }}
+                    </p>
+
+                    {% if seccion.periodo.nombre %}
+                        <small class="text-muted">
+                            {{ seccion.periodo.nombre }}
+                        </small>
+                    {% endif %}
+
+                </div>
+
+
+                <!-- ESTADO -->
+                <div class="col-md-6">
+
+                    <small class="text-muted d-block mb-1">
+                        Estado
+                    </small>
+
+                    {% if seccion.estado == "Activa" %}
+
+                        <span class="badge bg-success">
+                            Activa
+                        </span>
+
+                    {% elif seccion.estado == "Planificada" %}
+
+                        <span class="badge bg-warning text-dark">
+                            Planificada
+                        </span>
+
+                    {% elif seccion.estado == "Finalizada" %}
+
+                        <span class="badge bg-secondary">
+                            Finalizada
+                        </span>
+
+                    {% else %}
+
+                        <span class="badge bg-light text-dark border">
+                            {{ seccion.estado }}
+                        </span>
+
+                    {% endif %}
+
+                </div>
+
+
+                <!-- ASIGNATURA -->
+                <div class="col-md-6">
+
+                    <small class="text-muted">
+                        Asignatura
+                    </small>
+
+                    <p class="fw-semibold mb-0">
+
+                        {% if seccion.asignatura.codigo %}
+                            {{ seccion.asignatura.codigo }} -
+                        {% endif %}
+
+                        {{ seccion.asignatura.nombre }}
+
+                    </p>
+
+                </div>
+
+
+                <!-- NRC -->
+                <div class="col-md-3">
+
+                    <small class="text-muted">
+                        NRC
+                    </small>
+
+                    <p class="fw-semibold mb-0">
+                        {{ seccion.nrc }}
+                    </p>
+
+                </div>
+
+
+                <!-- SECCIÓN -->
+                <div class="col-md-3">
+
+                    <small class="text-muted">
+                        Sección
+                    </small>
+
+                    <p class="fw-semibold mb-0">
+                        {{ seccion.seccion }}
+                    </p>
+
+                </div>
+
+
+                <!-- JORNADA -->
+                <div class="col-md-6">
+
+                    <small class="text-muted">
+                        Jornada
+                    </small>
+
+                    <p class="fw-semibold mb-0">
+
+                        {% if seccion.jornada %}
+                            {{ seccion.jornada }}
+                        {% else %}
+                            <span class="text-muted">
+                                No especificada
+                            </span>
+                        {% endif %}
+
+                    </p>
+
+                </div>
+
+
+                <!-- HORARIO -->
+                <div class="col-md-6">
+
+                    <small class="text-muted">
+                        Horario
+                    </small>
+
+                    <p class="fw-semibold mb-0">
+
+                        {% if seccion.horario %}
+                            {{ seccion.horario }}
+                        {% else %}
+                            <span class="text-muted">
+                                No especificado
+                            </span>
+                        {% endif %}
+
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- UBICACIÓN -->
+    <div class="card shadow-sm border-0 mb-4">
+
+        <div class="card-header bg-white border-bottom py-3">
+
+            <h5 class="fw-bold mb-0">
+                Ubicación académica
+            </h5>
+
+        </div>
+
+        <div class="card-body p-4">
+
+            <div class="row g-4">
+
+                <!-- SEDE -->
+                <div class="col-md-6">
+
+                    <small class="text-muted">
+                        Sede
+                    </small>
+
+                    <p class="fw-semibold mb-0">
+                        {{ seccion.campus.sede.nombre }}
+                    </p>
+
+                </div>
+
+
+                <!-- CAMPUS -->
+                <div class="col-md-6">
+
+                    <small class="text-muted">
+                        Campus
+                    </small>
+
+                    <p class="fw-semibold mb-0">
+                        {{ seccion.campus.nombre }}
+                    </p>
+
+                </div>
+
+
+                <!-- DIRECCIÓN -->
+                <div class="col-md-6">
+
+                    <small class="text-muted">
+                        Dirección
+                    </small>
+
+                    <p class="fw-semibold mb-0">
+
+                        {% if seccion.campus.direccion %}
+                            {{ seccion.campus.direccion }}
+                        {% else %}
+                            <span class="text-muted">
+                                No registrada
+                            </span>
+                        {% endif %}
+
+                    </p>
+
+                </div>
+
+
+                <!-- CIUDAD -->
+                <div class="col-md-6">
+
+                    <small class="text-muted">
+                        Ciudad
+                    </small>
+
+                    <p class="fw-semibold mb-0">
+
+                        {% if seccion.campus.sede.ciudad %}
+                            {{ seccion.campus.sede.ciudad }}
+                        {% else %}
+                            <span class="text-muted">
+                                No registrada
+                            </span>
+                        {% endif %}
+
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- CARRERAS -->
+    <div class="card shadow-sm border-0 mb-4">
+
+        <div class="card-header bg-white border-bottom py-3">
+
+            <h5 class="fw-bold mb-0">
+                Carreras asociadas
+            </h5>
+
+        </div>
+
+        <div class="card-body p-4">
+
+            {% for relacion in seccion.seccion_carreras.all %}
+
+                <div class="border rounded p-3 mb-3">
+
+                    <div class="row g-3">
+
+                        <!-- CARRERA -->
+                        <div class="col-md-6">
+
+                            <small class="text-muted">
+                                Carrera
+                            </small>
+
+                            <p class="fw-semibold mb-0">
+
+                                {% if relacion.carrera.codigo %}
+                                    {{ relacion.carrera.codigo }} -
+                                {% endif %}
+
+                                {{ relacion.carrera.nombre }}
+
+                            </p>
+
+                        </div>
+
+
+                        <!-- FACULTAD -->
+                        <div class="col-md-6">
+
+                            <small class="text-muted">
+                                Facultad
+                            </small>
+
+                            <p class="fw-semibold mb-0">
+                                {{ relacion.carrera.facultad.nombre }}
+                            </p>
+
+                        </div>
+
+
+                        <!-- NIVEL -->
+                        <div class="col-md-4">
+
+                            <small class="text-muted">
+                                Nivel
+                            </small>
+
+                            <p class="fw-semibold mb-0">
+                                {{ relacion.nivel|default:"No especificado" }}
+                            </p>
+
+                        </div>
+
+
+                        <!-- DECLARACIÓN A+S -->
+                        <div class="col-md-4">
+
+                            <small class="text-muted">
+                                Declaración A+S
+                            </small>
+
+                            <p class="fw-semibold mb-0">
+
+                                {% if relacion.declaracion_as == True %}
+                                    Sí
+                                {% elif relacion.declaracion_as == False %}
+                                    No
+                                {% else %}
+                                    No especificada
+                                {% endif %}
+
+                            </p>
+
+                        </div>
+
+
+                        <!-- ESTUDIANTES -->
+                        <div class="col-md-4">
+
+                            <small class="text-muted">
+                                Estudiantes planificados
+                            </small>
+
+                            <p class="fw-semibold mb-0">
+                                {{ relacion.estudiantes_planificados|default_if_none:"No especificado" }}
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% empty %}
+
+                <div class="text-muted">
+                    No existen carreras asociadas a esta sección.
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+
+    <!-- DOCENTES -->
+    <div class="card shadow-sm border-0 mb-4">
+
+        <div class="card-header bg-white border-bottom py-3">
+
+            <h5 class="fw-bold mb-0">
+                Docentes asociados
+            </h5>
+
+        </div>
+
+        <div class="card-body p-4">
+
+            {% for relacion in seccion.seccion_docentes.all %}
+
+                <div class="border rounded p-3 mb-3">
+
+                    <div class="row g-3">
+
+                        <!-- DOCENTE -->
+                        <div class="col-md-6">
+
+                            <small class="text-muted">
+                                Docente
+                            </small>
+
+                            <p class="fw-semibold mb-0">
+                                {{ relacion.docente.nombres }}
+                                {{ relacion.docente.apellidos }}
+                            </p>
+
+                        </div>
+
+
+                        <!-- RUT -->
+                        <div class="col-md-6">
+
+                            <small class="text-muted">
+                                RUT
+                            </small>
+
+                            <p class="fw-semibold mb-0">
+                                {{ relacion.docente.rut }}
+                            </p>
+
+                        </div>
+
+
+                        <!-- CORREO -->
+                        <div class="col-md-6">
+
+                            <small class="text-muted">
+                                Correo institucional
+                            </small>
+
+                            <p class="fw-semibold mb-0">
+                                {{ relacion.docente.correo_institucional }}
+                            </p>
+
+                        </div>
+
+
+                        <!-- TELÉFONO -->
+                        <div class="col-md-6">
+
+                            <small class="text-muted">
+                                Teléfono
+                            </small>
+
+                            <p class="fw-semibold mb-0">
+                                {{ relacion.docente.telefono|default:"No registrado" }}
+                            </p>
+
+                        </div>
+
+
+                        <!-- TIPO CONTRATO -->
+                        <div class="col-md-6">
+
+                            <small class="text-muted">
+                                Tipo de contrato
+                            </small>
+
+                            <p class="fw-semibold mb-0">
+                                {{ relacion.tipo_contrato|default:"No especificado" }}
+                            </p>
+
+                        </div>
+
+
+                        <!-- CAPACITADO A+S -->
+                        <div class="col-md-6">
+
+                            <small class="text-muted">
+                                Capacitado A+S
+                            </small>
+
+                            <p class="fw-semibold mb-0">
+
+                                {% if relacion.capacitado_as == True %}
+                                    Sí
+                                {% elif relacion.capacitado_as == False %}
+                                    No
+                                {% else %}
+                                    No especificado
+                                {% endif %}
+
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% empty %}
+
+                <div class="text-muted">
+                    No existen docentes asociados a esta sección.
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+
+    <!-- VOLVER -->
+    <div class="mb-4">
+
+        <a href="{% url 'planificacion_list' %}"
+           class="btn btn-outline-secondary">
+            ← Volver a planificación
+        </a>
+
+    </div>
+
+</div>
+
+{% endblock %}

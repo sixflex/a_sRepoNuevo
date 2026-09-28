@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>
+    {{ seccion.asignatura.nombre }}
+</h1>
+
+<p>
+    Sección:
+    {{ seccion.seccion }}
+</p>
+
+<p>
+    NRC:
+    {{ seccion.nrc }}
+</p>
+
+<p>
+    Período:
+    {{ seccion.periodo.nombre }}
+</p>
+
+<p>
+    Campus:
+    {{ seccion.campus.nombre }}
+</p>
+
+<p>
+    Docente{% if seccion.docentes.count != 1 %}s{% endif %}:
+    {% for docente in seccion.docentes.all %}
+        {{ docente.nombres }} {{ docente.apellidos }}{% if not forloop.last %}, {% endif %}
+    {% empty %}
+        Sin docente asignado
+    {% endfor %}
+</p>
+
+{% endblock %}

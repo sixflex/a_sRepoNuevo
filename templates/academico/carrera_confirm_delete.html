@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}Eliminar Carrera{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+
+            <div class="card shadow-sm border-0">
+
+                <!-- ENCABEZADO -->
+                <div class="card-header bg-white border-bottom py-3">
+
+                    <h4 class="mb-1 fw-bold">
+                        Eliminar Carrera
+                    </h4>
+
+                    <p class="text-muted mb-0 small">
+                        Confirma la eliminación de la carrera seleccionada.
+                    </p>
+
+                </div>
+
+                <!-- CONTENIDO -->
+                <div class="card-body p-4">
+
+                    <div class="alert alert-danger" role="alert">
+
+                        <h5 class="alert-heading fw-bold">
+                            ¿Estás seguro?
+                        </h5>
+
+                        <p class="mb-2">
+                            Estás a punto de eliminar la carrera
+                            <strong>{{ carrera.nombre }}</strong>.
+                        </p>
+
+                        {% if carrera.codigo %}
+                            <p class="mb-2">
+                                Código:
+                                <strong>{{ carrera.codigo }}</strong>
+                            </p>
+                        {% endif %}
+
+                        <p class="mb-2">
+                            Facultad:
+                            <strong>{{ carrera.facultad.nombre }}</strong>
+                        </p>
+
+                        <p class="mb-0">
+                            Esta acción no se puede deshacer y puede afectar
+                            registros académicos asociados a esta carrera.
+                        </p>
+
+                    </div>
+
+                    <!-- BOTONES -->
+                    <form method="POST">
+                        {% csrf_token %}
+
+                        <div class="d-flex justify-content-between align-items-center mt-4">
+
+                            <a href="{% url 'carrera_list' %}"
+                               class="btn btn-outline-secondary">
+                                ← Volver
+                            </a>
+
+                            <button type="submit"
+                                    class="btn btn-danger px-4">
+                                Sí, eliminar
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
