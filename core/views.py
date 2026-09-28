@@ -13,15 +13,14 @@ from academico.models import (
 )
 
 
-@login_required
 def inicio(request):
-    if es_coordinador(request.user):
-        return redirect("core:coordinacion")
+    if request.user.is_authenticated:
+        if es_coordinador(request.user):
+            return redirect("core:coordinacion")
+        if es_docente(request.user):
+            return redirect("core:docente")
 
-    if es_docente(request.user):
-        return redirect("core:docente")
-
-    raise PermissionDenied
+    return render(request, "core/inicio.html")
 
 
 @coordinador_required
