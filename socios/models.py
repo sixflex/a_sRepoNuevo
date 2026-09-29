@@ -2,7 +2,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
-
+from django.utils import timezone
 
 class ClasificacionSocio(models.Model):
     nombre = models.CharField(
@@ -103,6 +103,11 @@ class SocioComunitario(models.Model):
 
     def __str__(self):
         return self.nombre_organizacion
+    
+    @property
+    def solo_historial(self):
+        """Conservado solo en historial (CDE-65)."""
+        return (not self.activo) or self.estado_revision == "TRABAJO_TERMINADO"
 
 
 class ContactoSocio(models.Model):
@@ -365,3 +370,29 @@ class PostulacionSocio(models.Model):
 
     def __str__(self):
         return f"Postulación {self.id} - {self.estado}"
+
+
+class HistorialEstadoSocio(models.Model):
+    socio = models.ForeignKey(
+        SocioComunitario,
+        on_delete=models.CASCADE,
+        related_name="historial_estados",
+    )
+    estado_anterior = models.CharField(max_length=30, blank=True)
+    estado_nuevo = models.CharField(max_length=30)
+    provisional_anterior = models.BooleanField(default=False)
+    provisional_nuevo = models.BooleanField(default=False)
+    cambiado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cambios_estado_socios",
+    )
+    fecha = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-fecha"]
+
+    def __str__(self):
+        return f"{self.socio} · {self.estado_anterior} → {self.estado_nuevo}"
