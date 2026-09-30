@@ -1,5 +1,4 @@
 from django import forms
-from django.core.exceptions import ValidationError
 from django.forms import BaseModelFormSet, formset_factory, modelformset_factory
 
 from .models import FilaPlanificacion
@@ -83,7 +82,6 @@ class BaseFilaPlanificacionFormSet(BaseModelFormSet):
             if form.cleaned_data.get("DELETE"):
                 continue
 
-            # El formulario extra totalmente vacío no participa.
             if not form.instance.pk and not form.has_changed():
                 continue
 
@@ -105,7 +103,7 @@ FilaPlanificacionFormSet = modelformset_factory(
     FilaPlanificacion,
     form=FilaPlanificacionForm,
     formset=BaseFilaPlanificacionFormSet,
-    extra=1,
+    extra=0,
     can_delete=True,
 )
 
@@ -191,6 +189,6 @@ class DocenteFilaForm(forms.Form):
 
 DocenteFilaFormSet = formset_factory(
     DocenteFilaForm,
-    extra=1,
+    extra=0,
     can_delete=True,
 )
