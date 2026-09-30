@@ -1,0 +1,25 @@
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white border-bottom py-3">
+        <h5 class="fw-bold mb-0">Ubicación académica</h5>
+    </div>
+    <div class="card-body p-4">
+        <div class="row g-4">
+            <div class="col-md-6">
+                <small class="text-muted">Sede</small>
+                <p class="fw-semibold mb-0">{{ seccion.campus.sede.nombre }}</p>
+            </div>
+            <div class="col-md-6">
+                <small class="text-muted">Campus</small>
+                <p class="fw-semibold mb-0">{{ seccion.campus.nombre }}</p>
+            </div>
+            <div class="col-md-6">
+                <small class="text-muted">Dirección</small>
+                <p class="fw-semibold mb-0">{{ seccion.campus.direccion|default:"No registrada" }}</p>
+            </div>
+            <div class="col-md-6">
+                <small class="text-muted">Ciudad</small>
+                <p class="fw-semibold mb-0">{{ seccion.campus.sede.ciudad|default:"No registrada" }}</p>
+            </div>
+        </div>
+    </div>
+</div>

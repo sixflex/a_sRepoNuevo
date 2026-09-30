@@ -19,76 +19,7 @@
 
     <!-- CSS propio -->
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
-
-    <style>
-        :root {
-            --ua-red: #C8232C;
-            --ua-red-hover: #A71C23;
-            --ua-border: #E5E7EB;
-            --ua-text-dark: #1F2937;
-            --ua-text-muted: #6B7280;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: #F9FAFB;
-            margin: 0;
-            padding: 0;
-            color: var(--ua-text-dark);
-        }
-
-        /* Barra superior institucional roja */
-        .navbar-sistema {
-            background-color: var(--ua-red) !important;
-            padding: 8px 1.5rem;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-        }
-
-        /* Contenedor transparente y logo ampliado */
-        .brand-logo-container {
-            background: transparent !important;
-            padding: 0;
-            display: inline-flex;
-            align-items: center;
-        }
-
-        .brand-logo-img {
-            height: 48px; /* Escala institucional nítida y legible */
-            width: auto;
-            object-fit: contain;
-            display: block;
-        }
-
-        /* Sidebar administrativo */
-        .sidebar {
-            min-height: calc(100vh - 58px);
-            background-color: #FFFFFF !important;
-            border-right: 1px solid var(--ua-border);
-        }
-
-        .sidebar .nav-link {
-            color: #4B5563;
-            font-size: 0.92rem;
-            font-weight: 500;
-            padding: 8px 16px;
-            border-radius: 6px;
-            margin: 2px 8px;
-            display: flex;
-            align-items: center;
-            transition: all 0.15s ease;
-        }
-
-        .sidebar .nav-link:hover {
-            background-color: #F3F4F6;
-            color: var(--ua-red);
-        }
-
-        .sidebar .nav-link.active {
-            background-color: #FDEDEE;
-            color: var(--ua-red);
-            font-weight: 600;
-        }
-    </style>
+    {% block extra_css %}{% endblock %}
 </head>
 
 <body>
@@ -157,70 +88,10 @@
             <div class="row g-0">
                 {% if user.is_authenticated and not hide_sidebar %}
                     <!-- SIDEBAR PANEL INTERNO -->
-                    <aside class="col-md-3 col-lg-2 sidebar py-4">
-                        <h6 class="text-muted px-3 text-uppercase small fw-bold mb-3" style="letter-spacing: 0.05em;">Menú</h6>
-                        <ul class="nav flex-column">
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'core:inicio' %}">
-                                    <i class="bi bi-house me-2"></i>Inicio
-                                </a>
-                            </li>
-
-                            {% if user.groups.all.0.name == "Coordinador" %}
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{% url 'core:coordinacion' %}">
-                                        <i class="bi bi-speedometer2 me-2"></i>Coordinación
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{% url 'proyectos:gestionar_enlaces' %}">
-                                        <i class="bi bi-link-45deg me-2"></i>Enlaces para Dirección
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="#">
-                                        <i class="bi bi-folder me-2"></i>Proyectos
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="#">
-                                        <i class="bi bi-people me-2"></i>Socios Comunitarios
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="#">
-                                        <i class="bi bi-ui-checks me-2"></i>Encuestas
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="#">
-                                        <i class="bi bi-file-earmark-bar-graph me-2"></i>Reportes
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{% url 'home' %}">
-                                        <i class="bi bi-mortarboard me-2"></i>Gestión Académica
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{% url 'planificacion_list' %}">
-                                        <i class="bi bi-calendar-check me-2"></i>Consultar planificación académica
-                                    </a>
-                                </li>
-                            {% endif %}
-
-                            {% if user.groups.all.0.name == "Docente" %}
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{% url 'core:docente' %}">
-                                        <i class="bi bi-journal-bookmark me-2"></i>Mis secciones
-                                    </a>
-                                </li>
-                            {% endif %}
-                        </ul>
-                    </aside>
+                    {% include "includes/sidebar.html" %}
 
                     <!-- CONTENIDO PRINCIPAL AUTENTICADO -->
-                    <main class="col-md-9 col-lg-10 p-4">
+                    <main class="app-main col-md-9 col-lg-10 p-4">
                         {% block content %}{% endblock %}
                     </main>
 
@@ -238,7 +109,7 @@
         </div>
 
         {% block main_footer %}
-        <footer class="border-top py-3 bg-white mt-auto">
+        <footer class="{% if user.is_authenticated and not hide_sidebar %}app-footer {% endif %}border-top py-3 bg-white mt-auto">
             <div class="container text-center text-muted small">
                 Portal Integrado de Aprendizaje + Servicio · Universidad Autónoma de Chile
             </div>

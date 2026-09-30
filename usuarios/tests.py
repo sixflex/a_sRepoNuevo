@@ -280,7 +280,7 @@ class PermisosTestCase(TestCase):
         self.client.force_login(usuario)
 
         response = self.client.get(
-            reverse("core:inicio")
+            reverse("core:coordinacion")
         )
 
         self.assertEqual(response.status_code, 403)

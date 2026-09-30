@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-Planificación Académica | Portal A+S
+Secciones Académicas Consolidadas | Portal A+S
 {% endblock %}
 
 {% block content %}
@@ -12,12 +12,11 @@ Planificación Académica | Portal A+S
     <div class="mb-4">
 
         <h2 class="fw-bold mb-1">
-            Planificación Académica
+            Secciones Académicas Consolidadas
         </h2>
 
         <p class="text-muted mb-0">
-            Consulta las secciones académicas registradas
-            y utiliza filtros para localizar información específica.
+            Consulta las secciones registradas y utiliza filtros para localizar información específica.
         </p>
 
     </div>
@@ -431,9 +430,9 @@ Planificación Académica | Portal A+S
     <!-- VOLVER -->
     <div class="mt-4 mb-4">
 
-        <a href="{% url 'home' %}"
+        <a href="{% url 'core:coordinacion' %}"
            class="btn btn-outline-secondary">
-            ← Volver a Gestión Académica
+            ← Volver a Coordinación
         </a>
 
     </div>

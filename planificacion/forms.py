@@ -70,9 +70,6 @@ class BaseFilaPlanificacionFormSet(BaseModelFormSet):
     def clean(self):
         super().clean()
 
-        if any(self.errors):
-            return
-
         nrc_vistos = set()
 
         for form in self.forms:
@@ -82,8 +79,27 @@ class BaseFilaPlanificacionFormSet(BaseModelFormSet):
             if form.cleaned_data.get("DELETE"):
                 continue
 
-            if not form.instance.pk and not form.has_changed():
-                continue
+            if not form.instance.pk:
+                campos_fila = [
+                    form.data.get(form.add_prefix("nrc")),
+                    form.data.get(form.add_prefix("seccion")),
+                    form.data.get(form.add_prefix("asignatura_texto")),
+                    form.data.get(form.add_prefix("nivel")),
+                    form.data.get(form.add_prefix("jornada")),
+                    form.data.get(form.add_prefix("horario")),
+                    form.data.get(form.add_prefix("estudiantes_planificados")),
+                ]
+
+                declaracion_as = form.data.get(
+                    form.add_prefix("declaracion_as")
+                )
+
+                if (
+                    not any(valor for valor in campos_fila)
+                    and not declaracion_as
+                ):
+                    form._errors.clear()
+                    continue
 
             nrc = (form.cleaned_data.get("nrc") or "").strip()
 
