@@ -4,7 +4,9 @@ from io import BytesIO
 from urllib import request
 import re
 import qrcode
-
+import uuid
+from django.db import transaction, IntegrityError
+from django.db.models import Max
 from django.contrib import messages
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
@@ -18,6 +20,7 @@ from usuarios.decorators import coordinador_required, docente_required
 
 from planificacion.models import PlanificacionEnlace
 from planificacion.email_service import enviar_correo_planificacion
+from academico.models import Seccion
 
 from academico.models import (
     Campus,
@@ -25,6 +28,12 @@ from academico.models import (
     PeriodoAcademico,
     Seccion,
     UnidadAcademica,
+)
+
+from .models import (
+    EnlaceRegistroEquipo,
+    Equipo,
+    IntegranteEquipo,
 )
 
 from auditoria.services import registrar_auditoria
@@ -516,10 +525,7 @@ def acceso_registro_equipos(request, token):
     ahora = timezone.now()
 
     
-    # VALIDAR ENLACE
-    
 
-    
     if not enlace.activo:
         return render(
             request,
@@ -530,7 +536,6 @@ def acceso_registro_equipos(request, token):
             status=403,
         )
 
-    
     if (
         enlace.fecha_expiracion
         and enlace.fecha_expiracion <= ahora
@@ -545,9 +550,6 @@ def acceso_registro_equipos(request, token):
         )
 
     
-    
-    
-
     if not request.user.is_authenticated:
         return redirect_to_login(
             request.get_full_path(),
@@ -572,10 +574,20 @@ def acceso_registro_equipos(request, token):
         )
 
     
-    
 
     errores = []
     datos_formulario = {}
+    integrantes_validados = []
+
+    clave_idempotencia = request.POST.get(
+        "clave_idempotencia",
+        "",
+    ).strip()
+
+    if not clave_idempotencia:
+        clave_idempotencia = str(uuid.uuid4())
+
+    
 
     if request.method == "POST":
 
@@ -586,8 +598,6 @@ def acceso_registro_equipos(request, token):
 
         datos_formulario["cantidad_integrantes"] = cantidad_raw
 
-        
-        
         
 
         try:
@@ -600,12 +610,9 @@ def acceso_registro_equipos(request, token):
                 "La cantidad de integrantes debe estar entre 1 y 6."
             )
 
-        
         ruts_utilizados = set()
         correos_utilizados = set()
 
-        
-        
         
 
         if 1 <= cantidad_integrantes <= 6:
@@ -623,33 +630,30 @@ def acceso_registro_equipos(request, token):
                 ).strip().lower()
 
                 nombres_declarados = request.POST.get(
-                f"nombres_{i}",
-                ""
+                    f"nombres_{i}",
+                    ""
                 )
 
                 apellidos_declarados = request.POST.get(
-                f"apellidos_{i}",
-                ""
+                    f"apellidos_{i}",
+                    ""
                 )
 
                 nombres = normalizar_nombre(
-                nombres_declarados
+                    nombres_declarados
                 )
 
                 apellidos = normalizar_nombre(
-                apellidos_declarados
+                    apellidos_declarados
                 )
 
-                
+                # Mantener datos si ocurre un error.
                 datos_formulario[f"rut_{i}"] = rut
                 datos_formulario[f"correo_{i}"] = correo
                 datos_formulario[f"nombres_{i}"] = nombres
                 datos_formulario[f"apellidos_{i}"] = apellidos
 
                 
-                # CAMPOS OBLIGATORIOS
-                
-
                 if not rut:
                     errores.append(
                         f"Integrante {i}: el RUT es obligatorio."
@@ -672,8 +676,8 @@ def acceso_registro_equipos(request, token):
                     )
 
                 
-                # VALIDAR RUT
-                
+
+                rut_normalizado = ""
 
                 if rut:
 
@@ -693,9 +697,7 @@ def acceso_registro_equipos(request, token):
                     else:
                         ruts_utilizados.add(rut_normalizado)
 
-                
-                # VALIDAR CORREO
-                
+               
 
                 if correo:
 
@@ -716,17 +718,29 @@ def acceso_registro_equipos(request, token):
                     else:
                         correos_utilizados.add(correo)
 
+                
+
+                integrantes_validados.append(
+                    {
+                        "rut": rut_normalizado,
+                        "nombres": nombres,
+                        "apellidos": apellidos,
+                        "correo": correo,
+                        "es_informante": i == 1,
+                    }
+                )
+
         
-        # VALIDAR IDENTIDAD 
+
+        correo_informante = (
+            request.user.correo_institucional
+            or request.user.email
+            or ""
+        ).strip().lower()
+
         
 
         if 1 <= cantidad_integrantes <= 6:
-
-            correo_informante = (
-                request.user.correo_institucional
-                or request.user.email
-                or ""
-            ).strip().lower()
 
             correo_integrante_1 = (
                 request.POST.get("correo_1", "")
@@ -744,22 +758,216 @@ def acceso_registro_equipos(request, token):
                 )
 
         
-        # FORMULARIO VÁLIDO
+
+        try:
+            clave_uuid = uuid.UUID(
+                clave_idempotencia
+            )
+        except (ValueError, TypeError, AttributeError):
+            clave_uuid = None
+
+            errores.append(
+                "La solicitud de registro no es válida. "
+                "Recarga el formulario e inténtalo nuevamente."
+            )
+
+        
+
+        if clave_uuid:
+
+            equipo_misma_solicitud = (
+                Equipo.objects
+                .filter(
+                    clave_idempotencia=clave_uuid
+                )
+                .first()
+            )
+
+            if equipo_misma_solicitud:
+
+                messages.info(
+                    request,
+                    (
+                        "Este equipo ya fue registrado como "
+                        f"Grupo {equipo_misma_solicitud.numero_grupo}."
+                    ),
+                )
+
+                return redirect(
+                    "proyectos:acceso_registro_equipos",
+                    token=enlace.token,
+                )
+
+        
+
+        if correo_informante:
+
+            equipo_ya_registrado = (
+                Equipo.objects
+                .filter(
+                    seccion=enlace.seccion,
+                    informante_correo__iexact=correo_informante,
+                )
+                .first()
+            )
+
+            if equipo_ya_registrado:
+
+                errores.append(
+                    "Ya registraste un equipo en esta sección. "
+                    f"Tu equipo corresponde al Grupo "
+                    f"{equipo_ya_registrado.numero_grupo}."
+                )
+
         
 
         if not errores:
-            messages.success(
-                request,
-                "Los datos del equipo superaron correctamente "
-                "las validaciones."
-            )
 
-            # IMPORTANTE:
-            # Todavía no guardamos Equipo ni IntegranteEquipo.
-            # Eso se implementará en CDE-45.
+            try:
 
-    
-    #  FORMULARIO
+                with transaction.atomic():
+
+                    
+                    seccion_bloqueada = (
+                        Seccion.objects
+                        .select_for_update()
+                        .get(pk=enlace.seccion_id)
+                    )
+
+                    
+                    equipo_existente = (
+                        Equipo.objects
+                        .filter(
+                            clave_idempotencia=clave_uuid
+                        )
+                        .first()
+                    )
+
+                    if equipo_existente:
+
+                        numero_grupo = (
+                            equipo_existente.numero_grupo
+                        )
+
+                    else:
+
+                        
+                        equipo_informante_existente = (
+                            Equipo.objects
+                            .filter(
+                                seccion=seccion_bloqueada,
+                                informante_correo__iexact=correo_informante,
+                            )
+                            .first()
+                        )
+
+                        if equipo_informante_existente:
+
+                            numero_grupo = (
+                                equipo_informante_existente.numero_grupo
+                            )
+
+                            errores.append(
+                                "Ya registraste un equipo en esta sección. "
+                                f"Tu equipo corresponde al Grupo "
+                                f"{numero_grupo}."
+                            )
+
+                        else:
+
+                            ultimo_numero = (
+                                Equipo.objects
+                                .filter(
+                                    seccion=seccion_bloqueada
+                                )
+                                .aggregate(
+                                    maximo=Max("numero_grupo")
+                                )
+                                .get("maximo")
+                                or 0
+                            )
+
+                            numero_grupo = ultimo_numero + 1
+
+                            integrante_informante = (
+                                integrantes_validados[0]
+                            )
+
+                            nombre_informante = normalizar_nombre(
+                                (
+                                    f"{integrante_informante['nombres']} "
+                                    f"{integrante_informante['apellidos']}"
+                                )
+                            )
+
+                            equipo = Equipo.objects.create(
+                                seccion=seccion_bloqueada,
+                                numero_grupo=numero_grupo,
+                                clave_idempotencia=clave_uuid,
+                                informante_nombre=nombre_informante,
+                                informante_correo=correo_informante,
+                                informante_entra_id=None,
+                                estado="Registrado",
+                            )
+
+                            
+                            IntegranteEquipo.objects.bulk_create(
+                                [
+                                    IntegranteEquipo(
+                                        equipo=equipo,
+                                        rut=integrante["rut"],
+                                        nombres=integrante["nombres"],
+                                        apellidos=integrante["apellidos"],
+                                        correo_institucional=integrante["correo"],
+                                        es_informante=integrante["es_informante"],
+                                    )
+                                    for integrante
+                                    in integrantes_validados
+                                ]
+                            )
+
+            except IntegrityError:
+
+                
+                equipo_existente = (
+                    Equipo.objects
+                    .filter(
+                        clave_idempotencia=clave_uuid
+                    )
+                    .first()
+                )
+
+                if equipo_existente:
+
+                    numero_grupo = (
+                        equipo_existente.numero_grupo
+                    )
+
+                else:
+
+                    errores.append(
+                        "No fue posible registrar el equipo. "
+                        "Inténtalo nuevamente."
+                    )
+
+            
+
+            if not errores:
+
+                messages.success(
+                    request,
+                    (
+                        "Equipo registrado correctamente como "
+                        f"Grupo {numero_grupo}."
+                    ),
+                )
+
+                # POST -> REDIRECT -> GET
+                return redirect(
+                    "proyectos:acceso_registro_equipos",
+                    token=enlace.token,
+                )
+
     
 
     return render(
@@ -771,6 +979,7 @@ def acceso_registro_equipos(request, token):
             "informante": request.user,
             "errores": errores,
             "datos_formulario": datos_formulario,
+            "clave_idempotencia": clave_idempotencia,
         },
     )
 

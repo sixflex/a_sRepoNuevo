@@ -136,80 +136,83 @@
 
             
 
-            <form method="post" id="form-equipo">
+            
 
-                {% csrf_token %}
+<form method="post" id="form-equipo">
 
-                <h5 class="fw-bold mb-3">
-                    Integrantes del equipo
-                </h5>
+    {% csrf_token %}
 
-                <div class="mb-4">
+    
+    <input
+        type="hidden"
+        name="clave_idempotencia"
+        value="{{ clave_idempotencia }}"
+    >
 
-                    <label
-                        for="cantidad_integrantes"
-                        class="form-label fw-semibold"
-                    >
-                        Cantidad de integrantes
-                    </label>
+    <h5 class="fw-bold mb-3">
+        Integrantes del equipo
+    </h5>
 
-                    <select
-                        class="form-select"
-                        id="cantidad_integrantes"
-                        name="cantidad_integrantes"
-                        required
-                    >
+    <div class="mb-4">
 
-                        <option value="">
-                            Selecciona una cantidad
-                        </option>
+        <label
+            for="cantidad_integrantes"
+            class="form-label fw-semibold"
+        >
+            Cantidad de integrantes
+        </label>
 
-                        <option value="1">1 integrante</option>
-                        <option value="2">2 integrantes</option>
-                        <option value="3">3 integrantes</option>
-                        <option value="4">4 integrantes</option>
-                        <option value="5">5 integrantes</option>
-                        <option value="6">6 integrantes</option>
+        <select
+            class="form-select"
+            id="cantidad_integrantes"
+            name="cantidad_integrantes"
+            required
+        >
 
-                    </select>
+            <option value="">
+                Selecciona una cantidad
+            </option>
 
-                    <div class="form-text">
-                        Selecciona la cantidad total de estudiantes que
-                        conforman el equipo.
-                    </div>
+            <option value="1">1 integrante</option>
+            <option value="2">2 integrantes</option>
+            <option value="3">3 integrantes</option>
+            <option value="4">4 integrantes</option>
+            <option value="5">5 integrantes</option>
+            <option value="6">6 integrantes</option>
 
-                </div>
+        </select>
 
+        <div class="form-text">
+            Selecciona la cantidad total de estudiantes que
+            conforman el equipo.
+        </div>
 
-                <!-- JavaScript genera aquí los integrantes -->
+    </div>
 
-                <div id="contenedor-integrantes"></div>
+    <div id="contenedor-integrantes"></div>
 
+    <div
+        id="acciones-formulario"
+        class="d-none mt-4"
+    >
 
-                <!-- BOTÓN -->
+        <hr>
 
-                <div
-                    id="acciones-formulario"
-                    class="d-none mt-4"
-                >
+        <div class="d-flex justify-content-end">
 
-                    <hr>
+            <button
+                type="submit"
+                class="btn text-white px-4"
+                style="background-color: #a90000;"
+            >
+                Registrar equipo
+            </button>
 
-                    <div class="d-flex justify-content-end">
+        </div>
 
-                        <button
-                            type="submit"
-                            class="btn text-white px-4"
-                            style="background-color: #a90000;"
-                        >
-                            Validar datos
-                        </button>
+    </div>
 
-                    </div>
-
-                </div>
-
-            </form>
+</form>
 
         </div>
 

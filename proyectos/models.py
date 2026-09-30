@@ -46,6 +46,12 @@ class Equipo(models.Model):
         null=True,
         blank=True,
     )
+    clave_idempotencia = models.UUIDField(
+    null=True,
+    blank=True,
+    unique=True,
+    editable=False,
+)
     fecha_registro = models.DateTimeField(auto_now_add=True)
     estado = models.CharField(max_length=20)
 
