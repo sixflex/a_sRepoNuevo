@@ -1,6 +1,7 @@
 from datetime import datetime, time, timedelta
 import base64
 from io import BytesIO
+from urllib import request
 
 import qrcode
 
@@ -8,6 +9,7 @@ from django.contrib import messages
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.urls import reverse
+from django.contrib.auth.views import redirect_to_login
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -454,7 +456,7 @@ def acceso_registro_equipos(request, token):
 
     ahora = timezone.now()
 
-    # Verificar si el docente cerró el formulario
+    # Verificar si el formulario fue cerrado por el docente
     if not enlace.activo:
         return render(
             request,
@@ -479,12 +481,39 @@ def acceso_registro_equipos(request, token):
             status=403,
         )
 
-    # El token existe, está activo y sigue vigente
-    return render(
+    
+    
+    if not request.user.is_authenticated:
+        return redirect_to_login(
+            request.get_full_path(),
+            login_url=reverse("usuarios:login"),
+        )
+    
+    es_estudiante = request.user.groups.filter(
+    name="Estudiante"
+).exists()
+
+    if not es_estudiante:
+        return render(
         request,
-        "proyectos/acceso_registro_equipos.html",
+        "proyectos/registro_equipos_no_disponible.html",
         {
-            "enlace": enlace,
-            "seccion": enlace.seccion,
+            "motivo": (
+                "Este formulario solo puede ser utilizado "
+                "por estudiantes autenticados."
+            ),
         },
+        status=403,
     )
+
+    
+    # retornar al formulario manteniendo el contexto obtenido desde el token.
+    return render(
+    request,
+    "proyectos/acceso_registro_equipos.html",
+    {
+        "enlace": enlace,
+        "seccion": enlace.seccion,
+        "informante": request.user,
+    },
+)

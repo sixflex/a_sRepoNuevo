@@ -33,6 +33,10 @@ class Command(BaseCommand):
             name="Docente"
         )
 
+        grupo_estudiante, _ = Group.objects.get_or_create(
+        name="Estudiante"
+        )
+
         coordinador, _ = User.objects.get_or_create(
             username="coordinador"
         )
@@ -56,6 +60,19 @@ class Command(BaseCommand):
         usuario_docente2.is_active = True
         usuario_docente2.save()
         usuario_docente2.groups.set([grupo_docente])
+
+        usuario_estudiante, _ = User.objects.get_or_create(
+    username="estudiante1"
+)
+
+        usuario_estudiante.set_password("Estudiante1234")
+        usuario_estudiante.is_active = True
+        usuario_estudiante.correo_institucional = "estudiante1@cloud.uautonoma.cl"
+        usuario_estudiante.first_name = "Estudiante"
+        usuario_estudiante.last_name = "Prueba"
+        usuario_estudiante.save()
+
+        usuario_estudiante.groups.set([grupo_estudiante])
 
         sede, _ = Sede.objects.get_or_create(
             nombre="Sede Santiago",
