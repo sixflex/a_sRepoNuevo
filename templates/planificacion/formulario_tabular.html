@@ -5,57 +5,60 @@
 {% block layout_completo %}
 <style>
     .tabla-planificacion {
-        table-layout: auto !important;
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-    
-    .tabla-planificacion th {
-        white-space: nowrap !important;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.03em;
-        background-color: #f8fafc !important;
-        color: #475569 !important;
-        padding: 10px 12px !important;
-        vertical-align: middle;
-    }
+    width: 100%;
+    border-collapse: collapse;
+}
 
-    .tabla-planificacion td {
-        vertical-align: middle;
-        padding: 8px 10px !important;
-    }
+.tabla-planificacion th {
+    white-space: nowrap !important;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.03em;
+    background-color: #f1f5f9 !important;
+    color: #334155 !important;
+    padding: 8px 10px !important;
+    vertical-align: middle;
+    text-align: center;
+}
 
-    .col-facultad { min-width: 220px !important; }
-    .col-carrera { min-width: 220px !important; }
-    .col-as { min-width: 60px !important; text-align: center; }
-    .col-nrc { min-width: 95px !important; }
-    .col-campus { min-width: 170px !important; }
-    .col-seccion { min-width: 85px !important; }
-    .col-asignatura { min-width: 240px !important; }
-    .col-nivel { min-width: 110px !important; }
-    .col-jornada { min-width: 120px !important; }
-    .col-horario { min-width: 130px !important; }
-    .col-estudiantes { min-width: 110px !important; }
-    .col-socio { min-width: 180px !important; }
-    .col-docentes { min-width: 580px !important; }
-    .col-acciones { min-width: 80px !important; text-align: center; }
+.tabla-planificacion td {
+    vertical-align: top;
+    padding: 10px 8px !important;
+    background-color: #ffffff;
+}
 
-    .tabla-planificacion input[type="text"],
-    .tabla-planificacion input[type="number"],
-    .tabla-planificacion select {
-        width: 100% !important;
-        font-size: 0.85rem !important;
-        padding: 5px 8px !important;
-    }
+.col-facultad { width: 130px; }
+.col-carrera { width: 140px; }
+.col-as { width: 50px; text-align: center; }
+.col-nrc { width: 80px; }
+.col-campus { width: 120px; }
+.col-seccion { width: 70px; }
+.col-asignatura { width: 160px; }
+.col-nivel { width: 70px; }
+.col-jornada { width: 90px; }
+.col-horario { width: 100px; }
+.col-estudiantes { width: 80px; }
+.col-socio { width: 130px; }
+.col-docentes { width: 320px; }
+.col-acciones { width: 60px; text-align: center; }
 
-    .docente-subcard {
-        background-color: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 6px;
-        padding: 10px;
-        margin-bottom: 8px;
-    }
+.tabla-planificacion input[type="text"],
+.tabla-planificacion input[type="number"],
+.tabla-planificacion select {
+    width: 100% !important;
+    font-size: 0.8rem !important;
+    padding: 4px 6px !important;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+}
+
+.docente-subcard {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px;
+    margin-bottom: 6px;
+}
 </style>
 
 <div class="d-flex flex-column min-vh-100">
