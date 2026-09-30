@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <div
+        class="card shadow-sm border-0 mx-auto"
+        style="max-width: 700px;"
+    >
+        <div class="card-body p-4">
+
+            <h3 class="fw-bold mb-2">
+                Registro de equipos
+            </h3>
+
+            <p class="text-muted mb-4">
+                Contexto académico asociado al formulario.
+            </p>
+
+            <div class="bg-light rounded p-3 mb-4">
+
+                <div class="mb-2">
+                    <strong>Asignatura:</strong>
+                    {{ seccion.asignatura.nombre }}
+                </div>
+
+                <div class="mb-2">
+                    <strong>Sección:</strong>
+                    {{ seccion.seccion }}
+                </div>
+
+                <div class="mb-2">
+                    <strong>NRC:</strong>
+                    {{ seccion.nrc }}
+                </div>
+
+                <div class="mb-2">
+                    <strong>Período:</strong>
+                    {{ seccion.periodo.nombre }}
+                </div>
+
+                <div>
+                    <strong>Campus:</strong>
+                    {{ seccion.campus.nombre }}
+                </div>
+
+            </div>
+
+            <div class="alert alert-success mb-0">
+                El enlace de registro se encuentra activo y vigente.
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

@@ -2,37 +2,194 @@
 
 {% block content %}
 
-<h1>
-    {{ seccion.asignatura.nombre }}
-</h1>
+<div class="container py-4">
 
-<p>
-    Sección:
-    {{ seccion.seccion }}
-</p>
+    <!-- ENCABEZADO -->
+    <div class="mb-4">
+        <h2 class="fw-bold text-dark mb-1">
+            {{ seccion.asignatura.nombre }}
+        </h2>
 
-<p>
-    NRC:
-    {{ seccion.nrc }}
-</p>
+        <p class="text-muted mb-0">
+            Información académica y herramientas disponibles para la sección.
+        </p>
+    </div>
 
-<p>
-    Período:
-    {{ seccion.periodo.nombre }}
-</p>
 
-<p>
-    Campus:
-    {{ seccion.campus.nombre }}
-</p>
+    <!-- INFORMACIÓN DE LA SECCIÓN -->
+    <div class="card shadow-sm border-0 mb-4">
 
-<p>
-    Docente{% if seccion.docentes.count != 1 %}s{% endif %}:
-    {% for docente in seccion.docentes.all %}
-        {{ docente.nombres }} {{ docente.apellidos }}{% if not forloop.last %}, {% endif %}
-    {% empty %}
-        Sin docente asignado
-    {% endfor %}
-</p>
+        <div class="card-body p-4">
+
+            <div class="d-flex justify-content-between align-items-start mb-4">
+
+                <div>
+                    <h5 class="fw-bold mb-1">
+                        Información de la sección
+                    </h5>
+
+                    <p class="text-muted small mb-0">
+                        Datos académicos asociados a la asignatura.
+                    </p>
+                </div>
+
+                <span class="badge bg-light text-dark border px-3 py-2">
+                    NRC {{ seccion.nrc }}
+                </span>
+
+            </div>
+
+
+            <div class="row g-4">
+
+                <!-- SECCIÓN -->
+                <div class="col-md-3 col-sm-6">
+                    <div class="text-muted small mb-1">
+                        Sección
+                    </div>
+
+                    <div class="fw-semibold">
+                        {{ seccion.seccion }}
+                    </div>
+                </div>
+
+
+                <!-- PERÍODO -->
+                <div class="col-md-3 col-sm-6">
+                    <div class="text-muted small mb-1">
+                        Período académico
+                    </div>
+
+                    <div class="fw-semibold">
+                        {{ seccion.periodo.nombre }}
+                    </div>
+                </div>
+
+
+                <!-- CAMPUS -->
+                <div class="col-md-3 col-sm-6">
+                    <div class="text-muted small mb-1">
+                        Campus
+                    </div>
+
+                    <div class="fw-semibold">
+                        {{ seccion.campus.nombre }}
+                    </div>
+                </div>
+
+
+                <!-- DOCENTE -->
+                <div class="col-md-3 col-sm-6">
+                    <div class="text-muted small mb-1">
+                        Docente{% if seccion.docentes.count != 1 %}s{% endif %}
+                    </div>
+
+                    <div class="fw-semibold">
+
+                        {% for docente in seccion.docentes.all %}
+
+                            {{ docente.nombres }}
+                            {{ docente.apellidos }}
+
+                            {% if not forloop.last %}
+                                <br>
+                            {% endif %}
+
+                        {% empty %}
+
+                            <span class="text-muted">
+                                Sin docente asignado
+                            </span>
+
+                        {% endfor %}
+
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- REGISTRO DE EQUIPOS -->
+    <div class="card shadow-sm border-0">
+
+        <div class="card-body p-4">
+
+            <div class="row align-items-center">
+
+                <div class="col-lg-8">
+
+                    <div class="d-flex align-items-center mb-2">
+
+                        <div
+                            class="d-flex align-items-center justify-content-center me-3"
+                            style="
+                                width: 45px;
+                                height: 45px;
+                                border-radius: 10px;
+                                background-color: #f8e5e5;
+                                color: #a90000;
+                                font-size: 22px;
+                            "
+                        >
+                            👥
+                        </div>
+
+                        <div>
+                            <h5 class="fw-bold mb-1">
+                                Registro de equipos y estudiantes
+                            </h5>
+
+                            <span class="badge bg-secondary">
+                                Formulario de estudiantes
+                            </span>
+                        </div>
+
+                    </div>
+
+
+                    <p class="text-muted mb-lg-0 mt-3">
+                        Habilita y administra el formulario utilizado por los
+                        estudiantes para registrar los integrantes de sus equipos
+                        asociados a esta sección.
+                    </p>
+
+                </div>
+
+
+                <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+
+                    <a
+                        href="{% url 'proyectos:gestionar_registro_equipos' seccion.id %}"
+                        class="btn btn-rojo px-4"
+                    >
+                        Gestionar registro
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- VOLVER -->
+    <div class="mt-4">
+
+        <a
+            href="{% url 'core:docente' %}"
+            class="btn btn-outline-secondary"
+        >
+            ← Volver a mis secciones
+        </a>
+
+    </div>
+
+</div>
 
 {% endblock %}

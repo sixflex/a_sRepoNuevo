@@ -14,4 +14,14 @@ urlpatterns = [
     # SP2-T05: generación y gestión de enlaces de planificación.
     path( "enlaces-planificacion/", views.gestionar_enlaces_planificacion, name="gestionar_enlaces",
     ),
+    path(
+    "secciones/<int:seccion_id>/registro-equipos/",
+    views.gestionar_registro_equipos,
+    name="gestionar_registro_equipos",
+),
+    path(
+    "registro-equipos/<uuid:token>/",
+    views.acceso_registro_equipos,
+    name="acceso_registro_equipos",
+),
 ]
