@@ -2,7 +2,7 @@ from datetime import datetime, time, timedelta
 import base64
 from io import BytesIO
 from urllib import request
-
+import re
 import qrcode
 
 from django.contrib import messages
@@ -443,6 +443,65 @@ def gestionar_registro_equipos(request, seccion_id):
         },
     )
 
+def limpiar_rut(rut):
+    return (
+        rut.replace(".", "")
+        .replace("-", "")
+        .replace(" ", "")
+        .upper()
+    )
+
+
+def formatear_rut(rut):
+    rut_limpio = limpiar_rut(rut)
+
+    if len(rut_limpio) < 2:
+        return rut_limpio
+
+    return f"{rut_limpio[:-1]}-{rut_limpio[-1]}"
+
+
+def validar_rut_chileno(rut):
+    rut = rut.strip().upper()
+
+    
+    
+
+    patron = r"^(?:\d{1,2}\.\d{3}\.\d{3}|\d{7,8})-[0-9K]$"
+
+    if not re.fullmatch(patron, rut):
+        return False
+
+    rut_limpio = limpiar_rut(rut)
+
+    cuerpo = rut_limpio[:-1]
+    dv_ingresado = rut_limpio[-1]
+
+    if not cuerpo.isdigit():
+        return False
+
+    suma = 0
+    multiplicador = 2
+
+    for digito in reversed(cuerpo):
+        suma += int(digito) * multiplicador
+
+        multiplicador += 1
+
+        if multiplicador > 7:
+            multiplicador = 2
+
+    resto = 11 - (suma % 11)
+
+    if resto == 11:
+        dv_calculado = "0"
+    elif resto == 10:
+        dv_calculado = "K"
+    else:
+        dv_calculado = str(resto)
+
+    return dv_ingresado == dv_calculado
+
 def acceso_registro_equipos(request, token):
     enlace = get_object_or_404(
         EnlaceRegistroEquipo.objects.select_related(
@@ -456,7 +515,11 @@ def acceso_registro_equipos(request, token):
 
     ahora = timezone.now()
 
-    # Verificar si el formulario fue cerrado por el docente
+    
+    # VALIDAR ENLACE
+    
+
+    
     if not enlace.activo:
         return render(
             request,
@@ -467,7 +530,7 @@ def acceso_registro_equipos(request, token):
             status=403,
         )
 
-    # Verificar si el enlace alcanzó su fecha de expiración
+    
     if (
         enlace.fecha_expiracion
         and enlace.fecha_expiracion <= ahora
@@ -483,37 +546,223 @@ def acceso_registro_equipos(request, token):
 
     
     
+    
+
     if not request.user.is_authenticated:
         return redirect_to_login(
             request.get_full_path(),
             login_url=reverse("usuarios:login"),
         )
-    
+
     es_estudiante = request.user.groups.filter(
-    name="Estudiante"
-).exists()
+        name="Estudiante"
+    ).exists()
 
     if not es_estudiante:
         return render(
-        request,
-        "proyectos/registro_equipos_no_disponible.html",
-        {
-            "motivo": (
-                "Este formulario solo puede ser utilizado "
-                "por estudiantes autenticados."
-            ),
-        },
-        status=403,
-    )
+            request,
+            "proyectos/registro_equipos_no_disponible.html",
+            {
+                "motivo": (
+                    "Este formulario solo puede ser utilizado "
+                    "por estudiantes autenticados."
+                ),
+            },
+            status=403,
+        )
 
     
-    # retornar al formulario manteniendo el contexto obtenido desde el token.
+    
+
+    errores = []
+    datos_formulario = {}
+
+    if request.method == "POST":
+
+        cantidad_raw = request.POST.get(
+            "cantidad_integrantes",
+            ""
+        ).strip()
+
+        datos_formulario["cantidad_integrantes"] = cantidad_raw
+
+        
+        # VALIDAR CANTIDAD DE INTEGRANTES
+        
+
+        try:
+            cantidad_integrantes = int(cantidad_raw)
+        except (TypeError, ValueError):
+            cantidad_integrantes = 0
+
+        if cantidad_integrantes < 1 or cantidad_integrantes > 6:
+            errores.append(
+                "La cantidad de integrantes debe estar entre 1 y 6."
+            )
+
+        # Sets para detectar duplicados dentro del mismo equipo
+        ruts_utilizados = set()
+        correos_utilizados = set()
+
+        
+        # VALIDAR CADA INTEGRANTE
+        
+
+        if 1 <= cantidad_integrantes <= 6:
+
+            for i in range(1, cantidad_integrantes + 1):
+
+                rut = request.POST.get(
+                    f"rut_{i}",
+                    ""
+                ).strip()
+
+                correo = request.POST.get(
+                    f"correo_{i}",
+                    ""
+                ).strip().lower()
+
+                nombres = request.POST.get(
+                    f"nombres_{i}",
+                    ""
+                ).strip()
+
+                apellidos = request.POST.get(
+                    f"apellidos_{i}",
+                    ""
+                ).strip()
+
+                # Guardamos los datos para poder mostrarlos
+                # nuevamente si existe algún error.
+                datos_formulario[f"rut_{i}"] = rut
+                datos_formulario[f"correo_{i}"] = correo
+                datos_formulario[f"nombres_{i}"] = nombres
+                datos_formulario[f"apellidos_{i}"] = apellidos
+
+                
+                # CAMPOS OBLIGATORIOS
+                
+
+                if not rut:
+                    errores.append(
+                        f"Integrante {i}: el RUT es obligatorio."
+                    )
+
+                if not correo:
+                    errores.append(
+                        f"Integrante {i}: el correo institucional "
+                        "es obligatorio."
+                    )
+
+                if not nombres:
+                    errores.append(
+                        f"Integrante {i}: los nombres son obligatorios."
+                    )
+
+                if not apellidos:
+                    errores.append(
+                        f"Integrante {i}: los apellidos son obligatorios."
+                    )
+
+                
+                # VALIDAR RUT
+                
+
+                if rut:
+
+                    if not validar_rut_chileno(rut):
+                        errores.append(
+                            f"Integrante {i}: el RUT ingresado "
+                            "no es válido."
+                        )
+
+                    rut_normalizado = formatear_rut(rut)
+
+                    if rut_normalizado in ruts_utilizados:
+                        errores.append(
+                            f"Integrante {i}: el RUT está repetido "
+                            "dentro del equipo."
+                        )
+                    else:
+                        ruts_utilizados.add(rut_normalizado)
+
+                
+                # VALIDAR CORREO
+                
+
+                if correo:
+
+                    try:
+                        validate_email(correo)
+
+                    except ValidationError:
+                        errores.append(
+                            f"Integrante {i}: el correo ingresado "
+                            "no es válido."
+                        )
+
+                    if correo in correos_utilizados:
+                        errores.append(
+                            f"Integrante {i}: el correo está repetido "
+                            "dentro del equipo."
+                        )
+                    else:
+                        correos_utilizados.add(correo)
+
+        
+        # VALIDAR IDENTIDAD 
+        
+
+        if 1 <= cantidad_integrantes <= 6:
+
+            correo_informante = (
+                request.user.correo_institucional
+                or request.user.email
+                or ""
+            ).strip().lower()
+
+            correo_integrante_1 = (
+                request.POST.get("correo_1", "")
+                .strip()
+                .lower()
+            )
+
+            if (
+                correo_informante
+                and correo_integrante_1 != correo_informante
+            ):
+                errores.append(
+                    "El correo del estudiante informante no coincide "
+                    "con la cuenta autenticada."
+                )
+
+        
+        # FORMULARIO VÁLIDO
+        
+
+        if not errores:
+            messages.success(
+                request,
+                "Los datos del equipo superaron correctamente "
+                "las validaciones."
+            )
+
+            # IMPORTANTE:
+            # Todavía no guardamos Equipo ni IntegranteEquipo.
+            # Eso se implementará en CDE-45.
+
+    
+    #  FORMULARIO
+    
+
     return render(
-    request,
-    "proyectos/acceso_registro_equipos.html",
-    {
-        "enlace": enlace,
-        "seccion": enlace.seccion,
-        "informante": request.user,
-    },
-)
+        request,
+        "proyectos/acceso_registro_equipos.html",
+        {
+            "enlace": enlace,
+            "seccion": enlace.seccion,
+            "informante": request.user,
+            "errores": errores,
+            "datos_formulario": datos_formulario,
+        },
+    )

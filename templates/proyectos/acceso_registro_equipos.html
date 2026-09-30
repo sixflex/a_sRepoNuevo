@@ -18,9 +18,8 @@
                 Completa la información de los integrantes de tu equipo.
             </p>
 
-            <!-- ====================================================== -->
-            <!-- CONTEXTO ACADÉMICO                                     -->
-            <!-- ====================================================== -->
+
+            
 
             <h5 class="fw-bold mb-3">
                 Contexto académico
@@ -60,9 +59,7 @@
             </div>
 
 
-            <!-- ====================================================== -->
-            <!-- ESTUDIANTE INFORMANTE                                  -->
-            <!-- ====================================================== -->
+            
 
             <h5 class="fw-bold mb-3">
                 Estudiante informante
@@ -78,6 +75,7 @@
                     </div>
 
                     <div class="col-md-6 mb-2">
+
                         <strong>Correo institucional:</strong>
 
                         {% if informante.correo_institucional %}
@@ -87,6 +85,7 @@
                         {% else %}
                             No registrado
                         {% endif %}
+
                     </div>
 
                 </div>
@@ -99,9 +98,43 @@
             </div>
 
 
-            <!-- ====================================================== -->
-            <!-- FORMULARIO                                             -->
-            <!-- ====================================================== -->
+            
+
+            {% if errores %}
+
+                <div class="alert alert-danger mb-4">
+
+                    <div class="fw-bold mb-2">
+                        Revisa los siguientes datos:
+                    </div>
+
+                    <ul class="mb-0">
+
+                        {% for error in errores %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+
+                    </ul>
+
+                </div>
+
+            {% endif %}
+
+
+            {% if messages %}
+
+                {% for message in messages %}
+
+                    <div class="alert alert-success mb-4">
+                        {{ message }}
+                    </div>
+
+                {% endfor %}
+
+            {% endif %}
+
+
+            
 
             <form method="post" id="form-equipo">
 
@@ -126,6 +159,7 @@
                         name="cantidad_integrantes"
                         required
                     >
+
                         <option value="">
                             Selecciona una cantidad
                         </option>
@@ -136,6 +170,7 @@
                         <option value="4">4 integrantes</option>
                         <option value="5">5 integrantes</option>
                         <option value="6">6 integrantes</option>
+
                     </select>
 
                     <div class="form-text">
@@ -146,12 +181,12 @@
                 </div>
 
 
-                <!-- Aquí JavaScript generará los integrantes -->
+                <!-- JavaScript genera aquí los integrantes -->
 
                 <div id="contenedor-integrantes"></div>
 
 
-                <!-- BOTONES -->
+                <!-- BOTÓN -->
 
                 <div
                     id="acciones-formulario"
@@ -167,7 +202,7 @@
                             class="btn text-white px-4"
                             style="background-color: #a90000;"
                         >
-                            Continuar
+                            Validar datos
                         </button>
 
                     </div>
@@ -177,15 +212,28 @@
             </form>
 
         </div>
+
     </div>
 
 </div>
 
 
+
+
+{{ datos_formulario|json_script:"datos-formulario" }}
+
+
 <script>
-const correoInformante = "{{ informante.correo_institucional|default:informante.email|escapejs }}";
-const nombresInformante = "{{ informante.first_name|default:''|escapejs }}";
-const apellidosInformante = "{{ informante.last_name|default:''|escapejs }}";
+
+const correoInformante =
+    "{{ informante.correo_institucional|default:informante.email|escapejs }}";
+
+const nombresInformante =
+    "{{ informante.first_name|default:''|escapejs }}";
+
+const apellidosInformante =
+    "{{ informante.last_name|default:''|escapejs }}";
+
 
 document.addEventListener("DOMContentLoaded", function () {
 
@@ -199,14 +247,33 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("acciones-formulario");
 
 
-    selectorCantidad.addEventListener("change", function () {
+    
 
-        const cantidad = parseInt(this.value);
+    const elementoDatos =
+        document.getElementById("datos-formulario");
+
+    let datosFormulario = {};
+
+    if (elementoDatos) {
+
+        try {
+            datosFormulario =
+                JSON.parse(elementoDatos.textContent);
+        }
+        catch (error) {
+            datosFormulario = {};
+        }
+
+    }
+
+
+    
+
+    function generarIntegrantes(cantidad) {
 
         contenedor.innerHTML = "";
 
-
-        if (!cantidad || cantidad < 1) {
+        if (!cantidad || cantidad < 1 || cantidad > 6) {
 
             acciones.classList.add("d-none");
 
@@ -216,10 +283,43 @@ document.addEventListener("DOMContentLoaded", function () {
 
         for (let i = 1; i <= cantidad; i++) {
 
-            const integrante = document.createElement("div");
+            const integrante =
+                document.createElement("div");
+
 
             integrante.className =
                 "card border mb-3 integrante-card";
+
+
+            
+
+            const rutAnterior =
+                datosFormulario[`rut_${i}`] || "";
+
+            const correoAnterior =
+                datosFormulario[`correo_${i}`] || "";
+
+            const nombresAnteriores =
+                datosFormulario[`nombres_${i}`] || "";
+
+            const apellidosAnteriores =
+                datosFormulario[`apellidos_${i}`] || "";
+
+
+            
+
+            const correo =
+                i === 1
+                    ? correoInformante
+                    : correoAnterior;
+
+            const nombres =
+                nombresAnteriores ||
+                (i === 1 ? nombresInformante : "");
+
+            const apellidos =
+                apellidosAnteriores ||
+                (i === 1 ? apellidosInformante : "");
 
 
             integrante.innerHTML = `
@@ -230,14 +330,15 @@ document.addEventListener("DOMContentLoaded", function () {
                         Integrante ${i}
                     </strong>
 
-                    ${i === 1
+                    ${
+                        i === 1
                         ? `
-                        <span
-                            class="badge ms-2"
-                            style="background-color: #a90000;"
-                        >
-                            Informante
-                        </span>
+                            <span
+                                class="badge ms-2"
+                                style="background-color: #a90000;"
+                            >
+                                Informante
+                            </span>
                         `
                         : ""
                     }
@@ -248,6 +349,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 <div class="card-body">
 
                     <div class="row">
+
+
+                        <!-- RUT -->
 
                         <div class="col-md-6 mb-3">
 
@@ -264,11 +368,14 @@ document.addEventListener("DOMContentLoaded", function () {
                                 id="rut_${i}"
                                 name="rut_${i}"
                                 placeholder="12.345.678-9"
+                                value="${escaparHTML(rutAnterior)}"
                                 required
                             >
 
                         </div>
 
+
+                        <!-- CORREO -->
 
                         <div class="col-md-6 mb-3">
 
@@ -285,13 +392,15 @@ document.addEventListener("DOMContentLoaded", function () {
                                 id="correo_${i}"
                                 name="correo_${i}"
                                 placeholder="estudiante@cloud.uautonoma.cl"
-                                value="${i === 1 ? correoInformante : ''}"
-                                ${i === 1 ? 'readonly' : ''}
+                                value="${escaparHTML(correo)}"
+                                ${i === 1 ? "readonly" : ""}
                                 required
                             >
 
                         </div>
 
+
+                        <!-- NOMBRES -->
 
                         <div class="col-md-6 mb-3">
 
@@ -307,12 +416,14 @@ document.addEventListener("DOMContentLoaded", function () {
                                 class="form-control"
                                 id="nombres_${i}"
                                 name="nombres_${i}"
-                                value="${i === 1 ? nombresInformante : ''}"
+                                value="${escaparHTML(nombres)}"
                                 required
                             >
 
                         </div>
 
+
+                        <!-- APELLIDOS -->
 
                         <div class="col-md-6 mb-3">
 
@@ -328,7 +439,7 @@ document.addEventListener("DOMContentLoaded", function () {
                                 class="form-control"
                                 id="apellidos_${i}"
                                 name="apellidos_${i}"
-                                value="${i === 1 ? apellidosInformante : ''}"
+                                value="${escaparHTML(apellidos)}"
                                 required
                             >
 
@@ -347,7 +458,66 @@ document.addEventListener("DOMContentLoaded", function () {
 
         acciones.classList.remove("d-none");
 
-    });
+    }
+
+
+    
+
+    function escaparHTML(valor) {
+
+        const elemento =
+            document.createElement("div");
+
+        elemento.textContent =
+            valor == null ? "" : String(valor);
+
+        return elemento.innerHTML
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+
+    }
+
+
+    
+
+    selectorCantidad.addEventListener(
+        "change",
+        function () {
+
+            const cantidad =
+                parseInt(this.value);
+
+            
+
+            datosFormulario = {};
+
+            generarIntegrantes(cantidad);
+
+        }
+    );
+
+
+    
+
+    const cantidadAnterior =
+        parseInt(
+            datosFormulario["cantidad_integrantes"]
+        );
+
+
+    if (
+        cantidadAnterior >= 1 &&
+        cantidadAnterior <= 6
+    ) {
+
+        selectorCantidad.value =
+            String(cantidadAnterior);
+
+        generarIntegrantes(
+            cantidadAnterior
+        );
+
+    }
 
 });
 
