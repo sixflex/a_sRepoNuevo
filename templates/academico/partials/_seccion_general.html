@@ -1,0 +1,59 @@
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white border-bottom py-3">
+        <h5 class="fw-bold mb-0">Información de la sección</h5>
+    </div>
+    <div class="card-body p-4">
+        <div class="row g-4">
+            <div class="col-md-6">
+                <small class="text-muted">Período</small>
+                <p class="fw-semibold mb-0">
+                    {{ seccion.periodo.anio }} - {{ seccion.periodo.tipo }}
+                </p>
+                {% if seccion.periodo.nombre %}
+                    <small class="text-muted">{{ seccion.periodo.nombre }}</small>
+                {% endif %}
+            </div>
+
+            <div class="col-md-6">
+                <small class="text-muted d-block mb-1">Estado</small>
+                {% if seccion.estado == "Activa" %}
+                    <span class="badge bg-success">Activa</span>
+                {% elif seccion.estado == "Planificada" %}
+                    <span class="badge bg-warning text-dark">Planificada</span>
+                {% elif seccion.estado == "Finalizada" %}
+                    <span class="badge bg-secondary">Finalizada</span>
+                {% else %}
+                    <span class="badge bg-light text-dark border">{{ seccion.estado }}</span>
+                {% endif %}
+            </div>
+
+            <div class="col-md-6">
+                <small class="text-muted">Asignatura</small>
+                <p class="fw-semibold mb-0">
+                    {% if seccion.asignatura.codigo %}{{ seccion.asignatura.codigo }} - {% endif %}
+                    {{ seccion.asignatura.nombre }}
+                </p>
+            </div>
+
+            <div class="col-md-3">
+                <small class="text-muted">NRC</small>
+                <p class="fw-semibold mb-0">{{ seccion.nrc }}</p>
+            </div>
+
+            <div class="col-md-3">
+                <small class="text-muted">Sección</small>
+                <p class="fw-semibold mb-0">{{ seccion.seccion }}</p>
+            </div>
+
+            <div class="col-md-6">
+                <small class="text-muted">Jornada</small>
+                <p class="fw-semibold mb-0">{{ seccion.jornada|default:"No especificada" }}</p>
+            </div>
+
+            <div class="col-md-6">
+                <small class="text-muted">Horario</small>
+                <p class="fw-semibold mb-0">{{ seccion.horario|default:"No especificado" }}</p>
+            </div>
+        </div>
+    </div>
+</div>

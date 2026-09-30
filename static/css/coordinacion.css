@@ -1,0 +1,140 @@
+:root {
+        --ua-red: #C8232C;
+        --ua-red-hover: #A71C23;
+        --ua-card-bg: #FFFFFF;
+        --ua-border: #E5E7EB;
+        --ua-text-dark: #111827;
+        --ua-text-muted: #6B7280;
+    }
+
+    .coord-header {
+        margin-bottom: 2rem;
+    }
+    .coord-title {
+        font-weight: 800;
+        color: var(--ua-text-dark);
+        font-size: 1.8rem;
+        letter-spacing: -0.02em;
+    }
+    .coord-subtitle {
+        color: var(--ua-text-muted);
+        font-size: 0.95rem;
+    }
+
+    /* Cards de Métricas Rápidas */
+    .metric-card {
+        background: var(--ua-card-bg);
+        border: 1px solid var(--ua-border);
+        border-radius: 10px;
+        padding: 1.25rem 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+    .metric-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--ua-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.25rem;
+    }
+    .metric-number {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--ua-text-dark);
+        line-height: 1.1;
+    }
+    .metric-icon-box {
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
+        background-color: #FDEDEE;
+        color: var(--ua-red);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+    }
+
+    /* Cards de Módulos Operativos */
+    .module-card {
+        background: var(--ua-card-bg);
+        border: 1px solid var(--ua-border);
+        border-radius: 12px;
+        padding: 1.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .module-badge {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--ua-red);
+        background: #FDEDEE;
+        padding: 4px 10px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        display: inline-block;
+        margin-bottom: 0.75rem;
+    }
+    .module-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--ua-text-dark);
+        margin-bottom: 0.5rem;
+    }
+    .module-desc {
+        font-size: 0.92rem;
+        color: var(--ua-text-muted);
+        line-height: 1.5;
+        margin-bottom: 1.5rem;
+    }
+    .btn-ua-action {
+        background-color: var(--ua-red);
+        color: #FFFFFF;
+        font-weight: 600;
+        font-size: 0.88rem;
+        padding: 9px 18px;
+        border-radius: 6px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: none;
+        transition: background-color 0.15s ease;
+        width: fit-content;
+    }
+    .btn-ua-action:hover {
+        background-color: var(--ua-red-hover);
+        color: #FFFFFF;
+    }
+    .btn-ua-outline-action {
+        background-color: transparent;
+        color: #374151;
+        border: 1px solid #D1D5DB;
+        font-weight: 600;
+        font-size: 0.88rem;
+        padding: 9px 18px;
+        border-radius: 6px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.15s ease;
+        width: fit-content;
+    }
+    .btn-ua-outline-action:hover {
+        background-color: #F3F4F6;
+        color: var(--ua-red);
+        border-color: var(--ua-red);
+    }
