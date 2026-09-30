@@ -1,73 +1,176 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Validación de Planificación</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light p-4">
-<div class="container">
-    <h3 class="mb-4 text-primary fw-bold">Validación de Planificación Académica</h3>
+{% extends 'base.html' %}
+{% load static %}
 
-    <!-- Formulario para Enviar Enlace -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-white fw-semibold">Cargar Nueva Planificación por Enlace</div>
-        <div class="card-body">
-            <form method="POST">
+{% block title %}Validación de Planificación Académica | Universidad Autónoma de Chile{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --ua-red: #C8232C;
+        --ua-red-hover: #A71C23;
+        --ua-card-bg: #FFFFFF;
+        --ua-border: #E5E7EB;
+        --ua-text-dark: #111827;
+        --ua-text-muted: #6B7280;
+    }
+
+    .val-header {
+        margin-bottom: 1.5rem;
+    }
+    .val-title {
+        font-weight: 800;
+        color: var(--ua-text-dark);
+        font-size: 1.75rem;
+        letter-spacing: -0.02em;
+    }
+    .val-card {
+        background: var(--ua-card-bg);
+        border: 1px solid var(--ua-border);
+        border-radius: 10px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+    .val-card-header {
+        background-color: #FAFAFA;
+        border-bottom: 1px solid var(--ua-border);
+        padding: 0.85rem 1.25rem;
+        font-weight: 700;
+        color: var(--ua-text-dark);
+        font-size: 0.95rem;
+    }
+    .val-card-body {
+        padding: 1.25rem;
+    }
+    .btn-ua-red {
+        background-color: var(--ua-red);
+        color: #FFFFFF;
+        font-weight: 600;
+        border: none;
+        padding: 0.5rem 1.25rem;
+        border-radius: 6px;
+        transition: background-color 0.15s ease;
+    }
+    .btn-ua-red:hover {
+        background-color: var(--ua-red-hover);
+        color: #FFFFFF;
+    }
+    .btn-ua-back {
+        background-color: transparent;
+        color: var(--ua-text-muted);
+        border: 1px solid var(--ua-border);
+        font-weight: 600;
+        padding: 0.45rem 1rem;
+        border-radius: 6px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.9rem;
+        transition: all 0.15s ease;
+    }
+    .btn-ua-back:hover {
+        background-color: #F3F4F6;
+        color: var(--ua-text-dark);
+    }
+    .table-ua thead th {
+        background-color: #F9FAFB;
+        color: var(--ua-text-dark);
+        font-weight: 700;
+        font-size: 0.85rem;
+        border-bottom: 1px solid var(--ua-border);
+    }
+</style>
+
+<div class="container-fluid py-2">
+    <!-- Encabezado con Botón de Regreso -->
+    <div class="val-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h2 class="val-title mb-0">Validación de Planificación Académica</h2>
+        </div>
+        <div>
+            <a href="{% url 'core:coordinacion' %}" class="btn-ua-back">
+                <i class="bi bi-arrow-left"></i> Volver al Panel
+            </a>
+        </div>
+    </div>
+
+    <!-- Formulario de Carga -->
+    <div class="val-card">
+        <div class="val-card-header">
+            Cargar Nueva Planificación por Enlace
+        </div>
+        <div class="val-card-body">
+            <form method="POST" action="{% url 'core:validar_planificacion' %}">
                 {% csrf_token %}
-                <div class="row g-3">
-                    <div class="col-md-5">
-                        <label class="form-label">Enlace de Planificación</label>
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-md-5">
+                        <label class="form-label fw-semibold text-secondary small">Enlace de Planificación</label>
                         <input type="url" name="enlace_planificacion" class="form-control" placeholder="https://docs.google.com/..." required>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Unidad Académica</label>
-                        <input type="text" name="unidad" class="form-control" value="Departamento de Informática" required>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fw-semibold text-secondary small">Unidad Académica</label>
+                        <input type="text" name="unidad" class="form-control" value="Departamento de Informática">
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Período</label>
-                        <input type="text" name="periodo" class="form-control" value="2026-10" required>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label fw-semibold text-secondary small">Período</label>
+                        <input type="text" name="periodo" class="form-control" value="2026-10">
                     </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100">Validar</button>
+                    <div class="col-12 col-md-2 d-grid">
+                        <button type="submit" class="btn btn-ua-red">
+                            <i class="bi bi-check-circle me-1"></i> Validar
+                        </button>
                     </div>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- Tarjetas de Resumen de Carga Reciente (si existen resultados) -->
     {% if resumen %}
-    <!-- 1. Tarjeta de Resumen -->
-    <div class="card border-info mb-4 shadow-sm">
-        <div class="card-header bg-info text-white fw-bold">Resultado de la Carga #{{ resumen.id }}</div>
-        <div class="card-body">
-            <div class="row text-center g-3">
-                <div class="col-4">Recibidas: <strong>{{ resumen.filas_recibidas }}</strong></div>
-                <div class="col-4">Aceptadas: <strong class="text-success">{{ resumen.filas_aceptadas }}</strong></div>
-                <div class="col-4">Observadas: <strong class="text-danger">{{ resumen.filas_observadas }}</strong></div>
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
+            <div class="p-3 border rounded bg-white">
+                <span class="d-block text-muted small fw-semibold">RECIBIDAS</span>
+                <span class="fs-3 fw-bold text-dark">{{ resumen.filas_recibidas }}</span>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="p-3 border rounded bg-white border-start border-4 border-success">
+                <span class="d-block text-success small fw-semibold">ACEPTADAS</span>
+                <span class="fs-3 fw-bold text-success">{{ resumen.filas_aceptadas }}</span>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="p-3 border rounded bg-white border-start border-4 border-danger">
+                <span class="d-block text-danger small fw-semibold">OBSERVADAS</span>
+                <span class="fs-3 fw-bold text-danger">{{ resumen.filas_observadas }}</span>
             </div>
         </div>
     </div>
+    {% endif %}
 
-    <!-- 2. Tabla de Filas Observadas (Errores por Fila) -->
+    <!-- Tabla de Filas Observadas (si hay errores) -->
     {% if errores_filas %}
-    <div class="card border-danger mb-4 shadow-sm">
-        <div class="card-header bg-danger text-white fw-bold">Detalle de Filas Observadas / Rechazadas</div>
+    <div class="val-card">
+        <div class="val-card-header text-danger">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i> Filas Observadas en el Último Proceso
+        </div>
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+            <table class="table table-hover align-middle table-ua mb-0">
+                <thead>
                     <tr>
-                        <th>N° Fila</th>
-                        <th>NRC</th>
-                        <th>Causa del Error</th>
+                        <th style="width: 100px;">N° Fila</th>
+                        <th style="width: 150px;">NRC</th>
+                        <th>Causa de la Observación</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for err in errores_filas %}
                     <tr>
-                        <td><span class="badge bg-dark">Fila {{ err.fila }}</span></td>
+                        <td class="fw-bold">{{ err.fila }}</td>
                         <td><code>{{ err.nrc }}</code></td>
-                        <td class="text-danger fw-semibold">{{ err.causa }}</td>
+                        <td class="text-danger small">{{ err.causa }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -75,45 +178,46 @@
         </div>
     </div>
     {% endif %}
-    {% endif %}
 
-    <!-- 3. Tabla de Historial General de Cargas -->
-    <div class="card shadow-sm mt-4">
-        <div class="card-header bg-white fw-bold">Historial de Planificaciones Procesadas</div>
+    <!-- Historial de Planificaciones Procesadas -->
+    <div class="val-card">
+        <div class="val-card-header">
+            Historial de Planificaciones Procesadas
+        </div>
         <div class="table-responsive">
-            <table class="table table-striped mb-0">
+            <table class="table table-hover align-middle table-ua mb-0">
                 <thead>
                     <tr>
                         <th>ID Carga</th>
                         <th>Fecha y Hora</th>
                         <th>Unidad</th>
                         <th>Período</th>
-                        <th>Recibidas</th>
-                        <th>Aceptadas</th>
-                        <th>Observadas</th>
+                        <th class="text-center">Recibidas</th>
+                        <th class="text-center">Aceptadas</th>
+                        <th class="text-center">Observadas</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for carga in historial_cargas %}
-                    <tr>
-                        <td>#{{ carga.id }}</td>
-                        <td>{{ carga.fecha|date:"d/m/Y H:i" }}</td>
-                        <td>{{ carga.unidad }}</td>
-                        <td>{{ carga.periodo }}</td>
-                        <td>{{ carga.filas_recibidas }}</td>
-                        <td><span class="text-success fw-bold">{{ carga.filas_aceptadas }}</span></td>
-                        <td><span class="text-danger fw-bold">{{ carga.filas_observadas }}</span></td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="7" class="text-center text-muted py-3">No hay registros previos.</td>
-                    </tr>
-                    {% endfor %}
+                    {% if historial_cargas %}
+                        {% for carga in historial_cargas %}
+                        <tr>
+                            <td class="fw-bold">#{{ carga.id }}</td>
+                            <td class="small text-secondary">{{ carga.fecha|date:"d/m/Y H:i" }}</td>
+                            <td>{{ carga.unidad }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ carga.periodo }}</span></td>
+                            <td class="text-center">{{ carga.filas_recibidas }}</td>
+                            <td class="text-center text-success fw-semibold">{{ carga.filas_aceptadas }}</td>
+                            <td class="text-center text-danger fw-semibold">{{ carga.filas_observadas }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">No hay registros previos.</td>
+                        </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
     </div>
-
 </div>
-</body>
-</html>
+{% endblock %}
