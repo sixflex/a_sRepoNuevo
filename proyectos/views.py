@@ -587,7 +587,7 @@ def acceso_registro_equipos(request, token):
         datos_formulario["cantidad_integrantes"] = cantidad_raw
 
         
-        # VALIDAR CANTIDAD DE INTEGRANTES
+        
         
 
         try:
@@ -600,12 +600,12 @@ def acceso_registro_equipos(request, token):
                 "La cantidad de integrantes debe estar entre 1 y 6."
             )
 
-        # Sets para detectar duplicados dentro del mismo equipo
+        
         ruts_utilizados = set()
         correos_utilizados = set()
 
         
-        # VALIDAR CADA INTEGRANTE
+        
         
 
         if 1 <= cantidad_integrantes <= 6:
@@ -622,18 +622,25 @@ def acceso_registro_equipos(request, token):
                     ""
                 ).strip().lower()
 
-                nombres = request.POST.get(
-                    f"nombres_{i}",
-                    ""
-                ).strip()
+                nombres_declarados = request.POST.get(
+                f"nombres_{i}",
+                ""
+                )
 
-                apellidos = request.POST.get(
-                    f"apellidos_{i}",
-                    ""
-                ).strip()
+                apellidos_declarados = request.POST.get(
+                f"apellidos_{i}",
+                ""
+                )
 
-                # Guardamos los datos para poder mostrarlos
-                # nuevamente si existe algún error.
+                nombres = normalizar_nombre(
+                nombres_declarados
+                )
+
+                apellidos = normalizar_nombre(
+                apellidos_declarados
+                )
+
+                
                 datos_formulario[f"rut_{i}"] = rut
                 datos_formulario[f"correo_{i}"] = correo
                 datos_formulario[f"nombres_{i}"] = nombres
@@ -766,3 +773,10 @@ def acceso_registro_equipos(request, token):
             "datos_formulario": datos_formulario,
         },
     )
+
+def normalizar_nombre(valor):
+   
+    if not valor:
+        return ""
+
+    return " ".join(valor.split())
