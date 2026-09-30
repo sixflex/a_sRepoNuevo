@@ -33,35 +33,29 @@ class Command(BaseCommand):
             name="Docente"
         )
 
-        coordinador, creado = User.objects.get_or_create(
+        coordinador, _ = User.objects.get_or_create(
             username="coordinador"
         )
+        coordinador.set_password("Coord1234")
+        coordinador.is_active = True
+        coordinador.save()
+        coordinador.groups.set([grupo_coordinador])
 
-        if creado:
-            coordinador.set_password("Coord1234")
-            coordinador.save()
-
-        coordinador.groups.add(grupo_coordinador)
-
-        usuario_docente1, creado = User.objects.get_or_create(
+        usuario_docente1, _ = User.objects.get_or_create(
             username="docente1"
         )
+        usuario_docente1.set_password("Docente1234")
+        usuario_docente1.is_active = True
+        usuario_docente1.save()
+        usuario_docente1.groups.set([grupo_docente])
 
-        if creado:
-            usuario_docente1.set_password("Docente1234")
-            usuario_docente1.save()
-
-        usuario_docente1.groups.add(grupo_docente)
-
-        usuario_docente2, creado = User.objects.get_or_create(
+        usuario_docente2, _ = User.objects.get_or_create(
             username="docente2"
         )
-
-        if creado:
-            usuario_docente2.set_password("Docente1234")
-            usuario_docente2.save()
-
-        usuario_docente2.groups.add(grupo_docente)
+        usuario_docente2.set_password("Docente1234")
+        usuario_docente2.is_active = True
+        usuario_docente2.save()
+        usuario_docente2.groups.set([grupo_docente])
 
         sede, _ = Sede.objects.get_or_create(
             nombre="Sede Santiago",

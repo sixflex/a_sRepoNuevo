@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Postulaciones | Portal A+S{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/socios.css' %}">
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+        <h1 class="page-title">Postulaciones de Socios</h1>
+        <p class="page-subtitle mb-0">Revisa las postulaciones recibidas desde las convocatorias.</p>
+    </div>
+    <span class="badge rounded-pill text-bg-light border px-3 py-2" style="color: var(--ua-text-dark);">
+        <i class="bi bi-inbox me-1" style="color: var(--ua-red);"></i>
+        {{ postulaciones|length }} postulación{{ postulaciones|length|pluralize:"es" }}
+    </span>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show" role="alert">
+            <i class="bi bi-info-circle me-2"></i>{{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card-ua">
+    <div class="card-header-ua">
+        <span><i class="bi bi-inbox me-2" style="color: var(--ua-red);"></i>Listado de postulaciones</span>
+    </div>
+
+    {% if postulaciones %}
+        <div class="table-responsive">
+            <table class="table tabla-ua mb-0">
+                <thead>
+                    <tr>
+                        <th>Convocatoria</th>
+                        <th>Socio</th>
+                        <th>Recepción</th>
+                        <th>Estado</th>
+                        <th>Revisión</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for post in postulaciones %}
+                        <tr>
+                            <td class="fw-semibold">{{ post.convocatoria|default:"—" }}</td>
+                            <td>{{ post.socio|default:"Sin socio asociado" }}</td>
+                            <td>{{ post.fecha_recepcion|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <span class="badge-estado estado-{{ post.estado }}">{{ post.estado|title }}</span>
+                                {% if post.estado == "RECHAZADA" and post.motivo_rechazo %}
+                                    <div class="socio-rut mt-1">Motivo: {{ post.motivo_rechazo }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if post.revisado_por_usuario %}
+                                    <div>{{ post.revisado_por_usuario.username }}</div>
+                                    <div class="socio-rut">{{ post.fecha_revision|date:"d/m/Y H:i" }}</div>
+                                {% else %}
+                                    <span class="text-muted small">Sin revisar</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end text-nowrap">
+                                <button type="button" class="btn-accion" data-bs-toggle="modal"
+                                        data-bs-target="#modalRevisar{{ post.id }}">
+                                    <i class="bi bi-clipboard-check me-1"></i>Revisar
+                                </button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <p class="mt-2 mb-0 fw-semibold">No hay postulaciones registradas</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- MODALES DE REVISIÓN -->
+{% for post in postulaciones %}
+<div class="modal fade" id="modalRevisar{{ post.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 10px; border: 1px solid var(--ua-border);">
+            <form method="post" action="{% url 'socios:revisar_postulacion' post.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title modal-title-ua">
+                        <i class="bi bi-clipboard-check me-2" style="color: var(--ua-red);"></i>Revisar postulación
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3 socio-nombre">{{ post.convocatoria|default:"Postulación" }}</p>
+
+                    <label for="estado_{{ post.id }}" class="form-label-ua">Decisión</label>
+                    <select id="estado_{{ post.id }}" name="estado" class="form-select mb-3 select-decision"
+                            data-motivo="motivo_wrap_{{ post.id }}" required>
+                        <option value="">Selecciona...</option>
+                        <option value="APROBADA">Aprobar</option>
+                        <option value="RECHAZADA">Rechazar</option>
+                    </select>
+
+                    <div id="motivo_wrap_{{ post.id }}" class="d-none">
+                        <label for="motivo_{{ post.id }}" class="form-label-ua">Motivo de rechazo</label>
+                        <textarea id="motivo_{{ post.id }}" name="motivo_rechazo" class="form-control" rows="3"
+                                  placeholder="Explica brevemente el motivo"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light-ua" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-ua"><i class="bi bi-check2 me-1"></i>Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<script>
+    // Muestra el motivo solo al rechazar y lo vuelve obligatorio
+    document.querySelectorAll('.select-decision').forEach(function (sel) {
+        sel.addEventListener('change', function () {
+            var wrap = document.getElementById(sel.dataset.motivo);
+            var area = wrap.querySelector('textarea');
+            var rechaza = sel.value === 'RECHAZADA';
+            wrap.classList.toggle('d-none', !rechaza);
+            area.required = rechaza;
+        });
+    });
+</script>
+{% endblock %}
