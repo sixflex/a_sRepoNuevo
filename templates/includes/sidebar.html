@@ -1,0 +1,105 @@
+<aside class="col-md-3 col-lg-2 sidebar">
+    <div class="sidebar-inner py-4">
+        <h6 class="text-muted px-3 text-uppercase small fw-bold mb-3"
+            style="letter-spacing: 0.05em;">
+            Menú
+        </h6>
+
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link" href="{% if user.groups.all.0.name == 'Coordinador' %}{% url 'core:coordinacion' %}{% elif user.groups.all.0.name == 'Docente' %}{% url 'core:docente' %}{% else %}{% url 'core:inicio' %}{% endif %}">
+                    <i class="bi bi-house me-2"></i>Inicio
+                </a>
+            </li>
+
+            {% if user.groups.all.0.name == "Coordinador" %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'home' %}">
+                        <i class="bi bi-mortarboard me-2"></i>Gestión Académica
+                    </a>
+                </li>
+
+                {% with current=request.resolver_match.url_name %}
+                    <li class="nav-item">
+                        <button
+                            class="nav-link sidebar-toggle {% if current == 'planificacion_list' or current == 'planificacion_detail' or current == 'gestionar_enlaces' or current == 'planificacion_coordinacion' or current == 'detalle_planificacion_coordinacion' %}active{% endif %}"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#submenuPlanificacion"
+                            aria-controls="submenuPlanificacion"
+                            aria-expanded="{% if current == 'planificacion_list' or current == 'planificacion_detail' or current == 'gestionar_enlaces' or current == 'planificacion_coordinacion' or current == 'detalle_planificacion_coordinacion' %}true{% else %}false{% endif %}"
+                        >
+                            <span>
+                                <i class="bi bi-calendar-check me-2"></i>Planificación A+S
+                            </span>
+                            <i class="bi bi-chevron-down sidebar-chevron"></i>
+                        </button>
+
+                        <div
+                            id="submenuPlanificacion"
+                            class="collapse {% if current == 'planificacion_list' or current == 'planificacion_detail' or current == 'gestionar_enlaces' or current == 'planificacion_coordinacion' or current == 'detalle_planificacion_coordinacion' %}show{% endif %}"
+                        >
+                            <ul class="nav flex-column sidebar-submenu">
+                                <li class="nav-item">
+                                    <a
+                                        class="nav-link {% if current == 'planificacion_list' or current == 'planificacion_detail' %}active{% endif %}"
+                                        href="{% url 'planificacion_list' %}"
+                                    >
+                                        Consultar secciones
+                                    </a>
+                                </li>
+
+                                <li class="nav-item">
+                                    <a
+                                        class="nav-link {% if current == 'gestionar_enlaces' %}active{% endif %}"
+                                        href="{% url 'proyectos:gestionar_enlaces' %}"
+                                    >
+                                        Enlaces para Dirección
+                                    </a>
+                                </li>
+
+                                <li class="nav-item">
+                                    <a
+                                        class="nav-link {% if current == 'planificacion_coordinacion' or current == 'detalle_planificacion_coordinacion' %}active{% endif %}"
+                                        href="{% url 'core:planificacion_coordinacion' %}"
+                                    >
+                                        Planificaciones recibidas
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                {% endwith %}
+
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="bi bi-folder me-2"></i>Proyectos
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'socios:lista_coordinador' %}">
+                        <i class="bi bi-people me-2"></i>Socios Comunitarios
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="bi bi-ui-checks me-2"></i>Encuestas
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="bi bi-file-earmark-bar-graph me-2"></i>Reportes
+                    </a>
+                </li>
+            {% endif %}
+
+            {% if user.groups.all.0.name == "Docente" %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'core:docente' %}">
+                        <i class="bi bi-journal-bookmark me-2"></i>Mis secciones
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </div>
+</aside>

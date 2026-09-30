@@ -1,0 +1,89 @@
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Período</th>
+                        <th>Carrera</th>
+                        <th>Asignatura</th>
+                        <th>NRC</th>
+                        <th>Sección</th>
+                        <th>Docente</th>
+                        <th>Campus / Sede</th>
+                        <th>Estado</th>
+                        <th class="text-center">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for seccion in secciones %}
+                        <tr>
+                            <td>
+                                <span class="fw-semibold">{{ seccion.periodo.anio }}</span><br>
+                                <span class="text-muted small">{{ seccion.periodo.tipo }}</span>
+                            </td>
+
+                            <td>
+                                {% for carrera in seccion.carreras.all %}
+                                    <span class="badge bg-light text-dark border mb-1">
+                                        {{ carrera.nombre }}
+                                    </span>
+                                {% empty %}
+                                    <span class="text-muted small">Sin carreras</span>
+                                {% endfor %}
+                            </td>
+
+                            <td>
+                                {% if seccion.asignatura.codigo %}
+                                    <span class="fw-semibold">{{ seccion.asignatura.codigo }}</span><br>
+                                {% endif %}
+                                {{ seccion.asignatura.nombre }}
+                            </td>
+
+                            <td class="fw-semibold">{{ seccion.nrc }}</td>
+                            <td>{{ seccion.seccion }}</td>
+
+                            <td>
+                                {% for docente in seccion.docentes.all %}
+                                    <div>{{ docente.nombres }} {{ docente.apellidos }}</div>
+                                {% empty %}
+                                    <span class="text-muted small">Sin docentes</span>
+                                {% endfor %}
+                            </td>
+
+                            <td>
+                                <span class="fw-semibold">{{ seccion.campus.nombre }}</span><br>
+                                <span class="text-muted small">{{ seccion.campus.sede.nombre }}</span>
+                            </td>
+
+                            <td>
+                                {% if seccion.estado == "Activa" %}
+                                    <span class="badge bg-success">Activa</span>
+                                {% elif seccion.estado == "Planificada" %}
+                                    <span class="badge bg-warning text-dark">Planificada</span>
+                                {% elif seccion.estado == "Finalizada" %}
+                                    <span class="badge bg-secondary">Finalizada</span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark border">{{ seccion.estado }}</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-center">
+                                <a href="{% url 'planificacion_detail' seccion.id %}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    Ver detalle
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                No se encontraron registros para los filtros seleccionados.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
