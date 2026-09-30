@@ -9,8 +9,9 @@ from django.utils.dateparse import parse_date
 
 from usuarios.decorators import coordinador_required
 from planificacion.models import PlanificacionEnlace
+from planificacion.email_service import enviar_correo_planificacion
 from academico.models import Campus, PeriodoAcademico, UnidadAcademica
-
+from auditoria.services import registrar_auditoria
 
 @coordinador_required
 def coordinador_contexto(request):
@@ -27,8 +28,25 @@ def gestionar_enlaces_planificacion(request):
                 PlanificacionEnlace,
                 pk=request.POST.get("enlace_id"),
             )
+            estado_anterior = enlace.activo
             enlace.activo = not enlace.activo
             enlace.save(update_fields=["activo"])
+            registrar_auditoria(
+                request=request,
+                entidad="PlanificacionEnlace",
+                entidad_id=enlace.id,
+                accion=(
+                    "ACTIVAR_ENLACE"
+                    if enlace.activo
+                    else "DESACTIVAR_ENLACE"
+                ),
+                valores_anteriores={
+                    "activo": estado_anterior,
+                },
+                valores_nuevos={
+                    "activo": enlace.activo,
+                },
+            )
 
             messages.success(
                 request,
@@ -36,6 +54,72 @@ def gestionar_enlaces_planificacion(request):
                 if enlace.activo
                 else "El enlace fue desactivado.",
             )
+            return redirect("proyectos:gestionar_enlaces")
+
+        if accion == "reenviar":
+            enlace = get_object_or_404(
+            PlanificacionEnlace,
+            pk=request.POST.get("enlace_id"),
+            )
+
+            ahora = timezone.now()
+
+            if not enlace.activo:
+                messages.error(
+                    request,
+                    "No se puede reenviar un enlace que está inactivo.",
+                )
+                return redirect("proyectos:gestionar_enlaces")
+
+            if (
+                enlace.fecha_expiracion is not None
+                and enlace.fecha_expiracion < ahora
+            ):
+                messages.error(
+                    request,
+                    "No se puede reenviar un enlace que ya expiró.",
+                )
+                return redirect("proyectos:gestionar_enlaces")
+
+            try:
+                enviado = enviar_correo_planificacion(
+                    request,
+                    enlace,
+                    reenvio=True,
+                )
+
+                if enviado:
+                    registrar_auditoria(
+                        request=request,
+                        entidad="PlanificacionEnlace",
+                        entidad_id=enlace.id,
+                        accion="REENVIAR_ENLACE",
+                        valores_nuevos={
+                            "destinatario_correo": enlace.destinatario_correo,
+                            "fecha_reenvio": timezone.now().isoformat(),
+                        },
+                    )
+                    messages.success(
+                        request,
+                        (
+                            "El enlace fue reenviado correctamente a "
+                            f"{enlace.destinatario_correo}."
+                        ),
+                    )
+                else:
+                    messages.error(
+                        request,
+                        "No fue posible reenviar el enlace.",
+                    )
+
+            except Exception:
+                messages.error(
+                    request,
+                    (
+                        "No fue posible enviar el correo. "
+                        "Revise la configuración del servicio de correo."
+                    ),
+                )
             return redirect("proyectos:gestionar_enlaces")
 
         unidad_id = request.POST.get("unidad_academica")
@@ -105,7 +189,7 @@ def gestionar_enlaces_planificacion(request):
                 pk=periodo_id,
             )
 
-            PlanificacionEnlace.objects.create(
+            enlace = PlanificacionEnlace.objects.create(
                 unidad_academica=unidad,
                 campus=campus,
                 periodo=periodo,
@@ -115,11 +199,59 @@ def gestionar_enlaces_planificacion(request):
                 fecha_expiracion=fecha_expiracion_dt,
                 activo=True,
             )
-
-            messages.success(
-                request,
-                f"Enlace generado exitosamente para {destinatario_nombre}.",
+            registrar_auditoria(
+                request=request,
+                entidad="PlanificacionEnlace",
+                entidad_id=enlace.id,
+                accion="CREAR_ENLACE",
+                valores_nuevos={
+                    "unidad_academica_id": enlace.unidad_academica_id,
+                    "campus_id": enlace.campus_id,
+                    "periodo_id": enlace.periodo_id,
+                    "destinatario_nombre": enlace.destinatario_nombre,
+                    "destinatario_correo": enlace.destinatario_correo,
+                    "fecha_expiracion": (
+                        enlace.fecha_expiracion.isoformat()
+                        if enlace.fecha_expiracion
+                        else None
+                    ),
+                    "activo": enlace.activo,
+                },
             )
+            try:
+                enviado = enviar_correo_planificacion(
+                    request,
+                    enlace,
+                    reenvio=False,
+                )
+
+                if enviado:
+                    messages.success(
+                        request,
+                        (
+                            f"Enlace generado y enviado correctamente a "
+                            f"{destinatario_correo}."
+                        ),
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        (
+                            "El enlace fue generado correctamente, "
+                            "pero no pudo enviarse por correo."
+                        ),
+                    )
+
+            except Exception:
+                messages.warning(
+                    request,
+                    (
+                        "El enlace fue generado correctamente, "
+                        "pero no pudo enviarse por correo. "
+                        "Puede copiarlo manualmente desde la lista."
+                    ),
+                )
+
             return redirect("proyectos:gestionar_enlaces")
 
     enlaces = list(

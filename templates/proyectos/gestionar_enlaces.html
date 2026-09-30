@@ -61,22 +61,7 @@
                             </td>
 
                             <td>
-                                <span class="badge bg-light text-dark border">
-                                    {{ e.unidad_academica.tipo }}
-                                </span>
-                                <div class="mt-1">
-                                    {{ e.unidad_academica.nombre }}
-                                </div>
-
-                                {% if e.unidad_academica.carrera %}
-                                    <small class="text-muted">
-                                        {{ e.unidad_academica.carrera.nombre }}
-                                    </small>
-                                {% elif e.unidad_academica.facultad %}
-                                    <small class="text-muted">
-                                        {{ e.unidad_academica.facultad.nombre }}
-                                    </small>
-                                {% endif %}
+                                {{ e.unidad_academica.nombre }}
                             </td>
 
                             <td>
@@ -126,6 +111,32 @@
                                         <i class="bi bi-box-arrow-up-right"></i>
                                     </a>
                                 </div>
+                                {% if e.esta_vigente %}
+                                    <form method="POST" class="d-inline">
+                                        {% csrf_token %}
+
+                                        <input
+                                            type="hidden"
+                                            name="accion"
+                                            value="reenviar"
+                                        >
+
+                                        <input
+                                            type="hidden"
+                                            name="enlace_id"
+                                            value="{{ e.id }}"
+                                        >
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-sm btn-outline-primary ms-1"
+                                            title="Reenviar enlace por correo"
+                                        >
+                                            <i class="bi bi-envelope"></i>
+                                            Reenviar
+                                        </button>
+                                    </form>
+                                {% endif %}
 
                                 <form method="POST" class="d-inline">
                                     {% csrf_token %}
@@ -194,12 +205,7 @@
                         </option>
 
                         {% for u in unidades %}
-                            <option value="{{ u.id }}">
-                                {{ u.tipo }} — {{ u.nombre }}
-                                {% if u.carrera %}
-                                    — {{ u.carrera.nombre }}
-                                {% endif %}
-                            </option>
+                            <option value="{{ u.id }}">{{ u.nombre }}</option>
                         {% endfor %}
                     </select>
                 </div>
