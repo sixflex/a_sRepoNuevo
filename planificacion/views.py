@@ -4,10 +4,11 @@ from django.db.models import Max
 from django.forms.utils import ErrorList
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from .forms import (DocenteFilaFormSet,FilaPlanificacionFormSet,)
-from .models import (FilaPlanificacion,FilaPlanificacionDocente,Planificacion,PlanificacionEnlace,)
+from .forms import (DocenteFilaFormSet, FilaPlanificacionFormSet)
+from .models import (FilaPlanificacion, FilaPlanificacionDocente, Planificacion, PlanificacionEnlace)
 from .services import validar_y_consolidar_planificacion
 from auditoria.services import registrar_auditoria
+
 
 def _docentes_initial(fila):
     if not fila.pk:
@@ -347,31 +348,23 @@ def formulario_tabular_as(request, token):
 
     else:
         initial = []
+        unidad = enlace.unidad_academica
+        facultad = (
+            unidad.facultad
+            or (
+                unidad.carrera.facultad
+                if unidad.carrera
+                else None
+            )
+        )
+        fila_defecto = {
+            "facultad_texto": facultad.nombre if facultad else "",
+            "carrera_texto": unidad.carrera.nombre if unidad.carrera else "",
+            "posible_socio_texto": "",
+        }
+
         if not queryset.exists():
-            unidad = enlace.unidad_academica
-            facultad = (
-                unidad.facultad
-                or (
-                    unidad.carrera.facultad
-                    if unidad.carrera
-                    else None
-                )
-            )
-            initial.append(
-                {
-                    "facultad_texto": (
-                        facultad.nombre
-                        if facultad
-                        else ""
-                    ),
-                    "carrera_texto": (
-                        unidad.carrera.nombre
-                        if unidad.carrera
-                        else ""
-                    ),
-                    "posible_socio_texto": "",
-                }
-            )
+            initial.append(fila_defecto)
 
         formset = FilaPlanificacionFormSet(
             queryset=queryset,
@@ -390,12 +383,19 @@ def formulario_tabular_as(request, token):
         zip(formset.forms, docentes_formsets)
     )
 
+    docentes_empty_formset = DocenteFilaFormSet(
+        prefix="docentes-__fila_prefix__",
+        initial=[{}],
+    )
+    docentes_empty_formset.extra = 1
+
     return render(
         request,
         "planificacion/formulario_tabular.html",
         {
             "formset": formset,
             "filas_con_docentes": filas_con_docentes,
+            "docentes_empty_formset": docentes_empty_formset,
             "planificacion": planificacion,
             "enlace": enlace,
             "vigente": vigente,
