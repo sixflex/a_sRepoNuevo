@@ -51,9 +51,17 @@ class Equipo(models.Model):
     blank=True,
     unique=True,
     editable=False,
-)
+    )
     fecha_registro = models.DateTimeField(auto_now_add=True)
     estado = models.CharField(max_length=20)
+
+    socio_comunitario = models.ForeignKey(
+    "socios.SocioComunitario",
+    on_delete=models.PROTECT,
+    null=True,
+    blank=True,
+    related_name="equipos",
+    )
 
     class Meta:
         constraints = [

@@ -15,6 +15,7 @@ from django.contrib.auth.views import redirect_to_login
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from socios.models import SocioComunitario
 
 from usuarios.decorators import coordinador_required, docente_required
 
@@ -525,7 +526,6 @@ def acceso_registro_equipos(request, token):
     ahora = timezone.now()
 
     
-
     if not enlace.activo:
         return render(
             request,
@@ -574,11 +574,25 @@ def acceso_registro_equipos(request, token):
         )
 
     
+    socios_disponibles = (
+        SocioComunitario.objects
+        .filter(
+            activo=True,
+            es_provisional=False,
+            estado_revision__in=["APROBADO", "DISPONIBLE"],
+        )
+        .select_related("clasificacion", "comuna")
+        .order_by("nombre_organizacion")
+    )
 
     errores = []
     datos_formulario = {}
     integrantes_validados = []
 
+    socio_seleccionado = None
+    socio_provisional_nombre = ""
+
+    
     clave_idempotencia = request.POST.get(
         "clave_idempotencia",
         "",
@@ -588,17 +602,90 @@ def acceso_registro_equipos(request, token):
         clave_idempotencia = str(uuid.uuid4())
 
     
-
     if request.method == "POST":
 
+        
+        tipo_socio = request.POST.get(
+            "tipo_socio",
+            "",
+        ).strip()
+
+        socio_comunitario_id = request.POST.get(
+            "socio_comunitario",
+            "",
+        ).strip()
+
+        socio_provisional_nombre = normalizar_nombre(
+            request.POST.get(
+                "socio_provisional_nombre",
+                ""
+            )
+        )
+
+        datos_formulario["tipo_socio"] = tipo_socio
+        datos_formulario["socio_comunitario"] = socio_comunitario_id
+        datos_formulario[
+            "socio_provisional_nombre"
+        ] = socio_provisional_nombre
+
+        if tipo_socio not in ["existente", "provisional"]:
+            errores.append(
+                "Debes seleccionar cómo registrarás "
+                "el Socio Comunitario."
+            )
+
+        elif tipo_socio == "existente":
+            if not socio_comunitario_id:
+                errores.append(
+                    "Debes seleccionar un Socio Comunitario disponible."
+                )
+            else:
+                try:
+                    socio_seleccionado = (
+                        SocioComunitario.objects
+                        .filter(
+                            pk=socio_comunitario_id,
+                            activo=True,
+                            es_provisional=False,
+                            estado_revision__in=[
+                                "APROBADO",
+                                "DISPONIBLE",
+                            ],
+                        )
+                        .first()
+                    )
+
+                    if socio_seleccionado is None:
+                        errores.append(
+                            "El Socio Comunitario seleccionado "
+                            "no se encuentra disponible."
+                        )
+
+                except (ValueError, TypeError):
+                    errores.append(
+                        "El Socio Comunitario seleccionado no es válido."
+                    )
+
+        elif tipo_socio == "provisional":
+            if not socio_provisional_nombre:
+                errores.append(
+                    "Debes ingresar el nombre de la organización "
+                    "del Socio Comunitario provisional."
+                )
+
+            elif len(socio_provisional_nombre) > 220:
+                errores.append(
+                    "El nombre de la organización no puede superar "
+                    "los 220 caracteres."
+                )
+
+        
         cantidad_raw = request.POST.get(
             "cantidad_integrantes",
-            ""
+            "",
         ).strip()
 
         datos_formulario["cantidad_integrantes"] = cantidad_raw
-
-        
 
         try:
             cantidad_integrantes = int(cantidad_raw)
@@ -614,29 +701,28 @@ def acceso_registro_equipos(request, token):
         correos_utilizados = set()
 
         
-
         if 1 <= cantidad_integrantes <= 6:
 
             for i in range(1, cantidad_integrantes + 1):
 
                 rut = request.POST.get(
                     f"rut_{i}",
-                    ""
+                    "",
                 ).strip()
 
                 correo = request.POST.get(
                     f"correo_{i}",
-                    ""
+                    "",
                 ).strip().lower()
 
                 nombres_declarados = request.POST.get(
                     f"nombres_{i}",
-                    ""
+                    "",
                 )
 
                 apellidos_declarados = request.POST.get(
                     f"apellidos_{i}",
-                    ""
+                    "",
                 )
 
                 nombres = normalizar_nombre(
@@ -647,13 +733,12 @@ def acceso_registro_equipos(request, token):
                     apellidos_declarados
                 )
 
-                # Mantener datos si ocurre un error.
+                
                 datos_formulario[f"rut_{i}"] = rut
                 datos_formulario[f"correo_{i}"] = correo
                 datos_formulario[f"nombres_{i}"] = nombres
                 datos_formulario[f"apellidos_{i}"] = apellidos
 
-                
                 if not rut:
                     errores.append(
                         f"Integrante {i}: el RUT es obligatorio."
@@ -676,11 +761,9 @@ def acceso_registro_equipos(request, token):
                     )
 
                 
-
                 rut_normalizado = ""
 
                 if rut:
-
                     if not validar_rut_chileno(rut):
                         errores.append(
                             f"Integrante {i}: el RUT ingresado "
@@ -697,10 +780,8 @@ def acceso_registro_equipos(request, token):
                     else:
                         ruts_utilizados.add(rut_normalizado)
 
-               
-
+                
                 if correo:
-
                     try:
                         validate_email(correo)
 
@@ -718,8 +799,6 @@ def acceso_registro_equipos(request, token):
                     else:
                         correos_utilizados.add(correo)
 
-                
-
                 integrantes_validados.append(
                     {
                         "rut": rut_normalizado,
@@ -731,14 +810,11 @@ def acceso_registro_equipos(request, token):
                 )
 
         
-
         correo_informante = (
             request.user.correo_institucional
             or request.user.email
             or ""
         ).strip().lower()
-
-        
 
         if 1 <= cantidad_integrantes <= 6:
 
@@ -758,11 +834,11 @@ def acceso_registro_equipos(request, token):
                 )
 
         
-
         try:
             clave_uuid = uuid.UUID(
                 clave_idempotencia
             )
+
         except (ValueError, TypeError, AttributeError):
             clave_uuid = None
 
@@ -772,7 +848,6 @@ def acceso_registro_equipos(request, token):
             )
 
         
-
         if clave_uuid:
 
             equipo_misma_solicitud = (
@@ -799,7 +874,6 @@ def acceso_registro_equipos(request, token):
                 )
 
         
-
         if correo_informante:
 
             equipo_ya_registrado = (
@@ -820,11 +894,9 @@ def acceso_registro_equipos(request, token):
                 )
 
         
-
         if not errores:
 
             try:
-
                 with transaction.atomic():
 
                     
@@ -875,6 +947,22 @@ def acceso_registro_equipos(request, token):
 
                         else:
 
+                            
+                            if tipo_socio == "provisional":
+
+                                socio_seleccionado = (
+                                    SocioComunitario.objects.create(
+                                        nombre_organizacion=(
+                                            socio_provisional_nombre
+                                        ),
+                                        estado_revision="RECIBIDO",
+                                        es_provisional=True,
+                                        activo=True,
+                                        fecha_creacion=timezone.now(),
+                                    )
+                                )
+
+                            
                             ultimo_numero = (
                                 Equipo.objects
                                 .filter(
@@ -900,8 +988,10 @@ def acceso_registro_equipos(request, token):
                                 )
                             )
 
+                            
                             equipo = Equipo.objects.create(
                                 seccion=seccion_bloqueada,
+                                socio_comunitario=socio_seleccionado,
                                 numero_grupo=numero_grupo,
                                 clave_idempotencia=clave_uuid,
                                 informante_nombre=nombre_informante,
@@ -928,7 +1018,6 @@ def acceso_registro_equipos(request, token):
 
             except IntegrityError:
 
-                
                 equipo_existente = (
                     Equipo.objects
                     .filter(
@@ -951,7 +1040,6 @@ def acceso_registro_equipos(request, token):
                     )
 
             
-
             if not errores:
 
                 messages.success(
@@ -969,7 +1057,6 @@ def acceso_registro_equipos(request, token):
                 )
 
     
-
     return render(
         request,
         "proyectos/acceso_registro_equipos.html",
@@ -980,6 +1067,9 @@ def acceso_registro_equipos(request, token):
             "errores": errores,
             "datos_formulario": datos_formulario,
             "clave_idempotencia": clave_idempotencia,
+
+            # CDE-46
+            "socios_disponibles": socios_disponibles,
         },
     )
 
