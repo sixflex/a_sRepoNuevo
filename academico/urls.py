@@ -23,6 +23,11 @@ urlpatterns = [
     path('carreras/crear/', views.carrera_create, name='carrera_create'),
     path('carreras/editar/<int:pk>/', views.carrera_update, name='carrera_update'),
     path('carreras/eliminar/<int:pk>/', views.carrera_delete, name='carrera_delete'),
+    # Unidades Académicas
+    path('unidades-academicas/', views.unidad_academica_list, name='unidad_academica_list'),
+    path('unidades-academicas/crear/', views.unidad_academica_create, name='unidad_academica_create'),
+    path('unidades-academicas/editar/<int:pk>/', views.unidad_academica_update, name='unidad_academica_update'),
+    path('unidades-academicas/eliminar/<int:pk>/',views.unidad_academica_delete, name='unidad_academica_delete'),
     # Asignaturas
     path('asignaturas/', views.asignatura_list, name='asignatura_list'),
     path('asignaturas/crear/', views.asignatura_create, name='asignatura_create'),

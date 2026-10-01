@@ -10,6 +10,7 @@ from .models import (
     Campus,
     Facultad,
     Carrera,
+    UnidadAcademica,
     Asignatura,
     AsignaturaCarrera,
     Docente,
@@ -131,7 +132,6 @@ def sede_delete(request, pk):
             "sede": sede,
         },
     )
-
 
 # =========================================================
 # CRUD CAMPUS
@@ -526,6 +526,192 @@ def carrera_delete(request, pk):
         "academico/carrera_confirm_delete.html",
         {
             "carrera": carrera,
+        },
+    )
+
+# =========================================================
+# CRUD UNIDADES ACADÉMICAS
+# =========================================================
+
+@coordinador_required
+def unidad_academica_list(request):
+    unidades = (
+        UnidadAcademica.objects
+        .select_related("facultad", "carrera")
+        .all()
+        .order_by("nombre")
+    )
+
+    return render(
+        request,
+        "academico/unidad_academica_list.html",
+        {
+            "unidades": unidades,
+        },
+    )
+
+
+@coordinador_required
+def unidad_academica_create(request):
+    facultades = Facultad.objects.filter(activo=True).order_by("nombre")
+    carreras = Carrera.objects.filter(activo=True).order_by("nombre")
+    error = None
+
+    if request.method == "POST":
+        facultad_id = request.POST.get("facultad")
+        carrera_id = request.POST.get("carrera")
+        tipo = request.POST.get("tipo", "").strip()
+        nombre = request.POST.get("nombre", "").strip()
+        correo_oficial = request.POST.get("correo_oficial", "").strip()
+        activo = request.POST.get("activo") == "on"
+
+        if not tipo:
+            error = "El tipo de unidad académica es obligatorio."
+
+        elif not nombre:
+            error = "El nombre de la unidad académica es obligatorio."
+
+        else:
+            facultad = None
+            carrera = None
+
+            if facultad_id:
+                facultad = get_object_or_404(
+                    Facultad,
+                    pk=facultad_id,
+                    activo=True,
+                )
+
+            if carrera_id:
+                carrera = get_object_or_404(
+                    Carrera,
+                    pk=carrera_id,
+                    activo=True,
+                )
+
+            if correo_oficial:
+                try:
+                    validate_email(correo_oficial)
+                except ValidationError:
+                    error = "Ingresa un correo electrónico válido."
+
+            if not error:
+                UnidadAcademica.objects.create(
+                    facultad=facultad,
+                    carrera=carrera,
+                    tipo=tipo,
+                    nombre=nombre,
+                    correo_oficial=correo_oficial or None,
+                    activo=activo,
+                )
+
+                return redirect("unidad_academica_list")
+
+    return render(
+        request,
+        "academico/unidad_academica_form.html",
+        {
+            "facultades": facultades,
+            "carreras": carreras,
+            "error": error,
+        },
+    )
+
+
+@coordinador_required
+def unidad_academica_update(request, pk):
+    unidad = get_object_or_404(
+        UnidadAcademica.objects.select_related(
+            "facultad",
+            "carrera",
+        ),
+        pk=pk,
+    )
+
+  
+    facultades = Facultad.objects.all().order_by("nombre")
+    carreras = Carrera.objects.all().order_by("nombre")
+
+    error = None
+
+    if request.method == "POST":
+        facultad_id = request.POST.get("facultad")
+        carrera_id = request.POST.get("carrera")
+        tipo = request.POST.get("tipo", "").strip()
+        nombre = request.POST.get("nombre", "").strip()
+        correo_oficial = request.POST.get("correo_oficial", "").strip()
+        activo = request.POST.get("activo") == "on"
+
+        if not tipo:
+            error = "El tipo de unidad académica es obligatorio."
+
+        elif not nombre:
+            error = "El nombre de la unidad académica es obligatorio."
+
+        else:
+            facultad = None
+            carrera = None
+
+            if facultad_id:
+                facultad = get_object_or_404(
+                    Facultad,
+                    pk=facultad_id,
+                )
+
+            if carrera_id:
+                carrera = get_object_or_404(
+                    Carrera,
+                    pk=carrera_id,
+                )
+
+            if correo_oficial:
+                try:
+                    validate_email(correo_oficial)
+                except ValidationError:
+                    error = "Ingresa un correo electrónico válido."
+
+            if not error:
+                unidad.facultad = facultad
+                unidad.carrera = carrera
+                unidad.tipo = tipo
+                unidad.nombre = nombre
+                unidad.correo_oficial = correo_oficial or None
+                unidad.activo = activo
+                unidad.save()
+
+                return redirect("unidad_academica_list")
+
+    return render(
+        request,
+        "academico/unidad_academica_form.html",
+        {
+            "unidad": unidad,
+            "facultades": facultades,
+            "carreras": carreras,
+            "error": error,
+        },
+    )
+
+
+@coordinador_required
+def unidad_academica_delete(request, pk):
+    unidad = get_object_or_404(
+        UnidadAcademica.objects.select_related(
+            "facultad",
+            "carrera",
+        ),
+        pk=pk,
+    )
+
+    if request.method == "POST":
+        unidad.delete()
+        return redirect("unidad_academica_list")
+
+    return render(
+        request,
+        "academico/unidad_academica_confirm_delete.html",
+        {
+            "unidad": unidad,
         },
     )
 

@@ -3,6 +3,10 @@
 
 {% block title %}Dashboard de Coordinación A+S | Universidad Autónoma de Chile{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/coordinacion.css' %}">
+{% endblock %}
+
 {% block content %}
 <style>
     :root {
@@ -228,10 +232,13 @@
                 <div>
                     <span class="module-badge">Curricular</span>
                     <h5 class="module-title">Gestión Académica</h5>
-                    <p class="module-desc">Consulta y administra la información curricular de asignaturas, secciones y nóminas requeridas para el desarrollo del programa A+S.</p>
+                    <p class="module-desc">
+                        Consulta y administra la información curricular de asignaturas,
+                        secciones y nóminas requeridas para el desarrollo del programa A+S.
+                    </p>
                 </div>
                 <div>
-                    <a href="{% url 'core:inicio' %}" class="btn-ua-action">
+                    <a href="{% url 'home' %}" class="btn-ua-action">
                         Ir a gestión académica <i class="bi bi-arrow-right"></i>
                     </a>
                 </div>
@@ -247,7 +254,7 @@
                     <p class="module-desc">Genera y comparte enlaces individuales con vigencia para Dirección de Carrera y Secretaría de Estudios.</p>
                 </div>
                 <div class="d-flex gap-2 flex-column flex-sm-row flex-wrap">
-                    <a href="#" class="btn-ua-action">
+                    <a href="{% url 'proyectos:gestionar_enlaces' %}" class="btn-ua-action">
                         <i class="bi bi-link-45deg"></i> Enlaces
                     </a>
                     <a href="{% url 'core:planificacion_coordinacion' %}" class="btn-ua-outline-action">

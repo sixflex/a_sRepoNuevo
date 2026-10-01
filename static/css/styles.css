@@ -16,6 +16,9 @@
 body {
     background-color: var(--color-surface);
     color: var(--color-text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 .navbar-brand {
@@ -65,3 +68,193 @@ main {
     background-color: #5e0000;
     color: white;
 }
+
+/* === Estilos === */
+:root {
+            --ua-red: #C8232C;
+            --ua-red-hover: #A71C23;
+            --ua-border: #E5E7EB;
+            --ua-text-dark: #1F2937;
+            --ua-text-muted: #6B7280;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #F9FAFB;
+            margin: 0;
+            padding: 0;
+            color: var(--ua-text-dark);
+        }
+
+        /* Barra superior institucional roja */
+        .navbar-sistema {
+            background-color: var(--ua-red) !important;
+            padding: 8px 1.5rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        /* Contenedor transparente y logo ampliado */
+        .brand-logo-container {
+            background: transparent !important;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .brand-logo-img {
+            height: 48px; /* Escala institucional nítida y legible */
+            width: auto;
+            object-fit: contain;
+            display: block;
+        }
+
+        /* Sidebar administrativo */
+        .sidebar {
+            min-height: calc(100vh - 58px);
+            background-color: #FFFFFF !important;
+            border-right: 1px solid var(--ua-border);
+        }
+
+        .sidebar .nav-link {
+            color: #4B5563;
+            font-size: 0.92rem;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 6px;
+            margin: 2px 8px;
+            display: flex;
+            align-items: center;
+            transition: all 0.15s ease;
+        }
+
+        .sidebar .nav-link:hover {
+            background-color: #F3F4F6;
+            color: var(--ua-red);
+        }
+
+        .sidebar .nav-link.active {
+            background-color: #FDEDEE;
+            color: var(--ua-red);
+            font-weight: 600;
+        }
+
+/* =========================================================
+   Navegación / layout
+   Se agrega sin reemplazar estilos existentes del equipo.
+   ========================================================= */
+
+:root {
+    --app-navbar-height: 64px;
+}
+
+.navbar-sistema {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+}
+
+.sidebar {
+    background-color: #FFFFFF !important;
+}
+
+.sidebar-inner {
+    width: 100%;
+}
+
+.container-fluid.p-0 {
+    flex: 1 0 auto;
+}
+
+.sidebar-toggle {
+    width: auto;
+    justify-content: space-between;
+    background: transparent;
+    border: 0;
+}
+
+.sidebar-toggle > span {
+    display: flex;
+    align-items: center;
+}
+
+.sidebar-chevron {
+    font-size: 0.75rem;
+    transition: transform 0.2s ease;
+}
+
+.sidebar-toggle[aria-expanded="true"] .sidebar-chevron {
+    transform: rotate(180deg);
+}
+
+.sidebar-submenu {
+    margin: 2px 8px 6px 28px;
+    padding-left: 8px;
+    border-left: 1px solid var(--ua-border);
+}
+
+.sidebar-submenu .nav-link {
+    margin: 1px 0;
+    padding: 7px 10px;
+    font-size: 0.86rem;
+}
+
+@media (min-width: 768px) {
+    .sidebar {
+        position: fixed;
+        top: var(--app-navbar-height);
+        left: 0;
+        bottom: 0;
+
+        width: 25%;
+        height: auto;
+
+        overflow-y: auto;
+
+        z-index: 1020;
+    }
+
+    .app-main {
+        margin-left: 25%;
+    }
+
+    .app-footer {
+        margin-left: 25%;
+    }
+}
+
+@media (min-width: 992px) {
+    .sidebar {
+        width: 16.666667%;
+    }
+
+    .app-main {
+        margin-left: 16.666667%;
+    }
+
+    .app-footer {
+        margin-left: 16.666667%;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .navbar-sistema {
+        position: relative;
+    }
+
+    .sidebar {
+        position: static;
+        width: 100%;
+        min-height: auto;
+        height: auto;
+        overflow: visible;
+    }
+
+    .app-main {
+        margin-left: 0;
+    }
+
+    .app-footer {
+        margin-left: 0;
+    }
+}
+

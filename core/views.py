@@ -14,15 +14,14 @@ from academico.models import (
 from .models import CargaPlanificacion, DetalleFilaObservada
 
 
-@login_required
 def inicio(request):
-    if es_coordinador(request.user):
-        return redirect("core:coordinacion")
+    if request.user.is_authenticated:
+        if es_coordinador(request.user):
+            return redirect("core:coordinacion")
+        if es_docente(request.user):
+            return redirect("core:docente")
 
-    if es_docente(request.user):
-        return redirect("core:docente")
-
-    raise PermissionDenied
+    return render(request, "core/inicio.html")
 
 
 @coordinador_required
@@ -195,7 +194,7 @@ def detalle_planificacion_coordinacion(
     )
 
 
-# --- Requerimiento RF-ACA-04: Validación de Planificación Académica ---
+
 @coordinador_required
 def validar_planificacion_view(request):
     resumen = None

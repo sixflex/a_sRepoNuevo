@@ -4,18 +4,10 @@ from django.db.models import Max
 from django.forms.utils import ErrorList
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-
-from .forms import (
-    DocenteFilaFormSet,
-    FilaPlanificacionFormSet,
-)
-from .models import (
-    FilaPlanificacion,
-    FilaPlanificacionDocente,
-    Planificacion,
-    PlanificacionEnlace,
-)
-
+from .forms import (DocenteFilaFormSet,FilaPlanificacionFormSet,)
+from .models import (FilaPlanificacion,FilaPlanificacionDocente,Planificacion,PlanificacionEnlace,)
+from .services import validar_y_consolidar_planificacion
+from auditoria.services import registrar_auditoria
 
 def _docentes_initial(fila):
     if not fila.pk:
@@ -47,10 +39,16 @@ def _crear_formsets_docentes(request, formset_filas):
                 prefix=prefix,
             )
         else:
-            formset_docentes = DocenteFilaFormSet(
+            initial_data = _docentes_initial(form_fila.instance)
+            extra_count = 1 if len(initial_data) == 0 else 0
+            
+            formset_docentes_class = DocenteFilaFormSet
+            formset_docentes = formset_docentes_class(
                 prefix=prefix,
-                initial=_docentes_initial(form_fila.instance),
+                initial=initial_data,
             )
+            if extra_count == 1:
+                formset_docentes.extra = 1
 
         formsets.append(formset_docentes)
 
@@ -58,13 +56,30 @@ def _crear_formsets_docentes(request, formset_filas):
 
 
 def _fila_esta_activa(form):
-    if getattr(form, "cleaned_data", {}).get("DELETE"):
+    cleaned = getattr(form, "cleaned_data", {})
+
+    if not cleaned:
         return False
 
-    if form.instance.pk:
-        return True
+    if cleaned.get("DELETE"):
+        return False
 
-    return form.has_changed()
+    campos = [
+        cleaned.get("facultad_texto"),
+        cleaned.get("carrera_texto"),
+        cleaned.get("nrc"),
+        cleaned.get("seccion"),
+        cleaned.get("asignatura_texto"),
+        cleaned.get("nivel"),
+        cleaned.get("jornada"),
+        cleaned.get("horario"),
+        cleaned.get("estudiantes_planificados"),
+    ]
+
+    return any(
+        valor not in (None, "")
+        for valor in campos
+    ) or cleaned.get("declaracion_as") is True
 
 
 def _docente_tiene_datos(cleaned_data):
@@ -153,6 +168,7 @@ def formulario_tabular_as(request, token):
                 "enlace": enlace,
                 "vigente": False,
                 "editable": False,
+                "hide_sidebar": True,
             },
         )
 
@@ -166,7 +182,6 @@ def formulario_tabular_as(request, token):
         },
     )
 
-    # Una versión FINAL queda en modo lectura.
     editable = vigente and planificacion.estado != "FINAL"
 
     queryset = (
@@ -205,7 +220,8 @@ def formulario_tabular_as(request, token):
             formset.forms,
             docentes_formsets,
         ):
-            if not _fila_esta_activa(form_fila):
+            nrc_valor = getattr(form_fila, "cleaned_data", {}).get("nrc")
+            if not _fila_esta_activa(form_fila) or not nrc_valor:
                 continue
 
             if not formset_docentes.is_valid():
@@ -234,7 +250,6 @@ def formulario_tabular_as(request, token):
             )
 
             with transaction.atomic():
-                # Borrados de filas.
                 for form_fila in formset.forms:
                     if (
                         getattr(form_fila, "cleaned_data", {}).get("DELETE")
@@ -253,7 +268,8 @@ def formulario_tabular_as(request, token):
                     formset.forms,
                     docentes_formsets,
                 ):
-                    if not _fila_esta_activa(form_fila):
+                    nrc_valor = getattr(form_fila, "cleaned_data", {}).get("nrc")
+                    if not _fila_esta_activa(form_fila) or not nrc_valor:
                         continue
 
                     fila = form_fila.save(commit=False)
@@ -277,32 +293,46 @@ def formulario_tabular_as(request, token):
                 if estado_guardado == "FINAL":
                     planificacion.fecha_envio_final = timezone.now()
 
-                # La validación/consolidación RF-ACA-04 se ejecuta después.
-                # Mientras una fila no ha sido revisada, queda PENDIENTE.
-                planificacion.filas_recibidas = (
-                    planificacion.filas.count()
-                )
-                planificacion.filas_aceptadas = (
-                    planificacion.filas.filter(
-                        estado_validacion="ACEPTADA"
-                    ).count()
-                )
-                planificacion.filas_observadas = (
-                    planificacion.filas.filter(
-                        estado_validacion="OBSERVADA"
-                    ).count()
-                )
+                planificacion.filas_recibidas = planificacion.filas.count()
+                planificacion.filas_aceptadas = planificacion.filas.filter(
+                    estado_validacion="ACEPTADA"
+                ).count()
+                planificacion.filas_observadas = planificacion.filas.filter(
+                    estado_validacion="OBSERVADA"
+                ).count()
 
-                planificacion.save(
-                    update_fields=[
-                        "estado",
-                        "fecha_guardado",
-                        "fecha_envio_final",
-                        "filas_recibidas",
-                        "filas_aceptadas",
-                        "filas_observadas",
-                    ]
-                )
+                campos_actualizados = [
+                    "estado",
+                    "fecha_guardado",
+                    "filas_recibidas",
+                ]
+
+                if estado_guardado == "FINAL":
+                    campos_actualizados.append("fecha_envio_final")
+
+                planificacion.save(update_fields=campos_actualizados)
+
+                if estado_guardado == "FINAL":
+                    validar_y_consolidar_planificacion(planificacion)
+
+                    registrar_auditoria(
+                        request=request,
+                        entidad="Planificacion",
+                        entidad_id=planificacion.id,
+                        accion="ENVIO_FINAL_PLANIFICACION",
+                        valores_nuevos={
+                            "estado": planificacion.estado,
+                            "filas_recibidas": planificacion.filas_recibidas,
+                            "filas_aceptadas": planificacion.filas_aceptadas,
+                            "filas_observadas": planificacion.filas_observadas,
+                            "fecha_envio_final": (
+                                planificacion.fecha_envio_final.isoformat()
+                                if planificacion.fecha_envio_final
+                                else None
+                            ),
+                        },
+                        actor_externo=enlace.destinatario_correo,
+                    )
 
             messages.success(
                 request,
@@ -339,7 +369,7 @@ def formulario_tabular_as(request, token):
                         if unidad.carrera
                         else ""
                     ),
-                    "posible_socio_texto": "Por definir",
+                    "posible_socio_texto": "",
                 }
             )
 
@@ -348,6 +378,9 @@ def formulario_tabular_as(request, token):
             prefix="filas",
             initial=initial,
         )
+        if not queryset.exists():
+            formset.extra = 1
+
         docentes_formsets = _crear_formsets_docentes(
             request,
             formset,
@@ -368,5 +401,6 @@ def formulario_tabular_as(request, token):
             "vigente": vigente,
             "editable": editable,
             "token": token,
+            "hide_sidebar": True,
         },
     )

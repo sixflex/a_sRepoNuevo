@@ -31,8 +31,8 @@
         </div>
 
         <p class="text-muted small mb-4">
-            Administración de campus, sedes y facultades.
-        </p>
+    Administración de campus, sedes, facultades y unidades académicas.
+</p>
 
 
         <div class="row g-4">
@@ -117,13 +117,42 @@
 
             </div>
 
+
+            <!-- UNIDADES ACADÉMICAS -->
+            <div class="col-lg-4 col-md-6">
+            
+                <div class="card shadow-sm border-0 h-100">
+            
+                    <div class="card-body p-4">
+            
+                        <h5 class="fw-bold">
+                            Unidades Académicas
+                        </h5>
+            
+                        <p class="text-muted">
+                            Administra las unidades académicas asociadas a facultades y carreras.
+                        </p>
+            
+                        <a href="{% url 'unidad_academica_list' %}"
+                           class="btn btn-rojo w-100">
+                            Administrar Unidades Académicas
+                        </a>
+            
+                    </div>
+            
+                </div>
+            
+            </div>
+
         </div>
 
     </div>
 
 
+
     <hr class="my-5">
 
+    
 
     <!-- ============================== -->
     <!-- ESTRUCTURA ACADÉMICA -->
@@ -221,36 +250,7 @@
                 </div>
 
             </div>
-            <!-- PLANIFICACIÓN ACADÉMICA -->
-            <div class="col-lg-4 col-md-6">
-
-                <div class="card shadow-sm border-0 h-100">
-
-                    <div class="card-body p-4">
-
-                        <h5 class="fw-bold">
-                            Planificación Académica
-                        </h5>
-
-                        <p class="text-muted">
-                            Consulta las secciones registradas
-                            y localízalas mediante filtros.
-                        </p>
-
-                        <a href="{% url 'planificacion_list' %}"
-                        class="btn btn-rojo w-100">
-
-                            Consultar Planificación
-
-                        </a>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
+</div>
 
     </div>
 

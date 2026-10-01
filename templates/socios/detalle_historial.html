@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ socio.nombre_organizacion }} | Portal A+S{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/socios.css' %}">
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+        <h1 class="page-title">{{ socio.nombre_organizacion }}</h1>
+        <p class="page-subtitle mb-0">Ficha del socio comunitario e historial de participaciones.</p>
+    </div>
+    <a href="{% url 'socios:lista_coordinador' %}" class="btn btn-light-ua">
+        <i class="bi bi-arrow-left me-1"></i>Volver al listado
+    </a>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- FICHA -->
+    <div class="col-12 col-lg-7">
+        <div class="card-ua h-100">
+            <div class="card-header-ua">
+                <span><i class="bi bi-building me-2" style="color: var(--ua-red);"></i>Datos del socio</span>
+                <span>
+                    <span class="badge-estado estado-{{ socio.estado_revision }}">{{ socio.estado_revision|cut:"_"|title }}</span>
+                    {% if socio.es_provisional %}<span class="badge-provisional ms-1">Provisional</span>{% endif %}
+                </span>
+            </div>
+            <div class="p-3 p-md-4">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div class="dato-label">RUT</div>
+                        <div class="dato-valor">{{ socio.rut|default:"—" }}</div>
+                        <div class="dato-label">Clasificación</div>
+                        <div class="dato-valor">{{ socio.clasificacion|default:"—" }}{% if socio.clasificacion_otra %} ({{ socio.clasificacion_otra }}){% endif %}</div>
+                        <div class="dato-label">Comuna</div>
+                        <div class="dato-valor">{{ socio.comuna|default:"—" }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="dato-label">Dirección</div>
+                        <div class="dato-valor">{{ socio.direccion_exacta|default:"—" }}</div>
+                        <div class="dato-label">Centro de servicio</div>
+                        <div class="dato-valor">{{ socio.centro_servicio|default:"—" }}</div>
+                        <div class="dato-label">Activo</div>
+                        <div class="dato-valor">{% if socio.activo %}Sí{% else %}No{% endif %}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTACTOS -->
+    <div class="col-12 col-lg-5">
+        <div class="card-ua h-100">
+            <div class="card-header-ua">
+                <span><i class="bi bi-person-lines-fill me-2" style="color: var(--ua-red);"></i>Contactos</span>
+            </div>
+            <div class="p-3 p-md-4">
+                {% for contacto in contactos %}
+                    <div class="d-flex align-items-start gap-2 mb-3">
+                        <i class="bi bi-person-circle text-muted mt-1"></i>
+                        <div>
+                            <span class="socio-nombre">{{ contacto.nombre }}</span>
+                            {% if contacto.es_principal %}<span class="badge-estado estado-APROBADO ms-1">Principal</span>{% endif %}
+                            {% if contacto.cargo %}<div class="socio-rut">{{ contacto.cargo }}</div>{% endif %}
+                            {% if contacto.correo %}<div class="small"><i class="bi bi-envelope me-1 text-muted"></i>{{ contacto.correo }}</div>{% endif %}
+                            {% if contacto.telefono %}<div class="small"><i class="bi bi-telephone me-1 text-muted"></i>{{ contacto.telefono }}</div>{% endif %}
+                        </div>
+                    </div>
+                {% empty %}
+                    <p class="text-muted small mb-0">Este socio no tiene contactos activos registrados.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- HISTORIAL -->
+<div class="card-ua">
+    <div class="card-header-ua">
+        <span><i class="bi bi-clock-history me-2" style="color: var(--ua-red);"></i>Historial de participaciones</span>
+        <span class="text-muted small">{{ participaciones|length }} registro{{ participaciones|length|pluralize }}</span>
+    </div>
+
+    {% if participaciones %}
+        <div class="table-responsive">
+            <table class="table tabla-ua mb-0">
+                <thead>
+                    <tr>
+                        <th>Período</th>
+                        <th>Inicio</th>
+                        <th>Sede / Campus</th>
+                        <th>Carrera</th>
+                        <th>Asignatura / Sección</th>
+                        <th>Equipo</th>
+                        <th>Proyecto</th>
+                        <th>Servicio realizado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in participaciones %}
+                        <tr>
+                            <td class="fw-semibold">{{ p.periodo|default:"—" }}</td>
+                            <td>{{ p.fecha_inicio|date:"d/m/Y"|default:"—" }}{% if p.fecha_fin %}<br><span class="socio-rut">al {{ p.fecha_fin|date:"d/m/Y" }}</span>{% endif %}</td>
+                            <td>{{ p.sede|default:"—" }}<br><span class="socio-rut">{{ p.campus|default:"" }}</span></td>
+                            <td>{{ p.carrera|default:"—" }}</td>
+                            <td>{{ p.asignatura|default:"—" }}<br><span class="socio-rut">{{ p.seccion|default:"" }}</span></td>
+                            <td>{{ p.equipo|default:"—" }}</td>
+                            <td>{{ p.proyecto|default:"—" }}</td>
+                            <td style="min-width: 200px;">
+                                {{ p.servicio_realizado|default:"—" }}
+                                {% if p.beneficiarios_estimados %}<div class="socio-rut">Beneficiarios: {{ p.beneficiarios_estimados }}</div>{% endif %}
+                                {% if p.evaluacion %}<div class="socio-rut">Evaluación: {{ p.evaluacion }}</div>{% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="bi bi-clock-history"></i>
+            <p class="mt-2 mb-0 fw-semibold">Sin participaciones registradas</p>
+            <p class="small mb-0">Este socio aún no ha participado en asignaturas A+S.</p>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}

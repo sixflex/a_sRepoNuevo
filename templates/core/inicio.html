@@ -1,18 +1,17 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block content %}
-<!-- Google Fonts: Inter y Montserrat para tipografía exacta del mockup -->
+{% block title %}Vinculación con el Medio UA | Aprendizaje + Servicio (A+S){% endblock %}
+
+{% block main_navbar %}{% endblock %}
+{% block main_footer %}{% endblock %}
+
+{% block layout_completo %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
 
 <style>
-    /* Ocultar barra superior genérica del layout base solo en la portada */
-    header, .navbar-dark.bg-danger {
-        display: none !important;
-    }
-
     :root {
         --ua-red: #C8232C;
         --ua-red-hover: #A71C23;
@@ -39,7 +38,6 @@
         color: var(--ua-text-title);
     }
 
-    /* 1. Navbar Oficial UA */
     .ua-navbar {
         background: #FFFFFF;
         border-bottom: 1px solid var(--ua-border);
@@ -73,11 +71,10 @@
         font-weight: 600;
     }
 
-    /* 2. Hero Section */
     .ua-hero {
         position: relative;
         background: #FFFFFF;
-        padding: 60px 0 50px 0;
+        padding: 65px 0 55px 0;
         text-align: center;
         overflow: hidden;
     }
@@ -136,7 +133,6 @@
         color: #FFFFFF;
     }
 
-    /* 3. Cards Estilo Figma */
     .mockup-card {
         background: #FFFFFF;
         border: 1px solid #EEF0F2;
@@ -192,7 +188,6 @@
         color: #FFFFFF;
     }
 
-    /* 4. Métricas y Estadísticas */
     .metric-bubble {
         width: 32px;
         height: 32px;
@@ -212,7 +207,6 @@
         line-height: 1;
     }
 
-    /* 5. Noticias y Documentos */
     .news-card-img {
         height: 190px;
         object-fit: cover;
@@ -238,12 +232,11 @@
         border-color: #D1D5DB;
     }
 
-    /* 6. Footer Oficial */
     .ua-footer {
         background-color: #16181B;
-        color: #9CA3AF;
+        color: #D1D5DB;
         font-size: 0.9rem;
-        padding: 60px 0 25px 0;
+        padding: 50px 0 25px 0;
     }
     .ua-footer-title {
         color: #FFFFFF;
@@ -251,13 +244,14 @@
         font-weight: 700;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        margin-bottom: 18px;
+        margin-bottom: 16px;
     }
     .ua-footer-link {
         color: #9CA3AF;
         text-decoration: none;
         display: block;
         margin-bottom: 10px;
+        font-size: 0.9rem;
         transition: color 0.15s ease;
     }
     .ua-footer-link:hover {
@@ -265,35 +259,34 @@
     }
 </style>
 
-<!-- ============================================================ -->
-<!-- 1. BARRA DE NAVEGACIÓN SUPERIOR (OFICIAL UA)                 -->
-<!-- ============================================================ -->
+
 <nav class="ua-navbar sticky-top">
     <div class="container d-flex align-items-center justify-content-between">
-        <!-- Logo Institucional Oficial UA (Escudo y Tipografía) -->
+        <!-- Logo Institucional desde static/img/logo_ua.png -->
         <a href="{% url 'core:inicio' %}" class="d-flex align-items-center text-decoration-none">
-            <div class="d-flex align-items-stretch" style="height: 52px;">
-                <!-- Escudo Rojo UA Oficial SVG -->
-                <div style="background-color: #C8232C; width: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px; border-radius: 3px 0 0 3px;">
-                    <span style="color: rgba(255,255,255,0.7); font-size: 5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">DUC IN ALTUM</span>
-                    <span style="color: #FFFFFF; font-size: 19px; font-weight: 900; font-family: 'Inter', sans-serif; line-height: 1.1;">UA</span>
+            <img src="{% static 'img/logo_ua.png' %}" 
+                 alt="Universidad Autónoma de Chile" 
+                 style="height: 48px; width: auto; object-fit: contain;"
+                 onerror="this.style.display='none'; document.getElementById('logo-fallback-nav').style.display='flex';">
+            
+            <div id="logo-fallback-nav" class="d-none align-items-stretch" style="height: 48px;">
+                <div style="background-color: #C8232C; width: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3px; border-radius: 3px 0 0 3px;">
+                    <span style="color: rgba(255,255,255,0.7); font-size: 4px; font-weight: 700;">DUC IN ALTUM</span>
+                    <span style="color: #FFFFFF; font-size: 16px; font-weight: 900; line-height: 1;">UA</span>
                 </div>
-                <!-- Bloque Gris Tipográfico Oficial -->
-                <div style="background-color: #2F3235; color: #FFFFFF; display: flex; flex-direction: column; justify-content: center; padding: 0 12px; border-radius: 0 3px 3px 0;">
-                    <div style="font-size: 10px; font-weight: 800; letter-spacing: 0.8px; line-height: 1.15; text-transform: uppercase;">UNIVERSIDAD</div>
-                    <div style="font-size: 10px; font-weight: 800; letter-spacing: 0.8px; line-height: 1.15; text-transform: uppercase;">AUTONOMA</div>
-                    <div style="font-size: 7.5px; font-weight: 500; letter-spacing: 1.4px; line-height: 1.15; text-transform: uppercase; color: #D1D5DB;">DE CHILE</div>
+                <div style="background-color: #2F3235; color: #FFFFFF; display: flex; flex-direction: column; justify-content: center; padding: 0 10px; border-radius: 0 3px 3px 0;">
+                    <div style="font-size: 9px; font-weight: 800; line-height: 1.1;">UNIVERSIDAD</div>
+                    <div style="font-size: 9px; font-weight: 800; line-height: 1.1;">AUTONOMA</div>
+                    <div style="font-size: 6.5px; font-weight: 500; color: #D1D5DB;">DE CHILE</div>
                 </div>
             </div>
         </a>
 
-        <!-- Barra de Búsqueda Central del Mockup -->
         <div class="d-none d-md-block position-relative" style="width: 440px;">
             <i class="bi bi-search position-absolute top-50 translate-middle-y text-muted" style="left: 18px;"></i>
             <input type="text" class="form-control ua-search-input w-100" placeholder="Buscar proyectos, carreras, documentos...">
         </div>
 
-        <!-- Enlaces de Navegación -->
         <div class="d-flex align-items-center gap-4">
             <a href="{% url 'core:inicio' %}" class="ua-nav-link active">Portal Público</a>
             <a href="{% url 'usuarios:login' %}" class="ua-nav-link">Inicio de Sesión</a>
@@ -302,9 +295,7 @@
     </div>
 </nav>
 
-<!-- ============================================================ -->
-<!-- 2. HERO PRINCIPAL A+S                                         -->
-<!-- ============================================================ -->
+
 <section class="ua-hero">
     <div class="container position-relative">
         <span class="ua-badge-model">MODELO EDUCATIVO A+S</span>
@@ -317,13 +308,10 @@
     </div>
 </section>
 
-<!-- ============================================================ -->
-<!-- 3. ACCESOS DIRECTOS (ESTUDIANTES Y SOCIOS)                   -->
-<!-- ============================================================ -->
+
 <section class="container py-5">
     <h3 class="fw-bold mb-4" style="font-size: 1.4rem;">Accesos Directos</h3>
     <div class="row g-4">
-        <!-- Tarjeta Estudiantes -->
         <div class="col-12 col-md-6">
             <div class="mockup-card p-4 h-100 d-flex flex-column justify-content-between">
                 <div>
@@ -334,10 +322,10 @@
                         <h4 class="mb-0 fw-bold" style="font-size: 1.25rem;">Portal Estudiantes</h4>
                     </div>
                     <div class="py-2">
-                        <a href="{% url 'proyectos:formulario_prueba' %}" class="list-action-item">
+                        <a href="#documentos" class="list-action-item">
                             <i class="bi bi-chevron-right"></i> Solicitar Carta de Presentación
                         </a>
-                        <a href="{% url 'proyectos:formulario_prueba' %}" class="list-action-item">
+                        <a href="#documentos" class="list-action-item">
                             <i class="bi bi-chevron-right"></i> Registrar Socio Comunitario
                         </a>
                         <a href="#" class="list-action-item">
@@ -355,7 +343,6 @@
             </div>
         </div>
 
-        <!-- Tarjeta Socios Comunitarios -->
         <div class="col-12 col-md-6">
             <div class="mockup-card p-4 h-100 d-flex flex-column justify-content-between">
                 <div>
@@ -389,22 +376,18 @@
     </div>
 </section>
 
-<!-- ============================================================ -->
-<!-- 4. IMPACTO TERRITORIAL Y MÉTRICAS (MOCKUP EXACTO)             -->
-<!-- ============================================================ -->
+
 <section id="proyectos" class="container pb-5">
     <div class="mb-3">
         <h3 class="fw-bold mb-1" style="font-size: 1.4rem;">Nuestro Impacto Territorial</h3>
         <p class="text-muted small mb-0">Visualiza los proyectos activos de Vinculación con el Medio y A+S en las distintas comunas</p>
     </div>
 
-    <!-- Mapa Simulado Calibrado -->
     <div class="mockup-card overflow-hidden mb-3 position-relative" style="height: 380px; background: #e6edf2;">
         <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1600&auto=format&fit=crop" 
              alt="Mapa Territorial Santiago" 
              style="width: 100%; height: 100%; object-fit: cover; opacity: 0.55; filter: contrast(1.15);">
         
-        <!-- Puntos simulados de calor territorial -->
         <div style="position: absolute; top: 40%; left: 45%; width: 140px; height: 140px; background: radial-gradient(circle, rgba(200,35,44,0.65) 0%, rgba(245,158,11,0.4) 50%, rgba(255,255,255,0) 75%); border-radius: 50%;"></div>
         <div style="position: absolute; top: 32%; left: 55%; width: 180px; height: 180px; background: radial-gradient(circle, rgba(245,158,11,0.7) 0%, rgba(239,68,68,0.4) 45%, rgba(255,255,255,0) 75%); border-radius: 50%;"></div>
         <div style="position: absolute; top: 50%; left: 48%; width: 90px; height: 90px; background: radial-gradient(circle, rgba(200,35,44,0.8) 0%, rgba(255,255,255,0) 70%); border-radius: 50%;"></div>
@@ -414,7 +397,6 @@
         </div>
     </div>
 
-    <!-- 3 Cards de Métricas Inferiores -->
     <div class="row g-3">
         <div class="col-12 col-md-4">
             <div class="mockup-card p-3 text-center">
@@ -440,9 +422,7 @@
     </div>
 </section>
 
-<!-- ============================================================ -->
-<!-- 5. CIFRAS MACRO DEL PROGRAMA A+S                             -->
-<!-- ============================================================ -->
+
 <section class="container pb-5">
     <h3 class="fw-bold mb-3" style="font-size: 1.35rem;">Cifras Macro del Programa A+S</h3>
     <div class="row g-3">
@@ -485,13 +465,10 @@
     </div>
 </section>
 
-<!-- ============================================================ -->
-<!-- 6. NOTICIAS Y RECURSOS                                       -->
-<!-- ============================================================ -->
+
 <section class="container pb-5">
     <h3 class="fw-bold mb-3" style="font-size: 1.35rem;">Noticias y Recursos</h3>
     <div class="row g-4">
-        <!-- Noticia 1 -->
         <div class="col-12 col-md-4">
             <div class="mockup-card h-100 overflow-hidden d-flex flex-column">
                 <img src="https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=600&auto=format&fit=crop" class="news-card-img" alt="Reunión UA">
@@ -505,7 +482,6 @@
                 </div>
             </div>
         </div>
-        <!-- Noticia 2 -->
         <div class="col-12 col-md-4">
             <div class="mockup-card h-100 overflow-hidden d-flex flex-column">
                 <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?q=80&w=600&auto=format&fit=crop" class="news-card-img" alt="Salud UA">
@@ -519,7 +495,6 @@
                 </div>
             </div>
         </div>
-        <!-- Noticia 3 -->
         <div class="col-12 col-md-4">
             <div class="mockup-card h-100 overflow-hidden d-flex flex-column">
                 <img src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=600&auto=format&fit=crop" class="news-card-img" alt="Guía A+S">
@@ -536,9 +511,7 @@
     </div>
 </section>
 
-<!-- ============================================================ -->
-<!-- 7. DOCUMENTOS DESCARGABLES                                   -->
-<!-- ============================================================ -->
+
 <section id="documentos" class="container pb-5">
     <h3 class="fw-bold mb-3" style="font-size: 1.35rem;">Documentos Descargables</h3>
     <div class="row g-3">
@@ -593,48 +566,78 @@
     </div>
 </section>
 
-<!-- ============================================================ -->
-<!-- 8. FOOTER OFICIAL UA                                         -->
-<!-- ============================================================ -->
+
 <footer class="ua-footer">
     <div class="container">
         <div class="row g-4 pb-4">
+            
             <div class="col-12 col-md-5">
-                <!-- Logo versión Footer -->
                 <div class="d-flex align-items-stretch mb-3" style="height: 48px; width: fit-content;">
-                    <div style="background-color: #C8232C; width: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3px; border-radius: 3px 0 0 3px;">
-                        <span style="color: rgba(255,255,255,0.7); font-size: 4px; font-weight: 700; letter-spacing: 0.5px;">DUC IN ALTUM</span>
-                        <span style="color: #FFFFFF; font-size: 16px; font-weight: 900; line-height: 1.1;">UA</span>
-                    </div>
-                    <div style="background-color: #383B3E; color: #FFFFFF; display: flex; flex-direction: column; justify-content: center; padding: 0 12px; border-radius: 0 3px 3px 0;">
-                        <div style="font-size: 9px; font-weight: 800; letter-spacing: 0.8px; line-height: 1.15;">UNIVERSIDAD AUTONOMA</div>
-                        <div style="font-size: 7px; font-weight: 500; letter-spacing: 1.2px; line-height: 1.15; color: #9CA3AF;">DE CHILE</div>
+                    <img src="{% static 'img/logo_ua.png' %}" 
+                         alt="Universidad Autónoma de Chile" 
+                         style="height: 46px; width: auto; object-fit: contain;"
+                         onerror="this.style.display='none'; document.getElementById('logo-fallback-footer').style.display='flex';">
+                    
+                    <div id="logo-fallback-footer" class="d-none align-items-stretch" style="height: 46px;">
+                        <div style="background-color: #C8232C; width: 38px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px; border-radius: 3px 0 0 3px;">
+                            <span style="color: rgba(255,255,255,0.7); font-size: 4px; font-weight: 700;">DUC IN ALTUM</span>
+                            <span style="color: #FFFFFF; font-size: 15px; font-weight: 900; line-height: 1;">UA</span>
+                        </div>
+                        <div style="background-color: #383B3E; color: #FFFFFF; display: flex; flex-direction: column; justify-content: center; padding: 0 10px; border-radius: 0 3px 3px 0;">
+                            <div style="font-size: 8.5px; font-weight: 800; line-height: 1.1;">UNIVERSIDAD AUTONOMA</div>
+                            <div style="font-size: 6.5px; font-weight: 500; color: #D1D5DB;">DE CHILE</div>
+                        </div>
                     </div>
                 </div>
-                <p class="small text-muted pe-md-4">
+                <p class="small pe-md-4 mb-0" style="color: #9CA3AF; line-height: 1.6; font-size: 0.88rem;">
                     Portal Integrado de Gestión e Información A+S. Fortaleciendo el aprendizaje de nuestros estudiantes mediante el servicio activo a nuestras comunidades.
                 </p>
             </div>
-            <div class="col-4 col-md-2">
+
+            <div class="col-6 col-md-2">
                 <div class="ua-footer-title">PORTAL</div>
                 <a href="{% url 'core:inicio' %}" class="ua-footer-link">Inicio</a>
                 <a href="#proyectos" class="ua-footer-link">Proyectos</a>
             </div>
-            <div class="col-4 col-md-2">
+
+            <div class="col-6 col-md-2">
                 <div class="ua-footer-title">ACCESOS</div>
-                <a href="{% url 'proyectos:formulario_prueba' %}" class="ua-footer-link">Estudiantes</a>
+                <a href="#documentos" class="ua-footer-link">Estudiantes</a>
                 <a href="#" class="ua-footer-link">Socios</a>
             </div>
-            <div class="col-4 col-md-3">
+
+            <div class="col-12 col-md-3">
                 <div class="ua-footer-title">CONTACTO</div>
-                <div class="small text-muted mb-2">contacto@uautonoma.cl</div>
-                <div class="small text-muted">+56 2 2303 6000</div>
+                
+                <div class="mb-3">
+                    <a href="tel:223036069" class="text-decoration-none d-inline-flex align-items-center gap-2" style="color: #FFFFFF; font-size: 0.92rem; font-weight: 600;">
+                        <i class="bi bi-telephone text-danger"></i> +56 2 2303 6069
+                    </a>
+                </div>
+
+                <div class="d-flex flex-column gap-2" style="font-size: 0.86rem;">
+                    <a href="mailto:admision@uautonoma.cl" class="ua-footer-link text-decoration-none mb-0">
+                        <i class="bi bi-envelope me-1 text-secondary"></i> admision@uautonoma.cl
+                    </a>
+                    <a href="mailto:postgrados@uautonoma.cl" class="ua-footer-link text-decoration-none mb-0">
+                        <i class="bi bi-envelope me-1 text-secondary"></i> postgrados@uautonoma.cl
+                    </a>
+                    <a href="mailto:comunicaciones@uautonoma.cl" class="ua-footer-link text-decoration-none mb-0">
+                        <i class="bi bi-envelope me-1 text-secondary"></i> comunicaciones@uautonoma.cl
+                    </a>
+                </div>
             </div>
         </div>
-        <div class="border-top border-secondary pt-3 mt-2 d-flex justify-content-between flex-wrap text-muted small" style="border-color: #26292D !important; font-size: 0.78rem;">
-            <div>Política de Protección de Datos (Ley 19.628)</div>
-            <div>© 2026 Universidad Autónoma de Chile. Todos los derechos reservados.</div>
+
+        <div class="border-top pt-3 mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2" 
+             style="border-color: rgba(255, 255, 255, 0.12) !important; font-size: 0.82rem; color: #9CA3AF;">
+            <div>
+                <a href="#" style="color: #9CA3AF; text-decoration: none;">Política de Protección de Datos (Ley 19.628)</a>
+            </div>
+            <div>
+                © 2026 Universidad Autónoma de Chile. Todos los derechos reservados.
+            </div>
         </div>
     </div>
 </footer>
-{% endblock %}
+{% endblock layout_completo %}

@@ -1,0 +1,76 @@
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <form method="get">
+            <div class="row g-3">
+                <div class="col-md-4 col-lg-2">
+                    <label for="periodo" class="form-label fw-semibold">Período</label>
+                    <select id="periodo" name="periodo" class="form-select">
+                        <option value="">Todos</option>
+                        {% for periodo in periodos %}
+                            <option value="{{ periodo.id }}"
+                                    {% if filtros.periodo == periodo.id|stringformat:"s" %}selected{% endif %}>
+                                {{ periodo.anio }} - {{ periodo.tipo }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4 col-lg-2">
+                    <label for="carrera" class="form-label fw-semibold">Carrera</label>
+                    <select id="carrera" name="carrera" class="form-select">
+                        <option value="">Todas</option>
+                        {% for carrera in carreras %}
+                            <option value="{{ carrera.id }}"
+                                    {% if filtros.carrera == carrera.id|stringformat:"s" %}selected{% endif %}>
+                                {{ carrera.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4 col-lg-2">
+                    <label for="asignatura" class="form-label fw-semibold">Asignatura</label>
+                    <select id="asignatura" name="asignatura" class="form-select">
+                        <option value="">Todas</option>
+                        {% for asignatura in asignaturas %}
+                            <option value="{{ asignatura.id }}"
+                                    {% if filtros.asignatura == asignatura.id|stringformat:"s" %}selected{% endif %}>
+                                {% if asignatura.codigo %}{{ asignatura.codigo }} - {% endif %}{{ asignatura.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4 col-lg-2">
+                    <label for="docente" class="form-label fw-semibold">Docente</label>
+                    <select id="docente" name="docente" class="form-select">
+                        <option value="">Todos</option>
+                        {% for docente in docentes %}
+                            <option value="{{ docente.id }}"
+                                    {% if filtros.docente == docente.id|stringformat:"s" %}selected{% endif %}>
+                                {{ docente.nombres }} {{ docente.apellidos }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4 col-lg-2">
+                    <label for="nrc" class="form-label fw-semibold">NRC</label>
+                    <input id="nrc"
+                           name="nrc"
+                           type="text"
+                           value="{{ filtros.nrc }}"
+                           class="form-control"
+                           placeholder="Buscar NRC">
+                </div>
+
+                <div class="col-md-4 col-lg-2 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-rojo">Filtrar</button>
+                    <a href="{% url 'planificacion_list' %}" class="btn btn-outline-secondary">
+                        Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
