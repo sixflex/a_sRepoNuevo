@@ -1,0 +1,658 @@
+{% extends "base.html" %}
+
+{% block title %}Planificación Académica A+S | Universidad Autónoma de Chile{% endblock %}
+
+{% block layout_completo %}
+<style>
+    .tabla-planificacion {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .tabla-planificacion th {
+        white-space: nowrap !important;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        letter-spacing: 0.03em;
+        background-color: #f1f5f9 !important;
+        color: #334155 !important;
+        padding: 8px 10px !important;
+        vertical-align: middle;
+        text-align: center;
+    }
+
+    .tabla-planificacion td {
+        vertical-align: top;
+        padding: 10px 8px !important;
+        background-color: #ffffff;
+    }
+
+    .col-facultad { width: 130px; }
+    .col-carrera { width: 140px; }
+    .col-as { width: 50px; text-align: center; }
+    .col-nrc { width: 80px; }
+    .col-campus { width: 120px; }
+    .col-seccion { width: 70px; }
+    .col-asignatura { width: 160px; }
+    .col-nivel { width: 70px; }
+    .col-jornada { width: 90px; }
+    .col-horario { width: 100px; }
+    .col-estudiantes { width: 80px; }
+    .col-socio { width: 130px; }
+    .col-docentes { width: 340px; }
+    .col-acciones { width: 60px; text-align: center; }
+
+    .tabla-planificacion input[type="text"],
+    .tabla-planificacion input[type="number"],
+    .tabla-planificacion select {
+        width: 100% !important;
+        font-size: 0.8rem !important;
+        padding: 4px 6px !important;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+    }
+
+    .docente-subcard {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 8px;
+        margin-bottom: 6px;
+    }
+</style>
+
+<div class="d-flex flex-column min-vh-100">
+    {% block main_navbar %}
+        <nav class="navbar navbar-expand-lg navbar-dark navbar-sistema py-2">
+            <div class="container-fluid">
+                <a class="navbar-brand d-flex align-items-center gap-3 text-white fw-bold py-0" href="{% if user.is_authenticated %}{% url 'core:inicio' %}{% else %}#{% endif %}">
+                    <div class="brand-logo-container d-flex align-items-center" style="height: 48px;">
+                        <img src="/static/img/logo_ua.png" 
+                             alt="Universidad Autónoma de Chile" 
+                             class="brand-logo-img"
+                             style="height: 44px; max-height: 44px; width: auto; object-fit: contain;"
+                             onerror="this.style.display='none'; document.getElementById('fallback-ua-badge-tab').style.display='inline-block';">
+                        
+                        <span id="fallback-ua-badge-tab" class="d-none fw-bold" style="color: #FFFFFF; font-size: 0.9rem; background: rgba(0,0,0,0.2); padding: 3px 8px; border-radius: 4px;">
+                            UA
+                        </span>
+                    </div>
+
+                    <span style="letter-spacing: 0.02em; font-size: 1.2rem;">Portal A+S</span>
+                </a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarPrincipalTab">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarPrincipalTab">
+                    <ul class="navbar-nav ms-auto align-items-center gap-2">
+                        {% if user.is_authenticated %}
+                            <li class="nav-item">
+                                <a class="nav-link text-white opacity-75" href="{% url 'core:inicio' %}">
+                                    <i class="bi bi-house-door me-1"></i>Inicio
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <span class="nav-link text-white fw-semibold">
+                                    <i class="bi bi-person-circle me-1"></i>{{ user.username }}
+                                </span>
+                            </li>
+                            <li class="nav-item">
+                                <form method="post" action="{% url 'usuarios:logout' %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-link nav-link text-white text-decoration-none opacity-75">
+                                        <i class="bi bi-box-arrow-right me-1"></i>Cerrar sesión
+                                    </button>
+                                </form>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    {% endblock main_navbar %}
+
+    <main class="flex-grow-1 p-4">
+        <div class="container-fluid mt-2 mb-4">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                        <h3 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-table text-danger me-2"></i> Planificación Académica A+S
+                        </h3>
+                        {% if planificacion and planificacion.estado == "FINAL" %}
+                            <span class="badge bg-success px-3 py-2 fs-6">Versión Final (Modo Lectura)</span>
+                        {% elif vigente %}
+                            <span class="badge bg-primary px-3 py-2 fs-6">Planilla en Edición</span>
+                        {% else %}
+                            <span class="badge bg-danger px-3 py-2 fs-6">Enlace Inactivo / Expirado</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="row g-2 text-secondary small">
+                        <div class="col-12 col-md-6">
+                            <div><strong>Unidad Académica:</strong> {{ enlace.unidad_academica.nombre }}</div>
+                            <div><strong>Sede / Campus:</strong> {{ enlace.campus.sede.nombre }} — {{ enlace.campus.nombre }}</div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div><strong>Período Académico:</strong> {{ enlace.periodo.nombre }}</div>
+                            <div><strong>Destinatario:</strong> {{ enlace.destinatario_nombre }} ({{ enlace.destinatario_correo }})</div>
+                        </div>
+                    </div>
+
+                    {% if planificacion.filas_recibidas > 0 or planificacion.estado == "FINAL" %}
+                        <hr class="my-3 text-muted">
+                        <div class="row g-3 text-center">
+                            <div class="col-4">
+                                <div class="p-2 border rounded bg-light">
+                                    <span class="d-block text-secondary small fw-semibold">Filas Recibidas</span>
+                                    <span class="fs-5 fw-bold text-dark">{{ planificacion.filas_recibidas }}</span>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 border rounded bg-light">
+                                    <span class="d-block text-success small fw-semibold">Filas Aceptadas</span>
+                                    <span class="fs-5 fw-bold text-success">{{ planificacion.filas_aceptadas }}</span>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 border rounded bg-light">
+                                    <span class="d-block text-warning small fw-semibold">Filas Observadas</span>
+                                    <span class="fs-5 fw-bold text-warning">{{ planificacion.filas_observadas }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% if not vigente %}
+                <div class="alert alert-warning border-0 shadow-sm mb-4">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    Este enlace está inactivo o su plazo de vigencia ya finalizó. La información se muestra únicamente como registro histórico.
+                </div>
+            {% endif %}
+
+            {% if planificacion and planificacion.estado == "FINAL" %}
+                <div class="alert alert-info border-0 shadow-sm mb-4">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    Esta planificación ya fue enviada formalmente como versión final a la Coordinación A+S y se encuentra bloqueada para modificaciones.
+                </div>
+            {% endif %}
+
+            {% if planificacion %}
+                <form method="POST" id="form-planificacion">
+                    {% csrf_token %}
+                    {{ formset.management_form }}
+
+                    {% if formset.non_form_errors %}
+                        <div class="alert alert-danger">
+                            {{ formset.non_form_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="card shadow-sm border-0 mb-3">
+                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold text-secondary">
+                                Asignaturas, Secciones y Docentes Planificados
+                            </h6>
+                            {% if editable %}
+                                <button type="button" class="btn btn-sm btn-primary" id="btn-agregar-fila">
+                                    <i class="bi bi-plus-lg me-1"></i> + Agregar Asignatura
+                                </button>
+                            {% endif %}
+                        </div>
+
+                        <div class="card-body p-0 table-responsive">
+                            <table class="table table-bordered table-hover align-middle mb-0 small tabla-planificacion" id="tabla-planificacion">
+                                <thead>
+                                    <tr>
+                                        <th class="col-facultad">Facultad</th>
+                                        <th class="col-carrera">Carrera</th>
+                                        <th class="col-as">A+S</th>
+                                        <th class="col-nrc">NRC</th>
+                                        <th class="col-campus">Campus</th>
+                                        <th class="col-seccion">Sección</th>
+                                        <th class="col-asignatura">Asignatura</th>
+                                        <th class="col-nivel">Nivel</th>
+                                        <th class="col-jornada">Jornada</th>
+                                        <th class="col-horario">Horario</th>
+                                        <th class="col-estudiantes">Estudiantes</th>
+                                        <th class="col-socio">Posible SC</th>
+                                        <th class="col-docentes">Docente(s) Responsable(s)</th>
+                                        {% if editable %}
+                                            <th class="col-acciones">Quitar</th>
+                                        {% endif %}
+                                    </tr>
+                                </thead>
+
+                                <tbody id="filas-tbody">
+                                    {% for form, docentes_formset in filas_con_docentes %}
+                                        <tr class="fila-planificacion-tr" data-fila-idx="{{ forloop.counter0 }}">
+                                            {% for hidden in form.hidden_fields %}
+                                                {{ hidden }}
+                                            {% endfor %}
+
+                                            <td class="col-facultad">{{ form.facultad_texto }}</td>
+                                            <td class="col-carrera">{{ form.carrera_texto }}</td>
+                                            <td class="col-as">{{ form.declaracion_as }}</td>
+                                            <td class="col-nrc">{{ form.nrc }}</td>
+                                            <td class="col-campus">
+                                                <span class="badge bg-light text-dark border p-2 w-100 text-truncate text-start">
+                                                    {{ enlace.campus.nombre }}
+                                                </span>
+                                            </td>
+                                            <td class="col-seccion">{{ form.seccion }}</td>
+                                            <td class="col-asignatura">{{ form.asignatura_texto }}</td>
+                                            <td class="col-nivel">{{ form.nivel }}</td>
+                                            <td class="col-jornada">{{ form.jornada }}</td>
+                                            <td class="col-horario">{{ form.horario }}</td>
+                                            <td class="col-estudiantes">{{ form.estudiantes_planificados }}</td>
+                                            <td class="col-socio">{{ form.posible_socio_texto }}</td>
+
+                                            <td class="col-docentes bg-light">
+                                                {{ docentes_formset.management_form }}
+
+                                                {% if docentes_formset.non_form_errors %}
+                                                    <div class="text-danger small mb-2">
+                                                        {{ docentes_formset.non_form_errors }}
+                                                    </div>
+                                                {% endif %}
+
+                                                <div class="docentes-container" data-prefix="{{ docentes_formset.prefix }}">
+                                                    {% for docente_form in docentes_formset %}
+                                                        <div class="docente-subcard shadow-sm">
+                                                            {{ docente_form.id }}
+
+                                                            <div class="row g-2">
+                                                                <div class="col-md-3">
+                                                                    <label class="form-label small mb-1 fw-semibold text-secondary">RUT</label>
+                                                                    {{ docente_form.rut }}
+                                                                </div>
+                                                                <div class="col-md-5">
+                                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Nombre Completo</label>
+                                                                    {{ docente_form.nombre }}
+                                                                </div>
+                                                                <div class="col-md-4">
+                                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Tipo Contrato</label>
+                                                                    {{ docente_form.tipo_contrato }}
+                                                                </div>
+                                                                <div class="col-md-3">
+                                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Capacitado A+S</label>
+                                                                    {{ docente_form.capacitado_as }}
+                                                                </div>
+                                                                <div class="col-md-5">
+                                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Correo</label>
+                                                                    {{ docente_form.correo }}
+                                                                </div>
+                                                                <div class="col-md-4">
+                                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Teléfono</label>
+                                                                    {{ docente_form.telefono }}
+                                                                </div>
+
+                                                                {% if editable %}
+                                                                    <div class="col-12 mt-1">
+                                                                        <div class="form-check">
+                                                                            {{ docente_form.DELETE }}
+                                                                            <label class="form-check-label text-danger small">
+                                                                                Quitar docente
+                                                                            </label>
+                                                                        </div>
+                                                                    </div>
+                                                                {% endif %}
+                                                            </div>
+
+                                                            {% if docente_form.errors %}
+                                                                <div class="text-danger small mt-2">
+                                                                    {{ docente_form.errors }}
+                                                                </div>
+                                                            {% endif %}
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+
+                                                {% if editable %}
+                                                    <button type="button" class="btn btn-sm btn-outline-primary mt-1 agregar-docente" data-prefix="{{ docentes_formset.prefix }}">
+                                                        <i class="bi bi-person-plus-fill me-1"></i> + Agregar Docente
+                                                    </button>
+
+                                                    <template id="template-{{ docentes_formset.prefix }}">
+                                                        <div class="docente-subcard shadow-sm">
+                                                            {{ docentes_formset.empty_form.id }}
+                                                            <div class="row g-2">
+                                                                <div class="col-md-3">
+                                                                    <label class="form-label small mb-1 fw-semibold text-secondary">RUT</label>
+                                                                    {{ docentes_formset.empty_form.rut }}
+                                                                </div>
+                                                                <div class="col-md-5">
+                                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Nombre Completo</label>
+                                                                    {{ docentes_formset.empty_form.nombre }}
+                                                                </div>
+                                                                <div class="col-md-4">
+                                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Tipo Contrato</label>
+                                                                    {{ docentes_formset.empty_form.tipo_contrato }}
+                                                                </div>
+                                                                <div class="col-md-3">
+                                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Capacitado A+S</label>
+                                                                    {{ docentes_formset.empty_form.capacitado_as }}
+                                                                </div>
+                                                                <div class="col-md-5">
+                                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Correo</label>
+                                                                    {{ docentes_formset.empty_form.correo }}
+                                                                </div>
+                                                                <div class="col-md-4">
+                                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Teléfono</label>
+                                                                    {{ docentes_formset.empty_form.telefono }}
+                                                                </div>
+                                                                <div class="col-12 mt-1">
+                                                                    <div class="form-check">
+                                                                        {{ docentes_formset.empty_form.DELETE }}
+                                                                        <label class="form-check-label text-danger small">
+                                                                            Quitar docente
+                                                                        </label>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </template>
+                                                {% endif %}
+                                            </td>
+
+                                            {% if editable %}
+                                                <td class="col-acciones">
+                                                    {% if form.instance.pk %}
+                                                        {{ form.DELETE }}
+                                                    {% else %}
+                                                        <button type="button" class="btn btn-sm btn-outline-danger btn-quitar-fila">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    {% endif %}
+                                                </td>
+                                            {% endif %}
+                                        </tr>
+
+                                        {% if form.errors %}
+                                            <tr>
+                                                <td colspan="{% if editable %}14{% else %}13{% endif %}" class="text-danger bg-light">
+                                                    {{ form.errors }}
+                                                </td>
+                                            </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {% if editable %}
+                        <template id="template-fila">
+                            <tr class="fila-planificacion-tr" data-fila-idx="__prefix__">
+                                {% for hidden in formset.empty_form.hidden_fields %}
+                                    {{ hidden }}
+                                {% endfor %}
+
+                                <td class="col-facultad">{{ formset.empty_form.facultad_texto }}</td>
+                                <td class="col-carrera">{{ formset.empty_form.carrera_texto }}</td>
+                                <td class="col-as">{{ formset.empty_form.declaracion_as }}</td>
+                                <td class="col-nrc">{{ formset.empty_form.nrc }}</td>
+                                <td class="col-campus">
+                                    <span class="badge bg-light text-dark border p-2 w-100 text-truncate text-start">
+                                        {{ enlace.campus.nombre }}
+                                    </span>
+                                </td>
+                                <td class="col-seccion">{{ formset.empty_form.seccion }}</td>
+                                <td class="col-asignatura">{{ formset.empty_form.asignatura_texto }}</td>
+                                <td class="col-nivel">{{ formset.empty_form.nivel }}</td>
+                                <td class="col-jornada">{{ formset.empty_form.jornada }}</td>
+                                <td class="col-horario">{{ formset.empty_form.horario }}</td>
+                                <td class="col-estudiantes">{{ formset.empty_form.estudiantes_planificados }}</td>
+                                <td class="col-socio">{{ formset.empty_form.posible_socio_texto }}</td>
+
+                                <td class="col-docentes bg-light">
+                                    <input type="hidden" name="docentes-__prefix__-TOTAL_FORMS" value="1" id="id_docentes-__prefix__-TOTAL_FORMS">
+                                    <input type="hidden" name="docentes-__prefix__-INITIAL_FORMS" value="0" id="id_docentes-__prefix__-INITIAL_FORMS">
+                                    <input type="hidden" name="docentes-__prefix__-MIN_NUM_FORMS" value="0" id="id_docentes-__prefix__-MIN_NUM_FORMS">
+                                    <input type="hidden" name="docentes-__prefix__-MAX_NUM_FORMS" value="1000" id="id_docentes-__prefix__-MAX_NUM_FORMS">
+
+                                    <div class="docentes-container" data-prefix="docentes-__prefix__">
+                                        <div class="docente-subcard shadow-sm">
+                                            <input type="hidden" name="docentes-__prefix__-0-id" id="id_docentes-__prefix__-0-id">
+                                            <div class="row g-2">
+                                                <div class="col-md-3">
+                                                    <label class="form-label small mb-1 fw-semibold text-secondary">RUT</label>
+                                                    <input type="text" name="docentes-__prefix__-0-rut" maxlength="12" class="form-control form-control-sm" id="id_docentes-__prefix__-0-rut">
+                                                </div>
+                                                <div class="col-md-5">
+                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Nombre Completo</label>
+                                                    <input type="text" name="docentes-__prefix__-0-nombre" maxlength="180" class="form-control form-control-sm" id="id_docentes-__prefix__-0-nombre">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Tipo Contrato</label>
+                                                    <input type="text" name="docentes-__prefix__-0-tipo_contrato" maxlength="80" class="form-control form-control-sm" id="id_docentes-__prefix__-0-tipo_contrato">
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Capacitado A+S</label>
+                                                    <select name="docentes-__prefix__-0-capacitado_as" class="form-select form-select-sm" id="id_docentes-__prefix__-0-capacitado_as">
+                                                        <option value="" selected>No informado</option>
+                                                        <option value="true">Sí</option>
+                                                        <option value="false">No</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-5">
+                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Correo</label>
+                                                    <input type="email" name="docentes-__prefix__-0-correo" class="form-control form-control-sm" id="id_docentes-__prefix__-0-correo">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Teléfono</label>
+                                                    <input type="text" name="docentes-__prefix__-0-telefono" maxlength="30" class="form-control form-control-sm" id="id_docentes-__prefix__-0-telefono">
+                                                </div>
+                                                <div class="col-12 mt-1">
+                                                    <div class="form-check">
+                                                        <input type="checkbox" name="docentes-__prefix__-0-DELETE" id="id_docentes-__prefix__-0-DELETE" class="form-check-input">
+                                                        <label class="form-check-label text-danger small" for="id_docentes-__prefix__-0-DELETE">
+                                                            Quitar docente
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button type="button" class="btn btn-sm btn-outline-primary mt-1 agregar-docente" data-prefix="docentes-__prefix__">
+                                        <i class="bi bi-person-plus-fill me-1"></i> + Agregar Docente
+                                    </button>
+
+                                    <template id="template-docentes-__prefix__">
+                                        <div class="docente-subcard shadow-sm">
+                                            <input type="hidden" name="docentes-__prefix__-__doc_prefix__-id" id="id_docentes-__prefix__-__doc_prefix__-id">
+                                            <div class="row g-2">
+                                                <div class="col-md-3">
+                                                    <label class="form-label small mb-1 fw-semibold text-secondary">RUT</label>
+                                                    <input type="text" name="docentes-__prefix__-__doc_prefix__-rut" maxlength="12" class="form-control form-control-sm" id="id_docentes-__prefix__-__doc_prefix__-rut">
+                                                </div>
+                                                <div class="col-md-5">
+                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Nombre Completo</label>
+                                                    <input type="text" name="docentes-__prefix__-__doc_prefix__-nombre" maxlength="180" class="form-control form-control-sm" id="id_docentes-__prefix__-__doc_prefix__-nombre">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Tipo Contrato</label>
+                                                    <input type="text" name="docentes-__prefix__-__doc_prefix__-tipo_contrato" maxlength="80" class="form-control form-control-sm" id="id_docentes-__prefix__-__doc_prefix__-tipo_contrato">
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Capacitado A+S</label>
+                                                    <select name="docentes-__prefix__-__doc_prefix__-capacitado_as" class="form-select form-select-sm" id="id_docentes-__prefix__-__doc_prefix__-capacitado_as">
+                                                        <option value="" selected>No informado</option>
+                                                        <option value="true">Sí</option>
+                                                        <option value="false">No</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-5">
+                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Correo</label>
+                                                    <input type="email" name="docentes-__prefix__-__doc_prefix__-correo" class="form-control form-control-sm" id="id_docentes-__prefix__-__doc_prefix__-correo">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label small mb-1 fw-semibold text-secondary">Teléfono</label>
+                                                    <input type="text" name="docentes-__prefix__-__doc_prefix__-telefono" maxlength="30" class="form-control form-control-sm" id="id_docentes-__prefix__-__doc_prefix__-telefono">
+                                                </div>
+                                                <div class="col-12 mt-1">
+                                                    <div class="form-check">
+                                                        <input type="checkbox" name="docentes-__prefix__-__doc_prefix__-DELETE" id="id_docentes-__prefix__-__doc_prefix__-DELETE" class="form-check-input">
+                                                        <label class="form-check-label text-danger small" for="id_docentes-__prefix__-__doc_prefix__-DELETE">
+                                                            Quitar docente
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </td>
+
+                                <td class="col-acciones">
+                                    <button type="button" class="btn btn-sm btn-outline-danger btn-quitar-fila">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+
+                        <div class="d-flex justify-content-between align-items-center mt-4 pb-5">
+                            <button type="submit" name="guardar_borrador" class="btn btn-outline-secondary px-4">
+                                <i class="bi bi-save me-1"></i> Guardar Borrador
+                            </button>
+
+                            <button type="submit" name="enviar_final" class="btn btn-success px-4 fw-semibold" onclick="return confirm('¿Seguro que deseas enviar la versión final? Una vez enviada ya no podrá ser editada.');">
+                                <i class="bi bi-send-check me-1"></i> Enviar Versión Final
+                            </button>
+                        </div>
+                    {% endif %}
+                </form>
+            {% endif %}
+        </div>
+    </main>
+
+    {% block main_footer %}
+        <footer class="border-top py-3 bg-white mt-auto">
+            <div class="container text-center text-muted small">
+                Portal Integrado de Aprendizaje + Servicio · Universidad Autónoma de Chile
+            </div>
+        </footer>
+    {% endblock main_footer %}
+</div>
+
+{% if editable %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    function vincularEventosQuitarDocente() {
+        document.querySelectorAll(".docente-subcard").forEach(function (tarjeta) {
+            const checkDelete = tarjeta.querySelector('input[type="checkbox"][name$="-DELETE"]');
+            const labelDelete = tarjeta.querySelector('label[for="' + (checkDelete ? checkDelete.id : "") + '"]');
+
+            if (checkDelete && !checkDelete.dataset.listenerAttached) {
+                checkDelete.dataset.listenerAttached = "true";
+
+                const removerTarjeta = function () {
+                    checkDelete.checked = true;
+                    tarjeta.querySelectorAll('input[type="text"], input[type="email"]').forEach(input => input.value = "");
+                    tarjeta.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+                    
+                    tarjeta.style.transition = "all 0.25s ease";
+                    tarjeta.style.opacity = "0";
+                    tarjeta.style.transform = "scale(0.95)";
+                    setTimeout(() => {
+                        tarjeta.style.display = "none";
+                    }, 250);
+                };
+
+                checkDelete.addEventListener("change", function () {
+                    if (this.checked) removerTarjeta();
+                });
+
+                if (labelDelete) {
+                    labelDelete.style.cursor = "pointer";
+                    labelDelete.addEventListener("click", function () {
+                        if (!checkDelete.checked) {
+                            checkDelete.checked = true;
+                            removerTarjeta();
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    function vincularEventosAgregarDocente() {
+        document.querySelectorAll(".agregar-docente").forEach(function (boton) {
+            if (!boton.dataset.listenerAttached) {
+                boton.dataset.listenerAttached = "true";
+                boton.addEventListener("click", function () {
+                    const prefix = boton.dataset.prefix;
+                    const container = document.querySelector('.docentes-container[data-prefix="' + prefix + '"]');
+                    const totalInput = document.getElementById("id_" + prefix + "-TOTAL_FORMS");
+                    const template = document.getElementById("template-" + prefix);
+
+                    if (!container || !totalInput || !template) return;
+
+                    const indice = parseInt(totalInput.value, 10);
+                    const html = template.innerHTML.replaceAll("__doc_prefix__", indice).replaceAll("__prefix__", indice);
+
+                    container.insertAdjacentHTML("beforeend", html);
+                    totalInput.value = indice + 1;
+                    
+                    vincularEventosQuitarDocente();
+                });
+            }
+        });
+    }
+
+    function vincularEventosQuitarFila() {
+        document.querySelectorAll(".btn-quitar-fila").forEach(function (btn) {
+            if (!btn.dataset.listenerAttached) {
+                btn.dataset.listenerAttached = "true";
+                btn.addEventListener("click", function () {
+                    const fila = btn.closest("tr");
+                    if (fila) {
+                        fila.remove();
+                    }
+                });
+            }
+        });
+    }
+
+    const btnAgregarFila = document.getElementById("btn-agregar-fila");
+    if (btnAgregarFila) {
+        btnAgregarFila.addEventListener("click", function () {
+            const tbody = document.getElementById("filas-tbody");
+            const totalFormsInput = document.getElementById("id_filas-TOTAL_FORMS");
+            const templateFila = document.getElementById("template-fila");
+
+            if (!tbody || !totalFormsInput || !templateFila) return;
+
+            const nuevoIndice = parseInt(totalFormsInput.value, 10);
+            let filaHtml = templateFila.innerHTML.replaceAll("__prefix__", nuevoIndice);
+
+            tbody.insertAdjacentHTML("beforeend", filaHtml);
+            totalFormsInput.value = nuevoIndice + 1;
+
+            vincularEventosAgregarDocente();
+            vincularEventosQuitarDocente();
+            vincularEventosQuitarFila();
+        });
+    }
+
+    vincularEventosQuitarDocente();
+    vincularEventosAgregarDocente();
+    vincularEventosQuitarFila();
+});
+</script>
+{% endif %}
+{% endblock layout_completo %}
