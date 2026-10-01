@@ -24,4 +24,14 @@ urlpatterns = [
     views.acceso_registro_equipos,
     name="acceso_registro_equipos",
 ),
+    path(
+    "secciones/<int:seccion_id>/equipos/",
+    views.gestionar_equipos_seccion,
+    name="gestionar_equipos_seccion",
+),
+    path(
+    "equipos/<int:equipo_id>/gestionar/",
+    views.gestionar_equipo,
+    name="gestionar_equipo",
+),
 ]

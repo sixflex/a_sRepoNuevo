@@ -35,6 +35,9 @@ from .models import (
     EnlaceRegistroEquipo,
     Equipo,
     IntegranteEquipo,
+    Etiqueta,
+    IntegranteEtiqueta,
+    HistorialSocioEquipo,
 )
 
 from auditoria.services import registrar_auditoria
@@ -1079,3 +1082,482 @@ def normalizar_nombre(valor):
         return ""
 
     return " ".join(valor.split())
+
+@docente_required
+def gestionar_equipos_seccion(request, seccion_id):
+    docente = get_object_or_404(
+        Docente,
+        usuario=request.user,
+        activo=True,
+    )
+
+    seccion = get_object_or_404(
+        Seccion.objects.select_related(
+            "asignatura",
+            "periodo",
+            "campus",
+            "campus__sede",
+        ),
+        pk=seccion_id,
+    )
+
+    
+    if not seccion.docentes.filter(pk=docente.pk).exists():
+        raise PermissionDenied
+
+    equipos = (
+        Equipo.objects
+        .filter(seccion=seccion)
+        .select_related("socio_comunitario")
+        .prefetch_related("integrantes")
+        .order_by("numero_grupo")
+    )
+
+    return render(
+        request,
+        "proyectos/gestionar_equipos_seccion.html",
+        {
+            "seccion": seccion,
+            "equipos": equipos,
+        },
+    )
+
+@docente_required
+def gestionar_equipo(request, equipo_id):
+    docente = get_object_or_404(
+        Docente,
+        usuario=request.user,
+        activo=True,
+    )
+
+    equipo = get_object_or_404(
+        Equipo.objects.select_related(
+            "seccion",
+            "seccion__asignatura",
+            "seccion__periodo",
+            "seccion__campus",
+            "socio_comunitario",
+        ).prefetch_related(
+            "integrantes__etiquetas_asignadas__etiqueta",
+        ),
+        pk=equipo_id,
+    )
+
+    
+    if not equipo.seccion.docentes.filter(pk=docente.pk).exists():
+        raise PermissionDenied
+
+    if request.method == "POST":
+        accion = request.POST.get("accion", "").strip()
+
+        
+        if accion == "gestionar_etiquetas":
+            integrante_id = request.POST.get(
+                "integrante_id",
+                "",
+            ).strip()
+
+            integrante = get_object_or_404(
+                IntegranteEquipo,
+                pk=integrante_id,
+                equipo=equipo,
+            )
+
+            etiquetas_ids = request.POST.getlist("etiquetas")
+
+            
+            etiquetas_validas = list(
+                Etiqueta.objects.filter(
+                    id__in=etiquetas_ids,
+                    activo=True,
+                )
+            )
+
+            ids_validos = {
+                str(etiqueta.id)
+                for etiqueta in etiquetas_validas
+            }
+
+            ids_recibidos = {
+                str(etiqueta_id)
+                for etiqueta_id in etiquetas_ids
+            }
+
+            if ids_validos != ids_recibidos:
+                messages.error(
+                    request,
+                    "Una o más etiquetas seleccionadas no son válidas.",
+                )
+
+                return redirect(
+                    "proyectos:gestionar_equipo",
+                    equipo_id=equipo.id,
+                )
+
+            with transaction.atomic():
+                # Eliminar etiquetas que fueron desmarcadas.
+                IntegranteEtiqueta.objects.filter(
+                    integrante=integrante,
+                ).exclude(
+                    etiqueta_id__in=ids_validos,
+                ).delete()
+
+                # Agregar las etiquetas nuevas.
+                for etiqueta in etiquetas_validas:
+                    IntegranteEtiqueta.objects.get_or_create(
+                        integrante=integrante,
+                        etiqueta=etiqueta,
+                        defaults={
+                            "asignado_por_docente": docente,
+                        },
+                    )
+
+            messages.success(
+                request,
+                "Las etiquetas del integrante fueron actualizadas "
+                "correctamente.",
+            )
+
+            return redirect(
+                "proyectos:gestionar_equipo",
+                equipo_id=equipo.id,
+            )
+
+        
+        elif accion == "corregir_integrante":
+            integrante_id = request.POST.get(
+                "integrante_id",
+                "",
+            ).strip()
+
+            integrante = get_object_or_404(
+                IntegranteEquipo,
+                pk=integrante_id,
+                equipo=equipo,
+            )
+
+            nombres = normalizar_nombre(
+                request.POST.get("nombres", "")
+            )
+
+            apellidos = normalizar_nombre(
+                request.POST.get("apellidos", "")
+            )
+
+            correo = (
+                request.POST.get("correo", "")
+                .strip()
+                .lower()
+            )
+
+            errores_integrante = []
+
+            
+            if not nombres:
+                errores_integrante.append(
+                    "Los nombres son obligatorios."
+                )
+
+            elif len(nombres) > 120:
+                errores_integrante.append(
+                    "Los nombres no pueden superar los 120 caracteres."
+                )
+
+           
+            if not apellidos:
+                errores_integrante.append(
+                    "Los apellidos son obligatorios."
+                )
+
+            elif len(apellidos) > 120:
+                errores_integrante.append(
+                    "Los apellidos no pueden superar los 120 caracteres."
+                )
+
+            
+            if not correo:
+                errores_integrante.append(
+                    "El correo institucional es obligatorio."
+                )
+
+            else:
+                try:
+                    validate_email(correo)
+
+                except ValidationError:
+                    errores_integrante.append(
+                        "El correo institucional no tiene un formato válido."
+                    )
+
+            
+            if correo:
+                correo_repetido = (
+                    IntegranteEquipo.objects
+                    .filter(
+                        equipo=equipo,
+                        correo_institucional__iexact=correo,
+                    )
+                    .exclude(pk=integrante.pk)
+                    .exists()
+                )
+
+                if correo_repetido:
+                    errores_integrante.append(
+                        "El correo institucional ya pertenece a otro "
+                        "integrante del equipo."
+                    )
+
+            
+            if integrante.es_informante:
+                correo_informante = (
+                    equipo.informante_correo or ""
+                ).strip().lower()
+
+                if correo != correo_informante:
+                    errores_integrante.append(
+                        "No se puede cambiar el correo del informante "
+                        "por uno diferente al correo registrado "
+                        "en el equipo."
+                    )
+
+            
+            if errores_integrante:
+                for error in errores_integrante:
+                    messages.error(
+                        request,
+                        error,
+                    )
+
+                return redirect(
+                    "proyectos:gestionar_equipo",
+                    equipo_id=equipo.id,
+                )
+
+            
+            integrante.nombres = nombres
+            integrante.apellidos = apellidos
+            integrante.correo_institucional = correo
+
+            integrante.save(
+                update_fields=[
+                    "nombres",
+                    "apellidos",
+                    "correo_institucional",
+                ]
+            )
+
+            
+            if integrante.es_informante:
+                equipo.informante_nombre = normalizar_nombre(
+                    f"{nombres} {apellidos}"
+                )
+
+                equipo.save(
+                    update_fields=[
+                        "informante_nombre",
+                    ]
+                )
+
+            messages.success(
+                request,
+                "Los datos del integrante fueron corregidos correctamente.",
+            )
+
+            return redirect(
+                "proyectos:gestionar_equipo",
+                equipo_id=equipo.id,
+            )
+
+        
+        elif accion == "cambiar_socio":
+            socio_nuevo_id = request.POST.get(
+                "socio_comunitario",
+                "",
+            ).strip()
+
+            motivo = normalizar_nombre(
+                request.POST.get("motivo", "")
+            )
+
+            
+            if not socio_nuevo_id:
+                messages.error(
+                    request,
+                    "Debes seleccionar un Socio Comunitario.",
+                )
+
+                return redirect(
+                    "proyectos:gestionar_equipo",
+                    equipo_id=equipo.id,
+                )
+
+            if not motivo:
+                messages.error(
+                    request,
+                    "Debes indicar el motivo del cambio.",
+                )
+
+                return redirect(
+                    "proyectos:gestionar_equipo",
+                    equipo_id=equipo.id,
+                )
+
+            if len(motivo) > 255:
+                messages.error(
+                    request,
+                    "El motivo del cambio no puede superar "
+                    "los 255 caracteres.",
+                )
+
+                return redirect(
+                    "proyectos:gestionar_equipo",
+                    equipo_id=equipo.id,
+                )
+
+            
+            socio_nuevo = (
+                SocioComunitario.objects
+                .filter(
+                    pk=socio_nuevo_id,
+                    activo=True,
+                    es_provisional=False,
+                    estado_revision__in=[
+                        "APROBADO",
+                        "DISPONIBLE",
+                    ],
+                )
+                .first()
+            )
+
+            if socio_nuevo is None:
+                messages.error(
+                    request,
+                    "El Socio Comunitario seleccionado no está disponible.",
+                )
+
+                return redirect(
+                    "proyectos:gestionar_equipo",
+                    equipo_id=equipo.id,
+                )
+
+            
+            if equipo.socio_comunitario_id == socio_nuevo.id:
+                messages.warning(
+                    request,
+                    "El equipo ya se encuentra asociado a ese "
+                    "Socio Comunitario.",
+                )
+
+                return redirect(
+                    "proyectos:gestionar_equipo",
+                    equipo_id=equipo.id,
+                )
+
+            
+            with transaction.atomic():
+                equipo_bloqueado = (
+                    Equipo.objects
+                    .select_for_update()
+                    .get(pk=equipo.id)
+                )
+
+                socio_anterior = equipo_bloqueado.socio_comunitario
+
+                
+                if (
+                    equipo_bloqueado.socio_comunitario_id
+                    == socio_nuevo.id
+                ):
+                    messages.warning(
+                        request,
+                        "El equipo ya se encuentra asociado a ese "
+                        "Socio Comunitario.",
+                    )
+
+                    return redirect(
+                        "proyectos:gestionar_equipo",
+                        equipo_id=equipo.id,
+                    )
+
+                equipo_bloqueado.socio_comunitario = socio_nuevo
+
+                equipo_bloqueado.save(
+                    update_fields=[
+                        "socio_comunitario",
+                    ]
+                )
+
+                HistorialSocioEquipo.objects.create(
+                    equipo=equipo_bloqueado,
+                    socio_anterior=socio_anterior,
+                    socio_nuevo=socio_nuevo,
+                    cambiado_por_docente=docente,
+                    motivo=motivo,
+                )
+
+            messages.success(
+                request,
+                "El Socio Comunitario del equipo fue actualizado "
+                "correctamente.",
+            )
+
+            return redirect(
+                "proyectos:gestionar_equipo",
+                equipo_id=equipo.id,
+            )
+
+
+    integrantes = (
+        equipo.integrantes
+        .all()
+        .order_by("id")
+    )
+
+    etiquetas = (
+        Etiqueta.objects
+        .filter(
+            activo=True
+        )
+        .order_by(
+            "nombre"
+        )
+    )
+
+    socios_disponibles = (
+        SocioComunitario.objects
+        .filter(
+            activo=True,
+            es_provisional=False,
+            estado_revision__in=[
+                "APROBADO",
+                "DISPONIBLE",
+            ],
+        )
+        .order_by(
+            "nombre_organizacion"
+        )
+    )
+
+    historial_socios = (
+        equipo.historial_socios
+        .select_related(
+            "socio_anterior",
+            "socio_nuevo",
+            "cambiado_por_docente",
+        )
+        .order_by(
+            "-fecha_cambio"
+        )
+    )
+
+    return render(
+        request,
+        "proyectos/gestionar_equipo.html",
+        {
+            "equipo": equipo,
+            "integrantes": integrantes,
+            "etiquetas": etiquetas,
+            "socios_disponibles": socios_disponibles,
+            "historial_socios": historial_socios,
+        },
+    )

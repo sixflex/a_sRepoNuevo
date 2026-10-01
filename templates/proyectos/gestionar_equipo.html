@@ -1,0 +1,558 @@
+{% extends "base.html" %}
+
+{% block title %}Gestionar equipo{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- ENCABEZADO -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                Gestionar Grupo {{ equipo.numero_grupo }}
+            </h2>
+
+            <p class="text-muted mb-0">
+                {{ equipo.seccion.asignatura.nombre }}
+                · NRC {{ equipo.seccion.nrc }}
+                · {{ equipo.seccion.periodo.nombre }}
+            </p>
+        </div>
+
+        <a href="{% url 'proyectos:gestionar_equipos_seccion' equipo.seccion.id %}"
+           class="btn btn-outline-secondary">
+            Volver a equipos
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+
+    <!-- DATOS GENERALES -->
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-header text-white"
+             style="background-color: #A90000;">
+            <strong>Información del equipo</strong>
+        </div>
+
+        <div class="card-body">
+
+            <div class="row">
+
+                <div class="col-md-6 mb-3">
+                    <strong>Informante</strong>
+                    <div>
+                        {{ equipo.informante_nombre }}
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <strong>Correo del informante</strong>
+                    <div>
+                        {{ equipo.informante_correo }}
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Estado</strong>
+                    <div>
+                        {{ equipo.estado }}
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Fecha de registro</strong>
+                    <div>
+                        {{ equipo.fecha_registro|date:"d/m/Y H:i" }}
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- INTEGRANTES -->
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-header">
+            <strong>Integrantes del equipo</strong>
+        </div>
+
+        <div class="card-body">
+
+            {% for integrante in integrantes %}
+
+                <div class="border rounded p-3 mb-3">
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+
+                        <h6 class="mb-0">
+                            {{ integrante.nombres }}
+                            {{ integrante.apellidos }}
+                        </h6>
+
+                        {% if integrante.es_informante %}
+                            <span class="badge bg-secondary">
+                                Informante
+                            </span>
+                        {% endif %}
+
+                    </div>
+
+                    <div class="row">
+
+                        <div class="col-md-4 mb-2">
+                            <strong>RUT:</strong><br>
+                            {{ integrante.rut }}
+                        </div>
+
+                        <div class="col-md-4 mb-2">
+                            <strong>Correo:</strong><br>
+                            {{ integrante.correo_institucional }}
+                        </div>
+
+                        <div class="col-md-4 mb-2">
+                            <strong>Etiquetas:</strong><br>
+
+                            {% for asignacion in integrante.etiquetas_asignadas.all %}
+                                <span class="badge bg-dark me-1">
+                                    {{ asignacion.etiqueta.nombre }}
+                                </span>
+                            {% empty %}
+                                <span class="text-muted">
+                                    Sin etiquetas
+                                </span>
+                            {% endfor %}
+                        </div>
+
+                    </div>
+
+
+                    <div class="mt-3">
+
+                        <!-- BOTÓN CORREGIR INTEGRANTE -->
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#corregir-integrante-{{ integrante.id }}"
+                                aria-expanded="false"
+                                aria-controls="corregir-integrante-{{ integrante.id }}">
+                            Corregir integrante
+                        </button>
+
+
+                        <!-- BOTÓN GESTIONAR ETIQUETAS -->
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#etiquetas-integrante-{{ integrante.id }}"
+                                aria-expanded="false"
+                                aria-controls="etiquetas-integrante-{{ integrante.id }}">
+                            Gestionar etiquetas
+                        </button>
+
+
+                        <!-- FORMULARIO DE ETIQUETAS -->
+                        <div class="collapse mt-3"
+                             id="etiquetas-integrante-{{ integrante.id }}">
+
+                            <form method="post"
+                                  class="border rounded p-3 bg-light">
+
+                                {% csrf_token %}
+
+                                <input type="hidden"
+                                       name="accion"
+                                       value="gestionar_etiquetas">
+
+                                <input type="hidden"
+                                       name="integrante_id"
+                                       value="{{ integrante.id }}">
+
+                                <h6 class="mb-3">
+                                    Etiquetas del integrante
+                                </h6>
+
+                                {% if etiquetas %}
+
+                                    {% for etiqueta in etiquetas %}
+
+                                        <div class="form-check mb-2">
+
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                name="etiquetas"
+                                                value="{{ etiqueta.id }}"
+                                                id="etiqueta-{{ integrante.id }}-{{ etiqueta.id }}"
+
+                                                {% for asignacion in integrante.etiquetas_asignadas.all %}
+                                                    {% if asignacion.etiqueta_id == etiqueta.id %}
+                                                        checked
+                                                    {% endif %}
+                                                {% endfor %}
+                                            >
+
+                                            <label class="form-check-label"
+                                                   for="etiqueta-{{ integrante.id }}-{{ etiqueta.id }}">
+                                                {{ etiqueta.nombre }}
+                                            </label>
+
+                                        </div>
+
+                                    {% endfor %}
+
+                                    <div class="mt-3">
+
+                                        <button type="submit"
+                                                class="btn text-white"
+                                                style="background-color: #A90000;">
+                                            Guardar etiquetas
+                                        </button>
+
+                                    </div>
+
+                                {% else %}
+
+                                    <div class="alert alert-info mb-0">
+                                        No existen etiquetas activas disponibles.
+                                    </div>
+
+                                {% endif %}
+
+                            </form>
+
+                        </div>
+
+
+                        <!-- FORMULARIO DE CORRECCIÓN -->
+                        <div class="collapse mt-3"
+                             id="corregir-integrante-{{ integrante.id }}">
+
+                            <form method="post"
+                                  class="border rounded p-3 bg-light">
+
+                                {% csrf_token %}
+
+                                <input type="hidden"
+                                       name="accion"
+                                       value="corregir_integrante">
+
+                                <input type="hidden"
+                                       name="integrante_id"
+                                       value="{{ integrante.id }}">
+
+                                <div class="row">
+
+                                    <!-- NOMBRES -->
+                                    <div class="col-md-6 mb-3">
+
+                                        <label class="form-label fw-bold">
+                                            Nombres
+                                        </label>
+
+                                        <input type="text"
+                                               name="nombres"
+                                               class="form-control"
+                                               maxlength="120"
+                                               value="{{ integrante.nombres }}"
+                                               required>
+
+                                    </div>
+
+
+                                    <!-- APELLIDOS -->
+                                    <div class="col-md-6 mb-3">
+
+                                        <label class="form-label fw-bold">
+                                            Apellidos
+                                        </label>
+
+                                        <input type="text"
+                                               name="apellidos"
+                                               class="form-control"
+                                               maxlength="120"
+                                               value="{{ integrante.apellidos }}"
+                                               required>
+
+                                    </div>
+
+
+                                    <!-- RUT -->
+                                    <div class="col-md-6 mb-3">
+
+                                        <label class="form-label fw-bold">
+                                            RUT
+                                        </label>
+
+                                        <input type="text"
+                                               class="form-control"
+                                               value="{{ integrante.rut }}"
+                                               disabled>
+
+                                        <div class="form-text">
+                                            El RUT no puede modificarse desde esta corrección.
+                                        </div>
+
+                                    </div>
+
+
+                                    <!-- CORREO -->
+                                    <div class="col-md-6 mb-3">
+
+                                        <label class="form-label fw-bold">
+                                            Correo institucional
+                                        </label>
+
+                                        <input type="email"
+                                               name="correo"
+                                               class="form-control"
+                                               maxlength="254"
+                                               value="{{ integrante.correo_institucional }}"
+                                               {% if integrante.es_informante %}
+                                                   readonly
+                                               {% endif %}
+                                               required>
+
+                                        {% if integrante.es_informante %}
+
+                                            <div class="form-text">
+                                                El correo del informante está asociado al
+                                                registro original del equipo.
+                                            </div>
+
+                                        {% endif %}
+
+                                    </div>
+
+                                </div>
+
+
+                                <button type="submit"
+                                        class="btn text-white"
+                                        style="background-color: #A90000;">
+                                    Guardar corrección
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% empty %}
+
+                <div class="alert alert-info mb-0">
+                    El equipo no tiene integrantes registrados.
+                </div>
+
+            {% endfor %}
+
+        </div>
+    </div>
+
+
+    <!-- SOCIO COMUNITARIO -->
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-header">
+            <strong>Socio Comunitario</strong>
+        </div>
+
+        <div class="card-body">
+
+            <div class="mb-4">
+
+                <strong>Socio actualmente asociado:</strong>
+
+                <div class="mt-2">
+
+                    {% if equipo.socio_comunitario %}
+
+                        {{ equipo.socio_comunitario.nombre_organizacion }}
+
+                        {% if equipo.socio_comunitario.es_provisional %}
+                            <span class="badge bg-warning text-dark ms-1">
+                                Provisional
+                            </span>
+                        {% endif %}
+
+                    {% else %}
+
+                        <span class="text-muted">
+                            Sin Socio Comunitario asociado
+                        </span>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+
+            <!-- CAMBIAR SOCIO -->
+            <form method="post"
+                  class="border rounded p-3">
+
+                {% csrf_token %}
+
+                <input type="hidden"
+                       name="accion"
+                       value="cambiar_socio">
+
+                <label for="socio_comunitario"
+                       class="form-label fw-bold">
+                    Cambiar Socio Comunitario
+                </label>
+
+                <select name="socio_comunitario"
+                        id="socio_comunitario"
+                        class="form-select mb-3"
+                        required>
+
+                    <option value="">
+                        Seleccione un Socio Comunitario
+                    </option>
+
+                    {% for socio in socios_disponibles %}
+
+                        <option value="{{ socio.id }}">
+                            {{ socio.nombre_organizacion }}
+                        </option>
+
+                    {% empty %}
+
+                        <option value="" disabled>
+                            No existen Socios Comunitarios disponibles
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+
+                <label for="motivo"
+                       class="form-label fw-bold">
+                    Motivo del cambio
+                </label>
+
+                <textarea name="motivo"
+                          id="motivo"
+                          class="form-control mb-3"
+                          rows="3"
+                          maxlength="255"
+                          required
+                          placeholder="Ingrese el motivo de la corrección"></textarea>
+
+
+                <button type="submit"
+                        class="btn text-white"
+                        style="background-color: #A90000;">
+                    Guardar cambio de socio
+                </button>
+
+            </form>
+
+        </div>
+    </div>
+
+
+    <!-- HISTORIAL SOCIO COMUNITARIO -->
+    <div class="card shadow-sm">
+
+        <div class="card-header">
+            <strong>Historial de cambios de Socio Comunitario</strong>
+        </div>
+
+        <div class="card-body">
+
+            {% if historial_socios %}
+
+                <div class="table-responsive">
+
+                    <table class="table table-bordered align-middle">
+
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Socio anterior</th>
+                                <th>Socio nuevo</th>
+                                <th>Docente</th>
+                                <th>Motivo</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for historial in historial_socios %}
+
+                                <tr>
+
+                                    <td>
+                                        {{ historial.fecha_cambio|date:"d/m/Y H:i" }}
+                                    </td>
+
+                                    <td>
+                                        {% if historial.socio_anterior %}
+                                            {{ historial.socio_anterior.nombre_organizacion }}
+                                        {% else %}
+                                            Sin socio
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        {% if historial.socio_nuevo %}
+                                            {{ historial.socio_nuevo.nombre_organizacion }}
+                                        {% else %}
+                                            Sin socio
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        {{ historial.cambiado_por_docente.nombres }}
+                                        {{ historial.cambiado_por_docente.apellidos }}
+                                    </td>
+
+                                    <td>
+                                        {% if historial.motivo %}
+                                            {{ historial.motivo }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            {% else %}
+
+                <div class="alert alert-light border mb-0">
+                    Este equipo todavía no registra cambios de
+                    Socio Comunitario.
+                </div>
+
+            {% endif %}
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

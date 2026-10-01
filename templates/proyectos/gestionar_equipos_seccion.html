@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Equipos de la sección{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Equipos registrados</h2>
+            <p class="text-muted mb-0">
+                {{ seccion.asignatura.nombre }}
+                · NRC {{ seccion.nrc }}
+                · {{ seccion.periodo.nombre }}
+            </p>
+        </div>
+
+        <a href="{% url 'proyectos:gestionar_registro_equipos' seccion.id %}"
+           class="btn btn-outline-secondary">
+            Volver
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if equipos %}
+
+        <div class="row g-4">
+
+            {% for equipo in equipos %}
+                <div class="col-lg-6">
+
+                    <div class="card shadow-sm h-100">
+
+                        <div class="card-header text-white"
+                             style="background-color: #A90000;">
+                            <strong>
+                                Grupo {{ equipo.numero_grupo }}
+                            </strong>
+                        </div>
+
+                        <div class="card-body">
+
+                            <p class="mb-2">
+                                <strong>Informante:</strong>
+                                {{ equipo.informante_nombre }}
+                            </p>
+
+                            <p class="mb-3">
+                                <strong>Correo:</strong>
+                                {{ equipo.informante_correo }}
+                            </p>
+
+                            <p class="mb-3">
+                                <strong>Socio Comunitario:</strong>
+
+                                {% if equipo.socio_comunitario %}
+                                    {{ equipo.socio_comunitario.nombre_organizacion }}
+
+                                    {% if equipo.socio_comunitario.es_provisional %}
+                                        <span class="badge bg-warning text-dark ms-1">
+                                            Provisional
+                                        </span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">
+                                        Sin Socio Comunitario
+                                    </span>
+                                {% endif %}
+                            </p>
+
+                            <hr>
+
+                            <h6>Integrantes</h6>
+
+                            <ul class="mb-0">
+                                {% for integrante in equipo.integrantes.all %}
+                                    <li>
+                                        {{ integrante.nombres }}
+                                        {{ integrante.apellidos }}
+
+                                        {% if integrante.es_informante %}
+                                            <span class="badge bg-secondary">
+                                                Informante
+                                            </span>
+                                        {% endif %}
+                                    </li>
+                                {% empty %}
+                                    <li class="text-muted">
+                                        Sin integrantes registrados.
+                                    </li>
+                                {% endfor %}
+                            </ul>
+
+                        </div>
+
+                        <div class="card-footer bg-white">
+
+                            <a href="{% url 'proyectos:gestionar_equipo' equipo.id %}"
+                               class="btn text-white"
+                               style="background-color: #A90000;">
+                                Gestionar equipo
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </div>
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <div class="alert alert-info">
+            Todavía no existen equipos registrados en esta sección.
+        </div>
+
+    {% endif %}
+
+</div>
+{% endblock %}
