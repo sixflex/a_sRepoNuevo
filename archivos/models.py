@@ -15,9 +15,13 @@ class Archivo(models.Model):
         max_length=255,
     )
 
+    extension = models.CharField(
+        max_length=20,
+    )
+
     storage_key = models.CharField(
-    max_length=500,
-    unique=True,
+        max_length=500,
+        unique=True,
     )
 
     mime_type = models.CharField(

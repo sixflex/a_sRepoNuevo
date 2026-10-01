@@ -142,3 +142,46 @@ AUTH_USER_MODEL = 'usuarios.Usuario'
 LOGIN_URL = "usuarios:login"
 LOGIN_REDIRECT_URL = "core:inicio"
 LOGOUT_REDIRECT_URL = "usuarios:login"
+
+# Private file storage
+# SP3-T02: los binarios se almacenan fuera de PostgreSQL.
+PRIVATE_STORAGE_BACKEND = os.getenv(
+    "PRIVATE_STORAGE_BACKEND",
+    "archivos.storage.PrivateFileSystemStorage",
+)
+
+PRIVATE_STORAGE_ROOT = Path(
+    os.getenv(
+        "PRIVATE_STORAGE_ROOT",
+        str(BASE_DIR / "private_uploads"),
+    )
+)
+
+if not PRIVATE_STORAGE_ROOT.is_absolute():
+    PRIVATE_STORAGE_ROOT = BASE_DIR / PRIVATE_STORAGE_ROOT
+
+PRIVATE_STORAGE_MAX_FILE_SIZE_MB = int(
+    os.getenv("PRIVATE_STORAGE_MAX_FILE_SIZE_MB", "20")
+)
+
+PRIVATE_STORAGE_MAX_FILES_PER_ACTIVITY = int(
+    os.getenv("PRIVATE_STORAGE_MAX_FILES_PER_ACTIVITY", "10")
+)
+
+private_storage_options = {}
+if PRIVATE_STORAGE_BACKEND == "archivos.storage.PrivateFileSystemStorage":
+    private_storage_options["location"] = str(PRIVATE_STORAGE_ROOT)
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+    "private": {
+        "BACKEND": PRIVATE_STORAGE_BACKEND,
+        "OPTIONS": private_storage_options,
+    },
+}
+
