@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-4">
+    <div class="mb-4">
+        <a
+            href="{% url 'core:detalle_seccion' seccion.id %}"
+            class="btn btn-outline-secondary"
+        >
+            ← Volver a la sección
+        </a>
+    </div>
+
+    <div class="mb-4">
+        <h2 class="fw-bold text-dark mb-1">
+            Ruta del Docente A+S
+        </h2>
+
+        <p class="text-muted mb-0">
+            {{ seccion.asignatura.nombre }} · NRC {{ seccion.nrc }} · Sección {{ seccion.seccion }}
+        </p>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-4">
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+
+                <div>
+                    <div class="text-muted small mb-1">
+                        Estado de la Ruta
+                    </div>
+
+                    <div class="fw-bold">
+                        {% if seccion_ruta.estado == "EN_PROGRESO" %}
+                            En progreso
+                        {% elif seccion_ruta.estado == "COMPLETADA" %}
+                            Completada
+                        {% else %}
+                            {{ seccion_ruta.estado|title }}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="text-end">
+                    <div class="text-muted small mb-1">
+                        Avance general
+                    </div>
+
+                    <div class="fs-3 fw-bold text-danger">
+                        {{ seccion_ruta.porcentaje_final|default:"0.00" }}%
+                    </div>
+                </div>
+
+            </div>
+
+            {% widthratio seccion_ruta.porcentaje_final 1 1 as porcentaje %}
+
+            <div class="progress mt-3" style="height: 12px;">
+                <div
+                    class="progress-bar bg-danger"
+                    role="progressbar"
+                    style="width: {{ porcentaje }}%"
+                ></div>
+            </div>
+
+        </div>
+    </div>
+
+    {% for etapa, actividades in etapas.items %}
+
+        <div class="card shadow-sm border-0 mb-4">
+
+            <div class="card-header bg-white p-4">
+                <h5 class="fw-bold mb-1">
+                    {{ etapa }}
+                </h5>
+
+                <span class="text-muted small">
+                    {{ actividades|length }} actividades
+                </span>
+            </div>
+
+            <div class="card-body p-0">
+
+                {% for actividad in actividades %}
+
+                    <div class="p-4 border-bottom">
+
+                        <div class="d-flex justify-content-between align-items-start gap-3">
+
+                            <div>
+
+                                <div class="fw-bold mb-1">
+                                    {{ actividad.ruta_actividad.orden }}.
+                                    {{ actividad.ruta_actividad.nombre }}
+                                </div>
+
+                                {% if actividad.ruta_actividad.descripcion %}
+                                    <div class="text-muted small">
+                                        {{ actividad.ruta_actividad.descripcion }}
+                                    </div>
+                                {% endif %}
+
+                            </div>
+
+                            <div class="text-end">
+
+                                {% if actividad.completada_por_docente %}
+
+                                    <span class="badge bg-success mb-2">
+                                        Completada
+                                    </span>
+
+                                    {% if actividad.fecha_completada %}
+                                        <div class="small text-muted">
+                                            {{ actividad.fecha_completada|date:"d/m/Y H:i" }}
+                                        </div>
+                                    {% endif %}
+
+                                {% else %}
+
+                                    <span class="badge bg-secondary mb-2">
+                                        Pendiente
+                                    </span>
+
+                                    <form
+                                        method="post"
+                                        action="{% url 'rutas:completar_actividad' actividad.id %}"
+                                        class="mt-2"
+                                    >
+                                        {% csrf_token %}
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-sm btn-outline-danger"
+                                        >
+                                            Marcar como completada
+                                        </button>
+                                    </form>
+
+                                {% endif %}
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+    {% empty %}
+
+        <div class="alert alert-light border">
+            Esta Ruta todavía no tiene actividades asociadas.
+        </div>
+
+    {% endfor %}
+
+{% endblock %}
