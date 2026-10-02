@@ -7,7 +7,7 @@ from django.core.files.storage import storages
 from django.utils import timezone
 
 from .models import Archivo
-from .validators import validar_tamano_archivo
+from .validators import validar_extension_archivo, validar_tamano_archivo
 
 
 def obtener_storage_privado():
@@ -57,8 +57,8 @@ def _generar_storage_key(nombre):
 
 
 def guardar_archivo(archivo_subido, autor=None, storage=None):
-    """Guarda el binario fuera de PostgreSQL y persiste solo metadatos."""
     validar_tamano_archivo(archivo_subido)
+    validar_extension_archivo(archivo_subido)
 
     storage = storage or obtener_storage_privado()
     nombre = _nombre_seguro(archivo_subido.name)

@@ -54,10 +54,19 @@ class ArchivoServiceTests(TestCase):
     def test_abrir_archivo_recupera_contenido_desde_storage(self):
         contenido = b"archivo privado"
         subido = SimpleUploadedFile(
-            "privado.txt",
+            "privado.pdf",
             contenido,
-            content_type="text/plain",
+            content_type="application/pdf",
         )
+
+        archivo = guardar_archivo(
+            subido,
+            autor=self.user,
+            storage=self.storage,
+        )
+
+        with abrir_archivo(archivo, storage=self.storage) as manejador:
+            self.assertEqual(manejador.read(), contenido)
         archivo = guardar_archivo(
             subido,
             autor=self.user,

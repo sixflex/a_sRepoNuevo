@@ -4,6 +4,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from academico.models import Asignatura, Campus, Carrera, PeriodoAcademico, Sede
 from usuarios.decorators import coordinador_required, docente_required
+from django.core.exceptions import PermissionDenied
+from django.views.decorators.http import require_POST
+from proyectos.models import Equipo, HistorialSocioEquipo
+from rutas.models import SeccionActividad
 
 from .models import (
     ClasificacionSocio,
@@ -246,3 +250,112 @@ def revisar_postulacion(request, postulacion_id):
             messages.error(request, "La decisión seleccionada no es válida.")
 
     return redirect('socios:lista_postulaciones')
+@docente_required
+def asociar_socio_equipo(request, actividad_id):
+    actividad = get_object_or_404(
+        SeccionActividad.objects.select_related(
+            "seccion_ruta",
+            "seccion_ruta__seccion",
+            "ruta_actividad",
+        ),
+        id=actividad_id,
+    )
+
+    seccion = actividad.seccion_ruta.seccion
+
+    docente = getattr(request.user, "perfil_docente", None)
+
+    if docente is None:
+        raise PermissionDenied
+
+    if not seccion.docentes.filter(id=docente.id).exists():
+        raise PermissionDenied
+
+    if actividad.ruta_actividad.orden != 13:
+        raise PermissionDenied
+
+    equipos = (
+        Equipo.objects
+        .filter(seccion=seccion)
+        .select_related("socio_comunitario")
+        .prefetch_related("integrantes")
+        .order_by("numero_grupo")
+    )
+
+    socios = (
+        socios_disponibles()
+        .select_related(
+            "clasificacion",
+            "comuna",
+        )
+        .order_by("nombre_organizacion")
+    )
+
+    if request.method == "POST":
+        equipo_id = request.POST.get("equipo")
+        socio_id = request.POST.get("socio")
+        motivo = request.POST.get("motivo", "").strip()
+
+        if not equipo_id or not socio_id:
+            messages.error(
+                request,
+                "Debes seleccionar un equipo y un Socio Comunitario.",
+            )
+        else:
+            equipo = get_object_or_404(
+                Equipo,
+                id=equipo_id,
+                seccion=seccion,
+            )
+
+            socio = get_object_or_404(
+                socios_disponibles(),
+                id=socio_id,
+            )
+
+            socio_anterior = equipo.socio_comunitario
+
+            if equipo.socio_comunitario_id == socio.id:
+                messages.info(
+                    request,
+                    "El equipo ya tiene asociado este Socio Comunitario.",
+                )
+
+                return redirect(
+                    "socios:asociar_socio_equipo",
+                    actividad_id=actividad.id,
+                )
+
+            equipo.socio_comunitario = socio
+            equipo.save(
+                update_fields=["socio_comunitario"]
+            )
+
+            HistorialSocioEquipo.objects.create(
+                equipo=equipo,
+                socio_anterior=socio_anterior,
+                socio_nuevo=socio,
+                cambiado_por_docente=docente,
+                motivo=motivo or None,
+            )
+
+            messages.success(
+                request,
+                f"El Socio Comunitario fue asociado correctamente al Grupo {equipo.numero_grupo}.",
+            )
+
+            return redirect(
+                "socios:asociar_socio_equipo",
+                actividad_id=actividad.id,
+            )
+
+    return render(
+        request,
+        "socios/asociar_socio_equipo.html",
+        {
+            "actividad": actividad,
+            "seccion": seccion,
+            "equipos": equipos,
+            "socios": socios,
+        },
+    )

@@ -1,6 +1,9 @@
+from pathlib import Path
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 
+EXTENSIONES_PERMITIDAS = {"pdf","doc","docx","xls","xlsx","jpg","jpeg","png",}
 
 def validar_tamano_archivo(archivo):
     limite_mb = settings.PRIVATE_STORAGE_MAX_FILE_SIZE_MB
@@ -12,6 +15,16 @@ def validar_tamano_archivo(archivo):
             code="archivo_demasiado_grande",
         )
 
+def validar_extension_archivo(archivo):
+    extension = Path(
+        archivo.name or ""
+    ).suffix.lower().lstrip(".")
+
+    if extension not in EXTENSIONES_PERMITIDAS:
+        raise ValidationError(
+            "Formato no permitido. Solo se aceptan PDF, DOC, DOCX, XLS, XLSX, JPG y PNG.",
+            code="extension_no_permitida",
+        )
 
 def validar_cantidad_archivos(cantidad_actual, cantidad_nueva=1, limite=None):
     limite = (

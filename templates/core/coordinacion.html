@@ -221,29 +221,28 @@
             </div>
         </div>
     </div>
+<!-- 2. Accesos Operativos Principales -->
+<h4 class="fw-bold mb-3" style="font-size: 1.25rem; color: #111827;">Flujo Operativo y Validación</h4>
+<div class="row g-4">
 
-    <!-- 2. Accesos Operativos Principales -->
-    <h4 class="fw-bold mb-3" style="font-size: 1.25rem; color: #111827;">Flujo Operativo y Validación</h4>
-    <div class="row g-4">
-        
-        <!-- Módulo 1: Gestión Académica -->
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="module-card">
-                <div>
-                    <span class="module-badge">Curricular</span>
-                    <h5 class="module-title">Gestión Académica</h5>
-                    <p class="module-desc">
-                        Consulta y administra la información curricular de asignaturas,
-                        secciones y nóminas requeridas para el desarrollo del programa A+S.
-                    </p>
-                </div>
-                <div>
-                    <a href="{% url 'home' %}" class="btn-ua-action">
-                        Ir a gestión académica <i class="bi bi-arrow-right"></i>
-                    </a>
-                </div>
+    <!-- Módulo 1: Gestión Académica -->
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="module-card border-top border-4 border-danger">
+            <div>
+                <span class="module-badge">Curricular</span>
+                <h5 class="module-title">Gestión Académica</h5>
+                <p class="module-desc">
+                    Consulta y administra la información curricular de asignaturas,
+                    secciones y nóminas requeridas para el desarrollo del programa A+S.
+                </p>
+            </div>
+            <div>
+                <a href="{% url 'home' %}" class="btn-ua-action">
+                    Ir a gestión académica <i class="bi bi-arrow-right"></i>
+                </a>
             </div>
         </div>
+    </div>
 
         <!-- Módulo 2: Enlaces de Planificación -->
         <div class="col-12 col-md-6 col-xl-3">
@@ -251,7 +250,9 @@
                 <div>
                     <span class="module-badge">Planificación</span>
                     <h5 class="module-title">Enlaces de Planificación</h5>
-                    <p class="module-desc">Genera y comparte enlaces individuales con vigencia para Dirección de Carrera y Secretaría de Estudios.</p>
+                    <p class="module-desc">
+                        Genera y comparte enlaces individuales con vigencia para Dirección de Carrera y Secretaría de Estudios.
+                    </p>
                 </div>
                 <div class="d-flex gap-2 flex-column flex-sm-row flex-wrap">
                     <a href="{% url 'proyectos:gestionar_enlaces' %}" class="btn-ua-action">
@@ -266,11 +267,13 @@
 
         <!-- Módulo 3: Consulta de Planificación -->
         <div class="col-12 col-md-6 col-xl-3">
-            <div class="module-card">
+            <div class="module-card border-top border-4 border-danger">
                 <div>
                     <span class="module-badge">Consulta</span>
                     <h5 class="module-title">Planificación Académica</h5>
-                    <p class="module-desc">Consulta las secciones académicas registradas y filtra por período, carrera, asignatura, NRC y docente.</p>
+                    <p class="module-desc">
+                        Consulta las secciones académicas registradas y filtra por período, carrera, asignatura, NRC y docente.
+                    </p>
                 </div>
                 <div>
                     <a href="{% url 'core:planificacion_coordinacion' %}" class="btn-ua-action">
@@ -280,17 +283,18 @@
             </div>
         </div>
 
-        
         <!-- Módulo 4: Validación y Estado A+S -->
         <div class="col-12 col-md-6 col-xl-3">
-            <div class="module-card border-top border-4 border-success">
+            <div class="module-card border-top border-4 border-danger">
                 <div>
-                    <span class="module-badge module-badge-success">Validación A+S</span>
+                    <span class="module-badge">Validación A+S</span>
                     <h5 class="module-title">Validación y Seguimiento</h5>
-                    <p class="module-desc">Verifica el cumplimiento de los criterios A+S, valida las propuestas de docentes y supervisa la asignación de socios comunitarios.</p>
+                    <p class="module-desc">
+                        Verifica el cumplimiento de los criterios A+S, valida las propuestas de docentes y supervisa la asignación de socios comunitarios.
+                    </p>
                 </div>
                 <div class="d-flex gap-2 flex-column flex-sm-row flex-wrap">
-                    <a href="{% url 'core:validar_planificacion' %}" class="btn-ua-action" style="background-color: var(--ua-success);">
+                    <a href="{% url 'core:validar_planificacion' %}" class="btn-ua-action">
                         <i class="bi bi-check2-circle"></i> Validar
                     </a>
                     <a href="#" class="btn-ua-outline-action">
@@ -300,6 +304,39 @@
             </div>
         </div>
 
+                <div class="col-12 col-md-6 col-xl-3">
+            <div class="module-card border-top border-4 border-danger">
+                <div>
+                    <span class="module-badge">Cartas</span>
+                    <h5 class="module-title">Cartas de Presentación</h5>
+                    <p class="module-desc">
+                        Revisa las solicitudes de Cartas de Presentación enviadas por docentes y gestiona su aprobación u observación.
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'cartas:listar_solicitudes_coordinacion' %}" class="btn-ua-action">
+                        <i class="bi bi-envelope-paper"></i> Revisar solicitudes
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="module-card border-top border-4 border-danger">
+                <div>
+                    <span class="module-badge">Ruta A+S</span>
+                    <h5 class="module-title">Seguimiento de Rutas A+S</h5>
+                    <p class="module-desc">
+                        Supervisa el avance de las Rutas A+S de los docentes, sus actividades pendientes y las evidencias registradas.
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'rutas:seguimiento_rutas_coordinacion' %}" class="btn-ua-action">
+                        <i class="bi bi-list-check"></i> Consultar Rutas
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

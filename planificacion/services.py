@@ -2,19 +2,9 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from academico.models import (
-    Asignatura,
-    Carrera,
-    Docente,
-    Seccion,
-    SeccionCarrera,
-    SeccionDocente,
-)
-
-from .models import (
-    FilaPlanificacion,
-    PlanificacionError,
-)
+from academico.models import (Asignatura,Carrera,Docente,Seccion,SeccionCarrera,SeccionDocente,)
+from .models import (FilaPlanificacion,PlanificacionError,)
+from rutas.services import asignar_ruta_as_si_corresponde
 
 ESTADO_PENDIENTE = "PENDIENTE"
 ESTADO_ACEPTADA = "ACEPTADA"
@@ -331,9 +321,8 @@ def consolidar_fila(fila):
         )
 
     fila.seccion_resultante = seccion
-    fila.save(
-        update_fields=["seccion_resultante"]
-    )
+    fila.save(update_fields=["seccion_resultante"])
+    asignar_ruta_as_si_corresponde(seccion)
 
     return seccion
 

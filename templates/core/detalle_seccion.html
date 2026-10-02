@@ -4,7 +4,6 @@
 
 <div class="container py-4">
 
-    <!-- ENCABEZADO -->
     <div class="mb-4">
         <h2 class="fw-bold text-dark mb-1">
             {{ seccion.asignatura.nombre }}
@@ -15,8 +14,6 @@
         </p>
     </div>
 
-
-    <!-- INFORMACIÓN DE LA SECCIÓN -->
     <div class="card shadow-sm border-0 mb-4">
 
         <div class="card-body p-4">
@@ -39,10 +36,8 @@
 
             </div>
 
-
             <div class="row g-4">
 
-                <!-- SECCIÓN -->
                 <div class="col-md-3 col-sm-6">
                     <div class="text-muted small mb-1">
                         Sección
@@ -53,8 +48,6 @@
                     </div>
                 </div>
 
-
-                <!-- PERÍODO -->
                 <div class="col-md-3 col-sm-6">
                     <div class="text-muted small mb-1">
                         Período académico
@@ -65,8 +58,6 @@
                     </div>
                 </div>
 
-
-                <!-- CAMPUS -->
                 <div class="col-md-3 col-sm-6">
                     <div class="text-muted small mb-1">
                         Campus
@@ -77,8 +68,6 @@
                     </div>
                 </div>
 
-
-                <!-- DOCENTE -->
                 <div class="col-md-3 col-sm-6">
                     <div class="text-muted small mb-1">
                         Docente{% if seccion.docentes.count != 1 %}s{% endif %}
@@ -112,8 +101,6 @@
 
     </div>
 
-
-    <!-- REGISTRO DE EQUIPOS -->
     <div class="card shadow-sm border-0">
 
         <div class="card-body p-4">
@@ -239,8 +226,81 @@
 
 </div>
 
+    {% if seccion.ruta_asignada %}
+    <div class="card shadow-sm border-0 mt-4">
 
-    <!-- VOLVER -->
+        <div class="card-body p-4">
+
+            <div class="row align-items-center">
+
+                <div class="col-lg-8">
+
+                    <div class="d-flex align-items-center mb-2">
+
+                        <div
+                            class="d-flex align-items-center justify-content-center me-3"
+                            style="
+                                width: 45px;
+                                height: 45px;
+                                border-radius: 10px;
+                                background-color: #f8e5e5;
+                                color: #a90000;
+                                font-size: 22px;
+                            "
+                        >
+                            ✓
+                        </div>
+
+                        <div>
+                            <h5 class="fw-bold mb-1">
+                                Ruta del Docente A+S
+                            </h5>
+
+                            <span class="badge bg-secondary">
+                                {% if seccion.ruta_asignada.estado == "EN_PROGRESO" %}
+                                    En progreso
+                                {% elif seccion.ruta_asignada.estado == "COMPLETADA" %}
+                                    Completada
+                                {% else %}
+                                    {{ seccion.ruta_asignada.estado|title }}
+                                {% endif %}
+                            </span>
+                        </div>
+
+                    </div>
+
+                    <p class="text-muted mb-2 mt-3">
+                        Consulta y registra el avance de las actividades de la
+                        Ruta del Docente A+S asociadas a esta sección.
+                    </p>
+
+                    <div class="small text-muted">
+                        Avance actual:
+                        <strong>
+                            {{ seccion.ruta_asignada.porcentaje_final|default:"0.00" }}%
+                        </strong>
+                    </div>
+
+                </div>
+
+                <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+
+                    <a
+                        href="{% url 'rutas:detalle_ruta_docente' seccion.ruta_asignada.id %}"
+                        class="btn btn-rojo px-4"
+                    >
+                        Ver mi Ruta A+S
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+    {% endif %}
+
     <div class="mt-4">
 
         <a
