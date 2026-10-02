@@ -12,4 +12,5 @@ urlpatterns = [
     path('archivos/', include('archivos.urls')),
     path('proyectos/', include(('proyectos.urls', 'proyectos'), namespace='proyectos')),
     path("rutas/", include("rutas.urls")),
+    path("cartas/", include("cartas.urls")),
 ]

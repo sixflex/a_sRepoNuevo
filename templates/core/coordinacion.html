@@ -304,6 +304,39 @@
             </div>
         </div>
 
+                <div class="col-12 col-md-6 col-xl-3">
+            <div class="module-card border-top border-4 border-danger">
+                <div>
+                    <span class="module-badge">Cartas</span>
+                    <h5 class="module-title">Cartas de Presentación</h5>
+                    <p class="module-desc">
+                        Revisa las solicitudes de Cartas de Presentación enviadas por docentes y gestiona su aprobación u observación.
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'cartas:listar_solicitudes_coordinacion' %}" class="btn-ua-action">
+                        <i class="bi bi-envelope-paper"></i> Revisar solicitudes
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="module-card border-top border-4 border-danger">
+                <div>
+                    <span class="module-badge">Ruta A+S</span>
+                    <h5 class="module-title">Seguimiento de Rutas A+S</h5>
+                    <p class="module-desc">
+                        Supervisa el avance de las Rutas A+S de los docentes, sus actividades pendientes y las evidencias registradas.
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'rutas:seguimiento_rutas_coordinacion' %}" class="btn-ua-action">
+                        <i class="bi bi-list-check"></i> Consultar Rutas
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

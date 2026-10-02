@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-4">
+
+    <div class="mb-4">
+
+        <a
+            href="{% url 'cartas:listar_solicitudes_coordinacion' %}"
+            class="btn btn-outline-secondary btn-sm"
+        >
+            Volver a solicitudes
+        </a>
+
+    </div>
+
+    <div class="mb-4">
+
+        <h2>
+            Solicitud de Carta de Presentación
+        </h2>
+
+        <p class="text-muted">
+            Solicitud #{{ solicitud.id }}
+        </p>
+
+    </div>
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-body">
+
+            <div class="row g-4">
+
+                <div class="col-md-6">
+
+                    <strong>Estado</strong>
+
+                    <div class="mt-1">
+
+                        {% if solicitud.estado == "PENDIENTE" %}
+
+                            <span class="badge bg-warning text-dark">
+                                PENDIENTE
+                            </span>
+
+                        {% elif solicitud.estado == "APROBADA" %}
+
+                            <span class="badge bg-success">
+                                APROBADA
+                            </span>
+
+                        {% elif solicitud.estado == "OBSERVADA" %}
+
+                            <span class="badge bg-danger">
+                                OBSERVADA
+                            </span>
+
+                        {% else %}
+
+                            <span class="badge bg-secondary">
+                                {{ solicitud.estado }}
+                            </span>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <strong>Fecha de solicitud</strong>
+
+                    <div>
+                        {{ solicitud.fecha_solicitud|date:"d/m/Y H:i" }}
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <strong>Solicitante</strong>
+
+                    <div>
+                        {{ solicitud.solicitante_nombre }}
+                    </div>
+
+                    <div class="small text-muted">
+                        {{ solicitud.solicitante_correo }}
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <strong>Docente</strong>
+
+                    <div>
+                        {{ solicitud.docente_derivador }}
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <strong>Asignatura</strong>
+
+                    <div>
+                        {{ solicitud.seccion.asignatura.nombre }}
+                    </div>
+
+                    <div class="small text-muted">
+                        NRC {{ solicitud.seccion.nrc }}
+                        · Sección {{ solicitud.seccion.seccion }}
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <strong>Campus</strong>
+
+                    <div>
+                        {{ solicitud.campus.nombre }}
+                        · {{ solicitud.sede.nombre }}
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <strong>Institución receptora</strong>
+
+                    <div>
+                        {{ solicitud.institucion_receptora }}
+                    </div>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <strong>Persona receptora</strong>
+
+                    <div>
+                        {{ solicitud.persona_receptora }}
+                    </div>
+
+                    {% if solicitud.cargo_receptor %}
+
+                        <div class="small text-muted">
+                            {{ solicitud.cargo_receptor }}
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+                {% if solicitud.equipo %}
+
+                    <div class="col-md-6">
+
+                        <strong>Equipo</strong>
+
+                        <div>
+                            Grupo {{ solicitud.equipo.numero_grupo }}
+                        </div>
+
+                    </div>
+
+                {% endif %}
+
+                {% if solicitud.socio %}
+
+                    <div class="col-md-6">
+
+                        <strong>Socio Comunitario</strong>
+
+                        <div>
+                            {{ solicitud.socio }}
+                        </div>
+
+                    </div>
+
+                {% endif %}
+
+                {% if solicitud.consideraciones %}
+
+                    <div class="col-12">
+
+                        <strong>Consideraciones</strong>
+
+                        <div class="mt-1">
+                            {{ solicitud.consideraciones }}
+                        </div>
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+    {% if solicitud.estado == "PENDIENTE" %}
+
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-body">
+
+                <h5 class="mb-3">
+                    Revisar solicitud
+                </h5>
+
+                <div class="d-flex gap-2 flex-wrap mb-4">
+
+                    <form
+                        method="post"
+                        action="{% url 'cartas:aprobar_solicitud' solicitud.id %}"
+                    >
+
+                        {% csrf_token %}
+
+                        <button
+                            type="submit"
+                            class="btn btn-success"
+                        >
+                            Aprobar solicitud
+                        </button>
+
+                    </form>
+
+                </div>
+
+                <form
+                    method="post"
+                    action="{% url 'cartas:observar_solicitud' solicitud.id %}"
+                >
+
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+
+                        <label
+                            for="motivo_observacion"
+                            class="form-label"
+                        >
+                            Motivo de observación
+                        </label>
+
+                        <textarea
+                            name="motivo_observacion"
+                            id="motivo_observacion"
+                            class="form-control"
+                            rows="4"
+                            placeholder="Indica qué debe corregirse en la solicitud"
+                        ></textarea>
+
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="btn btn-outline-danger"
+                    >
+                        Observar solicitud
+                    </button>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+    {% if solicitud.estado == "OBSERVADA" %}
+
+        <div class="alert alert-danger">
+
+            <strong>Motivo de observación:</strong>
+
+            <div class="mt-1">
+                {{ solicitud.motivo_observacion }}
+            </div>
+
+        </div>
+
+    {% endif %}
+
+    {% if solicitud.estado == "APROBADA" %}
+
+    <div class="alert alert-success">
+        <strong>Solicitud aprobada</strong>
+
+        {% if solicitud.fecha_aprobacion %}
+            <div class="mt-1">
+                Aprobada el
+                {{ solicitud.fecha_aprobacion|date:"d/m/Y H:i" }}
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="card shadow-sm mt-3">
+        <div class="card-body">
+            <h5 class="mb-3">Carta de Presentación</h5>
+
+            <form
+                method="post"
+                action="{% url 'cartas:generar_carta_pdf' solicitud.id %}"
+            >
+                {% csrf_token %}
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    Generar PDF
+                </button>
+            </form>
+
+            {% if solicitud.documentos.all %}
+                <div class="mt-4">
+                    <strong>Documentos generados</strong>
+
+                    {% for documento in solicitud.documentos.all %}
+                        <div class="d-flex align-items-center gap-3 mt-2">
+                            <span>
+                                Versión {{ documento.numero_version }}
+                            </span>
+
+                            <a
+                                href="{% url 'archivos:descargar' documento.archivo.id %}"
+                                class="btn btn-sm btn-outline-primary"
+                            >
+                                Descargar PDF
+                            </a>
+
+                            <span class="text-muted small">
+                                {{ documento.fecha_generacion|date:"d/m/Y H:i" }}
+                            </span>
+                        </div>
+                    {% empty %}
+                        <div class="text-muted mt-2">
+                            Aún no se ha generado ningún PDF.
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+{% endif %}
+
+</div>
+
+{% endblock %}

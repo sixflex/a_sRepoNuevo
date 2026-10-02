@@ -1,165 +1,331 @@
 {% extends "base.html" %}
 
 {% block content %}
-
 <div class="container py-4">
-    <div class="mb-4">
-        <a
-            href="{% url 'core:detalle_seccion' seccion.id %}"
-            class="btn btn-outline-secondary"
-        >
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+        <div>
+            <h2 class="mb-1">Ruta del Docente A+S</h2>
+            <p class="text-muted mb-0">
+                {{ seccion.asignatura.nombre }} · NRC {{ seccion.nrc }} · Sección {{ seccion.seccion }}
+            </p>
+        </div>
+        <a href="{% url 'core:detalle_seccion' seccion.id %}" class="btn btn-outline-secondary">
             ← Volver a la sección
         </a>
     </div>
 
-    <div class="mb-4">
-        <h2 class="fw-bold text-dark mb-1">
-            Ruta del Docente A+S
-        </h2>
-
-        <p class="text-muted mb-0">
-            {{ seccion.asignatura.nombre }} · NRC {{ seccion.nrc }} · Sección {{ seccion.seccion }}
-        </p>
-    </div>
-
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body p-4">
-
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-
                 <div>
-                    <div class="text-muted small mb-1">
-                        Estado de la Ruta
-                    </div>
-
-                    <div class="fw-bold">
-                        {% if seccion_ruta.estado == "EN_PROGRESO" %}
-                            En progreso
-                        {% elif seccion_ruta.estado == "COMPLETADA" %}
-                            Completada
-                        {% else %}
-                            {{ seccion_ruta.estado|title }}
-                        {% endif %}
-                    </div>
+                    <h5 class="mb-1">Estado de la Ruta</h5>
+                    {% if seccion_ruta.estado == "COMPLETADA" %}
+                        <span class="badge bg-success">COMPLETADA</span>
+                    {% else %}
+                        <span class="badge bg-primary">EN PROGRESO</span>
+                    {% endif %}
                 </div>
-
                 <div class="text-end">
-                    <div class="text-muted small mb-1">
-                        Avance general
-                    </div>
-
-                    <div class="fs-3 fw-bold text-danger">
-                        {{ seccion_ruta.porcentaje_final|default:"0.00" }}%
+                    <div class="text-muted small">Avance</div>
+                    <div class="fw-bold fs-4">
+                        {{ seccion_ruta.porcentaje_final|floatformat:0 }}%
                     </div>
                 </div>
-
             </div>
-
-            {% widthratio seccion_ruta.porcentaje_final 1 1 as porcentaje %}
 
             <div class="progress mt-3" style="height: 12px;">
                 <div
-                    class="progress-bar bg-danger"
+                    class="progress-bar"
                     role="progressbar"
-                    style="width: {{ porcentaje }}%"
+                    style="width: {{ seccion_ruta.porcentaje_final|floatformat:0 }}%;"
+                    aria-valuenow="{{ seccion_ruta.porcentaje_final|floatformat:0 }}"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
                 ></div>
             </div>
 
+            {% if seccion_ruta.estado == "COMPLETADA" %}
+                <div class="alert alert-success mt-3 mb-0">
+                    <strong>Ruta completada.</strong>
+                    {% if seccion_ruta.fecha_cierre %}
+                        Cerrada el {{ seccion_ruta.fecha_cierre|date:"d/m/Y H:i" }}.
+                    {% endif %}
+                    {% if seccion_ruta.cerrada_por_docente %}
+                        Docente: {{ seccion_ruta.cerrada_por_docente }}.
+                    {% endif %}
+                </div>
+            {% endif %}
         </div>
     </div>
 
     {% for etapa, actividades in etapas.items %}
-
-        <div class="card shadow-sm border-0 mb-4">
-
-            <div class="card-header bg-white p-4">
-                <h5 class="fw-bold mb-1">
-                    {{ etapa }}
-                </h5>
-
-                <span class="text-muted small">
-                    {{ actividades|length }} actividades
-                </span>
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h4 class="mb-0">{{ etapa }}</h4>
             </div>
 
             <div class="card-body p-0">
-
                 {% for actividad in actividades %}
+                {% if actividad.ruta_actividad.orden == 13 %}
+                    {% if seccion_ruta.estado != "COMPLETADA" %}
+                        {% if not actividad.completada_por_docente %}
+                            <a
+                                href="{% url 'socios:asociar_socio_equipo' actividad.id %}"
+                                class="btn btn-outline-primary btn-sm"
+                            >
+                                Registrar Socio Comunitario
+                            </a>
+                        {% endif %}
+                    {% endif %}
+                {% endif %}
+                    <div class="p-4 {% if not forloop.last %}border-bottom{% endif %}">
+                        <div class="row g-3">
+                            <div class="col-lg-9">
+                                <div class="d-flex align-items-start gap-2">
+                                    <span class="badge bg-light text-dark border">
+                                        {{ actividad.ruta_actividad.orden }}
+                                    </span>
 
-                    <div class="p-4 border-bottom">
+                                    <div class="flex-grow-1">
+                                        <h5 class="mb-1">
+                                            {{ actividad.ruta_actividad.nombre }}
+                                        </h5>
 
-                        <div class="d-flex justify-content-between align-items-start gap-3">
+                                        {% if actividad.ruta_actividad.descripcion %}
+                                            <p class="text-muted mb-2">
+                                                {{ actividad.ruta_actividad.descripcion }}
+                                            </p>
+                                        {% endif %}
 
-                            <div>
+                                        {% if actividad.ruta_actividad.orden == 10 %}
+                                            <div class="mt-3">
+                                                <a
+                                                    href="{% url 'cartas:solicitar_carta_docente' seccion.id %}"
+                                                    class="btn btn-outline-primary btn-sm"
+                                                >
+                                                    Solicitar Carta de Presentación
+                                                </a>
+                                            </div>
+                                        {% endif %}
 
-                                <div class="fw-bold mb-1">
-                                    {{ actividad.ruta_actividad.orden }}.
-                                    {{ actividad.ruta_actividad.nombre }}
-                                </div>
+                                        {% if actividad.evidencias.all %}
+                                            <div class="mt-3">
+                                                <div class="fw-semibold mb-2">Evidencias</div>
 
-                                {% if actividad.ruta_actividad.descripcion %}
-                                    <div class="text-muted small">
-                                        {{ actividad.ruta_actividad.descripcion }}
+                                                {% for evidencia in actividad.evidencias.all %}
+                                                    <div class="border rounded p-2 mb-2">
+                                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                                            <div>
+                                                                <div class="fw-semibold">
+                                                                    {{ evidencia.archivo.nombre_original }}
+                                                                </div>
+
+                                                                {% if evidencia.descripcion %}
+                                                                    <div class="small text-muted">
+                                                                        {{ evidencia.descripcion }}
+                                                                    </div>
+                                                                {% endif %}
+                                                            </div>
+
+                                                            <div class="d-flex gap-2">
+                                                                <a
+                                                                    href="{% url 'archivos:descargar' evidencia.archivo.id %}"
+                                                                    class="btn btn-sm btn-outline-primary"
+                                                                >
+                                                                    Descargar
+                                                                </a>
+
+                                                                {% if seccion_ruta.estado != "COMPLETADA" and not actividad.completada_por_docente %}
+                                                                    <form
+                                                                        method="post"
+                                                                        action="{% url 'rutas:eliminar_evidencia' evidencia.id %}"
+                                                                    >
+                                                                        {% csrf_token %}
+                                                                        <button
+                                                                            type="submit"
+                                                                            class="btn btn-sm btn-outline-danger"
+                                                                        >
+                                                                            Eliminar
+                                                                        </button>
+                                                                    </form>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+
+                                        {% if seccion_ruta.estado != "COMPLETADA" %}
+                                            {% if not actividad.completada_por_docente and actividad.ruta_actividad.orden in actividades_con_evidencia %}
+                                                <div class="mt-3 border rounded p-3">
+                                                    <div class="fw-semibold mb-2">
+                                                        Subir evidencia
+                                                    </div>
+
+                                                    <form
+                                                        method="post"
+                                                        enctype="multipart/form-data"
+                                                        action="{% url 'rutas:subir_evidencia' actividad.id %}"
+                                                    >
+                                                        {% csrf_token %}
+
+                                                        <div class="mb-2">
+                                                            <input
+                                                                type="file"
+                                                                name="archivo"
+                                                                id="archivo-{{ actividad.id }}"
+                                                                class="form-control"
+                                                                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                                                                required
+                                                            >
+                                                        </div>
+
+                                                        <div class="small text-muted mb-2">
+                                                            Formatos permitidos: PDF, DOC, DOCX, XLS, XLSX, JPG y PNG.
+                                                        </div>
+
+                                                        <div class="mb-2">
+                                                            <input
+                                                                type="text"
+                                                                name="descripcion"
+                                                                class="form-control"
+                                                                placeholder="Descripción de la evidencia"
+                                                            >
+                                                        </div>
+
+                                                        <div class="d-flex gap-2">
+                                                            <button
+                                                                type="submit"
+                                                                class="btn btn-primary btn-sm"
+                                                            >
+                                                                Subir evidencia
+                                                            </button>
+
+                                                            <button
+                                                                type="button"
+                                                                class="btn btn-outline-secondary btn-sm"
+                                                                onclick="limpiarArchivo('{{ actividad.id }}')"
+                                                            >
+                                                                Quitar
+                                                            </button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            {% endif %}
+                                        {% endif %}
                                     </div>
-                                {% endif %}
-
+                                </div>
                             </div>
 
-                            <div class="text-end">
-
+                            <div class="col-lg-3 text-lg-end">
                                 {% if actividad.completada_por_docente %}
-
                                     <span class="badge bg-success mb-2">
                                         Completada
                                     </span>
 
                                     {% if actividad.fecha_completada %}
-                                        <div class="small text-muted">
+                                        <div class="small text-muted mb-2">
                                             {{ actividad.fecha_completada|date:"d/m/Y H:i" }}
                                         </div>
                                     {% endif %}
 
+                                    {% if seccion_ruta.estado != "COMPLETADA" %}
+                                        <form
+                                            method="post"
+                                            action="{% url 'rutas:completar_actividad' actividad.id %}"
+                                        >
+                                            {% csrf_token %}
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-outline-secondary"
+                                            >
+                                                Volver a pendiente
+                                            </button>
+                                        </form>
+                                    {% endif %}
                                 {% else %}
-
-                                    <span class="badge bg-secondary mb-2">
+                                    <span class="badge bg-warning text-dark mb-3">
                                         Pendiente
                                     </span>
 
-                                    <form
-                                        method="post"
-                                        action="{% url 'rutas:completar_actividad' actividad.id %}"
-                                        class="mt-2"
-                                    >
-                                        {% csrf_token %}
-
-                                        <button
-                                            type="submit"
-                                            class="btn btn-sm btn-outline-danger"
+                                    {% if seccion_ruta.estado != "COMPLETADA" %}
+                                        <form
+                                            method="post"
+                                            action="{% url 'rutas:completar_actividad' actividad.id %}"
                                         >
-                                            Marcar como completada
-                                        </button>
-                                    </form>
-
+                                            {% csrf_token %}
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-success"
+                                            >
+                                                Marcar como completada
+                                            </button>
+                                        </form>
+                                    {% endif %}
                                 {% endif %}
-
                             </div>
-
                         </div>
-
                     </div>
-
                 {% endfor %}
-
             </div>
-
         </div>
-
-    {% empty %}
-
-        <div class="alert alert-light border">
-            Esta Ruta todavía no tiene actividades asociadas.
-        </div>
-
     {% endfor %}
 
+    {% if seccion_ruta.estado == "COMPLETADA" %}
+        <div class="alert alert-success">
+            <h5 class="mb-2">Ruta A+S completada</h5>
+            <div>La Ruta fue completada correctamente y ya no puede modificarse.</div>
+
+            {% if seccion_ruta.fecha_cierre %}
+                <div class="small mt-2">
+                    Fecha de cierre: {{ seccion_ruta.fecha_cierre|date:"d/m/Y H:i" }}
+                </div>
+            {% endif %}
+
+            {% if seccion_ruta.cerrada_por_docente %}
+                <div class="small">
+                    Docente: {{ seccion_ruta.cerrada_por_docente }}
+                </div>
+            {% endif %}
+        </div>
+
+    {% elif puede_completar_ruta %}
+        <div class="card shadow-sm border-success mb-4">
+            <div class="card-body">
+                <h5 class="mb-2">Ruta lista para completar</h5>
+                <p class="text-muted mb-3">
+                    Todas las actividades obligatorias se encuentran completadas.
+                </p>
+
+                <form
+                    method="post"
+                    action="{% url 'rutas:completar_ruta' seccion_ruta.id %}"
+                >
+                    {% csrf_token %}
+                    <button
+                        type="submit"
+                        class="btn btn-success"
+                    >
+                        Completar Ruta
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    {% else %}
+        <div class="alert alert-secondary mb-4">
+            Completa todas las actividades obligatorias para finalizar la Ruta A+S.
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function limpiarArchivo(actividadId) {
+    const input = document.getElementById("archivo-" + actividadId);
+    if (input) {
+        input.value = "";
+    }
+}
+</script>
 {% endblock %}
