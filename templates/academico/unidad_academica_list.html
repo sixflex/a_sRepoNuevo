@@ -1,202 +1,121 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+
+{% block title %}Gestión de Unidades Académicas{% endblock %}
 
 {% block content %}
+<div class="container-fluid py-2">
 
-<div class="container py-4">
-
-    <!-- ENCABEZADO -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-
+    <!-- TÍTULO Y BOTÓN -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
         <div>
-            <h2 class="fw-bold mb-1">
-                Gestión de Unidades Académicas
-            </h2>
-
+            <h2 class="fw-bold mb-1">Gestión de Unidades Académicas</h2>
             <p class="text-muted mb-0">
-                Administra las unidades académicas, facultades y carreras asociadas.
+                Administra las unidades académicas, facultades y carreras asociadas en el sistema.
             </p>
         </div>
 
-        <a
-            href="{% url 'unidad_academica_create' %}"
-            class="btn text-white"
-            style="
-                background-color: #a90000;
-                border-color: #a90000;
-            "
-        >
+        <a href="{% url 'unidad_academica_create' %}" class="btn btn-rojo">
             + Crear Unidad Académica
         </a>
-
     </div>
 
+    <!-- TABLA DE ANCHO MÁXIMO -->
+    <div class="card shadow-sm border-0 w-100">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 w-100">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Tipo</th>
+                            <th>Facultad</th>
+                            <th>Carrera</th>
+                            <th>Correo Oficial</th>
+                            <th>Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for unidad in unidades %}
+                        <tr>
+                            <!-- NOMBRE -->
+                            <td class="fw-semibold">
+                                {{ unidad.nombre }}
+                            </td>
 
-    <!-- TABLA -->
-    <div class="card shadow-sm border-0">
+                            <!-- TIPO -->
+                            <td>
+                                {{ unidad.tipo }}
+                            </td>
 
-        <div class="card-body p-3">
+                            <!-- FACULTAD -->
+                            <td>
+                                {% if unidad.facultad %}
+                                    {{ unidad.facultad.nombre }}
+                                {% else %}
+                                    <span class="text-muted">Sin especificar</span>
+                                {% endif %}
+                            </td>
 
-            {% if unidades %}
+                            <!-- CARRERA -->
+                            <td>
+                                {% if unidad.carrera %}
+                                    {{ unidad.carrera.nombre }}
+                                {% else %}
+                                    <span class="text-muted">Sin especificar</span>
+                                {% endif %}
+                            </td>
 
-                <div class="table-responsive">
+                            <!-- CORREO -->
+                            <td>
+                                {% if unidad.correo_oficial %}
+                                    {{ unidad.correo_oficial }}
+                                {% else %}
+                                    <span class="text-muted">Sin especificar</span>
+                                {% endif %}
+                            </td>
 
-                    <table class="table table-hover align-middle mb-0">
+                            <!-- ESTADO -->
+                            <td>
+                                {% if unidad.activo %}
+                                    <span class="badge bg-success">Activa</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactiva</span>
+                                {% endif %}
+                            </td>
 
-                        <thead>
-                            <tr>
-                                <th>Nombre</th>
-                                <th>Tipo</th>
-                                <th>Facultad</th>
-                                <th>Carrera</th>
-                                <th>Correo oficial</th>
-                                <th>Estado</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
+                            <!-- ACCIONES -->
+                            <td class="text-center text-nowrap">
+                                <a href="{% url 'unidad_academica_update' unidad.pk %}"
+                                   class="btn btn-sm btn-outline-secondary me-1">
+                                    Editar
+                                </a>
 
-                        <tbody>
-
-                            {% for unidad in unidades %}
-
-                                <tr>
-
-                                    <!-- NOMBRE -->
-                                    <td class="fw-semibold">
-                                        {{ unidad.nombre }}
-                                    </td>
-
-
-                                    <!-- TIPO -->
-                                    <td>
-                                        {{ unidad.tipo }}
-                                    </td>
-
-
-                                    <!-- FACULTAD -->
-                                    <td>
-                                        {% if unidad.facultad %}
-                                            {{ unidad.facultad.nombre }}
-                                        {% else %}
-                                            <span class="text-muted">
-                                                Sin especificar
-                                            </span>
-                                        {% endif %}
-                                    </td>
-
-
-                                    <!-- CARRERA -->
-                                    <td>
-                                        {% if unidad.carrera %}
-                                            {{ unidad.carrera.nombre }}
-                                        {% else %}
-                                            <span class="text-muted">
-                                                Sin especificar
-                                            </span>
-                                        {% endif %}
-                                    </td>
-
-
-                                    <!-- CORREO -->
-                                    <td>
-                                        {% if unidad.correo_oficial %}
-                                            {{ unidad.correo_oficial }}
-                                        {% else %}
-                                            <span class="text-muted">
-                                                Sin especificar
-                                            </span>
-                                        {% endif %}
-                                    </td>
-
-
-                                    <!-- ESTADO -->
-                                    <td>
-
-                                        {% if unidad.activo %}
-
-                                            <span class="badge bg-success">
-                                                Activo
-                                            </span>
-
-                                        {% else %}
-
-                                            <span class="badge bg-secondary">
-                                                Inactivo
-                                            </span>
-
-                                        {% endif %}
-
-                                    </td>
-
-
-                                    <!-- ACCIONES -->
-                                    <td>
-
-                                        <a
-                                            href="{% url 'unidad_academica_update' unidad.pk %}"
-                                            class="btn btn-sm btn-outline-secondary me-1"
-                                        >
-                                            Editar
-                                        </a>
-
-                                        <a
-                                            href="{% url 'unidad_academica_delete' unidad.pk %}"
-                                            class="btn btn-sm btn-outline-danger"
-                                        >
-                                            Eliminar
-                                        </a>
-
-                                    </td>
-
-                                </tr>
-
-                            {% endfor %}
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            {% else %}
-
-                <div class="text-center py-4">
-
-                    <p class="text-muted mb-3">
-                        No hay unidades académicas registradas.
-                    </p>
-
-                    <a
-                        href="{% url 'unidad_academica_create' %}"
-                        class="btn text-white"
-                        style="
-                            background-color: #a90000;
-                            border-color: #a90000;
-                        "
-                    >
-                        + Crear Unidad Académica
-                    </a>
-
-                </div>
-
-            {% endif %}
-
+                                <a href="{% url 'unidad_academica_delete' unidad.pk %}"
+                                   class="btn btn-sm btn-outline-danger">
+                                    Eliminar
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                No hay unidades académicas registradas.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
-
     </div>
-
 
     <!-- VOLVER -->
-    <div class="mt-3">
-
-        <a
-            href="{% url 'home' %}"
-            class="btn btn-outline-secondary"
-        >
+    <div class="mt-4">
+        <a href="{% url 'home' %}" class="btn btn-outline-secondary">
             ← Volver a Gestión Académica
         </a>
-
     </div>
 
 </div>
-
 {% endblock %}

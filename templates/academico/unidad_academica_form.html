@@ -1,274 +1,186 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if unidad %}Editar Unidad Académica{% else %}Nueva Unidad Académica{% endif %}
+{% endblock %}
 
 {% block content %}
+<div class="container-fluid py-2">
 
-<div class="container-fluid py-4">
-
-    <div class="card shadow-sm border-0"
-         style="max-width: 860px;">
+    <div class="card shadow-sm border-0 w-100">
 
         <!-- ENCABEZADO -->
-        <div class="card-header bg-white px-3 py-3">
-
-            {% if unidad %}
-                <h3 class="mb-1 fw-bold">
+        <div class="card-header bg-white border-bottom py-3">
+            <h4 class="mb-1 fw-bold">
+                {% if unidad %}
                     Editar Unidad Académica
-                </h3>
-
-                <p class="text-muted mb-0">
-                    Modifica los datos de la unidad académica.
-                </p>
-            {% else %}
-                <h3 class="mb-1 fw-bold">
+                {% else %}
                     Nueva Unidad Académica
-                </h3>
-
-                <p class="text-muted mb-0">
-                    Ingresa los datos de la unidad académica.
-                </p>
-            {% endif %}
-
+                {% endif %}
+            </h4>
+            <p class="text-muted mb-0 small">
+                Ingresa los datos correspondientes a la unidad académica.
+            </p>
         </div>
 
+        <!-- CONTENIDO -->
+        <div class="card-body p-4">
 
-        <!-- CUERPO -->
-        <div class="card-body px-4 py-4">
-
+            <!-- MENSAJE DE VALIDACIÓN -->
             {% if error %}
-                <div class="alert alert-danger">
+                <div class="alert alert-danger" role="alert">
                     {{ error }}
                 </div>
             {% endif %}
 
-
-            <form method="POST">
+            <form method="POST" novalidate>
                 {% csrf_token %}
 
+                <div class="row g-3 mb-4">
 
-                <!-- NOMBRE -->
-                <div class="mb-3">
+                    <!-- NOMBRE -->
+                    <div class="col-12 col-md-8">
+                        <label for="nombre" class="form-label fw-semibold">
+                            Nombre de la unidad académica
+                        </label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="nombre"
+                            name="nombre"
+                            maxlength="180"
+                            placeholder="Ej: Escuela de Informática"
+                            value="{% if request.POST.nombre %}{{ request.POST.nombre }}{% elif unidad %}{{ unidad.nombre }}{% endif %}"
+                            required>
+                        <div class="form-text">
+                            Ingresa el nombre oficial de la unidad académica.
+                        </div>
+                    </div>
 
-                    <label for="nombre"
-                           class="form-label fw-bold">
-                        Nombre de la unidad académica
-                    </label>
+                    <!-- TIPO -->
+                    <div class="col-12 col-md-4">
+                        <label for="tipo" class="form-label fw-semibold">
+                            Tipo
+                        </label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="tipo"
+                            name="tipo"
+                            maxlength="40"
+                            placeholder="Ej: Escuela, Departamento, Dirección"
+                            value="{% if request.POST.tipo %}{{ request.POST.tipo }}{% elif unidad %}{{ unidad.tipo }}{% endif %}"
+                            required>
+                        <div class="form-text">
+                            Indica el tipo de unidad académica.
+                        </div>
+                    </div>
 
-                    <input
-                        type="text"
-                        class="form-control"
-                        id="nombre"
-                        name="nombre"
-                        maxlength="180"
-                        placeholder="Ej: Escuela de Informática"
-                        value="{% if request.POST.nombre %}{{ request.POST.nombre }}{% elif unidad %}{{ unidad.nombre }}{% endif %}"
-                        required
-                    >
+                    <!-- FACULTAD -->
+                    <div class="col-12 col-md-6">
+                        <label for="facultad" class="form-label fw-semibold">
+                            Facultad
+                        </label>
+                        <select class="form-select" id="facultad" name="facultad">
+                            <option value="">Seleccione una facultad</option>
+                            {% for facultad in facultades %}
+                                <option
+                                    value="{{ facultad.pk }}"
+                                    {% if request.POST.facultad == facultad.pk|stringformat:"s" %}
+                                        selected
+                                    {% elif not request.POST and unidad and unidad.facultad_id == facultad.pk %}
+                                        selected
+                                    {% endif %}>
+                                    {{ facultad.nombre }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            Selecciona la facultad asociada, si corresponde.
+                        </div>
+                    </div>
 
-                    <div class="form-text">
-                        Ingresa el nombre oficial de la unidad académica.
+                    <!-- CARRERA -->
+                    <div class="col-12 col-md-6">
+                        <label for="carrera" class="form-label fw-semibold">
+                            Carrera
+                        </label>
+                        <select class="form-select" id="carrera" name="carrera">
+                            <option value="">Seleccione una carrera</option>
+                            {% for carrera in carreras %}
+                                <option
+                                    value="{{ carrera.pk }}"
+                                    {% if request.POST.carrera == carrera.pk|stringformat:"s" %}
+                                        selected
+                                    {% elif not request.POST and unidad and unidad.carrera_id == carrera.pk %}
+                                        selected
+                                    {% endif %}>
+                                    {{ carrera.nombre }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            Selecciona la carrera asociada, si corresponde.
+                        </div>
+                    </div>
+
+                    <!-- CORREO OFICIAL -->
+                    <div class="col-12">
+                        <label for="correo_oficial" class="form-label fw-semibold">
+                            Correo oficial
+                        </label>
+                        <input
+                            type="email"
+                            class="form-control"
+                            id="correo_oficial"
+                            name="correo_oficial"
+                            maxlength="254"
+                            placeholder="Ej: unidad@uautonoma.cl"
+                            value="{% if request.POST.correo_oficial %}{{ request.POST.correo_oficial }}{% elif unidad and unidad.correo_oficial %}{{ unidad.correo_oficial }}{% endif %}">
+                        <div class="form-text">
+                            Ingresa el correo oficial institucional de contacto de la unidad académica.
+                        </div>
+                    </div>
+
+                    <!-- ACTIVO -->
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                id="activo"
+                                name="activo"
+                                {% if request.method == "POST" %}
+                                    {% if request.POST.activo %}checked{% endif %}
+                                {% elif unidad %}
+                                    {% if unidad.activo %}checked{% endif %}
+                                {% else %}
+                                    checked
+                                {% endif %}>
+                            <label class="form-check-label fw-semibold" for="activo">
+                                Unidad académica activa
+                            </label>
+                        </div>
+                        <div class="form-text">
+                            Indica si la unidad académica se encuentra disponible en el sistema.
+                        </div>
                     </div>
 
                 </div>
-
-
-                <!-- TIPO -->
-                <div class="mb-3">
-
-                    <label for="tipo"
-                           class="form-label fw-bold">
-                        Tipo
-                    </label>
-
-                    <input
-                        type="text"
-                        class="form-control"
-                        id="tipo"
-                        name="tipo"
-                        maxlength="40"
-                        placeholder="Ej: Escuela, Departamento, Dirección"
-                        value="{% if request.POST.tipo %}{{ request.POST.tipo }}{% elif unidad %}{{ unidad.tipo }}{% endif %}"
-                        required
-                    >
-
-                    <div class="form-text">
-                        Indica el tipo de unidad académica.
-                    </div>
-
-                </div>
-
-
-                <!-- FACULTAD -->
-                <div class="mb-3">
-
-                    <label for="facultad"
-                           class="form-label fw-bold">
-                        Facultad
-                    </label>
-
-                    <select
-                        class="form-select"
-                        id="facultad"
-                        name="facultad"
-                    >
-
-                        <option value="">
-                            Seleccione una facultad
-                        </option>
-
-                        {% for facultad in facultades %}
-
-                            <option
-                                value="{{ facultad.pk }}"
-
-                                {% if request.POST.facultad == facultad.pk|stringformat:"s" %}
-                                    selected
-
-                                {% elif not request.POST and unidad and unidad.facultad_id == facultad.pk %}
-                                    selected
-                                {% endif %}
-                            >
-                                {{ facultad.nombre }}
-                            </option>
-
-                        {% endfor %}
-
-                    </select>
-
-                    <div class="form-text">
-                        Selecciona la facultad asociada, si corresponde.
-                    </div>
-
-                </div>
-
-
-                <!-- CARRERA -->
-                <div class="mb-3">
-
-                    <label for="carrera"
-                           class="form-label fw-bold">
-                        Carrera
-                    </label>
-
-                    <select
-                        class="form-select"
-                        id="carrera"
-                        name="carrera"
-                    >
-
-                        <option value="">
-                            Seleccione una carrera
-                        </option>
-
-                        {% for carrera in carreras %}
-
-                            <option
-                                value="{{ carrera.pk }}"
-
-                                {% if request.POST.carrera == carrera.pk|stringformat:"s" %}
-                                    selected
-
-                                {% elif not request.POST and unidad and unidad.carrera_id == carrera.pk %}
-                                    selected
-                                {% endif %}
-                            >
-                                {{ carrera.nombre }}
-                            </option>
-
-                        {% endfor %}
-
-                    </select>
-
-                    <div class="form-text">
-                        Selecciona la carrera asociada, si corresponde.
-                    </div>
-
-                </div>
-
-
-                <!-- CORREO -->
-                <div class="mb-3">
-
-                    <label for="correo_oficial"
-                           class="form-label fw-bold">
-                        Correo oficial
-                    </label>
-
-                    <input
-                        type="email"
-                        class="form-control"
-                        id="correo_oficial"
-                        name="correo_oficial"
-                        maxlength="254"
-                        placeholder="Ej: unidad@uautonoma.cl"
-                        value="{% if request.POST.correo_oficial %}{{ request.POST.correo_oficial }}{% elif unidad and unidad.correo_oficial %}{{ unidad.correo_oficial }}{% endif %}"
-                    >
-
-                    <div class="form-text">
-                        Ingresa el correo oficial de la unidad académica.
-                    </div>
-
-                </div>
-
-
-                <!-- ACTIVO -->
-                <div class="form-check mb-4">
-
-                    <input
-                        class="form-check-input"
-                        type="checkbox"
-                        id="activo"
-                        name="activo"
-
-                        {% if request.method == "POST" %}
-                            {% if request.POST.activo %}checked{% endif %}
-                        {% elif unidad %}
-                            {% if unidad.activo %}checked{% endif %}
-                        {% else %}
-                            checked
-                        {% endif %}
-                    >
-
-                    <label
-                        class="form-check-label fw-bold"
-                        for="activo"
-                    >
-                        Unidad académica activa
-                    </label>
-
-                    <div class="form-text">
-                        Indica si la unidad académica se encuentra disponible en el sistema.
-                    </div>
-
-                </div>
-
 
                 <!-- BOTONES -->
-                <div class="d-flex justify-content-between align-items-center mt-4">
-
-                    <a
-                        href="{% url 'unidad_academica_list' %}"
-                        class="btn btn-outline-secondary"
-                    >
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'unidad_academica_list' %}" class="btn btn-outline-secondary">
                         ← Volver
                     </a>
 
-
-                    <button
-                        type="submit"
-                        class="btn text-white px-4"
-                        style="
-                            background-color: #a90000;
-                            border-color: #a90000;
-                            min-width: 109px;
-                        "
-                    >
+                    <button type="submit" class="btn btn-rojo px-4">
                         {% if unidad %}
                             Guardar cambios
                         {% else %}
                             Guardar
                         {% endif %}
                     </button>
-
                 </div>
 
             </form>
@@ -278,5 +190,4 @@
     </div>
 
 </div>
-
 {% endblock %}

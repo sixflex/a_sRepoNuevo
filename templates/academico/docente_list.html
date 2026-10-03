@@ -3,75 +3,57 @@
 {% block title %}Gestión de Docentes{% endblock %}
 
 {% block content %}
-
-<div class="container mt-4">
+<div class="container-fluid py-2">
 
     <!-- TÍTULO Y BOTÓN -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
         <div>
             <h2 class="fw-bold mb-1">Gestión de Docentes</h2>
-
             <p class="text-muted mb-0">
-                Administra los docentes disponibles para asociar a las secciones.
+                Administra los docentes disponibles para asociar a las secciones académicas.
             </p>
         </div>
 
-        <a href="{% url 'docente_create' %}"
-           class="btn btn-rojo">
+        <a href="{% url 'docente_create' %}" class="btn btn-rojo">
             + Crear Docente
         </a>
-
     </div>
 
-
-    <!-- TABLA -->
-    <div class="card shadow-sm border-0">
-
+    <!-- TABLA DE ANCHO MÁXIMO -->
+    <div class="card shadow-sm border-0 w-100">
         <div class="card-body">
-
             <div class="table-responsive">
-
-                <table class="table table-hover align-middle mb-0">
-
+                <table class="table table-hover align-middle mb-0 w-100">
                     <thead>
                         <tr>
                             <th>RUT</th>
-                            <th>Nombre</th>
-                            <th>Correo institucional</th>
+                            <th>Nombre Completo</th>
+                            <th>Correo Institucional</th>
                             <th>Teléfono</th>
                             <th>Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
-
                     <tbody>
-
                         {% for docente in docentes %}
-
                         <tr>
-
                             <!-- RUT -->
                             <td class="fw-semibold">
                                 {{ docente.rut }}
                             </td>
 
-
                             <!-- NOMBRE COMPLETO -->
-                            <td>
+                            <td class="fw-semibold">
                                 {{ docente.nombres }} {{ docente.apellidos }}
                             </td>
-
 
                             <!-- CORREO -->
                             <td>
                                 {{ docente.correo_institucional }}
                             </td>
 
-
                             <!-- TELÉFONO -->
                             <td>
-
                                 {% if docente.telefono %}
                                     {{ docente.telefono }}
                                 {% else %}
@@ -79,33 +61,23 @@
                                         Sin teléfono
                                     </span>
                                 {% endif %}
-
                             </td>
-
 
                             <!-- ESTADO -->
                             <td>
-
                                 {% if docente.activo %}
-
                                     <span class="badge bg-success">
                                         Activo
                                     </span>
-
                                 {% else %}
-
                                     <span class="badge bg-secondary">
                                         Inactivo
                                     </span>
-
                                 {% endif %}
-
                             </td>
 
-
                             <!-- ACCIONES -->
-                            <td class="text-center">
-
+                            <td class="text-center text-nowrap">
                                 <a href="{% url 'docente_update' docente.id %}"
                                    class="btn btn-sm btn-outline-secondary me-1">
                                     Editar
@@ -115,43 +87,27 @@
                                    class="btn btn-sm btn-outline-danger">
                                     Eliminar
                                 </a>
-
                             </td>
-
                         </tr>
-
                         {% empty %}
-
                         <tr>
-                            <td colspan="6"
-                                class="text-center text-muted py-4">
+                            <td colspan="6" class="text-center text-muted py-4">
                                 No hay docentes registrados.
                             </td>
                         </tr>
-
                         {% endfor %}
-
                     </tbody>
-
                 </table>
-
             </div>
-
         </div>
-
     </div>
-
 
     <!-- VOLVER -->
     <div class="mt-4">
-
-        <a href="{% url 'home' %}"
-           class="btn btn-outline-secondary">
+        <a href="{% url 'home' %}" class="btn btn-outline-secondary">
             ← Volver a Gestión Académica
         </a>
-
     </div>
 
 </div>
-
 {% endblock %}
