@@ -194,3 +194,9 @@ STORAGES = {
     },
 }
 
+PRIVATE_STORAGE_ALLOWED_EXTENSIONS = os.getenv(
+    "PRIVATE_STORAGE_ALLOWED_EXTENSIONS",
+    "pdf,doc,docx,xls,xlsx,jpg,jpeg,png",
+).lower().split(",")
+
+PRIVATE_STORAGE_RETENTION_YEARS = int(os.getenv("PRIVATE_STORAGE_RETENTION_YEARS", "5"))

@@ -1,6 +1,7 @@
 from io import BytesIO
 from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
@@ -11,7 +12,11 @@ from django.urls import reverse
 
 from .models import Archivo
 from .services import abrir_archivo, guardar_archivo
-from .validators import validar_cantidad_archivos, validar_tamano_archivo
+from .validators import (
+    validar_cantidad_archivos,
+    validar_extension_archivo,
+    validar_tamano_archivo,
+)
 
 
 class ArchivoServiceTests(TestCase):
@@ -67,14 +72,6 @@ class ArchivoServiceTests(TestCase):
 
         with abrir_archivo(archivo, storage=self.storage) as manejador:
             self.assertEqual(manejador.read(), contenido)
-        archivo = guardar_archivo(
-            subido,
-            autor=self.user,
-            storage=self.storage,
-        )
-
-        with abrir_archivo(archivo, storage=self.storage) as manejador:
-            self.assertEqual(manejador.read(), contenido)
 
     def test_servicio_admite_otro_proveedor_sin_cambiar_reglas_de_negocio(self):
         otro_storage = InMemoryStorage()
@@ -92,24 +89,44 @@ class ArchivoServiceTests(TestCase):
 
         self.assertTrue(otro_storage.exists(archivo.storage_key))
 
-    @override_settings(PRIVATE_STORAGE_MAX_FILE_SIZE_MB=1)
-    def test_rechaza_archivo_que_supera_limite_configurado(self):
-        subido = SimpleUploadedFile(
-            "grande.bin",
-            b"x" * (1024 * 1024 + 1),
-            content_type="application/octet-stream",
-        )
+    @override_settings(PRIVATE_STORAGE_MAX_FILE_SIZE_MB=20)
+    def test_cde_300_limite_20mb_por_archivo(self):
+        limite_bytes = 20 * 1024 * 1024
+        archivo_valido = SimpleUploadedFile("evidencia.pdf", b"x" * 1024)
+        validar_tamano_archivo(archivo_valido)
 
-        with self.assertRaises(ValidationError):
-            validar_tamano_archivo(subido)
+        archivo_excedido = SimpleUploadedFile(
+            "pesado.pdf",
+            b"x" * (limite_bytes + 1),
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            validar_tamano_archivo(archivo_excedido)
+        self.assertEqual(ctx.exception.code, "archivo_demasiado_grande")
 
     @override_settings(PRIVATE_STORAGE_MAX_FILES_PER_ACTIVITY=10)
-    def test_rechaza_cantidad_sobre_limite_configurado(self):
-        with self.assertRaises(ValidationError):
-            validar_cantidad_archivos(
-                cantidad_actual=10,
-                cantidad_nueva=1,
-            )
+    def test_cde_301_limite_10_archivos_por_actividad(self):
+        validar_cantidad_archivos(cantidad_actual=9, cantidad_nueva=1)
+
+        with self.assertRaises(ValidationError) as ctx:
+            validar_cantidad_archivos(cantidad_actual=10, cantidad_nueva=1)
+        self.assertEqual(ctx.exception.code, "demasiados_archivos")
+
+    def test_cde_302_formatos_permitidos_y_rechazados(self):
+        formatos_validos = ["informe.pdf", "doc.docx", "planilla.xlsx", "foto.jpg", "captura.png"]
+        for nombre in formatos_validos:
+            archivo = SimpleUploadedFile(nombre, b"datos")
+            validar_extension_archivo(archivo)
+
+        formatos_invalidos = ["script.exe", "virus.bat", "archivo.sh", "comprimido.zip", "codigo.py"]
+        for nombre in formatos_invalidos:
+            archivo = SimpleUploadedFile(nombre, b"datos")
+            with self.assertRaises(ValidationError) as ctx:
+                validar_extension_archivo(archivo)
+            self.assertEqual(ctx.exception.code, "extension_no_permitida")
+
+    def test_cde_303_politica_conservacion_configurada(self):
+        self.assertTrue(hasattr(settings, "PRIVATE_STORAGE_RETENTION_YEARS"))
+        self.assertGreaterEqual(settings.PRIVATE_STORAGE_RETENTION_YEARS, 1)
 
 
 class ArchivoDownloadTests(TestCase):
