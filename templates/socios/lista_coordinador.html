@@ -201,16 +201,6 @@
     </span>
 </div>
 
-<!-- MENSAJES -->
-{% if messages %}
-    {% for message in messages %}
-        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show" role="alert">
-            <i class="bi bi-info-circle me-2"></i>{{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-        </div>
-    {% endfor %}
-{% endif %}
-
 <!-- BÚSQUEDA Y FILTROS -->
 <div class="card-ua mb-4">
     <div class="card-header-ua">
@@ -223,7 +213,7 @@
                 <div class="col-12 col-lg-6">
                     <label for="q" class="form-label-ua">Buscar</label>
                     <div class="input-group">
-                        <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                        <span class="input-group-text bg-white"><i class="bi bi-search text-muted" aria-hidden="true"></i></span>
                         <input type="text" id="q" name="q" class="form-control"
                                placeholder="Nombre de organización, RUT o contacto"
                                value="{{ filtros.q|default:'' }}">
@@ -334,10 +324,10 @@
                 <!-- Botones -->
                 <div class="col-12 col-lg-3 d-flex align-items-end gap-2">
                     <button type="submit" class="btn btn-ua flex-grow-1">
-                        <i class="bi bi-search me-1"></i>Aplicar
+                        <i class="bi bi-search me-1" aria-hidden="true"></i>Aplicar
                     </button>
-                    <a href="{% url 'socios:lista_coordinador' %}" class="btn btn-light-ua" title="Limpiar filtros">
-                        <i class="bi bi-arrow-counterclockwise"></i>
+                    <a href="{% url 'socios:lista_coordinador' %}" class="btn btn-light-ua" title="Limpiar filtros" aria-label="Limpiar filtros">
+                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
                     </a>
                 </div>
             </div>
@@ -356,12 +346,12 @@
             <table class="table tabla-ua mb-0">
                 <thead>
                     <tr>
-                        <th>Organización</th>
-                        <th>Clasificación</th>
-                        <th>Comuna</th>
-                        <th>Estado</th>
-                        <th>Registro</th>
-                        <th class="text-end">Acciones</th>
+                        <th scope="col">Organización</th>
+                        <th scope="col">Clasificación</th>
+                        <th scope="col">Comuna</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col">Registro</th>
+                        <th scope="col" class="text-end">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -380,21 +370,21 @@
                             </td>
                             <td>
                                 {% if socio.es_provisional %}
-                                    <span class="badge-provisional"><i class="bi bi-hourglass-split me-1"></i>Provisional</span>
+                                    <span class="badge-provisional"><i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>Provisional</span>
                                 {% else %}
                                     <span class="text-muted small">Definitivo</span>
                                 {% endif %}
                                 {% if not socio.activo or socio.estado_revision == "TRABAJO_TERMINADO" %}
-                                    <div class="mt-1"><span class="badge-estado"><i class="bi bi-archive me-1"></i>Solo historial</span></div>
+                                    <div class="mt-1"><span class="badge-estado"><i class="bi bi-archive me-1" aria-hidden="true"></i>Solo historial</span></div>
                                 {% endif %}
                             </td>
                             <td class="text-end text-nowrap">
                                 <a href="{% url 'socios:detalle_historial' socio.id %}" class="btn-accion text-decoration-none" title="Ver ficha e historial">
-                                    <i class="bi bi-eye me-1"></i>Historial
+                                    <i class="bi bi-eye me-1" aria-hidden="true"></i>Historial
                                 </a>
                                 <button type="button" class="btn-accion ms-1" data-bs-toggle="modal"
                                         data-bs-target="#modalEstado{{ socio.id }}" title="Cambiar estado">
-                                    <i class="bi bi-pencil-square me-1"></i>Estado
+                                    <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Estado
                                 </button>
                             </td>
                         </tr>
@@ -404,7 +394,7 @@
         </div>
     {% else %}
         <div class="empty-state">
-            <i class="bi bi-inbox"></i>
+            <i class="bi bi-inbox" aria-hidden="true"></i>
             <p class="mt-2 mb-0 fw-semibold">No se encontraron socios comunitarios</p>
             <p class="small mb-0">Prueba ajustando la búsqueda o los filtros aplicados.</p>
         </div>
@@ -450,7 +440,7 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light-ua" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-ua">
-                        <i class="bi bi-check2 me-1"></i>Guardar cambios
+                        <i class="bi bi-check2 me-1" aria-hidden="true"></i>Guardar cambios
                     </button>
                 </div>
             </form>

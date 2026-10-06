@@ -12,7 +12,7 @@
         <p class="page-subtitle mb-0">Ficha del socio comunitario e historial de participaciones.</p>
     </div>
     <a href="{% url 'socios:lista_coordinador' %}" class="btn btn-light-ua">
-        <i class="bi bi-arrow-left me-1"></i>Volver al listado
+        <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver al listado
     </a>
 </div>
 
@@ -59,13 +59,13 @@
             <div class="p-3 p-md-4">
                 {% for contacto in contactos %}
                     <div class="d-flex align-items-start gap-2 mb-3">
-                        <i class="bi bi-person-circle text-muted mt-1"></i>
+                        <i class="bi bi-person-circle text-muted mt-1" aria-hidden="true"></i>
                         <div>
                             <span class="socio-nombre">{{ contacto.nombre }}</span>
                             {% if contacto.es_principal %}<span class="badge-estado estado-APROBADO ms-1">Principal</span>{% endif %}
                             {% if contacto.cargo %}<div class="socio-rut">{{ contacto.cargo }}</div>{% endif %}
-                            {% if contacto.correo %}<div class="small"><i class="bi bi-envelope me-1 text-muted"></i>{{ contacto.correo }}</div>{% endif %}
-                            {% if contacto.telefono %}<div class="small"><i class="bi bi-telephone me-1 text-muted"></i>{{ contacto.telefono }}</div>{% endif %}
+                            {% if contacto.correo %}<div class="small"><i class="bi bi-envelope me-1 text-muted" aria-hidden="true"></i>{{ contacto.correo }}</div>{% endif %}
+                            {% if contacto.telefono %}<div class="small"><i class="bi bi-telephone me-1 text-muted" aria-hidden="true"></i>{{ contacto.telefono }}</div>{% endif %}
                         </div>
                     </div>
                 {% empty %}
@@ -88,14 +88,14 @@
             <table class="table tabla-ua mb-0">
                 <thead>
                     <tr>
-                        <th>Período</th>
-                        <th>Inicio</th>
-                        <th>Sede / Campus</th>
-                        <th>Carrera</th>
-                        <th>Asignatura / Sección</th>
-                        <th>Equipo</th>
-                        <th>Proyecto</th>
-                        <th>Servicio realizado</th>
+                        <th scope="col">Período</th>
+                        <th scope="col">Inicio</th>
+                        <th scope="col">Sede / Campus</th>
+                        <th scope="col">Carrera</th>
+                        <th scope="col">Asignatura / Sección</th>
+                        <th scope="col">Equipo</th>
+                        <th scope="col">Proyecto</th>
+                        <th scope="col">Servicio realizado</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -120,7 +120,7 @@
         </div>
     {% else %}
         <div class="empty-state">
-            <i class="bi bi-clock-history"></i>
+            <i class="bi bi-clock-history" aria-hidden="true"></i>
             <p class="mt-2 mb-0 fw-semibold">Sin participaciones registradas</p>
             <p class="small mb-0">Este socio aún no ha participado en asignaturas A+S.</p>
         </div>

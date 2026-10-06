@@ -11,9 +11,9 @@
         <!-- ENCABEZADO -->
         <div class="card-header bg-white border-bottom py-3">
 
-            <h4 class="mb-1 fw-bold">
+            <h1 class="h4 mb-1 fw-bold">
                 Eliminar Facultad
-            </h4>
+            </h1>
 
             <p class="text-muted mb-0 small">
                 Confirma la eliminación de la facultad seleccionada.
@@ -26,9 +26,9 @@
 
             <div class="alert alert-danger" role="alert">
 
-                <h5 class="alert-heading fw-bold">
+                <h2 class="alert-heading h5 fw-bold">
                     ¿Estás seguro?
-                </h5>
+                </h2>
 
                 <p class="mb-2">
                     Estás a punto de eliminar la facultad
@@ -60,14 +60,10 @@
                 <div class="d-flex justify-content-between align-items-center mt-4">
 
                     <a href="{% url 'facultad_list' %}"
-                       class="btn btn-outline-secondary">
-                        ← Volver
-                    </a>
+                       class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver</a>
 
                     <button type="submit"
-                            class="btn btn-danger px-4">
-                        Sí, eliminar
-                    </button>
+                            class="btn btn-danger px-4"><i class="bi bi-trash me-1" aria-hidden="true"></i>Sí, eliminar</button>
 
                 </div>
 

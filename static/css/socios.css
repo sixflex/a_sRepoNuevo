@@ -1,0 +1,106 @@
+/* Estilos compartidos de la app socios (usa las variables definidas en base.html) */
+
+.page-title {
+    font-family: 'Montserrat', 'Inter', sans-serif;
+    font-weight: 700;
+    color: var(--ua-text-dark);
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.page-subtitle { color: var(--ua-text-muted); font-size: 0.92rem; }
+
+.card-ua {
+    background: var(--ua-bg-card);
+    border: 1px solid var(--ua-border);
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.card-ua .card-header-ua {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--ua-border);
+    font-family: 'Montserrat', 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--ua-text-dark);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.form-label-ua {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ua-text-muted);
+    margin-bottom: 4px;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--ua-red);
+    box-shadow: 0 0 0 0.2rem rgba(200, 35, 44, 0.15);
+}
+
+.form-check-input:checked { background-color: var(--ua-red); border-color: var(--ua-red); }
+
+.btn-ua { background-color: var(--ua-red); border-color: var(--ua-red); color: #FFF; font-weight: 600; font-size: 0.9rem; }
+.btn-ua:hover, .btn-ua:focus { background-color: var(--ua-red-hover); border-color: var(--ua-red-hover); color: #FFF; }
+
+.btn-ua-outline { background: transparent; border: 1px solid var(--ua-red); color: var(--ua-red); font-weight: 600; font-size: 0.9rem; }
+.btn-ua-outline:hover { background-color: var(--ua-red-soft); color: var(--ua-red-hover); border-color: var(--ua-red); }
+
+.btn-light-ua { background-color: var(--ua-bg-subtle); border: 1px solid var(--ua-border); color: var(--ua-text-secondary); font-weight: 500; font-size: 0.9rem; }
+.btn-light-ua:hover { background-color: var(--ua-border); color: var(--ua-text-dark); }
+
+.btn-accion {
+    border: 1px solid var(--ua-border);
+    background: var(--ua-bg-card);
+    color: var(--ua-text-secondary);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.85rem;
+    transition: all 0.15s ease;
+}
+.btn-accion:hover { background-color: var(--ua-red-soft); border-color: var(--ua-red); color: var(--ua-red); }
+
+.tabla-ua thead th {
+    background-color: var(--ua-bg-page);
+    color: var(--ua-text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--ua-border);
+    padding: 12px 16px;
+    white-space: nowrap;
+}
+.tabla-ua tbody td { padding: 12px 16px; vertical-align: middle; font-size: 0.92rem; border-color: var(--ua-border); }
+.tabla-ua tbody tr:hover { background-color: #FEF7F7; }
+
+.socio-nombre { font-weight: 600; color: var(--ua-text-dark); }
+.socio-rut { font-size: 0.8rem; color: var(--ua-text-muted); }
+
+.badge-estado { font-size: 0.72rem; font-weight: 600; padding: 5px 10px; border-radius: 999px; letter-spacing: 0.02em; background-color: var(--ua-bg-subtle); color: var(--ua-text-secondary); }
+.estado-RECIBIDO, .estado-RECIBIDA, .estado-PENDIENTE { background-color: var(--ua-info-soft); color: var(--ua-info); }
+.estado-APROBADO, .estado-APROBADA { background-color: var(--ua-success-soft); color: var(--ua-success); }
+.estado-RECHAZADO, .estado-RECHAZADA { background-color: var(--ua-red-soft); color: var(--ua-red-hover); }
+.estado-DISPONIBLE { background-color: var(--ua-available-soft); color: var(--ua-available); }
+.estado-TRABAJO_TERMINADO { background-color: var(--ua-bg-subtle); color: var(--ua-text-secondary); }
+
+.badge-provisional { background-color: var(--ua-warning-soft); color: var(--ua-warning); font-size: 0.72rem; font-weight: 600; padding: 5px 10px; border-radius: 999px; }
+
+.modal-title-ua { font-family: 'Montserrat', 'Inter', sans-serif; font-weight: 700; font-size: 1.05rem; }
+
+.empty-state { padding: 48px 16px; text-align: center; color: var(--ua-text-muted); }
+.empty-state i { font-size: 2.5rem; color: var(--ua-border-strong); }
+
+/* Tarjetas del catálogo docente */
+.socio-card { height: 100%; transition: all 0.15s ease; }
+.socio-card:hover { border-color: var(--ua-red); box-shadow: 0 4px 12px rgba(200, 35, 44, 0.08); }
+.socio-card .socio-meta { font-size: 0.85rem; color: var(--ua-text-muted); }
+
+/* Ficha del socio */
+.dato-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ua-text-muted); }
+.dato-valor { font-size: 0.95rem; color: var(--ua-text-dark); margin-bottom: 14px; }

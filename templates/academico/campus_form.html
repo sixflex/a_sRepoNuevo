@@ -13,13 +13,13 @@
         <!-- ENCABEZADO -->
         <div class="card-header bg-white border-bottom py-3">
 
-            <h4 class="mb-1 fw-bold">
+            <h1 class="h4 mb-1 fw-bold">
                 {% if campus %}
                     Editar Campus
                 {% else %}
                     Nuevo Campus
                 {% endif %}
-            </h4>
+            </h1>
 
             <p class="text-muted mb-0 small">
                 Ingresa los datos del campus y selecciona la sede a la que pertenece.
@@ -37,6 +37,8 @@
                 </div>
             {% endif %}
 
+            <p class="text-muted small mb-3">Los campos marcados con <span class="text-danger" aria-hidden="true">*</span> son obligatorios.</p>
+
             <form method="POST">
                 {% csrf_token %}
 
@@ -47,13 +49,14 @@
 
                         <label for="sede"
                                class="form-label fw-semibold">
-                            Sede
+                            Sede <span class="text-danger" aria-hidden="true">*</span>
                         </label>
 
                         <select
                             class="form-select"
                             id="sede"
                             name="sede"
+                            aria-describedby="sede-ayuda"
                             required>
 
                             <option value="">
@@ -72,7 +75,7 @@
 
                         </select>
 
-                        <div class="form-text">
+                        <div class="form-text" id="sede-ayuda">
                             Selecciona la sede a la que pertenece este campus.
                         </div>
 
@@ -83,7 +86,7 @@
 
                         <label for="nombre"
                                class="form-label fw-semibold">
-                            Nombre del campus
+                            Nombre del campus <span class="text-danger" aria-hidden="true">*</span>
                         </label>
 
                         <input
@@ -125,6 +128,7 @@
                                 type="checkbox"
                                 id="activo"
                                 name="activo"
+                            aria-describedby="activo-ayuda"
                                 {% if not campus or campus.activo %}checked{% endif %}>
 
                             <label
@@ -135,7 +139,7 @@
 
                         </div>
 
-                        <div class="form-text">
+                        <div class="form-text" id="activo-ayuda">
                             Indica si el campus se encuentra disponible en el sistema.
                         </div>
 
@@ -147,9 +151,7 @@
                 <div class="d-flex justify-content-between align-items-center">
 
                     <a href="{% url 'campus_list' %}"
-                       class="btn btn-outline-secondary">
-                        ← Volver
-                    </a>
+                       class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver</a>
 
                     <button
                         type="submit"
