@@ -7,8 +7,8 @@
 
         <ul class="nav flex-column">
             <li class="nav-item">
-                <a class="nav-link {% if current == 'coordinacion' or current == 'docente' or current == 'inicio' %}active{% endif %}"
-                   {% if current == 'coordinacion' or current == 'docente' or current == 'inicio' %}aria-current="page"{% endif %}
+                <a class="nav-link {% if current == 'inicio' or current == 'coordinacion' %}active{% endif %}"
+                   {% if current == 'inicio' or current == 'coordinacion' %}aria-current="page"{% endif %}
                    href="{% if grupo == 'Coordinador' %}{% url 'core:coordinacion' %}{% elif grupo == 'Docente' %}{% url 'core:docente' %}{% else %}{% url 'core:inicio' %}{% endif %}">
                     <i class="bi bi-house me-2" aria-hidden="true"></i>Inicio
                 </a>
