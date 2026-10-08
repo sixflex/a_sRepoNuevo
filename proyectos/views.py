@@ -48,12 +48,9 @@ from .models import EnlaceRegistroEquipo
 def coordinador_contexto(request):
     return render(request, "proyectos/coordinador_contexto.html")
 
-<<<<<<< HEAD
 @coordinador_required
 def formulario_prueba(request):
     return render(request, 'proyectos/formulario_prueba.html')
-=======
->>>>>>> develop
 
 @coordinador_required
 def gestionar_enlaces_planificacion(request):
@@ -149,11 +146,6 @@ def gestionar_enlaces_planificacion(request):
                         "No fue posible reenviar el enlace.",
                     )
 
-<<<<<<< HEAD
-
-def formulario_planificacion_docente(request, token):
-    enlace = get_object_or_404(
-=======
             except Exception:
                 messages.error(
                     request,
@@ -295,9 +287,7 @@ def formulario_planificacion_docente(request, token):
                 )
 
             return redirect("proyectos:gestionar_enlaces")
-
     enlaces = list(
->>>>>>> develop
         PlanificacionEnlace.objects.select_related(
             "unidad_academica",
             "unidad_academica__facultad",
