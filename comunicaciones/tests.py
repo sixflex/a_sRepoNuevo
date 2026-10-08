@@ -52,10 +52,10 @@ class EmailServiceTestCase(TestCase):
         )
         self.assertEqual(EnvioCorreo.objects.count(), 1)
 
-        # Cambiamos el comportamiento a éxito para el reintento
+       
         mock_send_mail.side_effect = None
         envio_reintentado = EmailService.reintentar_envio(envio_inicial.id)
 
-        self.assertEqual(EnvioCorreo.objects.count(), 1)  # No se duplicó
+        self.assertEqual(EnvioCorreo.objects.count(), 1)  
         self.assertEqual(envio_reintentado.resultado, "OK")
         self.assertEqual(envio_reintentado.numero_intento, 2)

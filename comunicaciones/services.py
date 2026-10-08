@@ -22,13 +22,13 @@ class EmailService:
         """
         remitente_final = remitente or settings.DEFAULT_FROM_EMAIL
 
-        # 1. Obtener la plantilla activa
+        
         try:
             plantilla = PlantillaCorreo.objects.get(codigo=codigo_plantilla, activo=True)
             asunto_renderizado = Template(plantilla.asunto_template).render(Context(contexto))
             cuerpo_renderizado = Template(plantilla.cuerpo_template).render(Context(contexto))
         except PlantillaCorreo.DoesNotExist as e:
-            # Si no existe la plantilla, se deja registro del fallo
+           
             return EnvioCorreo.objects.create(
                 plantilla=None,
                 carta_documento=carta_documento,
@@ -44,7 +44,7 @@ class EmailService:
                 numero_intento=1,
             )
 
-        # 2. Crear registro inicial en estado PENDIENTE
+        
         envio = EnvioCorreo.objects.create(
             plantilla=plantilla,
             carta_documento=carta_documento,
@@ -60,7 +60,7 @@ class EmailService:
             numero_intento=1,
         )
 
-        # 3. Intentar el envío por SMTP / Backend activo
+       
         return EmailService._ejecutar_envio(envio)
 
     @staticmethod
