@@ -17,57 +17,16 @@
     if (!raiz) {
         return;
     }
-    const csrf = raiz.querySelector('[name="csrfmiddlewaretoken"]').value;
     const lienzo = raiz.querySelector(".enc-lienzo");
     const contenedorSecciones = raiz.querySelector("[data-secciones]");
     const barra = raiz.querySelector("[data-barra]");
-    const estado = document.querySelector("[data-estado-guardado]");
-    const avisos = document.querySelector("[data-avisos]");
     const DEMORA_GUARDADO = 700;
 
     // ---------------------------------------------------------------- utilidades
 
-    async function pedir(url, cuerpo) {
-        const opciones = { headers: { "X-Requested-With": "fetch", "X-CSRFToken": csrf } };
-        if (cuerpo !== undefined) {
-            opciones.method = "POST";
-            opciones.body = cuerpo instanceof FormData ? cuerpo : new URLSearchParams(cuerpo);
-        }
-        let respuesta;
-        try {
-            respuesta = await fetch(url, opciones);
-        } catch (error) {
-            throw new Error("No hay conexión. Revisa tu internet y vuelve a intentarlo.");
-        }
-        let datos;
-        try {
-            datos = await respuesta.json();
-        } catch (error) {
-            throw new Error("Algo falló al guardar. Recarga la página e inténtalo de nuevo.");
-        }
-        if (!respuesta.ok && !datos.errores) {
-            throw new Error(datos.error || "No se pudo guardar el cambio.");
-        }
-        return datos;
-    }
-
-    function avisar(texto) {
-        const aviso = document.createElement("div");
-        aviso.className = "enc-aviso";
-        aviso.setAttribute("role", "alert");
-        aviso.innerHTML = '<i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>';
-        aviso.appendChild(document.createTextNode(texto));
-        avisos.appendChild(aviso);
-        setTimeout(function () {
-            aviso.classList.add("saliendo");
-            aviso.addEventListener("animationend", function () { aviso.remove(); });
-        }, 6000);
-    }
-
-    function marcarEstado(texto, tipo) {
-        estado.textContent = texto;
-        estado.dataset.tipo = tipo || "";
-    }
+    const pedir = window.Encuestas.pedir;
+    const avisar = window.Encuestas.avisar;
+    const marcarEstado = window.Encuestas.marcarEstado;
 
     function desdeHtml(html) {
         const plantilla = document.createElement("template");
@@ -506,7 +465,7 @@
 
     // Clic fuera de las tarjetas: se cierra la activa (como en Forms).
     document.addEventListener("click", function (evento) {
-        if (activa && !evento.target.closest("[data-tarjeta], [data-barra], .enc-avisos, .modal")) {
+        if (activa && !evento.target.closest("[data-tarjeta], [data-barra], .enc-avisos, .modal, .offcanvas")) {
             cerrar();
         }
     });

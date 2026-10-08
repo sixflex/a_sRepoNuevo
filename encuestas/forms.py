@@ -36,7 +36,7 @@ def indicacion(pregunta, config):
     """
     tipo = pregunta.tipo
     if tipo == c.RUT:
-        return "Escríbalo con su dígito verificador, con o sin puntos y guion. Ejemplo: 12.345.678-5"
+        return "Escríbalo sin puntos y con guion antes del dígito verificador. Ejemplo: 12345678-5"
     if tipo == c.CORREO:
         return "Ejemplo: nombre@correo.cl"
     if tipo == c.FECHA:

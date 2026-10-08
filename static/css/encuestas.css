@@ -735,3 +735,112 @@
     .enc-tarjeta { padding: 16px; }
     .enc-seccion-nombre { padding-right: 0; }
 }
+
+/* ------------------------------------------------------------------
+   Tema del formulario público: color y foto de fondo (panel "Tema")
+   ------------------------------------------------------------------ */
+.enc-tema { min-height: calc(100vh - 140px); }
+
+/* Como en Microsoft Forms: la foto ocupa toda la página y el formulario va encima. */
+.enc-tema.con-fondo { background: var(--enc-fondo) center / cover no-repeat fixed, var(--ua-bg-page); }
+.enc-tema.con-fondo .card-ua,
+.enc-tema.con-fondo .enc-aviso-preview {
+    background-color: rgba(255, 255, 255, 0.97);
+    border-color: transparent;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+.enc-tema.con-fondo .enc-aviso-preview { background-color: var(--ua-info-soft); }
+.enc-tema.con-fondo .enc-encabezado { border-top-color: var(--ua-red); }
+
+/* En celulares la foto queda arriba, como cabecera, y el formulario la monta un poco. */
+@media (max-width: 767.98px) {
+    .enc-tema.con-fondo { background: var(--ua-bg-page); }
+    .enc-tema.con-fondo::before {
+        content: "";
+        display: block;
+        height: 170px;
+        background: var(--enc-fondo) center / cover no-repeat;
+    }
+    .enc-tema.con-fondo > .enc-contenedor { margin-top: -60px; position: relative; }
+}
+
+/* Panel lateral del editor */
+.enc-panel-tema { width: min(380px, 100vw); }
+
+.enc-tema-muestra {
+    border-radius: var(--ua-radius);
+    border: 1px solid var(--ua-border);
+    background: var(--ua-bg-subtle);
+    padding: 22px 26px;
+    transition: background 0.25s ease;
+}
+.enc-tema-muestra.con-fondo { background: var(--enc-fondo) center / cover no-repeat; }
+.enc-tema-muestra-tarjeta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: #FFF;
+    border-top: 6px solid var(--ua-red);
+    border-radius: var(--ua-radius-sm);
+    padding: 12px 14px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+    transition: border-color 0.25s ease;
+}
+.enc-tema-muestra-titulo { font-weight: 700; font-size: 0.85rem; color: var(--ua-text-dark); }
+.enc-tema-muestra-linea { height: 6px; border-radius: 3px; background: var(--ua-border); }
+.enc-tema-muestra-linea.corta { width: 60%; }
+.enc-tema-muestra-boton {
+    align-self: flex-end;
+    background: var(--ua-red);
+    color: #FFF;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border-radius: var(--ua-radius-sm);
+    padding: 3px 10px;
+    transition: background 0.25s ease;
+}
+
+.enc-colores { display: flex; gap: 10px; flex-wrap: wrap; }
+.enc-color {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--muestra);
+    color: #FFF;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0 0 2px #FFF, 0 0 0 3px var(--ua-border);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.enc-color i { opacity: 0; transition: opacity 0.15s ease; }
+.enc-color:hover { transform: scale(1.08); }
+.btn-check:checked + .enc-color { box-shadow: 0 0 0 2px #FFF, 0 0 0 4px var(--muestra); }
+.btn-check:checked + .enc-color i { opacity: 1; }
+.btn-check:focus-visible + .enc-color { outline: 3px solid var(--muestra); outline-offset: 4px; }
+
+.enc-fondo-actual { display: flex; align-items: center; gap: 12px; }
+.enc-fondo-actual img {
+    width: 120px;
+    height: 68px;
+    object-fit: cover;
+    border-radius: var(--ua-radius-sm);
+    border: 1px solid var(--ua-border);
+}
+.enc-subir-fondo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px dashed var(--ua-border-strong);
+    border-radius: var(--ua-radius);
+    color: var(--ua-text-secondary);
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+.enc-subir-fondo:hover,
+#fondo-tema:focus-visible + .enc-subir-fondo { border-color: var(--ua-red); background: var(--ua-red-soft); }
+.enc-panel-tema form[aria-busy="true"] { opacity: 0.7; pointer-events: none; }

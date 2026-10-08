@@ -89,3 +89,19 @@ OPCION_NUEVA = "Opción 1"
 
 ORIGEN_ENLACE = "ENLACE"
 ESTADO_REGISTRO_COMPLETO = "COMPLETO"
+
+# Temas del formulario público (como en Google o Microsoft Forms). Cada color
+# reemplaza el rojo del portal en botones, pestañas y bordes, y todos cumplen
+# contraste AA con texto blanco.
+TEMA_POR_DEFECTO = "rojo"
+TEMAS = {
+    "rojo": {"nombre": "Rojo UA", "base": "#C8232C", "hover": "#A71C23", "suave": "#FDEDEE", "rgb": "200, 35, 44"},
+    "azul": {"nombre": "Azul", "base": "#1D4ED8", "hover": "#1E40AF", "suave": "#EFF6FF", "rgb": "29, 78, 216"},
+    "verde": {"nombre": "Verde", "base": "#15803D", "hover": "#166534", "suave": "#F0FDF4", "rgb": "21, 128, 61"},
+    "morado": {"nombre": "Morado", "base": "#6D28D9", "hover": "#5B21B6", "suave": "#F5F3FF", "rgb": "109, 40, 217"},
+    "grafito": {"nombre": "Grafito", "base": "#374151", "hover": "#1F2937", "suave": "#F3F4F6", "rgb": "55, 65, 81"},
+}
+
+# Foto de fondo: formatos y tamaño aceptados.
+FONDO_EXTENSIONES = ("jpg", "jpeg", "png")
+FONDO_MAX_MB = 5

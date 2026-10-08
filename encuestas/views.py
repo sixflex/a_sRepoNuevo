@@ -2,14 +2,16 @@ import json
 import uuid
 
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.db.models import Count, Prefetch
-from django.http import JsonResponse
+from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from academico.models import Carrera
+from archivos.services import abrir_archivo
 from core.qr import qr_base64
 from usuarios.decorators import coordinador_required
 
@@ -85,6 +87,8 @@ def _contexto_version(version, pestana):
         "editable": services.es_editable(version),
         "tiene_respuestas": services.tiene_respuestas(version),
         "total_respuestas": version.respuestas.count(),
+        "tema": services.tema(version.plantilla),
+        "temas": c.TEMAS,
     }
 
 
@@ -239,6 +243,49 @@ def editar_datos(request, version_id):
     version.contexto_tipo = form.cleaned_data["contexto_tipo"] or None
     version.save(update_fields=["contexto_tipo"])
     return _listo(request, version, mensaje="Datos del formulario guardados.")
+
+
+@coordinador_required
+@require_POST
+def editar_tema(request, version_id):
+    """
+    Color y foto de fondo del formulario público. No cambia las preguntas, así
+    que se permite aunque la versión ya tenga respuestas.
+    """
+    version = _version_o_404(version_id)
+    try:
+        tema = services.guardar_tema(
+            version.plantilla,
+            color=request.POST.get("color") or None,
+            imagen=request.FILES.get("fondo"),
+            quitar_fondo=request.POST.get("quitar_fondo") == "1",
+            usuario=request.user,
+        )
+    except ValidationError as error:
+        return _fallo(request, version, " ".join(error.messages))
+    return _listo(
+        request, version, mensaje="Tema guardado.",
+        tema={"color": tema["color"], "fondo_url": tema["fondo_url"], "estilo": tema["estilo"]},
+    )
+
+
+def fondo_formulario(request, plantilla_id, firma):
+    """
+    Foto de fondo del formulario público. Es pública como el formulario, pero
+    la URL lleva una firma del archivo que no se puede adivinar.
+    """
+    plantilla = get_object_or_404(FormularioPlantilla, pk=plantilla_id)
+    fondo = services.tema(plantilla)["fondo"]
+    if fondo is None or services.firma_fondo(fondo) != firma:
+        raise Http404("El formulario no tiene esa foto.")
+    try:
+        contenido = abrir_archivo(fondo)
+    except FileNotFoundError as error:
+        raise Http404("La foto no está disponible.") from error
+    respuesta = FileResponse(contenido, content_type=fondo.mime_type)
+    # La firma cambia con la foto, así que el navegador puede guardarla mucho tiempo.
+    respuesta["Cache-Control"] = "public, max-age=31536000, immutable"
+    return respuesta
 
 
 @coordinador_required
@@ -611,6 +658,7 @@ def vista_previa(request, version_id):
         "form": form,
         "vista_previa": True,
         "hide_sidebar": True,
+        "tema": services.tema(version.plantilla),
     })
 
 
@@ -653,7 +701,7 @@ def responder(request, token):
         EnlaceFormulario.objects.select_related("version__plantilla"), token=token,
     )
     version = enlace.version
-    contexto = {"version": version, "enlace": enlace, "hide_sidebar": True}
+    contexto = {"version": version, "enlace": enlace, "hide_sidebar": True, "tema": services.tema(version.plantilla)}
 
     if not services.enlace_abierto(enlace):
         return render(request, "encuestas/cerrado.html", contexto)
@@ -694,4 +742,5 @@ def enviado(request, token):
         "version": enlace.version,
         "folio": request.session.get("encuestas_ultimo_folio"),
         "hide_sidebar": True,
+        "tema": services.tema(enlace.version.plantilla),
     })

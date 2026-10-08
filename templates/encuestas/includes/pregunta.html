@@ -104,7 +104,7 @@ Las reglas de visibilidad van en data-regla para que formulario_dinamico.js mues
                    {% if p.tipo == "NUMERO" %}type="number" step="any"{% if item.config.minimo is not None %} min="{{ item.config.minimo }}"{% endif %}{% if item.config.maximo is not None %} max="{{ item.config.maximo }}"{% endif %}
                    {% elif p.tipo == "FECHA" %}type="date"
                    {% elif p.tipo == "CORREO" %}type="email" autocomplete="email" placeholder="nombre@correo.cl"
-                   {% elif p.tipo == "RUT" %}type="text" inputmode="text" placeholder="12.345.678-5" autocomplete="off" data-rut
+                   {% elif p.tipo == "RUT" %}type="text" inputmode="text" placeholder="12345678-5" autocomplete="off" data-rut
                    {% else %}type="text"{% if item.config.largo_max %} maxlength="{{ item.config.largo_max }}" data-contador{% endif %}{% endif %}>
         {% endif %}
     {% endif %}

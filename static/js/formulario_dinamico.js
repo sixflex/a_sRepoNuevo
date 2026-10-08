@@ -124,15 +124,14 @@
 
     // ---------- Ayudas al escribir ----------
 
-    // RUT: al salir del campo se muestra con puntos y guion (12.345.678-5).
-    // El servidor acepta cualquier forma; esto solo ayuda a revisarlo.
+    // RUT: al salir del campo se deja sin puntos y con guion (12345678-5), el
+    // formato que usan los forms del cliente. El servidor acepta cualquier forma.
     function formatearRut(valor) {
         const limpio = valor.replace(/[^0-9kK]/g, "").toUpperCase();
         if (limpio.length < 2) {
             return valor;
         }
-        const cuerpo = limpio.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-        return cuerpo + "-" + limpio.slice(-1);
+        return limpio.slice(0, -1) + "-" + limpio.slice(-1);
     }
 
     formulario.querySelectorAll("[data-rut]").forEach(function (campo) {

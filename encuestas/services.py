@@ -17,10 +17,13 @@ import uuid
 from collections import Counter
 from datetime import datetime, time
 
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Max
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
+from PIL import Image, UnidentifiedImageError
 
 from . import constantes as c
 from .models import (
@@ -305,6 +308,7 @@ def copiar_formulario(version, usuario=None, titulo=None):
         descripcion=plantilla.descripcion,
         proceso=plantilla.proceso,
         activo=True,
+        tema_json=copy.deepcopy(plantilla.tema_json),
     )
     nueva = FormularioVersion.objects.create(
         plantilla=nueva_plantilla,
@@ -962,3 +966,95 @@ def duplicar_pregunta(pregunta):
         for o in pregunta.opciones.all()
     ])
     return copia
+
+
+# ---------------------------------------------------------------------------
+# Tema del formulario público: color y foto de fondo
+# ---------------------------------------------------------------------------
+
+def firma_fondo(archivo):
+    """Parte de la URL de la foto: no se puede adivinar y cambia si cambia la foto."""
+    return (archivo.hash_sha256 or archivo.storage_key)[:16]
+
+
+def tema(plantilla):
+    """
+    Colores y foto del formulario, listos para la plantilla HTML. "estilo"
+    reemplaza las variables de color del portal dentro del formulario.
+    """
+    from archivos.models import Archivo
+
+    datos = plantilla.tema_json or {}
+    clave = datos.get("color") if datos.get("color") in c.TEMAS else c.TEMA_POR_DEFECTO
+    colores = c.TEMAS[clave]
+    fondo = None
+    if datos.get("fondo_archivo_id"):
+        fondo = Archivo.objects.filter(pk=datos["fondo_archivo_id"]).first()
+    fondo_url = (
+        reverse("encuestas:fondo", args=[plantilla.id, firma_fondo(fondo)]) if fondo else ""
+    )
+    estilo = (
+        f"--ua-red: {colores['base']}; --ua-red-hover: {colores['hover']}; "
+        f"--ua-red-soft: {colores['suave']}; --ua-red-rgb: {colores['rgb']};"
+    )
+    if fondo_url:
+        estilo += f" --enc-fondo: url('{fondo_url}');"
+    return {
+        "color": clave, "colores": colores, "fondo": fondo, "fondo_url": fondo_url,
+        "estilo": estilo, "fondo_max_mb": c.FONDO_MAX_MB,
+    }
+
+
+def _validar_fondo(imagen):
+    extension = (imagen.name or "").rsplit(".", 1)[-1].lower()
+    if extension not in c.FONDO_EXTENSIONES:
+        raise ValidationError("La foto debe ser JPG o PNG.")
+    if imagen.size > c.FONDO_MAX_MB * 1024 * 1024:
+        raise ValidationError(f"La foto pesa más de {c.FONDO_MAX_MB} MB. Prueba con una más liviana.")
+    try:
+        Image.open(imagen).verify()
+    except (UnidentifiedImageError, OSError, SyntaxError) as error:
+        raise ValidationError("El archivo no es una imagen válida.") from error
+    finally:
+        imagen.seek(0)
+
+
+def _borrar_fondo_sin_uso(archivo_id, plantilla):
+    """Borra la foto anterior si ningún otro formulario (por ejemplo, una copia) la usa."""
+    from archivos.models import Archivo
+    from archivos.services import obtener_storage_privado
+
+    if FormularioPlantilla.objects.filter(tema_json__fondo_archivo_id=archivo_id).exclude(pk=plantilla.pk).exists():
+        return
+    archivo = Archivo.objects.filter(pk=archivo_id).first()
+    if archivo:
+        obtener_storage_privado().delete(archivo.storage_key)
+        archivo.delete()
+
+
+@transaction.atomic
+def guardar_tema(plantilla, color=None, imagen=None, quitar_fondo=False, usuario=None):
+    """
+    Cambia el color o la foto del formulario. El tema no altera las preguntas,
+    así que se puede cambiar aunque la versión ya tenga respuestas.
+    Lanza ValidationError si el color o la foto no son válidos.
+    """
+    from archivos.services import guardar_archivo
+
+    datos = dict(plantilla.tema_json or {})
+    if color is not None:
+        if color not in c.TEMAS:
+            raise ValidationError("Ese color no está disponible.")
+        datos["color"] = color
+    anterior = datos.get("fondo_archivo_id")
+    if imagen is not None:
+        _validar_fondo(imagen)
+        datos["fondo_archivo_id"] = guardar_archivo(imagen, autor=usuario).id
+    elif quitar_fondo:
+        datos.pop("fondo_archivo_id", None)
+    plantilla.tema_json = datos or None
+    plantilla.save(update_fields=["tema_json"])
+    if anterior and anterior != datos.get("fondo_archivo_id"):
+        _borrar_fondo_sin_uso(anterior, plantilla)
+    return tema(plantilla)
+

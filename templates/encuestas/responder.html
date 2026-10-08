@@ -6,6 +6,7 @@
 {% block extra_css %}{% include "encuestas/includes/css.html" %}{% endblock %}
 
 {% block content_public %}
+<div class="enc-tema{% if tema.fondo_url %} con-fondo{% endif %}" style="{{ tema.estilo }}">
 <div class="container enc-contenedor py-4">
     {% if vista_previa %}
         <div class="enc-aviso-preview mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -60,6 +61,7 @@
             </button>
         </div>
     </form>
+</div>
 </div>
 <script src="{% static 'js/formulario_dinamico.js' %}"></script>
 {% endblock %}

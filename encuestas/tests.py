@@ -668,7 +668,7 @@ class ConstructorEnVivoTests(FormularioBaseTestCase):
 class AyudasYResumenTests(FormularioBaseTestCase):
     def test_formulario_publico_explica_el_formato_del_rut(self):
         respuesta = self.client.get(self.url_responder)
-        self.assertContains(respuesta, "con o sin puntos y guion. Ejemplo: 12.345.678-5")
+        self.assertContains(respuesta, "sin puntos y con guion antes del dígito verificador. Ejemplo: 12345678-5")
 
     def test_resumen_cuenta_opciones_y_filtra_por_programa(self):
         self.client.post(self.url_responder, self.datos("A"))
@@ -719,3 +719,154 @@ class FichaEmprendedoresTests(TestCase):
         self.assertIn(formalizado.id, visibles_im)
         self.assertNotIn("Menos de 1 año", [o.texto for o in opciones_ce[antiguedad.id]])
         self.assertIn("Menos de 1 año", [o.texto for o in opciones_im[antiguedad.id]])
+
+
+class FormulariosDelClienteTests(TestCase):
+    """Carga de los forms del cliente (encuestas/definiciones) con cargar_formularios."""
+
+    def test_carga_todos_una_sola_vez(self):
+        from .definiciones import DEFINICIONES
+
+        call_command("cargar_formularios", stdout=StringIO())
+        call_command("cargar_formularios", stdout=StringIO())
+        self.assertEqual(FormularioPlantilla.objects.count(), len(DEFINICIONES))
+        for definicion in DEFINICIONES:
+            version = FormularioPlantilla.objects.get(codigo=definicion["codigo"]).versiones.get()
+            self.assertEqual(version.estado, c.PUBLICADA, definicion["codigo"])
+            total = sum(len(s["preguntas"]) for s in definicion["secciones"])
+            self.assertEqual(version.preguntas.count(), total, definicion["codigo"])
+
+    def test_codigo_desconocido_avisa(self):
+        from django.core.management.base import CommandError
+
+        with self.assertRaises(CommandError):
+            call_command("cargar_formularios", "NO_EXISTE", stdout=StringIO())
+
+    def test_estudiantes_ven_las_asignaturas_de_su_semestre(self):
+        call_command("cargar_formularios", "EVALUACION_AS_ESTUDIANTES", "--sin-publicar", stdout=StringIO())
+        version = FormularioPlantilla.objects.get(codigo="EVALUACION_AS_ESTUDIANTES").versiones.get()
+        bloques, preguntas = services.cargar_estructura(version)
+        semestre = next(p for p in preguntas if p.texto == "Semestre")
+        otono = next(p for p in preguntas if "Semestre Otoño" in p.texto)
+        primavera = next(p for p in preguntas if "Semestre Primavera" in p.texto)
+        valor_otono = semestre.opciones.get(texto="Otoño").valor
+
+        _, visibles, _ = services.calcular_visibilidad(bloques, preguntas, {semestre.id: {valor_otono}})
+        self.assertIn(otono.id, visibles)
+        self.assertNotIn(primavera.id, visibles)
+        self.assertEqual(otono.tipo, c.LISTA)
+        self.assertEqual(primavera.tipo, c.ALTERNATIVA_UNICA)
+        # Las opciones repetidas del txt quedaron una sola vez.
+        textos = list(otono.opciones.values_list("texto", flat=True))
+        self.assertEqual(len(textos), len(set(textos)))
+
+    def test_otras_con_texto_se_marca_como_otros(self):
+        call_command("cargar_formularios", "NUCLEO_APOYO_FISCAL", "--sin-publicar", stdout=StringIO())
+        motivo = PreguntaFormulario.objects.get(texto="Motivo de su consulta")
+        self.assertTrue(motivo.opciones.get(texto="Otras").es_otras)
+        self.assertEqual(motivo.tipo, c.SELECCION_MULTIPLE)
+
+    def test_condicion_a_pregunta_inexistente_falla(self):
+        from .semillas import crear_formulario, pregunta, seccion
+
+        definicion = {
+            "codigo": "MAL", "titulo": "Mal", "proceso": "X",
+            "secciones": [seccion("Única", [pregunta("Algo", c.TEXTO_CORTO)], si=("nada", ["Si"]))],
+        }
+        with self.assertRaises(ValueError):
+            crear_formulario(definicion)
+        self.assertFalse(FormularioPlantilla.objects.filter(codigo="MAL").exists())
+
+
+def imagen_png(nombre="fondo.png"):
+    """PNG real de 2x2 píxeles, para probar la foto de fondo."""
+    from io import BytesIO
+
+    from PIL import Image
+
+    contenido = BytesIO()
+    Image.new("RGB", (2, 2), "#336699").save(contenido, format="PNG")
+    return SimpleUploadedFile(nombre, contenido.getvalue(), content_type="image/png")
+
+
+class TemaTests(FormularioBaseTestCase):
+    """Color y foto de fondo del formulario público."""
+
+    def setUp(self):
+        super().setUp()
+        carpeta = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, carpeta, ignore_errors=True)
+        almacenamiento = override_settings(STORAGES={
+            "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+            "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+            "private": {"BACKEND": "django.core.files.storage.FileSystemStorage", "OPTIONS": {"location": carpeta}},
+        })
+        almacenamiento.enable()
+        self.addCleanup(almacenamiento.disable)
+        self.client.force_login(self.coordinador)
+        self.url_tema = reverse("encuestas:editar_tema", args=[self.version.id])
+
+    def guardar(self, datos):
+        return self.client.post(self.url_tema, datos, HTTP_X_REQUESTED_WITH="fetch")
+
+    def test_sin_tema_usa_el_rojo_del_portal(self):
+        tema = services.tema(self.version.plantilla)
+        self.assertEqual(tema["color"], c.TEMA_POR_DEFECTO)
+        self.assertEqual(tema["fondo_url"], "")
+
+    def test_cambia_el_color_aunque_haya_respuestas(self):
+        self.client.post(self.url_responder, self.datos())
+        self.assertTrue(services.tiene_respuestas(self.version))
+        respuesta = self.guardar({"color": "azul"})
+        self.assertEqual(respuesta.json()["tema"]["color"], "azul")
+        pagina = self.client.get(self.url_responder)
+        self.assertContains(pagina, "--ua-red: #1D4ED8")
+
+    def test_color_desconocido_se_rechaza(self):
+        respuesta = self.guardar({"color": "fucsia"})
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIsNone(FormularioPlantilla.objects.get(pk=self.version.plantilla_id).tema_json)
+
+    def test_foto_se_sirve_solo_con_su_firma(self):
+        datos = self.guardar({"fondo": imagen_png()}).json()["tema"]
+        self.assertTrue(datos["fondo_url"])
+        self.client.logout()
+        foto = self.client.get(datos["fondo_url"])
+        self.assertEqual(foto.status_code, 200)
+        self.assertEqual(foto["Content-Type"], "image/png")
+        pagina = self.client.get(self.url_responder)
+        self.assertContains(pagina, "enc-tema con-fondo")
+        otra = reverse("encuestas:fondo", args=[self.version.plantilla_id, "0000000000000000"])
+        self.assertEqual(self.client.get(otra).status_code, 404)
+
+    def test_archivo_que_no_es_imagen_se_rechaza(self):
+        falso = SimpleUploadedFile("fondo.png", b"no soy una imagen", content_type="image/png")
+        respuesta = self.guardar({"fondo": falso})
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIn("imagen", respuesta.json()["error"])
+
+    def test_quitar_foto_borra_el_archivo(self):
+        from archivos.models import Archivo
+
+        self.guardar({"fondo": imagen_png()})
+        self.assertEqual(Archivo.objects.count(), 1)
+        self.guardar({"quitar_fondo": "1"})
+        self.assertEqual(Archivo.objects.count(), 0)
+        self.assertEqual(services.tema(self.version.plantilla)["fondo_url"], "")
+
+    def test_la_copia_conserva_el_tema_y_la_foto_compartida(self):
+        from archivos.models import Archivo
+
+        self.guardar({"color": "verde", "fondo": imagen_png()})
+        self.version.plantilla.refresh_from_db()
+        copia = services.copiar_formulario(self.version)
+        self.assertEqual(services.tema(copia.plantilla)["color"], "verde")
+        # Quitar la foto del original no la borra mientras la copia la use.
+        self.guardar({"quitar_fondo": "1"})
+        self.assertEqual(Archivo.objects.count(), 1)
+        self.assertTrue(services.tema(copia.plantilla)["fondo_url"])
+
+    def test_docente_no_puede_cambiar_el_tema(self):
+        self.client.force_login(self.docente)
+        self.guardar({"color": "azul"})
+        self.assertIsNone(FormularioPlantilla.objects.get(pk=self.version.plantilla_id).tema_json)

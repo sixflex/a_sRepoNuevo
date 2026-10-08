@@ -14,7 +14,7 @@
     {% csrf_token %}
 
     <div class="enc-lienzo">
-        <div class="enc-tarjeta enc-encabezado-editor">
+        <div class="enc-tarjeta enc-encabezado-editor" style="{{ tema.estilo }}" data-tema-vivo>
             {% if editable %}
                 <form method="post" action="{% url 'encuestas:editar_datos' version.id %}" novalidate data-datos-formulario>
                     {% csrf_token %}
@@ -78,6 +78,10 @@
 
 <div class="enc-avisos" data-avisos aria-live="assertive"></div>
 
+{% include "encuestas/includes/panel_tema.html" %}
+
+<script src="{% static 'js/encuestas_comun.js' %}"></script>
+<script src="{% static 'js/encuestas_tema.js' %}"></script>
 {% if editable %}
     <script src="{% static 'js/encuestas_editor.js' %}"></script>
     <script src="{% static 'js/encuestas_constructor.js' %}"></script>

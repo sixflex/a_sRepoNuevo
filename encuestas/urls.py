@@ -10,6 +10,7 @@ urlpatterns = [
     path("nuevo/", views.crear_formulario, name="crear"),
     path("version/<int:version_id>/", views.editor, name="editor"),
     path("version/<int:version_id>/datos/", views.editar_datos, name="editar_datos"),
+    path("version/<int:version_id>/tema/", views.editar_tema, name="editar_tema"),
     path("version/<int:version_id>/secciones/nueva/", views.crear_seccion, name="crear_seccion"),
     path("version/<int:version_id>/preguntas/nueva/", views.crear_pregunta, name="crear_pregunta"),
     path("version/<int:version_id>/preguntas/ordenar/", views.ordenar_preguntas, name="ordenar_preguntas"),
@@ -29,4 +30,5 @@ urlpatterns = [
     # Público: responder por enlace o QR
     path("f/<uuid:token>/", views.responder, name="responder"),
     path("f/<uuid:token>/enviado/", views.enviado, name="enviado"),
+    path("fondo/<int:plantilla_id>/<str:firma>/", views.fondo_formulario, name="fondo"),
 ]
