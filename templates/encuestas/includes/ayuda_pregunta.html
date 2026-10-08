@@ -1,0 +1,7 @@
+{% comment %}Ayuda escrita por el Coordinador y mensaje automático del formato esperado (forms.indicacion).{% endcomment %}
+{% if item.config.ayuda or item.indicacion %}
+<div class="enc-ayuda" id="ayuda-{{ item.campo.html_name }}">
+    {% if item.config.ayuda %}<p class="mb-1">{{ item.config.ayuda }}</p>{% endif %}
+    {% if item.indicacion %}<p class="enc-indicacion mb-0"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>{{ item.indicacion }}</p>{% endif %}
+</div>
+{% endif %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo formulario | Portal A+S{% endblock %}
+{% block extra_css %}{% include "encuestas/includes/css.html" %}{% endblock %}
+
+{% block content %}
+<a class="small text-muted text-decoration-none" href="{% url 'encuestas:lista' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Formularios</a>
+<h1 class="page-title mt-2">Nuevo formulario</h1>
+<p class="page-subtitle">Después de crearlo agregas secciones y preguntas.</p>
+
+<form method="post" class="card-ua p-4" style="max-width: 720px;" novalidate>
+    {% csrf_token %}
+    {% include "encuestas/includes/campos.html" with form=form %}
+    <div class="d-flex justify-content-end gap-2">
+        <a class="btn btn-light-ua" href="{% url 'encuestas:lista' %}">Cancelar</a>
+        <button type="submit" class="btn btn-ua">Crear formulario</button>
+    </div>
+</form>
+{% endblock %}

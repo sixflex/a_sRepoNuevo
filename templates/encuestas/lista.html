@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Formularios | Portal A+S{% endblock %}
+{% block extra_css %}{% include "encuestas/includes/css.html" %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+        <h1 class="page-title">Formularios y encuestas</h1>
+        <p class="page-subtitle mb-0">Crea, edita y publica formularios como en Forms. Si un formulario ya tiene respuestas, los cambios quedan en una versión nueva.</p>
+    </div>
+    <form method="post" action="{% url 'encuestas:crear' %}">{% csrf_token %}
+        <button class="btn btn-ua" type="submit"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Nuevo formulario</button>
+    </form>
+</div>
+
+{% include "includes/messages.html" %}
+
+{% if filas %}
+    <div class="enc-lista-formularios">
+        {% for fila in filas %}
+            <a class="enc-fila-formulario" href="{% url 'encuestas:editor' fila.vigente.id %}">
+                <span class="enc-fila-icono" aria-hidden="true"><i class="bi bi-ui-checks"></i></span>
+                <span class="flex-grow-1 min-w-0">
+                    <span class="enc-fila-titulo">{{ fila.plantilla.titulo }}</span>
+                    <span class="enc-nota d-block">Versión {{ fila.vigente.numero_version }} · {{ fila.vigente.total_respuestas }} respuesta{{ fila.vigente.total_respuestas|pluralize }}</span>
+                </span>
+                <span class="enc-badge-estado enc-estado-{{ fila.vigente.estado }}">{{ fila.estado_nombre }}</span>
+                <i class="bi bi-chevron-right enc-fila-flecha" aria-hidden="true"></i>
+            </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card-ua empty-state">
+        <i class="bi bi-ui-checks" aria-hidden="true"></i>
+        <p class="mt-2 mb-0">Aún no hay formularios. Crea el primero con «Nuevo formulario».</p>
+    </div>
+{% endif %}
+{% endblock %}
