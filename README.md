@@ -91,6 +91,42 @@ conda activate portal_as
 - Si se agregan nuevas dependencias, actualizar `requirements.txt`.
 - Cuando esté disponible el repositorio oficial, el trabajo se realizará utilizando las ramas `main`, `develop` y `feature`.
 
+## Variables de Entorno (.env) para servicio transversal de comunicaciones
+
+El proyecto requiere las siguientes variables en el archivo `.env`:
+
+- `SECRET_KEY`: Clave secreta de Django.
+- `DEBUG`: Modo depuración (`True` / `False`).
+- `DB_NAME`: Nombre de la base de datos PostgreSQL (`portal_as`).
+- `DB_USER`: Usuario de la base de datos (`postgres`).
+- `DB_PASSWORD`: Contraseña del usuario de la base de datos.
+- `DB_HOST`: Host de la base de datos (ej. `localhost`).
+- `DB_PORT`: Puerto de conexión a PostgreSQL (`5432`).
+- `DEFAULT_FROM_EMAIL`: Dirección de correo remitente por defecto para el servicio de comunicaciones.
+
+## Servicio Transversal de Auditoría (módulo `auditoria`)
+
+El sistema cuenta con un servicio común para registrar de forma uniforme las operaciones críticas y la trazabilidad de cambios en los diferentes módulos del Portal A+S.
+
+### Características Principales
+- **Entidad principal**: `AUDITORIA_CAMBIO` para el almacenamiento del historial de eventos.
+- **Trazabilidad registrada**: Registra actor (usuario/responsable), tipo de operación, entidad afectada, resultado de la acción y marca de tiempo (fecha/hora).
+- **Restricción de permisos**: Los registros de auditoría son de solo lectura y no pueden ser modificados por usuarios con rol Docente.
+
+### Ejemplo de Uso en Servicios/Vistas
+Para registrar un evento desde cualquier módulo, se utiliza el servicio común de auditoría:
+
+```python
+from auditoria.services import AuditService
+
+AuditService.registrar_evento(
+    usuario=user,
+    operacion="CREAR",  # O MODIFICAR, ELIMINAR, etc.
+    entidad="SocioComunitario",
+    resultado="EXITO",
+    detalles={"campo_modificado": "nombre", "valor_nuevo": "Ejemplo"}
+)
+
 ### Cada integrante trabaja en su rama personal. Cuando termina su tarea, hace un Pull Request de su rama hacia develop. Ahí se integran todos los cambios del sprint y ustedes prueban que el proyecto funcione completo.
 ### Cuando ya terminó el sprint y develop está estable, recién hacen un Pull Request de develop hacia main.
 ### Entonces:
