@@ -4,75 +4,64 @@
 
 {% block content %}
 
-<div class="container mt-4">
+<div class="container-fluid py-2">
 
-    <div class="row justify-content-center">
-        <div class="col-lg-8 col-md-10">
+    <div class="card shadow-sm border-0">
 
-            <div class="card shadow-sm border-0">
+        <!-- ENCABEZADO -->
+        <div class="card-header bg-white border-bottom py-3">
 
-                <!-- ENCABEZADO -->
-                <div class="card-header bg-white border-bottom py-3">
+            <h1 class="h4 mb-1 fw-bold">
+                Eliminar Campus
+            </h1>
 
-                    <h4 class="mb-1 fw-bold">
-                        Eliminar Campus
-                    </h4>
+            <p class="text-muted mb-0 small">
+                Confirma la eliminación del campus seleccionado.
+            </p>
 
-                    <p class="text-muted mb-0 small">
-                        Confirma la eliminación del campus seleccionado.
-                    </p>
+        </div>
 
-                </div>
+        <!-- CONTENIDO -->
+        <div class="card-body p-4">
 
-                <!-- CONTENIDO -->
-                <div class="card-body p-4">
+            <!-- ADVERTENCIA -->
+            <div class="alert alert-danger" role="alert">
 
-                    <!-- ADVERTENCIA -->
-                    <div class="alert alert-danger" role="alert">
+                <h2 class="alert-heading h5 fw-bold">
+                    ¿Estás seguro?
+                </h2>
 
-                        <h5 class="alert-heading fw-bold">
-                            ¿Estás seguro?
-                        </h5>
+                <p class="mb-2">
+                    Estás a punto de eliminar el campus
+                    <strong>{{ campus.nombre }}</strong>.
+                </p>
 
-                        <p class="mb-2">
-                            Estás a punto de eliminar el campus
-                            <strong>{{ campus.nombre }}</strong>.
-                        </p>
+                <p class="mb-2">
+                    Sede:
+                    <strong>{{ campus.sede.nombre }}</strong>
+                </p>
 
-                        <p class="mb-2">
-                            Sede:
-                            <strong>{{ campus.sede.nombre }}</strong>
-                        </p>
-
-                        <p class="mb-0">
-                            Esta acción no se puede deshacer.
-                        </p>
-
-                    </div>
-
-                    <!-- BOTONES -->
-                    <form method="POST">
-                        {% csrf_token %}
-
-                        <div class="d-flex justify-content-between align-items-center mt-4">
-
-                            <a href="{% url 'campus_list' %}"
-                               class="btn btn-outline-secondary">
-                                ← Volver
-                            </a>
-
-                            <button type="submit"
-                                    class="btn btn-danger px-4">
-                                Sí, eliminar
-                            </button>
-
-                        </div>
-
-                    </form>
-
-                </div>
+                <p class="mb-0">
+                    Esta acción no se puede deshacer.
+                </p>
 
             </div>
+
+            <!-- BOTONES -->
+            <form method="POST">
+                {% csrf_token %}
+
+                <div class="d-flex justify-content-between align-items-center mt-4">
+
+                    <a href="{% url 'campus_list' %}"
+                       class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver</a>
+
+                    <button type="submit"
+                            class="btn btn-danger px-4"><i class="bi bi-trash me-1" aria-hidden="true"></i>Sí, eliminar</button>
+
+                </div>
+
+            </form>
 
         </div>
 

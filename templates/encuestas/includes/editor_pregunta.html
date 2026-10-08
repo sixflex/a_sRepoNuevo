@@ -1,0 +1,168 @@
+{% comment %}
+Editor de una pregunta. Se usa dentro de la tarjeta del constructor en vivo
+(guardado automático) y en la página completa de respaldo (pagina_completa).
+Cada data-error-para recibe los errores de ese campo cuando se guarda.
+{% endcomment %}
+{% with uid=pregunta.id|default:"nueva" %}
+<form method="post" novalidate class="enc-editor-pregunta" data-pregunta-editor
+      action="{% if pregunta %}{% url 'encuestas:editar_pregunta' pregunta.id %}{% else %}{% url 'encuestas:crear_pregunta' version.id %}{% endif %}"
+      data-tipos-con-opciones="{{ tipos_con_opciones }}" data-iconos-tipo="{{ iconos_tipo }}">
+    {% csrf_token %}
+    <div data-error-para="__all__">
+        {% for error in form.non_field_errors %}<div class="alert alert-danger py-2">{{ error }}</div>{% endfor %}
+    </div>
+
+    <div class="row g-2 align-items-start">
+        <div class="col-md-7">
+            <label class="visually-hidden" for="{{ form.texto.id_for_label }}-{{ uid }}">Pregunta</label>
+            <textarea name="texto" id="{{ form.texto.id_for_label }}-{{ uid }}" rows="1" data-autoalto
+                      class="form-control enc-input-pregunta" placeholder="Pregunta">{{ form.texto.value|default_if_none:'' }}</textarea>
+            <div data-error-para="texto">{% for error in form.texto.errors %}<div class="enc-error">{{ error }}</div>{% endfor %}</div>
+        </div>
+        <div class="col-md-5">
+            <label class="visually-hidden" for="tipo-{{ uid }}">Tipo de pregunta</label>
+            <div class="enc-select-icono">
+                <i class="bi" data-icono-tipo aria-hidden="true"></i>
+                <select name="tipo" id="tipo-{{ uid }}" class="form-select">
+                    {% for valor, nombre in form.fields.tipo.choices %}
+                        <option value="{{ valor }}" {% if form.tipo.value == valor %}selected{% endif %}>{{ nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div data-error-para="tipo">{% for error in form.tipo.errors %}<div class="enc-error">{{ error }}</div>{% endfor %}</div>
+        </div>
+        <div class="col-12">
+            <label class="visually-hidden" for="ayuda-{{ uid }}">Texto de ayuda</label>
+            <input type="text" name="ayuda" id="ayuda-{{ uid }}" maxlength="500" class="form-control enc-input-ayuda"
+                   value="{{ form.ayuda.value|default_if_none:'' }}" placeholder="{{ form.ayuda.field.widget.attrs.placeholder }}">
+        </div>
+    </div>
+
+    {% if pagina_completa %}
+        <div class="mt-3" style="max-width: 360px;">
+            <label class="form-label-ua" for="{{ form.bloque.id_for_label }}">{{ form.bloque.label }}</label>
+            {{ form.bloque }}
+        </div>
+    {% else %}
+        <input type="hidden" name="bloque" value="{{ form.bloque.value|default_if_none:'' }}">
+    {% endif %}
+
+    {# Configuración que depende del tipo #}
+    <div class="row g-2 mt-1">
+        <div class="col-sm-4" data-para-tipos="TEXTO_CORTO,TEXTO_LARGO">
+            <label class="enc-nota" for="largo-{{ uid }}">{{ form.largo_max.label }} (caracteres)</label>
+            <input type="number" min="1" max="5000" name="largo_max" id="largo-{{ uid }}" class="form-control form-control-sm"
+                   value="{{ form.largo_max.value|default_if_none:'' }}" placeholder="Sin límite">
+        </div>
+        <div class="col-sm-3" data-para-tipos="NUMERO,ESCALA">
+            <label class="enc-nota" for="minimo-{{ uid }}">{{ form.minimo.label }}</label>
+            <input type="number" name="minimo" id="minimo-{{ uid }}" class="form-control form-control-sm" value="{{ form.minimo.value|default_if_none:'' }}">
+            <div data-error-para="minimo">{% for error in form.minimo.errors %}<div class="enc-error">{{ error }}</div>{% endfor %}</div>
+        </div>
+        <div class="col-sm-3" data-para-tipos="NUMERO,ESCALA">
+            <label class="enc-nota" for="maximo-{{ uid }}">{{ form.maximo.label }}</label>
+            <input type="number" name="maximo" id="maximo-{{ uid }}" class="form-control form-control-sm" value="{{ form.maximo.value|default_if_none:'' }}">
+            <div data-error-para="maximo">{% for error in form.maximo.errors %}<div class="enc-error">{{ error }}</div>{% endfor %}</div>
+        </div>
+        <div class="col-sm-6" data-para-tipos="ESCALA">
+            <label class="enc-nota" for="estilo-{{ uid }}">{{ form.estilo_escala.label }}</label>
+            <select name="estilo_escala" id="estilo-{{ uid }}" class="form-select form-select-sm">
+                {% for valor, nombre in form.fields.estilo_escala.choices %}
+                    <option value="{{ valor }}" {% if form.estilo_escala.value == valor %}selected{% endif %}>{{ nombre }}</option>
+                {% endfor %}
+            </select>
+            <div class="enc-nota mt-1">Si dejas mínimo y máximo vacíos, va de 1 a 5.</div>
+        </div>
+        <div class="col-sm-6" data-para-tipos="ESCALA">
+            <label class="enc-nota" for="etmin-{{ uid }}">{{ form.etiqueta_minimo.label }}</label>
+            <input type="text" maxlength="60" name="etiqueta_minimo" id="etmin-{{ uid }}" class="form-control form-control-sm"
+                   value="{{ form.etiqueta_minimo.value|default_if_none:'' }}" placeholder="Ej.: Muy malo">
+        </div>
+        <div class="col-sm-6" data-para-tipos="ESCALA">
+            <label class="enc-nota" for="etmax-{{ uid }}">{{ form.etiqueta_maximo.label }}</label>
+            <input type="text" maxlength="60" name="etiqueta_maximo" id="etmax-{{ uid }}" class="form-control form-control-sm"
+                   value="{{ form.etiqueta_maximo.value|default_if_none:'' }}" placeholder="Ej.: Excelente">
+        </div>
+        <div class="col-sm-3" data-para-tipos="SELECCION_MULTIPLE">
+            <label class="enc-nota" for="minm-{{ uid }}">{{ form.min_marcadas.label }}</label>
+            <input type="number" min="1" name="min_marcadas" id="minm-{{ uid }}" class="form-control form-control-sm" value="{{ form.min_marcadas.value|default_if_none:'' }}">
+        </div>
+        <div class="col-sm-3" data-para-tipos="SELECCION_MULTIPLE">
+            <label class="enc-nota" for="maxm-{{ uid }}">{{ form.max_marcadas.label }}</label>
+            <input type="number" min="1" name="max_marcadas" id="maxm-{{ uid }}" class="form-control form-control-sm" value="{{ form.max_marcadas.value|default_if_none:'' }}">
+        </div>
+        <div class="col-sm-8" data-para-tipos="ARCHIVO">
+            <label class="enc-nota" for="ext-{{ uid }}">{{ form.extensiones.label }}</label>
+            <input type="text" maxlength="120" name="extensiones" id="ext-{{ uid }}" class="form-control form-control-sm"
+                   value="{{ form.extensiones.value|default_if_none:'' }}" placeholder="pdf, docx, jpg">
+            <div class="enc-nota mt-1">{{ form.extensiones.help_text }} Tamaño máximo: 20 MB.</div>
+        </div>
+    </div>
+
+    {# Opciones: opción única, casillas, lista y pestañas #}
+    <div class="enc-opciones-editor mt-2" data-opciones-editor>
+        <p class="enc-nota mb-1" data-solo-selector>
+            Cada opción es una pestaña (por ejemplo, un programa o carrera). Luego, en cada sección, usa la
+            condición para que aparezca solo con su pestaña.
+        </p>
+        <div data-filas-opciones>
+            {% for fila in filas_opciones %}
+                {% include "encuestas/includes/fila_opcion.html" %}
+            {% endfor %}
+        </div>
+        <template data-plantilla-opcion>
+            {% include "encuestas/includes/fila_opcion.html" with fila=None %}
+        </template>
+        <div class="enc-agregar-opcion">
+            <span class="enc-marcador" aria-hidden="true"></span>
+            <button type="button" class="btn btn-link p-0" data-agregar-opcion>Agregar opción</button>
+            <span class="enc-nota" data-no-selector>o</span>
+            <button type="button" class="btn btn-link p-0" data-agregar-otros data-no-selector>agregar «Otros» con texto</button>
+        </div>
+        <div class="enc-nota mt-1">Consejo: presiona Enter en una opción para escribir la siguiente.</div>
+    </div>
+
+    <div class="collapse{% if pregunta.regla_visibilidad_json or form.regla_pregunta.errors or form.regla_valores.errors %} show{% endif %}" id="mas-{{ uid }}">
+        <div class="enc-mas-opciones">
+            <div data-para-tipos="TEXTO_CORTO,TEXTO_LARGO,CORREO,RUT" class="mb-3" style="max-width: 360px;">
+                <label class="form-label-ua" for="dato-{{ uid }}">{{ form.dato_respondente.label }}</label>
+                <select name="dato_respondente" id="dato-{{ uid }}" class="form-select form-select-sm">
+                    {% for valor, nombre in form.fields.dato_respondente.choices %}
+                        <option value="{{ valor }}" {% if form.dato_respondente.value == valor %}selected{% endif %}>{{ nombre }}</option>
+                    {% endfor %}
+                </select>
+                <div class="enc-nota mt-1">Sirve para identificar a quien responde en la lista de respuestas.</div>
+            </div>
+            {% include "encuestas/includes/regla.html" %}
+        </div>
+    </div>
+
+    <div class="enc-editor-pie">
+        <button type="button" class="btn btn-link enc-nota p-0" data-bs-toggle="collapse" data-bs-target="#mas-{{ uid }}"
+                aria-expanded="{% if pregunta.regla_visibilidad_json %}true{% else %}false{% endif %}" aria-controls="mas-{{ uid }}">
+            <i class="bi bi-sliders me-1" aria-hidden="true"></i>Condición y más ajustes
+        </button>
+        <div class="ms-auto d-flex align-items-center gap-1">
+            {% if pregunta and not pagina_completa %}
+                {% if pregunta.tipo != "SELECTOR_PROGRAMA" %}
+                    <button type="button" class="btn btn-accion" data-accion="duplicar" title="Duplicar" aria-label="Duplicar pregunta"><i class="bi bi-copy" aria-hidden="true"></i></button>
+                {% endif %}
+                <button type="button" class="btn btn-accion" data-accion="eliminar" title="Eliminar" aria-label="Eliminar pregunta"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                <span class="enc-separador" aria-hidden="true"></span>
+            {% endif %}
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" role="switch" name="obligatoria" id="obligatoria-{{ uid }}" {% if form.obligatoria.value %}checked{% endif %}>
+                <label class="form-check-label" for="obligatoria-{{ uid }}">Obligatoria</label>
+            </div>
+        </div>
+    </div>
+
+    {% if pagina_completa %}
+        <div class="d-flex justify-content-end gap-2 flex-wrap mt-3">
+            <a class="btn btn-light-ua" href="{% url 'encuestas:editor' version.id %}">Cancelar</a>
+            <button type="submit" name="guardar_y_otra" class="btn btn-ua-outline">Guardar y agregar otra</button>
+            <button type="submit" class="btn btn-ua">Guardar pregunta</button>
+        </div>
+    {% endif %}
+</form>
+{% endwith %}

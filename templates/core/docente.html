@@ -1,33 +1,123 @@
 {% extends "base.html" %}
 
+{% block title %}Panel Docente{% endblock %}
+
 {% block content %}
+<div class="container-fluid py-2">
 
-<h1>
-    Panel Docente
-</h1>
+    <!-- ENCABEZADO -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">
+                Panel Docente
+            </h2>
+            <p class="text-muted mb-0">
+                Gestiona tus secciones y las herramientas de Aprendizaje + Servicio.
+            </p>
+        </div>
+    </div>
 
-<h2>
-    Mis secciones
-</h2>
+    <!-- MIS SECCIONES -->
+    <div class="card shadow-sm border-0 w-100">
+        <div class="card-body p-4">
 
-{% for seccion in secciones %}
+            <!-- TÍTULO Y CONTADOR DE SECCIONES -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h5 class="fw-bold mb-1">
+                        Mis secciones
+                    </h5>
+                    <p class="text-muted small mb-0">
+                        Secciones académicas asignadas actualmente.
+                    </p>
+                </div>
 
-    <p>
+                <span class="badge px-3 py-2" style="background-color: #f8e5e5; color: #a90000;">
+                    {{ secciones|length }} sección{% if secciones|length != 1 %}es{% endif %}
+                </span>
+            </div>
 
-        <a href="{% url 'core:detalle_seccion' seccion.id %}">
-            {{ seccion.asignatura.nombre }}
-            -
-            NRC {{ seccion.nrc }}
-        </a>
+            {% for seccion in secciones %}
+                <!-- TARJETA DE SECCIÓN (EXPANDIDA EN GRID) -->
+                <div class="border rounded-3 p-4 mb-3">
+                    <div class="row align-items-center g-3">
 
-    </p>
+                        <!-- INFORMACIÓN PRINCIPAL -->
+                        <div class="col-12 col-xl-9">
+                            <div class="d-flex align-items-center mb-3">
+                                <!-- ICONO -->
+                                <div class="d-flex align-items-center justify-content-center me-3"
+                                     style="width: 45px; height: 45px; min-width: 45px; border-radius: 10px; background-color: #f8e5e5; color: #a90000; font-size: 20px;">
+                                    📚
+                                </div>
 
-{% empty %}
+                                <div>
+                                    <h5 class="fw-bold mb-1">
+                                        {{ seccion.asignatura.nombre }}
+                                    </h5>
+                                    <span class="badge" style="background-color: #a90000;">
+                                        NRC {{ seccion.nrc }}
+                                    </span>
+                                </div>
+                            </div>
 
-    <p>
-        No tienes secciones asignadas.
-    </p>
+                            <!-- DATOS ACADÉMICOS EN GRID HORIZONTAL -->
+                            <div class="row g-3">
+                                <div class="col-12 col-sm-4">
+                                    <div class="text-muted small">
+                                        Sección
+                                    </div>
+                                    <div class="fw-semibold">
+                                        {{ seccion.seccion }}
+                                    </div>
+                                </div>
 
-{% endfor %}
+                                <div class="col-12 col-sm-4">
+                                    <div class="text-muted small">
+                                        Período académico
+                                    </div>
+                                    <div class="fw-semibold">
+                                        {{ seccion.periodo.nombre }}
+                                    </div>
+                                </div>
 
+                                <div class="col-12 col-sm-4">
+                                    <div class="text-muted small">
+                                        Campus
+                                    </div>
+                                    <div class="fw-semibold">
+                                        {{ seccion.campus.nombre }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ACCIÓN ALINEADA -->
+                        <div class="col-12 col-xl-3 text-xl-end mt-3 mt-xl-0">
+                            <a href="{% url 'core:detalle_seccion' seccion.id %}" class="btn btn-rojo px-4">
+                                Ver sección
+                            </a>
+                        </div>
+
+                    </div>
+                </div>
+            {% empty %}
+                <!-- SIN SECCIONES -->
+                <div class="text-center py-5">
+                    <div class="mb-3" style="font-size: 40px;">
+                        📚
+                    </div>
+                    <h5 class="fw-bold">
+                        No tienes secciones asignadas
+                    </h5>
+                    <p class="text-muted mb-0">
+                        Cuando tengas una sección asignada aparecerá en este panel.
+                    </p>
+                </div>
+            {% endfor %}
+
+        </div>
+    </div>
+
+</div>
 {% endblock %}

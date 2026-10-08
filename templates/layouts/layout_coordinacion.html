@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block sidebar %}
+    {% include 'components/sidebar.html' with role="coordinacion" %}
+{% endblock %}
+
+{% block main_class %}main-content-with-sidebar{% endblock %}
+
+{% block content %}
+    <h2>Panel de Coordinación</h2>
+    <div class="alert alert-success mt-3" role="alert">
+        {{ mensaje_prueba }}
+    </div>
+{% endblock %}

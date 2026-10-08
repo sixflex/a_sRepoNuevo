@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Postulación Exitosa | Portal A+S{% endblock %}
+
+{% block content_public %}
+<div class="container py-5 text-center" style="max-width: 680px;">
+    <div class="card-ua p-4 p-md-5 shadow-sm">
+        <div class="mb-4">
+            <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+        </div>
+        <h2 class="fw-bold mb-2">¡Postulación Recibida con Éxito!</h2>
+        <p class="text-muted mb-4">Hemos recibido los antecedentes de tu organización.</p>
+        <div class="alert alert-light border p-3 mb-4 text-start">
+            <span class="text-muted small d-block">Identificador (Folio):</span>
+            <strong class="fs-5" style="color: var(--ua-red, #b91c1c);">#{{ postulacion.id }}</strong>
+            <span class="text-muted small d-block mt-2">Fecha de Recepción:</span>
+            <strong>{{ postulacion.fecha_recepcion|date:"d/m/Y H:i" }}</strong>
+        </div>
+        <a href="/" class="btn btn-light-ua px-4">Volver al Inicio</a>
+    </div>
+</div>
+{% endblock %}

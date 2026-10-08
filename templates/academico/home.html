@@ -4,13 +4,13 @@
 
 {% block content %}
 
-<div class="container py-4">
+<div class="container-fluid py-2">
 
     <!-- ENCABEZADO -->
-    <div class="mb-5">
-        <h2 class="fw-bold text-dark mb-1">
+    <div class="mb-4">
+        <h1 class="h2 fw-bold text-dark mb-1">
             Gestión Académica
-        </h2>
+        </h1>
 
         <p class="text-muted mb-0">
             Administra la estructura académica del sistema.
@@ -22,310 +22,195 @@
     <!-- ESTRUCTURA INSTITUCIONAL -->
     <!-- ============================== -->
 
-    <div class="mb-5">
+    <div class="mb-4">
 
-        <div class="d-flex align-items-center mb-3">
-            <h5 class="fw-bold mb-0">
-                Estructura institucional
-            </h5>
-        </div>
+        <h2 class="h5 fw-bold mb-2">
+            Estructura institucional
+        </h2>
 
-        <p class="text-muted small mb-4">
-    Administración de campus, sedes, facultades y unidades académicas.
-</p>
-
+        <p class="text-muted small mb-3">
+            Administración de campus, sedes, facultades y unidades académicas.
+        </p>
 
         <div class="row g-4">
 
             <!-- CAMPUS -->
-            <div class="col-lg-4 col-md-6">
-
+            <div class="col-12 col-md-6 col-xl-3">
                 <div class="card shadow-sm border-0 h-100">
-
                     <div class="card-body p-4">
-
-                        <h5 class="fw-bold">
-                            Campus
-                        </h5>
-
+                        <h3 class="h5 fw-bold">Campus</h3>
                         <p class="text-muted">
                             Administra los campus registrados en el sistema.
                         </p>
-
-                        <a href="{% url 'campus_list' %}"
-                           class="btn btn-rojo w-100">
+                        <a href="{% url 'campus_list' %}" class="btn btn-rojo w-100">
                             Administrar Campus
                         </a>
-
                     </div>
-
                 </div>
-
             </div>
 
-
             <!-- SEDES -->
-            <div class="col-lg-4 col-md-6">
-
+            <div class="col-12 col-md-6 col-xl-3">
                 <div class="card shadow-sm border-0 h-100">
-
                     <div class="card-body p-4">
-
-                        <h5 class="fw-bold">
-                            Sedes
-                        </h5>
-
+                        <h3 class="h5 fw-bold">Sedes</h3>
                         <p class="text-muted">
                             Administra las sedes asociadas a los campus.
                         </p>
-
-                        <a href="{% url 'sede_list' %}"
-                           class="btn btn-rojo w-100">
+                        <a href="{% url 'sede_list' %}" class="btn btn-rojo w-100">
                             Administrar Sedes
                         </a>
-
                     </div>
-
                 </div>
-
             </div>
 
-
             <!-- FACULTADES -->
-            <div class="col-lg-4 col-md-6">
-
+            <div class="col-12 col-md-6 col-xl-3">
                 <div class="card shadow-sm border-0 h-100">
-
                     <div class="card-body p-4">
-
-                        <h5 class="fw-bold">
-                            Facultades
-                        </h5>
-
+                        <h3 class="h5 fw-bold">Facultades</h3>
                         <p class="text-muted">
                             Administra las facultades de la institución.
                         </p>
-
-                        <a href="{% url 'facultad_list' %}"
-                           class="btn btn-rojo w-100">
+                        <a href="{% url 'facultad_list' %}" class="btn btn-rojo w-100">
                             Administrar Facultades
                         </a>
-
                     </div>
-
                 </div>
-
             </div>
 
-
             <!-- UNIDADES ACADÉMICAS -->
-            <div class="col-lg-4 col-md-6">
-            
+            <div class="col-12 col-md-6 col-xl-3">
                 <div class="card shadow-sm border-0 h-100">
-            
                     <div class="card-body p-4">
-            
-                        <h5 class="fw-bold">
-                            Unidades Académicas
-                        </h5>
-            
+                        <h3 class="h5 fw-bold">Unidades Académicas</h3>
                         <p class="text-muted">
                             Administra las unidades académicas asociadas a facultades y carreras.
                         </p>
-            
-                        <a href="{% url 'unidad_academica_list' %}"
-                           class="btn btn-rojo w-100">
+                        <a href="{% url 'unidad_academica_list' %}" class="btn btn-rojo w-100">
                             Administrar Unidades Académicas
                         </a>
-            
                     </div>
-            
                 </div>
-            
             </div>
 
         </div>
 
     </div>
 
-
-
-    <hr class="my-5">
-
-    
+    <hr class="my-4">
 
     <!-- ============================== -->
     <!-- ESTRUCTURA ACADÉMICA -->
     <!-- ============================== -->
 
-    <div class="mb-5">
+    <div class="mb-4">
 
-        <h5 class="fw-bold mb-2">
+        <h2 class="h5 fw-bold mb-2">
             Estructura académica
-        </h5>
+        </h2>
 
-        <p class="text-muted small mb-4">
+        <p class="text-muted small mb-3">
             Administración de carreras, asignaturas y secciones.
         </p>
-
 
         <div class="row g-4">
 
             <!-- CARRERAS -->
-            <div class="col-lg-4 col-md-6">
-
+            <div class="col-12 col-md-6 col-xl-3">
                 <div class="card shadow-sm border-0 h-100">
-
                     <div class="card-body p-4">
-
-                        <h5 class="fw-bold">
-                            Carreras
-                        </h5>
-
+                        <h3 class="h5 fw-bold">Carreras</h3>
                         <p class="text-muted">
                             Administra las carreras asociadas a facultades.
                         </p>
-
-                        <a href="{% url 'carrera_list' %}"
-                           class="btn btn-rojo w-100">
+                        <a href="{% url 'carrera_list' %}" class="btn btn-rojo w-100">
                             Administrar Carreras
                         </a>
-
                     </div>
-
                 </div>
-
             </div>
 
-
             <!-- ASIGNATURAS -->
-            <div class="col-lg-4 col-md-6">
-
+            <div class="col-12 col-md-6 col-xl-3">
                 <div class="card shadow-sm border-0 h-100">
-
                     <div class="card-body p-4">
-
-                        <h5 class="fw-bold">
-                            Asignaturas
-                        </h5>
-
+                        <h3 class="h5 fw-bold">Asignaturas</h3>
                         <p class="text-muted">
                             Administra las asignaturas asociadas a carreras.
                         </p>
-
-                        <a href="{% url 'asignatura_list' %}"
-                           class="btn btn-rojo w-100">
+                        <a href="{% url 'asignatura_list' %}" class="btn btn-rojo w-100">
                             Administrar Asignaturas
                         </a>
-
                     </div>
-
                 </div>
-
             </div>
 
-
             <!-- SECCIONES -->
-            <div class="col-lg-4 col-md-6">
-
+            <div class="col-12 col-md-6 col-xl-3">
                 <div class="card shadow-sm border-0 h-100">
-
                     <div class="card-body p-4">
-
-                        <h5 class="fw-bold">
-                            Secciones / NRC
-                        </h5>
-
+                        <h3 class="h5 fw-bold">Secciones / NRC</h3>
                         <p class="text-muted">
                             Administra las secciones y sus NRC.
                         </p>
-
-                        <a href="{% url 'seccion_list' %}"
-                           class="btn btn-rojo w-100">
+                        <a href="{% url 'seccion_list' %}" class="btn btn-rojo w-100">
                             Administrar Secciones
                         </a>
-
                     </div>
-
                 </div>
-
             </div>
-</div>
+
+        </div>
 
     </div>
 
-
-    <hr class="my-5">
-
+    <hr class="my-4">
 
     <!-- ============================== -->
     <!-- CONFIGURACIÓN ACADÉMICA -->
     <!-- ============================== -->
 
-    <div class="mb-4">
+    <div class="mb-2">
 
-        <h5 class="fw-bold mb-2">
+        <h2 class="h5 fw-bold mb-2">
             Configuración académica
-        </h5>
+        </h2>
 
-        <p class="text-muted small mb-4">
+        <p class="text-muted small mb-3">
             Administración de docentes y periodos académicos.
         </p>
-
 
         <div class="row g-4">
 
             <!-- DOCENTES -->
-            <div class="col-lg-4 col-md-6">
-
+            <div class="col-12 col-md-6 col-xl-3">
                 <div class="card shadow-sm border-0 h-100">
-
                     <div class="card-body p-4">
-
-                        <h5 class="fw-bold">
-                            Docentes
-                        </h5>
-
+                        <h3 class="h5 fw-bold">Docentes</h3>
                         <p class="text-muted">
                             Administra los docentes asociados a las secciones.
                         </p>
-
-                        <a href="{% url 'docente_list' %}"
-                           class="btn btn-rojo w-100">
+                        <a href="{% url 'docente_list' %}" class="btn btn-rojo w-100">
                             Administrar Docentes
                         </a>
-
                     </div>
-
                 </div>
-
             </div>
 
-
             <!-- PERIODOS -->
-            <div class="col-lg-4 col-md-6">
-
+            <div class="col-12 col-md-6 col-xl-3">
                 <div class="card shadow-sm border-0 h-100">
-
                     <div class="card-body p-4">
-
-                        <h5 class="fw-bold">
-                            Periodos
-                        </h5>
-
+                        <h3 class="h5 fw-bold">Periodos</h3>
                         <p class="text-muted">
                             Administra los periodos académicos del sistema.
                         </p>
-
-                        <a href="{% url 'periodo_list' %}"
-                           class="btn btn-rojo w-100">
+                        <a href="{% url 'periodo_list' %}" class="btn btn-rojo w-100">
                             Administrar Periodos
                         </a>
-
                     </div>
-
                 </div>
-
             </div>
 
         </div>

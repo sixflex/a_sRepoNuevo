@@ -1,0 +1,18 @@
+{% comment %}
+Condición "Mostrar solo si…". Las casillas de respuestas las arma encuestas_editor.js
+a partir de data-opciones (JSON {pregunta_id: [[valor, texto], ...]}).
+{% endcomment %}
+<fieldset class="enc-regla" data-regla-editor data-opciones="{{ opciones_condicion }}"
+          data-seleccion="{{ form.regla_valores.value|default_if_none:''|join:'|' }}">
+    <legend class="form-label-ua float-none w-auto mb-1"><i class="bi bi-diagram-3 me-1" aria-hidden="true"></i>Condición</legend>
+    {% if form.fields.regla_pregunta.choices|length > 1 %}
+        <label class="enc-nota d-block mb-1" for="{{ form.regla_pregunta.id_for_label }}">{{ form.regla_pregunta.label }}</label>
+        {{ form.regla_pregunta }}
+        <div data-error-para="regla_pregunta">{% for error in form.regla_pregunta.errors %}<div class="enc-error">{{ error }}</div>{% endfor %}</div>
+        <div class="mt-2" data-regla-valores aria-live="polite"></div>
+        <div data-error-para="regla_valores">{% for error in form.regla_valores.errors %}<div class="enc-error">{{ error }}</div>{% endfor %}</div>
+        <div class="enc-nota mt-1">Por ejemplo, para que se vea solo con la pestaña de cierta carrera.</div>
+    {% else %}
+        <p class="enc-nota mb-0">Para usar una condición, antes debe haber una pregunta de opción única, lista desplegable o pestañas de programa.</p>
+    {% endif %}
+</fieldset>

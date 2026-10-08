@@ -46,8 +46,22 @@ class Equipo(models.Model):
         null=True,
         blank=True,
     )
+    clave_idempotencia = models.UUIDField(
+    null=True,
+    blank=True,
+    unique=True,
+    editable=False,
+    )
     fecha_registro = models.DateTimeField(auto_now_add=True)
     estado = models.CharField(max_length=20)
+
+    socio_comunitario = models.ForeignKey(
+    "socios.SocioComunitario",
+    on_delete=models.PROTECT,
+    null=True,
+    blank=True,
+    related_name="equipos",
+    )
 
     class Meta:
         constraints = [
@@ -118,6 +132,49 @@ class IntegranteEtiqueta(models.Model):
                 name="unique_etiqueta_por_integrante",
             )
         ]
+
+class HistorialSocioEquipo(models.Model):
+    equipo = models.ForeignKey(
+        Equipo,
+        on_delete=models.CASCADE,
+        related_name="historial_socios",
+    )
+
+    socio_anterior = models.ForeignKey(
+        "socios.SocioComunitario",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="historial_equipos_como_anterior",
+    )
+
+    socio_nuevo = models.ForeignKey(
+        "socios.SocioComunitario",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="historial_equipos_como_nuevo",
+    )
+
+    cambiado_por_docente = models.ForeignKey(
+        "academico.Docente",
+        on_delete=models.PROTECT,
+        related_name="cambios_socio_equipos",
+    )
+
+    fecha_cambio = models.DateTimeField(auto_now_add=True)
+
+    motivo = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+    )
+
+    def __str__(self):
+        return (
+            f"Grupo {self.equipo.numero_grupo}: "
+            f"{self.socio_anterior} -> {self.socio_nuevo}"
+        )
 
 
 class EnlaceRegistroEquipo(models.Model):

@@ -5,194 +5,152 @@
 {% endblock %}
 
 {% block content %}
+<div class="container-fluid py-2">
 
-<div class="container mt-4">
+    <div class="card shadow-sm border-0 w-100">
 
-    <div class="row justify-content-center">
+        <!-- ENCABEZADO -->
+        <div class="card-header bg-white border-bottom py-3">
+            <h4 class="mb-1 fw-bold">
+                {% if asignatura %}
+                    Editar Asignatura
+                {% else %}
+                    Nueva Asignatura
+                {% endif %}
+            </h4>
+            <p class="text-muted mb-0 small">
+                Ingresa los datos de la asignatura y selecciona las carreras asociadas.
+            </p>
+        </div>
 
-        <div class="col-lg-8 col-md-10">
+        <!-- CONTENIDO -->
+        <div class="card-body p-4">
 
-            <div class="card shadow-sm border-0">
+            <!-- MENSAJE DE VALIDACIÓN -->
+            {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+            {% endif %}
 
-                <!-- ENCABEZADO -->
-                <div class="card-header bg-white border-bottom py-3">
+            <form method="POST" novalidate>
+                {% csrf_token %}
 
-                    <h4 class="mb-1 fw-bold">
+                <div class="row g-3 mb-4">
+
+                    <!-- CÓDIGO -->
+                    <div class="col-12 col-md-4 col-lg-3">
+                        <label for="codigo" class="form-label fw-semibold">
+                            Código
+                        </label>
+
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="codigo"
+                            name="codigo"
+                            maxlength="30"
+                            placeholder="Ej: INF101"
+                            value="{{ asignatura.codigo|default:'' }}">
+
+                        <div class="form-text">
+                            Código identificador (opcional).
+                        </div>
+                    </div>
+
+                    <!-- NOMBRE -->
+                    <div class="col-12 col-md-8 col-lg-9">
+                        <label for="nombre" class="form-label fw-semibold">
+                            Nombre de la asignatura
+                        </label>
+
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="nombre"
+                            name="nombre"
+                            maxlength="180"
+                            placeholder="Ej: Programación I"
+                            value="{{ asignatura.nombre|default:'' }}"
+                            required>
+                    </div>
+
+                    <!-- CARRERAS -->
+                    <div class="col-12">
+                        <label for="carreras" class="form-label fw-semibold">
+                            Carreras
+                        </label>
+
+                        <select
+                            class="form-select"
+                            id="carreras"
+                            name="carreras"
+                            multiple
+                            size="6">
+
+                            {% for carrera in carreras %}
+                                <option
+                                    value="{{ carrera.id }}"
+                                    {% if carrera.id in carreras_seleccionadas %}
+                                        selected
+                                    {% endif %}>
+
+                                    {% if carrera.codigo %}
+                                        {{ carrera.codigo }} -
+                                    {% endif %}
+
+                                    {{ carrera.nombre }}
+                                </option>
+                            {% endfor %}
+                        </select>
+
+                        <div class="form-text">
+                            Puedes seleccionar una o varias carreras. Mantén presionada la tecla Ctrl (o Cmd en Mac) para seleccionar varias.
+                        </div>
+                    </div>
+
+                    <!-- ACTIVO -->
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                id="activo"
+                                name="activo"
+                                {% if not asignatura or asignatura.activo %}checked{% endif %}>
+
+                            <label class="form-check-label fw-semibold" for="activo">
+                                Asignatura activa
+                            </label>
+                        </div>
+
+                        <div class="form-text">
+                            Indica si la asignatura se encuentra disponible en el sistema.
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- BOTONES -->
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'asignatura_list' %}" class="btn btn-outline-secondary">
+                        ← Volver
+                    </a>
+
+                    <button type="submit" class="btn btn-rojo px-4">
                         {% if asignatura %}
-                            Editar Asignatura
+                            Guardar cambios
                         {% else %}
-                            Nueva Asignatura
+                            Guardar
                         {% endif %}
-                    </h4>
-
-                    <p class="text-muted mb-0 small">
-                        Ingresa los datos de la asignatura y selecciona las carreras asociadas.
-                    </p>
-
+                    </button>
                 </div>
 
-
-                <!-- CONTENIDO -->
-                <div class="card-body p-4">
-
-                    <!-- MENSAJE DE VALIDACIÓN -->
-                    {% if error %}
-                        <div class="alert alert-danger" role="alert">
-                            {{ error }}
-                        </div>
-                    {% endif %}
-
-
-                    <form method="POST" novalidate>
-                        {% csrf_token %}
-
-
-                        <!-- CÓDIGO -->
-                        <div class="mb-3">
-
-                            <label for="codigo"
-                                   class="form-label fw-semibold">
-                                Código
-                            </label>
-
-                            <input
-                                type="text"
-                                class="form-control"
-                                id="codigo"
-                                name="codigo"
-                                maxlength="30"
-                                placeholder="Ej: INF101"
-                                value="{{ asignatura.codigo|default:'' }}">
-
-                            <div class="form-text">
-                                Código identificador de la asignatura. Este campo es opcional.
-                            </div>
-
-                        </div>
-
-
-                        <!-- NOMBRE -->
-                        <div class="mb-3">
-
-                            <label for="nombre"
-                                   class="form-label fw-semibold">
-                                Nombre de la asignatura
-                            </label>
-
-                            <input
-                                type="text"
-                                class="form-control"
-                                id="nombre"
-                                name="nombre"
-                                maxlength="180"
-                                placeholder="Ej: Programación I"
-                                value="{{ asignatura.nombre|default:'' }}"
-                                required>
-
-                        </div>
-
-
-                        <!-- CARRERAS -->
-                        <div class="mb-3">
-
-                            <label for="carreras"
-                                   class="form-label fw-semibold">
-                                Carreras
-                            </label>
-
-                            <select
-                                class="form-select"
-                                id="carreras"
-                                name="carreras"
-                                multiple
-                                size="6">
-
-                                {% for carrera in carreras %}
-
-                                    <option
-                                        value="{{ carrera.id }}"
-                                        {% if carrera.id in carreras_seleccionadas %}
-                                            selected
-                                        {% endif %}>
-
-                                        {% if carrera.codigo %}
-                                            {{ carrera.codigo }} -
-                                        {% endif %}
-
-                                        {{ carrera.nombre }}
-
-                                    </option>
-
-                                {% endfor %}
-
-                            </select>
-
-                            <div class="form-text">
-                                Puedes seleccionar una o varias carreras.
-                                Mantén presionada la tecla Ctrl para seleccionar varias.
-                            </div>
-
-                        </div>
-
-
-                        <!-- ACTIVO -->
-                        <div class="mb-4">
-
-                            <div class="form-check">
-
-                                <input
-                                    class="form-check-input"
-                                    type="checkbox"
-                                    id="activo"
-                                    name="activo"
-                                    {% if not asignatura or asignatura.activo %}checked{% endif %}>
-
-                                <label
-                                    class="form-check-label fw-semibold"
-                                    for="activo">
-                                    Asignatura activa
-                                </label>
-
-                            </div>
-
-                            <div class="form-text">
-                                Indica si la asignatura se encuentra disponible en el sistema.
-                            </div>
-
-                        </div>
-
-
-                        <!-- BOTONES -->
-                        <div class="d-flex justify-content-between align-items-center">
-
-                            <a href="{% url 'asignatura_list' %}"
-                               class="btn btn-outline-secondary">
-                                ← Volver
-                            </a>
-
-                            <button type="submit"
-                                    class="btn btn-rojo px-4">
-
-                                {% if asignatura %}
-                                    Guardar cambios
-                                {% else %}
-                                    Guardar
-                                {% endif %}
-
-                            </button>
-
-                        </div>
-
-                    </form>
-
-                </div>
-
-            </div>
+            </form>
 
         </div>
 
     </div>
 
 </div>
-
 {% endblock %}

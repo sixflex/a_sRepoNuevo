@@ -6,169 +6,168 @@
 
 {% block content %}
 
-<div class="container mt-4">
+<div class="container-fluid py-2">
 
-    <div class="row justify-content-center">
-        <div class="col-lg-8 col-md-10">
+    <div class="card shadow-sm border-0">
 
-            <div class="card shadow-sm border-0">
+        <!-- ENCABEZADO -->
+        <div class="card-header bg-white border-bottom py-3">
 
-                <!-- ENCABEZADO -->
-                <div class="card-header bg-white border-bottom py-3">
+            <h1 class="h4 mb-1 fw-bold">
+                {% if campus %}
+                    Editar Campus
+                {% else %}
+                    Nuevo Campus
+                {% endif %}
+            </h1>
 
-                    <h4 class="mb-1 fw-bold">
-                        {% if campus %}
-                            Editar Campus
-                        {% else %}
-                            Nuevo Campus
-                        {% endif %}
-                    </h4>
+            <p class="text-muted mb-0 small">
+                Ingresa los datos del campus y selecciona la sede a la que pertenece.
+            </p>
 
-                    <p class="text-muted mb-0 small">
-                        Ingresa los datos del campus y selecciona la sede a la que pertenece.
-                    </p>
+        </div>
 
+        <!-- CONTENIDO -->
+        <div class="card-body p-4">
+
+            <!-- VALIDACIÓN -->
+            {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
                 </div>
+            {% endif %}
 
-                <!-- CONTENIDO -->
-                <div class="card-body p-4">
+            <p class="text-muted small mb-3">Los campos marcados con <span class="text-danger" aria-hidden="true">*</span> son obligatorios.</p>
 
-                    <!-- VALIDACIÓN -->
-                    {% if error %}
-                        <div class="alert alert-danger" role="alert">
-                            {{ error }}
-                        </div>
-                    {% endif %}
+            <form method="POST">
+                {% csrf_token %}
 
-                    <form method="POST">
-                        {% csrf_token %}
+                <div class="row g-3 mb-4">
 
-                        <!-- SEDE -->
-                        <div class="mb-3">
+                    <!-- SEDE -->
+                    <div class="col-12 col-md-6">
 
-                            <label for="sede"
-                                   class="form-label fw-semibold">
-                                Sede
-                            </label>
+                        <label for="sede"
+                               class="form-label fw-semibold">
+                            Sede <span class="text-danger" aria-hidden="true">*</span>
+                        </label>
 
-                            <select
-                                class="form-select"
-                                id="sede"
-                                name="sede"
-                                required>
+                        <select
+                            class="form-select"
+                            id="sede"
+                            name="sede"
+                            aria-describedby="sede-ayuda"
+                            required>
 
-                                <option value="">
-                                    Seleccione una sede
+                            <option value="">
+                                Seleccione una sede
+                            </option>
+
+                            {% for s in sedes %}
+                                <option
+                                    value="{{ s.id }}"
+                                    {% if campus and campus.sede_id == s.id %}
+                                        selected
+                                    {% endif %}>
+                                    {{ s.nombre }}
                                 </option>
+                            {% endfor %}
 
-                                {% for s in sedes %}
-                                    <option
-                                        value="{{ s.id }}"
-                                        {% if campus and campus.sede_id == s.id %}
-                                            selected
-                                        {% endif %}>
-                                        {{ s.nombre }}
-                                    </option>
-                                {% endfor %}
+                        </select>
 
-                            </select>
-
-                            <div class="form-text">
-                                Selecciona la sede a la que pertenece este campus.
-                            </div>
-
+                        <div class="form-text" id="sede-ayuda">
+                            Selecciona la sede a la que pertenece este campus.
                         </div>
 
-                        <!-- NOMBRE -->
-                        <div class="mb-3">
+                    </div>
 
-                            <label for="nombre"
-                                   class="form-label fw-semibold">
-                                Nombre del campus
-                            </label>
+                    <!-- NOMBRE -->
+                    <div class="col-12 col-md-6">
+
+                        <label for="nombre"
+                               class="form-label fw-semibold">
+                            Nombre del campus <span class="text-danger" aria-hidden="true">*</span>
+                        </label>
+
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="nombre"
+                            name="nombre"
+                            placeholder="Ej: Campus Providencia"
+                            value="{{ campus.nombre|default:'' }}"
+                            required>
+
+                    </div>
+
+                    <!-- DIRECCIÓN -->
+                    <div class="col-12">
+
+                        <label for="direccion"
+                               class="form-label fw-semibold">
+                            Dirección
+                        </label>
+
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="direccion"
+                            name="direccion"
+                            placeholder="Ej: Avenida Pedro de Valdivia 425"
+                            value="{{ campus.direccion|default:'' }}">
+
+                    </div>
+
+                    <!-- ACTIVO -->
+                    <div class="col-12">
+
+                        <div class="form-check">
 
                             <input
-                                type="text"
-                                class="form-control"
-                                id="nombre"
-                                name="nombre"
-                                placeholder="Ej: Campus Providencia"
-                                value="{{ campus.nombre|default:'' }}"
-                                required>
+                                class="form-check-input"
+                                type="checkbox"
+                                id="activo"
+                                name="activo"
+                            aria-describedby="activo-ayuda"
+                                {% if not campus or campus.activo %}checked{% endif %}>
 
-                        </div>
-
-                        <!-- DIRECCIÓN -->
-                        <div class="mb-3">
-
-                            <label for="direccion"
-                                   class="form-label fw-semibold">
-                                Dirección
+                            <label
+                                class="form-check-label fw-semibold"
+                                for="activo">
+                                Campus activo
                             </label>
 
-                            <input
-                                type="text"
-                                class="form-control"
-                                id="direccion"
-                                name="direccion"
-                                placeholder="Ej: Avenida Pedro de Valdivia 425"
-                                value="{{ campus.direccion|default:'' }}">
-
                         </div>
 
-                        <!-- ACTIVO -->
-                        <div class="mb-4">
-
-                            <div class="form-check">
-
-                                <input
-                                    class="form-check-input"
-                                    type="checkbox"
-                                    id="activo"
-                                    name="activo"
-                                    {% if not campus or campus.activo %}checked{% endif %}>
-
-                                <label
-                                    class="form-check-label fw-semibold"
-                                    for="activo">
-                                    Campus activo
-                                </label>
-
-                            </div>
-
-                            <div class="form-text">
-                                Indica si el campus se encuentra disponible en el sistema.
-                            </div>
-
+                        <div class="form-text" id="activo-ayuda">
+                            Indica si el campus se encuentra disponible en el sistema.
                         </div>
 
-                        <!-- BOTONES -->
-                        <div class="d-flex justify-content-between align-items-center">
-
-                            <a href="{% url 'campus_list' %}"
-                               class="btn btn-outline-secondary">
-                                ← Volver
-                            </a>
-
-                            <button
-                                type="submit"
-                                class="btn btn-rojo px-4">
-
-                                {% if campus %}
-                                    Guardar cambios
-                                {% else %}
-                                    Guardar
-                                {% endif %}
-
-                            </button>
-
-                        </div>
-
-                    </form>
+                    </div>
 
                 </div>
 
-            </div>
+                <!-- BOTONES -->
+                <div class="d-flex justify-content-between align-items-center">
+
+                    <a href="{% url 'campus_list' %}"
+                       class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver</a>
+
+                    <button
+                        type="submit"
+                        class="btn btn-rojo px-4">
+
+                        {% if campus %}
+                            Guardar cambios
+                        {% else %}
+                            Guardar
+                        {% endif %}
+
+                    </button>
+
+                </div>
+
+            </form>
 
         </div>
 

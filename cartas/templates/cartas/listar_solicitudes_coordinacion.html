@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+        <h2>Solicitudes de Cartas de Presentación</h2>
+        <p class="text-muted mb-0">
+            Revisa las solicitudes realizadas para las secciones A+S.
+        </p>
+    </div>
+
+    <a
+        href="{% url 'core:coordinacion' %}"
+        class="btn btn-outline-secondary"
+    >
+        ← Volver al Panel
+    </a>
+</div>
+
+    <div class="card shadow-sm">
+
+        <div class="card-body">
+
+            {% if solicitudes %}
+
+                <div class="table-responsive">
+
+                    <table class="table align-middle">
+
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Asignatura</th>
+                                <th>Solicitante</th>
+                                <th>Institución</th>
+                                <th>Estado</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for solicitud in solicitudes %}
+
+                                <tr>
+
+                                    <td>
+                                        {{ solicitud.fecha_solicitud|date:"d/m/Y H:i" }}
+                                    </td>
+
+                                    <td>
+                                        {{ solicitud.seccion.asignatura.nombre }}
+                                        <div class="small text-muted">
+                                            NRC {{ solicitud.seccion.nrc }}
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        {{ solicitud.solicitante_nombre }}
+                                    </td>
+
+                                    <td>
+                                        {{ solicitud.institucion_receptora }}
+                                    </td>
+
+                                    <td>
+
+                                        {% if solicitud.estado == "PENDIENTE" %}
+
+                                            <span class="badge bg-warning text-dark">
+                                                PENDIENTE
+                                            </span>
+
+                                        {% elif solicitud.estado == "APROBADA" %}
+
+                                            <span class="badge bg-success">
+                                                APROBADA
+                                            </span>
+
+                                        {% elif solicitud.estado == "OBSERVADA" %}
+
+                                            <span class="badge bg-danger">
+                                                OBSERVADA
+                                            </span>
+
+                                        {% else %}
+
+                                            <span class="badge bg-secondary">
+                                                {{ solicitud.estado }}
+                                            </span>
+
+                                        {% endif %}
+
+                                    </td>
+
+                                    <td class="text-end">
+
+                                        <a
+                                            href="{% url 'cartas:detalle_solicitud_coordinacion' solicitud.id %}"
+                                            class="btn btn-sm btn-outline-primary"
+                                        >
+                                            Revisar
+                                        </a>
+
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            {% else %}
+
+                <div class="alert alert-info mb-0">
+                    No existen solicitudes de cartas.
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

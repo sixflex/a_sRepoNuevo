@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-4">
+
+    <!-- ENCABEZADO -->
+    <div class="mb-4">
+        <h2 class="fw-bold mb-1">
+            Registro de equipos y estudiantes
+        </h2>
+
+        <p class="text-muted mb-0">
+            {{ seccion.asignatura.nombre }}
+            — Sección {{ seccion.seccion }}
+            — NRC {{ seccion.nrc }}
+        </p>
+    </div>
+
+
+    <!-- ESTADO DEL FORMULARIO -->
+    <div class="card shadow-sm border-0">
+
+        <div class="card-body p-4">
+
+            <h5 class="fw-bold mb-3">
+                Estado del formulario
+            </h5>
+
+            {% if enlace and enlace.activo %}
+
+                <!-- FORMULARIO HABILITADO -->
+                <div class="alert alert-success">
+                    <strong>Formulario habilitado.</strong>
+                    Los estudiantes pueden acceder al registro mediante
+                    el enlace o código QR generado para esta sección.
+                </div>
+
+
+                <!-- INFORMACIÓN DE VIGENCIA -->
+                <div class="row mb-4">
+
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <div class="text-muted small">
+                            Habilitado desde
+                        </div>
+
+                        <div class="fw-semibold">
+                            {{ enlace.fecha_inicio|date:"d/m/Y H:i" }}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="text-muted small">
+                            Válido hasta
+                        </div>
+
+                        <div class="fw-semibold">
+                            {{ enlace.fecha_expiracion|date:"d/m/Y H:i" }}
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <!-- ENLACE PARA ESTUDIANTES -->
+                <div class="mb-4">
+
+                    <label
+                        for="urlRegistro"
+                        class="form-label fw-bold"
+                    >
+                        Enlace para estudiantes
+                    </label>
+
+                    <div class="input-group">
+
+                        <input
+                            type="text"
+                            id="urlRegistro"
+                            class="form-control"
+                            value="{{ url_registro }}"
+                            readonly
+                        >
+
+                        <button
+                            type="button"
+                            class="btn btn-outline-secondary"
+                            onclick="copiarEnlace()"
+                        >
+                            Copiar enlace
+                        </button>
+
+                    </div>
+
+                    <div class="form-text">
+                        Este enlace está asociado exclusivamente a esta sección.
+                        El contexto académico no puede ser modificado desde la URL.
+                    </div>
+
+                </div>
+
+
+                <!-- CÓDIGO QR -->
+                {% if qr_base64 %}
+
+                    <div class="border-top pt-4 mb-4">
+
+                        <div class="row align-items-center">
+
+                            <!-- INFORMACIÓN -->
+                            <div class="col-md-7">
+
+                                <h5 class="fw-bold mb-2">
+                                    Código QR
+                                </h5>
+
+                                <p class="text-muted mb-2">
+                                    Los estudiantes pueden escanear este código
+                                    para acceder directamente al formulario de
+                                    registro correspondiente a esta sección.
+                                </p>
+
+                                <p class="text-muted small mb-md-0">
+                                    El código QR utiliza el mismo enlace único
+                                    mostrado anteriormente y mantiene el contexto
+                                    académico de la sección.
+                                </p>
+
+                            </div>
+
+
+                            <!-- QR -->
+                            <div class="col-md-5 text-center mt-3 mt-md-0">
+
+                                <div
+                                    class="d-inline-block bg-white border rounded p-3"
+                                >
+
+                                    <img
+                                        src="data:image/png;base64,{{ qr_base64 }}"
+                                        alt="Código QR para registro de equipos"
+                                        width="220"
+                                        height="220"
+                                        class="img-fluid"
+                                    >
+
+                                </div>
+
+                                <div class="text-muted small mt-2">
+                                    Escanear para acceder al formulario
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                {% endif %}
+
+
+                <!-- CERRAR FORMULARIO -->
+                <div class="border-top pt-4">
+
+                    <p class="text-muted mb-3">
+                        Al cerrar el formulario, los estudiantes dejarán
+                        de poder acceder mediante el enlace y el código QR.
+                    </p>
+
+                    <form method="POST">
+                        {% csrf_token %}
+
+                        <input
+                            type="hidden"
+                            name="accion"
+                            value="cerrar"
+                        >
+
+                        <button
+                            type="submit"
+                            class="btn btn-danger"
+                        >
+                            Cerrar formulario
+                        </button>
+
+                    </form>
+
+                </div>
+
+
+            {% else %}
+
+                <!-- FORMULARIO CERRADO -->
+                <div class="alert alert-secondary">
+                    <strong>Formulario cerrado.</strong>
+                    Actualmente los estudiantes no pueden registrar equipos
+                    para esta sección.
+                </div>
+
+                <p class="text-muted">
+                    Al habilitar el formulario se generará un enlace único
+                    y un código QR asociados a esta sección con una
+                    vigencia de 7 días.
+                </p>
+
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <input
+                        type="hidden"
+                        name="accion"
+                        value="habilitar"
+                    >
+
+                    <button
+                        type="submit"
+                        class="btn btn-rojo"
+                    >
+                        Habilitar formulario
+                    </button>
+
+                </form>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <!-- VOLVER -->
+    <div class="mt-3">
+
+        <a
+            href="{% url 'core:detalle_seccion' seccion.id %}"
+            class="btn btn-outline-secondary"
+        >
+            ← Volver a la sección
+        </a>
+
+    </div>
+
+</div>
+
+
+<!-- COPIAR ENLACE -->
+<script>
+function copiarEnlace() {
+
+    const campo = document.getElementById("urlRegistro");
+
+    if (!campo) {
+        return;
+    }
+
+    navigator.clipboard.writeText(campo.value)
+        .then(function() {
+            alert("Enlace copiado al portapapeles.");
+        })
+        .catch(function() {
+
+            campo.select();
+            campo.setSelectionRange(0, 99999);
+
+            document.execCommand("copy");
+
+            alert("Enlace copiado al portapapeles.");
+        });
+}
+</script>
+
+{% endblock %}

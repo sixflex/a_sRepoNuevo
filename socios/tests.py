@@ -1,8 +1,15 @@
+from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+
+from comunicaciones.models import EnvioCorreo
+from encuestas.models import FormularioPlantilla, FormularioVersion, RespuestaFormulario
+from socios.models import Convocatoria, PostulacionSocio, SocioComunitario
+from socios.validators import validar_rut_chileno
 
 from .models import (
     ClasificacionSocio,
@@ -230,8 +237,164 @@ class PermisosTests(DatosBase):
         resp = self.client.get(reverse("socios:lista_coordinador"))
         self.assertNotEqual(resp.status_code, 200)
 
+class PostulacionSocioPublicaTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.coordinador = User.objects.create_user(
+            username="coord_test",
+            password="test-password-123",
+        )
+        grupo_coord, _ = Group.objects.get_or_create(name="Coordinador")
+        self.coordinador.groups.add(grupo_coord)
 
-# Pendientes (necesitan los modelos de academico, proyectos y encuestas):
-#  - filtros por sede, campus, carrera, período y año vía ParticipacionSocio
-#  - historial cronológico ordenado de participaciones
-#  - revisión de postulaciones (aprobar, rechazar con y sin motivo)
+        self.plantilla = FormularioPlantilla.objects.create(
+            codigo="POST-SOCIO-V1",
+            titulo="Formulario de Postulación de Socios",
+            proceso="POSTULACION",
+            activo=True,
+        )
+        self.version = FormularioVersion.objects.create(
+            plantilla=self.plantilla,
+            numero_version=1,
+            estado="PUBLICADO",
+            fecha_creacion=timezone.now(),
+        )
+
+        self.convocatoria_activa = Convocatoria.objects.create(
+            formulario_version=self.version,
+            nombre="Convocatoria A+S 2026",
+            fecha_inicio=timezone.now() - timedelta(days=2),
+            fecha_fin=timezone.now() + timedelta(days=15),
+            estado="PUBLICADA",
+        )
+
+        self.convocatoria_expirada = Convocatoria.objects.create(
+            formulario_version=self.version,
+            nombre="Convocatoria Antigua Pasada",
+            fecha_inicio=timezone.now() - timedelta(days=30),
+            fecha_fin=timezone.now() - timedelta(days=5),
+            estado="PUBLICADA",
+        )
+
+    # CDE-52: Validación de RUT chileno (Módulo 11)
+    def test_cde_52_validador_rut_chileno(self):
+        # Casos válidos matemáticos reales: numérico, con K y con 0
+        self.assertEqual(validar_rut_chileno("11.111.111-1"), "11111111-1")
+        self.assertEqual(validar_rut_chileno("11.111.112-k"), "11111112-K")
+        self.assertEqual(validar_rut_chileno("60.805.000-0"), "60805000-0")
+
+        # Casos inválidos
+        with self.assertRaises(ValidationError):
+            validar_rut_chileno("11.111.111-9")
+        with self.assertRaises(ValidationError):
+            validar_rut_chileno("invalido")
+        with self.assertRaises(ValidationError):
+            validar_rut_chileno("")
+
+    # CDE-49 / CDE-50: Formulario público y aviso de cierre
+    def test_cde_50_convocatoria_expirada_muestra_aviso_cierre(self):
+        url = reverse("socios:postular_convocatoria", args=[self.convocatoria_expirada.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "ha cerrado su período de postulación")
+
+    # CDE-49, CDE-51, CDE-52, CDE-53, CDE-56: Postulación válida y confirmación
+    def test_cde_53_postulacion_exitosa_crea_folio_y_auditoria_correo(self):
+        url = reverse("socios:postular_convocatoria", args=[self.convocatoria_activa.id])
+        data = {
+            "nombre_organizacion": "Junta de Vecinos San Joaquín",
+            "rut": "11.111.111-1",
+            "contacto_nombre": "Marta Gómez",
+            "correo": "marta.gomez@vecinos.cl",
+            "telefono": "+56911223344",
+            "linea_servicio": "TECNOLOGIA",
+            "detalle_adicional": "Requerimos capacitación en ofimática.",
+        }
+        response = self.client.post(url, data, follow=True)
+        self.assertEqual(response.status_code, 200)
+
+        postulacion = PostulacionSocio.objects.filter(
+            respuesta_formulario__respondente_rut="11111111-1"
+        ).first()
+        self.assertIsNotNone(postulacion)
+        self.assertEqual(postulacion.estado, "RECIBIDA")
+        self.assertEqual(postulacion.socio.nombre_organizacion, "Junta de Vecinos San Joaquín")
+        self.assertTrue(postulacion.socio.es_provisional)
+
+        self.assertContains(response, f"#{postulacion.id}")
+        self.assertContains(response, "¡Postulación Recibida con Éxito!")
+
+        registro_correo = EnvioCorreo.objects.filter(postulacion=postulacion).first()
+        self.assertIsNotNone(registro_correo)
+        self.assertEqual(registro_correo.destinatario, "marta.gomez@vecinos.cl")
+        self.assertEqual(registro_correo.resultado, "OK")
+
+    # CDE-52: Bloqueo de postulaciones duplicadas
+    def test_cde_52_bloquea_postulacion_duplicada_mismo_rut(self):
+        url = reverse("socios:postular_convocatoria", args=[self.convocatoria_activa.id])
+        data = {
+            "nombre_organizacion": "Fundación Esperanza",
+            "rut": "11.111.111-1",
+            "contacto_nombre": "Carlos Rojas",
+            "correo": "carlos@fundacion.cl",
+            "linea_servicio": "SALUD",
+        }
+        # Primer envío
+        self.client.post(url, data)
+
+        # Segundo envío con mismo RUT
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Ya existe una postulación registrada para el RUT 11111111-1")
+
+    # CDE-54, CDE-55, CDE-56: Revisión, motivo de rechazo y auditoría
+    def test_cde_54_y_55_revision_postulacion_coordinador(self):
+        socio = SocioComunitario.objects.create(
+            nombre_organizacion="Club Adulto Mayor",
+            rut="76123456-7",
+            estado_revision="RECIBIDO",
+            es_provisional=True,
+            activo=True,
+            fecha_creacion=timezone.now(),
+        )
+        resp = RespuestaFormulario.objects.create(
+            version=self.version,
+            fecha_envio=timezone.now(),
+            origen="PUBLICO",
+            es_historica=False,
+            respondente_correo="adultos@mayor.cl",
+            respondente_rut="76123456-7",
+            estado_registro="COMPLETO",
+        )
+        postulacion = PostulacionSocio.objects.create(
+            convocatoria=self.convocatoria_activa,
+            respuesta_formulario=resp,
+            socio=socio,
+            estado="RECIBIDA",
+            fecha_recepcion=timezone.now(),
+        )
+
+        self.client.force_login(self.coordinador)
+        url_revisar = reverse("socios:revisar_postulacion", args=[postulacion.id])
+
+        # Caso A: Rechazar sin motivo falla
+        response_rechazo_vacio = self.client.post(url_revisar, {
+            "estado": "RECHAZADA",
+            "motivo_rechazo": "",
+        }, follow=True)
+        postulacion.refresh_from_db()
+        self.assertEqual(postulacion.estado, "RECIBIDA")
+        self.assertContains(response_rechazo_vacio, "Debes indicar un motivo de rechazo.")
+
+        # Caso B: Rechazar con motivo registra estado y auditoría
+        response_rechazo_ok = self.client.post(url_revisar, {
+            "estado": "RECHAZADA",
+            "motivo_rechazo": "Cupos completos para la línea de trabajo.",
+        }, follow=True)
+        postulacion.refresh_from_db()
+        self.assertEqual(postulacion.estado, "RECHAZADA")
+        self.assertEqual(postulacion.motivo_rechazo, "Cupos completos para la línea de trabajo.")
+
+        envio_rechazo = EnvioCorreo.objects.filter(postulacion=postulacion, resultado="OK").last()
+        self.assertIsNotNone(envio_rechazo)
+        self.assertIn("Cupos completos para la línea de trabajo", envio_rechazo.cuerpo)

@@ -79,16 +79,25 @@ WSGI_APPLICATION = "portal_as.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT'),
+if os.getenv('DB_NAME') and os.getenv('DB_USER') and os.getenv('DB_PASSWORD'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME'),
+            'USER': os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('DB_PASSWORD'),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '5432'),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+         
+        }
+    }
 
 
 # Password validation
@@ -142,3 +151,52 @@ AUTH_USER_MODEL = 'usuarios.Usuario'
 LOGIN_URL = "usuarios:login"
 LOGIN_REDIRECT_URL = "core:inicio"
 LOGOUT_REDIRECT_URL = "usuarios:login"
+
+# Private file storage
+# SP3-T02: los binarios se almacenan fuera de PostgreSQL.
+PRIVATE_STORAGE_BACKEND = os.getenv(
+    "PRIVATE_STORAGE_BACKEND",
+    "archivos.storage.PrivateFileSystemStorage",
+)
+
+PRIVATE_STORAGE_ROOT = Path(
+    os.getenv(
+        "PRIVATE_STORAGE_ROOT",
+        str(BASE_DIR / "private_uploads"),
+    )
+)
+
+if not PRIVATE_STORAGE_ROOT.is_absolute():
+    PRIVATE_STORAGE_ROOT = BASE_DIR / PRIVATE_STORAGE_ROOT
+
+PRIVATE_STORAGE_MAX_FILE_SIZE_MB = int(
+    os.getenv("PRIVATE_STORAGE_MAX_FILE_SIZE_MB", "20")
+)
+
+PRIVATE_STORAGE_MAX_FILES_PER_ACTIVITY = int(
+    os.getenv("PRIVATE_STORAGE_MAX_FILES_PER_ACTIVITY", "10")
+)
+
+private_storage_options = {}
+if PRIVATE_STORAGE_BACKEND == "archivos.storage.PrivateFileSystemStorage":
+    private_storage_options["location"] = str(PRIVATE_STORAGE_ROOT)
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+    "private": {
+        "BACKEND": PRIVATE_STORAGE_BACKEND,
+        "OPTIONS": private_storage_options,
+    },
+}
+
+PRIVATE_STORAGE_ALLOWED_EXTENSIONS = os.getenv(
+    "PRIVATE_STORAGE_ALLOWED_EXTENSIONS",
+    "pdf,doc,docx,xls,xlsx,jpg,jpeg,png",
+).lower().split(",")
+
+PRIVATE_STORAGE_RETENTION_YEARS = int(os.getenv("PRIVATE_STORAGE_RETENTION_YEARS", "5"))

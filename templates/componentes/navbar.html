@@ -1,0 +1,34 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="#">Portal A+S</a>
+        
+        {% if show_sidebar_toggle %}
+        <button class="navbar-toggler d-lg-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas" aria-controls="sidebarOffcanvas">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        {% endif %}
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <i class="bi bi-three-dots-vertical"></i>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto align-items-lg-center">
+                {% if request.user.is_authenticated %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle me-1"></i> {{ request.user.username }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#">Mi Perfil</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="#">Cerrar Sesión</a></li>
+                    </ul>
+                </li>
+                {% else %}
+                <li class="nav-item"><a class="nav-link text-white" href="#">Iniciar Sesión</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>

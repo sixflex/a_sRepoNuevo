@@ -1,0 +1,71 @@
+{% comment %}
+Cabecera común del formulario, con las pestañas Preguntas / Respuestas / Publicar
+como en Forms. Recibe el contexto de views._contexto_version.
+{% endcomment %}
+<div class="enc-cabecera">
+    <a class="small text-muted text-decoration-none" href="{% url 'encuestas:lista' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Formularios</a>
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mt-1">
+        <div class="min-w-0">
+            <h1 class="page-title text-truncate" data-titulo-formulario>{{ version.plantilla.titulo }}</h1>
+            <p class="page-subtitle mb-0">
+                Versión {{ version.numero_version }} ·
+                <span class="enc-badge-estado enc-estado-{{ version.estado }}">{{ estado_nombre }}</span>
+                <span class="enc-estado-guardado ms-2" data-estado-guardado role="status" aria-live="polite"></span>
+            </p>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <a class="btn btn-light-ua" href="{% url 'encuestas:vista_previa' version.id %}" target="_blank" rel="noopener">
+                <i class="bi bi-eye me-1" aria-hidden="true"></i>Vista previa
+            </a>
+            <div class="dropdown">
+                <button class="btn btn-light-ua" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Más acciones">
+                    <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <form method="post" action="{% url 'encuestas:copiar' version.id %}">{% csrf_token %}
+                            <button class="dropdown-item" type="submit"><i class="bi bi-files me-2" aria-hidden="true"></i>Copiar como formulario nuevo</button>
+                        </form>
+                    </li>
+                    <li>
+                        <form method="post" action="{% url 'encuestas:nueva_version' version.id %}">{% csrf_token %}
+                            <button class="dropdown-item" type="submit"><i class="bi bi-layers me-2" aria-hidden="true"></i>Crear nueva versión</button>
+                        </form>
+                    </li>
+                    {% with otras=version.plantilla.versiones.all %}
+                        {% if otras|length > 1 %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Versiones</h6></li>
+                            {% for otra in otras %}
+                                <li><a class="dropdown-item{% if otra.id == version.id %} active{% endif %}" href="{% url 'encuestas:editor' otra.id %}">
+                                    Versión {{ otra.numero_version }} · {{ otra.estado|lower|capfirst }}</a></li>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    <nav class="enc-pestanas" aria-label="Partes del formulario">
+        <a href="{% url 'encuestas:editor' version.id %}" {% if pestana == "preguntas" %}class="activa" aria-current="page"{% endif %}>Preguntas</a>
+        <a href="{% url 'encuestas:respuestas' version.id %}" {% if pestana == "respuestas" %}class="activa" aria-current="page"{% endif %}>
+            Respuestas <span class="enc-contador">{{ total_respuestas }}</span>
+        </a>
+        <a href="{% url 'encuestas:publicacion' version.id %}" {% if pestana == "publicar" %}class="activa" aria-current="page"{% endif %}>Publicar, enlace y QR</a>
+    </nav>
+</div>
+
+{% include "includes/messages.html" %}
+
+{% if not editable and pestana == "preguntas" %}
+    <div class="alert alert-warning d-flex justify-content-between align-items-center flex-wrap gap-2" role="status">
+        <span>
+            <i class="bi bi-lock me-1" aria-hidden="true"></i>
+            {% if tiene_respuestas %}Esta versión ya tiene respuestas, así que no se modifica.{% else %}Esta versión está {{ estado_nombre|lower }} y no se modifica.{% endif %}
+            Para cambiarla, crea una versión nueva: las respuestas anteriores quedan en esta.
+        </span>
+        <form method="post" action="{% url 'encuestas:nueva_version' version.id %}">{% csrf_token %}
+            <button class="btn btn-ua btn-sm" type="submit">Crear nueva versión</button>
+        </form>
+    </div>
+{% endif %}

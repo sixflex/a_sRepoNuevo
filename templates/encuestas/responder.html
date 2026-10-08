@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ version.plantilla.titulo }} | Portal A+S{% endblock %}
+
+{% block extra_css %}{% include "encuestas/includes/css.html" %}{% endblock %}
+
+{% block content_public %}
+<div class="container enc-contenedor py-4">
+    {% if vista_previa %}
+        <div class="enc-aviso-preview mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span><i class="bi bi-eye me-1" aria-hidden="true"></i>Vista previa de la versión {{ version.numero_version }}. Las respuestas no se guardan.</span>
+            <a class="btn btn-sm btn-light-ua" href="{% url 'encuestas:editor' version.id %}">Volver al editor</a>
+        </div>
+    {% endif %}
+
+    <div class="card-ua enc-encabezado p-4 mb-3">
+        <h1 class="enc-titulo mb-2">{{ version.plantilla.titulo }}</h1>
+        {% if version.plantilla.descripcion %}
+            <p class="enc-texto mb-0">{{ version.plantilla.descripcion }}</p>
+        {% endif %}
+        <p class="small text-muted mt-3 mb-0"><span class="enc-obligatoria">*</span> Obligatorio</p>
+    </div>
+
+    {% if form.errors %}
+        {# Resumen de errores al inicio, con enlace a cada pregunta (buena práctica de accesibilidad). #}
+        <div class="alert alert-danger enc-resumen-errores" role="alert" tabindex="-1" data-resumen-errores>
+            {% for error in form.non_field_errors %}<p class="mb-1 fw-semibold">{{ error }}</p>{% endfor %}
+            {% if form.errors|length > form.non_field_errors|length %}
+                <p class="mb-1 fw-semibold">Revisa estas preguntas antes de enviar:</p>
+                <ul class="mb-0">
+                    {% for seccion in form.secciones %}{% for item in seccion.preguntas %}{% if item.campo.errors %}
+                        <li><a href="#pregunta-{{ item.pregunta.id }}">{{ item.pregunta.texto|truncatechars:80 }}</a>: {{ item.campo.errors.0 }}</li>
+                    {% endif %}{% endfor %}{% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" novalidate data-formulario-dinamico
+          {% if vista_previa %}onsubmit="return false;"{% endif %}>
+        {% csrf_token %}
+        <input type="hidden" name="clave_envio" value="{{ clave_envio }}">
+
+        {% for seccion in form.secciones %}
+            <section class="card-ua p-4 mb-3" id="seccion-{{ seccion.bloque.id }}" data-seccion="{{ seccion.bloque.id }}"
+                     {% if seccion.regla_json %}data-regla="{{ seccion.regla_json }}"{% endif %}
+                     {% if not seccion.visible %}hidden{% endif %}>
+                {% if seccion.bloque.titulo %}<h2 class="enc-seccion-titulo">{{ seccion.bloque.titulo }}</h2>{% endif %}
+                {% if seccion.bloque.descripcion %}<p class="enc-texto">{{ seccion.bloque.descripcion }}</p>{% endif %}
+                {% for item in seccion.preguntas %}
+                    {% include "encuestas/includes/pregunta.html" %}
+                {% endfor %}
+            </section>
+        {% endfor %}
+
+        <div class="d-flex justify-content-end">
+            <button type="submit" class="btn btn-ua px-4 py-2" data-enviar {% if vista_previa %}disabled{% endif %}>
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true" hidden data-enviando></span>Enviar
+            </button>
+        </div>
+    </form>
+</div>
+<script src="{% static 'js/formulario_dinamico.js' %}"></script>
+{% endblock %}

@@ -10,4 +10,9 @@ urlpatterns = [
     path("coordinacion/<int:socio_id>/historial/", views.detalle_historial_socio, name="detalle_historial"),
     path("postulaciones/", views.lista_postulaciones, name="lista_postulaciones"),
     path("postulaciones/<int:postulacion_id>/revisar/", views.revisar_postulacion, name="revisar_postulacion"),
+    path("ruta/actividad/<int:actividad_id>/asociar-socio/", views.asociar_socio_equipo, name="asociar_socio_equipo"),
+
+    path("postular/", views.postular_publico, name="postular_publico"),
+    path("postular/<int:convocatoria_id>/", views.postular_publico, name="postular_convocatoria"),
+    path("postular/confirmacion/<int:postulacion_id>/", views.postulacion_exitosa, name="postulacion_exitosa"),
 ]

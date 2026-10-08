@@ -21,3 +21,6 @@ staticfiles/
 # Sistema operativo
 .DS_Store
 Thumbs.db
+
+# Archivos privados subidos por usuarios
+private_uploads/

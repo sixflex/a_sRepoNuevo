@@ -1,0 +1,125 @@
+{% comment %}
+Una pregunta del formulario público. Recibe `item` desde RespuestaFormularioForm.secciones().
+Las reglas de visibilidad van en data-regla para que formulario_dinamico.js muestre u oculte.
+{% endcomment %}
+{% with p=item.pregunta campo=item.campo %}
+<div class="enc-pregunta{% if campo.errors %} tiene-error{% endif %}"
+     id="pregunta-{{ p.id }}"
+     data-pregunta="{{ p.id }}"
+     {% if item.condicionante %}data-condicionante="{{ p.id }}"{% endif %}
+     {% if item.regla_json %}data-regla="{{ item.regla_json }}"{% endif %}
+     {% if not item.visible %}hidden{% endif %}>
+
+    {% if p.tipo == "SELECTOR_PROGRAMA" %}
+        <fieldset aria-describedby="ayuda-{{ campo.html_name }}">
+            <legend class="enc-pregunta-texto fs-6">
+                {{ p.texto }}{% if p.obligatoria %}<span class="enc-obligatoria" aria-hidden="true">*</span>{% endif %}
+            </legend>
+            {% include "encuestas/includes/ayuda_pregunta.html" %}
+            <div class="enc-tabs" role="radiogroup" aria-label="{{ p.texto }}">
+                {% for o in item.opciones %}
+                    <label class="enc-tab" data-opcion {% if o.regla_json %}data-opcion-regla="{{ o.regla_json }}"{% endif %} {% if not o.visible %}hidden{% endif %}>
+                        <input type="radio" name="{{ campo.html_name }}" value="{{ o.opcion.valor }}"
+                               {% if item.valor == o.opcion.valor %}checked{% endif %}
+                               {% if o.opcion.es_otras %}data-es-otras{% endif %}>
+                        <span>{{ o.opcion.texto }}</span>
+                    </label>
+                {% endfor %}
+            </div>
+        </fieldset>
+
+    {% elif p.tipo == "ALTERNATIVA_UNICA" or p.tipo == "SELECCION_MULTIPLE" %}
+        <fieldset aria-describedby="ayuda-{{ campo.html_name }}">
+            <legend class="enc-pregunta-texto fs-6">
+                {{ p.texto }}{% if p.obligatoria %}<span class="enc-obligatoria" aria-hidden="true">*</span>{% endif %}
+            </legend>
+            {% include "encuestas/includes/ayuda_pregunta.html" %}
+            {% for o in item.opciones %}
+                <div class="form-check" data-opcion {% if o.regla_json %}data-opcion-regla="{{ o.regla_json }}"{% endif %} {% if not o.visible %}hidden{% endif %}>
+                    <input class="form-check-input"
+                           type="{% if p.tipo == 'SELECCION_MULTIPLE' %}checkbox{% else %}radio{% endif %}"
+                           name="{{ campo.html_name }}" id="{{ campo.html_name }}_{{ forloop.counter }}"
+                           value="{{ o.opcion.valor }}"
+                           {% if p.tipo == 'SELECCION_MULTIPLE' %}{% if o.opcion.valor in item.valor %}checked{% endif %}{% elif item.valor == o.opcion.valor %}checked{% endif %}
+                           {% if o.opcion.es_otras %}data-es-otras{% endif %}>
+                    <label class="form-check-label" for="{{ campo.html_name }}_{{ forloop.counter }}">{{ o.opcion.texto }}</label>
+                </div>
+            {% endfor %}
+        </fieldset>
+
+    {% else %}
+        <label class="enc-pregunta-texto" for="{{ campo.id_for_label }}">
+            {{ p.texto }}{% if p.obligatoria %}<span class="enc-obligatoria" aria-hidden="true">*</span>{% endif %}
+        </label>
+        {% include "encuestas/includes/ayuda_pregunta.html" %}
+
+        {% if p.tipo == "LISTA" %}
+            <select class="form-select" name="{{ campo.html_name }}" id="{{ campo.id_for_label }}" aria-describedby="ayuda-{{ campo.html_name }}"{% if p.obligatoria %} aria-required="true"{% endif %}{% if campo.errors %} aria-invalid="true"{% endif %}>
+                <option value="">Seleccione...</option>
+                {% for o in item.opciones %}
+                    <option data-opcion value="{{ o.opcion.valor }}" {% if item.valor == o.opcion.valor %}selected{% endif %}
+                            {% if o.regla_json %}data-opcion-regla="{{ o.regla_json }}"{% endif %}
+                            {% if not o.visible %}hidden disabled{% endif %}
+                            {% if o.opcion.es_otras %}data-es-otras{% endif %}>{{ o.opcion.texto }}</option>
+                {% endfor %}
+            </select>
+
+        {% elif p.tipo == "ESCALA" %}
+            {% if item.config.estilo == "numeros" %}
+                <div class="enc-escala-numeros" role="radiogroup" aria-label="{{ p.texto }}">
+                    {% for n in item.escala %}
+                        <label>
+                            <input type="radio" name="{{ campo.html_name }}" value="{{ n }}" {% if item.valor == n %}checked{% endif %}>{{ n }}
+                        </label>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="enc-estrellas" role="radiogroup" aria-label="{{ p.texto }}">
+                    {% for n in item.escala_desc %}
+                        <input type="radio" name="{{ campo.html_name }}" id="{{ campo.html_name }}_{{ n }}" value="{{ n }}" {% if item.valor == n %}checked{% endif %}>
+                        <label for="{{ campo.html_name }}_{{ n }}" title="{{ n }}"><span aria-hidden="true">★</span><span class="visually-hidden">{{ n }}</span></label>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {% if item.config.etiqueta_minimo or item.config.etiqueta_maximo %}
+                <div class="enc-escala-etiquetas mt-1">
+                    {{ item.escala.0 }} = {{ item.config.etiqueta_minimo|default:"mínimo" }} ·
+                    {{ item.escala|last }} = {{ item.config.etiqueta_maximo|default:"máximo" }}
+                </div>
+            {% endif %}
+
+        {% elif p.tipo == "TEXTO_LARGO" %}
+            <textarea class="form-control" rows="4" name="{{ campo.html_name }}" id="{{ campo.id_for_label }}"
+                      aria-describedby="ayuda-{{ campo.html_name }}"{% if p.obligatoria %} aria-required="true"{% endif %}{% if campo.errors %} aria-invalid="true"{% endif %}
+                      {% if item.config.largo_max %}maxlength="{{ item.config.largo_max }}" data-contador{% endif %}>{{ item.valor }}</textarea>
+
+        {% elif p.tipo == "ARCHIVO" %}
+            <input class="form-control" type="file" name="{{ campo.html_name }}" id="{{ campo.id_for_label }}"
+                   aria-describedby="ayuda-{{ campo.html_name }}"{% if p.obligatoria %} aria-required="true"{% endif %}{% if campo.errors %} aria-invalid="true"{% endif %}
+                   {% if item.config.extensiones %}accept="{% for e in item.config.extensiones %}.{{ e }}{% if not forloop.last %},{% endif %}{% endfor %}"{% endif %}>
+
+        {% else %}
+            <input class="form-control" name="{{ campo.html_name }}" id="{{ campo.id_for_label }}" value="{{ item.valor }}"
+                   aria-describedby="ayuda-{{ campo.html_name }}"{% if p.obligatoria %} aria-required="true"{% endif %}{% if campo.errors %} aria-invalid="true"{% endif %}
+                   {% if p.tipo == "NUMERO" %}type="number" step="any"{% if item.config.minimo is not None %} min="{{ item.config.minimo }}"{% endif %}{% if item.config.maximo is not None %} max="{{ item.config.maximo }}"{% endif %}
+                   {% elif p.tipo == "FECHA" %}type="date"
+                   {% elif p.tipo == "CORREO" %}type="email" autocomplete="email" placeholder="nombre@correo.cl"
+                   {% elif p.tipo == "RUT" %}type="text" inputmode="text" placeholder="12.345.678-5" autocomplete="off" data-rut
+                   {% else %}type="text"{% if item.config.largo_max %} maxlength="{{ item.config.largo_max }}" data-contador{% endif %}{% endif %}>
+        {% endif %}
+    {% endif %}
+
+    {% if item.campo_otro %}
+        <div class="mt-2" data-otro>
+            <label class="visually-hidden" for="{{ item.campo_otro.id_for_label }}">Detalle de Otros</label>
+            <input class="form-control form-control-sm" type="text" name="{{ item.campo_otro.html_name }}"
+                   id="{{ item.campo_otro.id_for_label }}" value="{{ item.campo_otro.value|default:'' }}"
+                   placeholder="Si eligió «Otros», indíquelo aquí">
+        </div>
+    {% endif %}
+
+    {% for error in campo.errors %}
+        <div class="enc-error" id="error-{{ campo.html_name }}"><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>{{ error }}</div>
+    {% endfor %}
+</div>
+{% endwith %}

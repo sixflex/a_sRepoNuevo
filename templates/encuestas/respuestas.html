@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Respuestas · {{ version.plantilla.titulo }} | Portal A+S{% endblock %}
+{% block extra_css %}{% include "encuestas/includes/css.html" %}{% endblock %}
+
+{% block content %}
+{% include "encuestas/includes/cabecera.html" %}
+
+<div class="enc-lienzo">
+    <div class="card-ua p-3 mb-3 d-flex flex-wrap align-items-center gap-3">
+        <div class="enc-total-respuestas">
+            <strong>{{ filas|length }}</strong> respuesta{{ filas|length|pluralize }}{% if programa %} en este programa{% endif %}
+        </div>
+        {% if programas %}
+            <form method="get" class="ms-auto d-flex align-items-center gap-2">
+                <label class="enc-nota text-nowrap" for="filtro-programa">Programa</label>
+                <select class="form-select form-select-sm" id="filtro-programa" name="programa" onchange="this.form.submit()">
+                    <option value="">Todos</option>
+                    {% for valor, texto in programas %}
+                        <option value="{{ valor }}" {% if valor == programa %}selected{% endif %}>{{ texto }}</option>
+                    {% endfor %}
+                </select>
+                <noscript><button class="btn btn-light-ua btn-sm" type="submit">Filtrar</button></noscript>
+            </form>
+        {% endif %}
+    </div>
+
+    {% if filas %}
+        <ul class="nav enc-subpestanas mb-3" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="tab-resumen" data-bs-toggle="tab" data-bs-target="#panel-resumen" type="button" role="tab" aria-controls="panel-resumen" aria-selected="true">
+                    <i class="bi bi-bar-chart me-1" aria-hidden="true"></i>Resumen
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-individual" data-bs-toggle="tab" data-bs-target="#panel-individual" type="button" role="tab" aria-controls="panel-individual" aria-selected="false">
+                    <i class="bi bi-person-lines-fill me-1" aria-hidden="true"></i>Individual
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="panel-resumen" role="tabpanel" aria-labelledby="tab-resumen" tabindex="0">
+                {% for fila in resumen %}
+                    <div class="enc-tarjeta enc-resumen">
+                        <h2 class="enc-resumen-titulo">{{ fila.pregunta.texto }}</h2>
+                        <p class="enc-nota mb-3">{{ fila.respondidas }} respuesta{{ fila.respondidas|pluralize }}{% if fila.promedio is not None %} · promedio <strong>{{ fila.promedio }}</strong> de {{ fila.maximo }}{% endif %}</p>
+                        {% if fila.opciones %}
+                            <ul class="enc-barras">
+                                {% for o in fila.opciones %}
+                                    <li>
+                                        <span class="enc-barra-texto">{{ o.texto }}{% if fila.pregunta.tipo == "ESCALA" %} <i class="bi bi-star-fill enc-estrella-mini" aria-hidden="true"></i>{% endif %}</span>
+                                        <span class="enc-barra-pista" aria-hidden="true"><span class="enc-barra-relleno" style="--pct: {{ o.porcentaje }}%"></span></span>
+                                        <span class="enc-barra-valor">{{ o.cantidad }} <span class="enc-nota">({{ o.porcentaje }}%)</span></span>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        {% if fila.textos %}
+                            {% if fila.opciones %}<p class="enc-nota mt-3 mb-1">Detalle de «Otros»:</p>{% endif %}
+                            <ul class="enc-textos">
+                                {% for texto in fila.textos %}<li>{{ texto }}</li>{% endfor %}
+                            </ul>
+                        {% elif not fila.opciones and fila.respondidas %}
+                            <p class="enc-nota mb-0">Revisa los archivos en la pestaña Individual.</p>
+                        {% elif not fila.respondidas %}
+                            <p class="enc-nota mb-0">Nadie respondió esta pregunta todavía.</p>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="tab-pane fade" id="panel-individual" role="tabpanel" aria-labelledby="tab-individual" tabindex="0">
+                <div class="enc-buscador mb-3">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <label class="visually-hidden" for="buscar-respuesta">Buscar por nombre, RUT o correo</label>
+                    <input type="search" class="form-control" id="buscar-respuesta" placeholder="Buscar por nombre, RUT o correo" data-buscar-respuesta>
+                </div>
+                <p class="enc-nota" data-sin-resultados hidden>No hay respuestas que coincidan con la búsqueda.</p>
+                {% for fila in filas %}
+                    {% with r=fila.respuesta %}
+                    <details class="enc-respuesta" data-respuesta
+                             data-texto="{{ r.respondente_nombre|default:'' }} {{ r.respondente_rut|default:'' }} {{ r.respondente_correo|default:'' }}">
+                        <summary>
+                            <span class="enc-respuesta-avatar" aria-hidden="true">{{ r.respondente_nombre|default:"?"|slice:":1"|upper }}</span>
+                            <span class="flex-grow-1 min-w-0">
+                                <span class="enc-respuesta-nombre">{{ r.respondente_nombre|default:r.respondente_correo|default:"Sin nombre" }}</span>
+                                <span class="enc-nota d-block">
+                                    {{ r.fecha_envio|date:"d/m/Y H:i" }}{% if r.respondente_rut %} · {{ r.respondente_rut }}{% endif %}{% if r.seccion %} · NRC {{ r.nrc_snapshot }}{% endif %}
+                                </span>
+                            </span>
+                            {% if r.carrera %}<span class="enc-condicion d-none d-sm-inline-block">{{ r.carrera.nombre }}</span>{% endif %}
+                            <i class="bi bi-chevron-down enc-respuesta-flecha" aria-hidden="true"></i>
+                        </summary>
+                        <div class="enc-respuesta-detalle">
+                            <dl class="row mb-0">
+                                {% for pregunta, texto in fila.detalle %}
+                                    <dt class="col-sm-5">{{ pregunta.texto }}</dt>
+                                    <dd class="col-sm-7">{{ texto|default:"—" }}</dd>
+                                {% endfor %}
+                            </dl>
+                            <p class="enc-nota mb-0 mt-2">Folio #{{ r.id }}</p>
+                        </div>
+                    </details>
+                    {% endwith %}
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <div class="card-ua empty-state">
+            <i class="bi bi-inbox" aria-hidden="true"></i>
+            <p class="mt-2 mb-0">{% if programa %}Aún no hay respuestas en este programa.{% else %}Esta versión todavía no tiene respuestas. Compártela desde «Publicar, enlace y QR».{% endif %}</p>
+        </div>
+    {% endif %}
+</div>
+<script src="{% static 'js/encuestas_respuestas.js' %}"></script>
+{% endblock %}

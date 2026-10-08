@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+
+    <div class="mb-4">
+        <a
+            href="{% url 'rutas:detalle_ruta_docente' actividad.seccion_ruta.id %}"
+            class="btn btn-outline-secondary mb-3"
+        >
+            ← Volver a la Ruta
+        </a>
+
+        <h2>Registro de Socio Comunitario</h2>
+
+        <p class="text-muted">
+            {{ seccion.asignatura.nombre }}
+            · NRC {{ seccion.nrc }}
+            · Sección {{ seccion.seccion }}
+        </p>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5>{{ actividad.ruta_actividad.nombre }}</h5>
+
+            {% if actividad.ruta_actividad.descripcion %}
+                <p class="text-muted mb-0">
+                    {{ actividad.ruta_actividad.descripcion }}
+                </p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if equipos and socios %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+
+                <h5 class="mb-3">
+                    Asociar Socio Comunitario
+                </h5>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Equipo
+                        </label>
+
+                        <select
+                            name="equipo"
+                            class="form-select"
+                            required
+                        >
+                            <option value="">
+                                Selecciona un equipo
+                            </option>
+
+                            {% for equipo in equipos %}
+                                <option value="{{ equipo.id }}">
+                                    Grupo {{ equipo.numero_grupo }}
+                                    {% if equipo.socio_comunitario %}
+                                        - Actual: {{ equipo.socio_comunitario.nombre_organizacion }}
+                                    {% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Socio Comunitario
+                        </label>
+
+                        <select
+                            name="socio"
+                            class="form-select"
+                            required
+                        >
+                            <option value="">
+                                Selecciona un Socio Comunitario
+                            </option>
+
+                            {% for socio in socios %}
+                                <option value="{{ socio.id }}">
+                                    {{ socio.nombre_organizacion }}
+                                    {% if socio.comuna %}
+                                        - {{ socio.comuna.nombre }}
+                                    {% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Motivo u observación
+                        </label>
+
+                        <textarea
+                            name="motivo"
+                            class="form-control"
+                            rows="3"
+                        ></textarea>
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                    >
+                        Guardar asociación
+                    </button>
+                </form>
+
+            </div>
+        </div>
+    {% elif not equipos %}
+        <div class="alert alert-warning">
+            Esta sección todavía no tiene equipos registrados.
+        </div>
+    {% else %}
+        <div class="alert alert-warning">
+            No existen Socios Comunitarios aprobados o disponibles.
+        </div>
+    {% endif %}
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <h5 class="mb-3">
+                Equipos de la sección
+            </h5>
+
+            {% for equipo in equipos %}
+                <div class="border rounded p-3 mb-2">
+
+                    <strong>
+                        Grupo {{ equipo.numero_grupo }}
+                    </strong>
+
+                    <div class="text-muted">
+                        {{ equipo.integrantes.count }}
+                        estudiante{{ equipo.integrantes.count|pluralize:"s" }}
+                    </div>
+
+                    {% if equipo.socio_comunitario %}
+                        <div class="mt-2">
+                            Socio Comunitario:
+                            <strong>
+                                {{ equipo.socio_comunitario.nombre_organizacion }}
+                            </strong>
+                        </div>
+                    {% else %}
+                        <div class="mt-2 text-warning">
+                            Sin Socio Comunitario asociado
+                        </div>
+                    {% endif %}
+
+                </div>
+            {% empty %}
+                <p class="text-muted mb-0">
+                    No existen equipos registrados.
+                </p>
+            {% endfor %}
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}
