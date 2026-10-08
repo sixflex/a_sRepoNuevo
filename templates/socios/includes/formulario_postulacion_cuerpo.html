@@ -1,0 +1,102 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/socios.css' %}">
+
+<div class="text-center mb-4">
+    <h1 class="page-title text-center">Convocatoria Socios Comunitarios</h1>
+    <p class="page-subtitle text-center">
+        Programa Aprendizaje + Servicio (A+S) · Universidad Autónoma de Chile
+    </p>
+</div>
+
+<div class="card-ua mb-4 p-4">
+    <h4 class="fw-bold mb-2" style="color: var(--ua-red, #b91c1c);">{{ convocatoria.nombre }}</h4>
+    <p class="text-muted mb-3">{{ convocatoria.descripcion|default:"Invitamos a organizaciones comunitarias, fundaciones y entidades a postular para colaborar con el programa A+S." }}</p>
+    <div class="d-flex flex-wrap gap-3 small text-muted">
+        <div><i class="bi bi-calendar-event me-1"></i><strong>Inicio:</strong> {{ convocatoria.fecha_inicio|date:"d/m/Y" }}</div>
+        {% if convocatoria.fecha_fin %}
+            <div><i class="bi bi-clock-history me-1"></i><strong>Cierre:</strong> {{ convocatoria.fecha_fin|date:"d/m/Y H:i" }}</div>
+        {% else %}
+            <div><i class="bi bi-check-circle me-1"></i><strong>Vigencia:</strong> Abierta continua</div>
+        {% endif %}
+    </div>
+</div>
+
+{% if errores %}
+    <div class="alert alert-danger shadow-sm mb-4" role="alert">
+        <h6 class="fw-bold mb-2"><i class="bi bi-exclamation-triangle-fill me-2"></i>Por favor corrige los siguientes inconvenientes:</h6>
+        <ul class="mb-0 ps-3">
+            {% for err in errores %}
+                <li>{{ err }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+<form method="post" class="card-ua p-4">
+    {% csrf_token %}
+    <h5 class="fw-bold border-bottom pb-2 mb-3">1. Datos de la Organización</h5>
+    <div class="row g-3 mb-3">
+        <div class="col-md-8">
+            <label for="nombre_organizacion" class="form-label-ua">Nombre de la Organización *</label>
+            <input type="text" class="form-control" id="nombre_organizacion" name="nombre_organizacion" required>
+        </div>
+        <div class="col-md-4">
+            <label for="rut" class="form-label-ua">RUT *</label>
+            <input type="text" class="form-control" id="rut" name="rut" required placeholder="12345678-5">
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <label for="clasificacion" class="form-label-ua">Tipo de Organización</label>
+            <select class="form-select" id="clasificacion" name="clasificacion">
+                <option value="">Seleccione clasificación...</option>
+                {% for clas in clasificaciones %}
+                    <option value="{{ clas.id }}">{{ clas.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label for="comuna" class="form-label-ua">Comuna</label>
+            <select class="form-select" id="comuna" name="comuna">
+                <option value="">Seleccione comuna...</option>
+                {% for com in comunas %}
+                    <option value="{{ com.id }}">{{ com.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <h5 class="fw-bold border-bottom pb-2 mb-3">2. Contacto Principal</h5>
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <label for="contacto_nombre" class="form-label-ua">Nombre del Contacto *</label>
+            <input type="text" class="form-control" id="contacto_nombre" name="contacto_nombre" required>
+        </div>
+        <div class="col-md-3">
+            <label for="correo" class="form-label-ua">Correo Electrónico *</label>
+            <input type="email" class="form-control" id="correo" name="correo" required>
+        </div>
+        <div class="col-md-3">
+            <label for="telefono" class="form-label-ua">Teléfono</label>
+            <input type="tel" class="form-control" id="telefono" name="telefono">
+        </div>
+    </div>
+
+    <h5 class="fw-bold border-bottom pb-2 mb-3">3. Requerimiento</h5>
+    <div class="mb-3">
+        <label for="linea_servicio" class="form-label-ua">Área de Colaboración *</label>
+        <select class="form-select" id="linea_servicio" name="linea_servicio" required>
+            <option value="">Seleccione...</option>
+            <option value="TECNOLOGIA">Tecnología y Sistemas</option>
+            <option value="SALUD">Salud Comunitaria</option>
+            <option value="JURIDICO">Asesoría Jurídica</option>
+            <option value="GESTION">Gestión Comercial</option>
+            <option value="OTRA">Otra</option>
+        </select>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mt-4">
+        <button type="submit" class="btn btn-ua px-4 py-2">Enviar Postulación</button>
+    </div>
+</form>
