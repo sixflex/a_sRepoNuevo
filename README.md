@@ -116,6 +116,9 @@ El sistema cuenta con un servicio común para registrar de forma uniforme las op
 ### Ejemplo de Uso en Servicios/Vistas
 Para registrar un evento desde cualquier módulo, se utiliza el servicio común de auditoría:
 
+### Ejemplo de Uso en Servicios/Vistas
+Para registrar un evento desde cualquier módulo, se utiliza el servicio común de auditoría:
+
 ```python
 from auditoria.services import AuditService
 
@@ -126,10 +129,12 @@ AuditService.registrar_evento(
     resultado="EXITO",
     detalles={"campo_modificado": "nombre", "valor_nuevo": "Ejemplo"}
 )
+```
+
 
 ### Cada integrante trabaja en su rama personal. Cuando termina su tarea, hace un Pull Request de su rama hacia develop. Ahí se integran todos los cambios del sprint y ustedes prueban que el proyecto funcione completo.
 ### Cuando ya terminó el sprint y develop está estable, recién hacen un Pull Request de develop hacia main.
 ### Entonces:
 ### rama personal = trabajo de cada integrante
 ### develop = unión de todo el trabajo del sprint
-#### main = versión estable/final 
+#### main = versión estable/final
