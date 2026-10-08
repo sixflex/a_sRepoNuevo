@@ -1,0 +1,41 @@
+{% comment %}
+Tarjeta de una pregunta en el constructor: muestra la pregunta tal como la verá
+quien responde. Al hacer clic se abre su editor en el mismo lugar.
+{% endcomment %}
+{% with p=item.pregunta %}
+<article class="enc-tarjeta" id="tarjeta-{{ p.id }}" data-tarjeta="pregunta" data-id="{{ p.id }}"
+         {% if editable %}tabindex="0" aria-label="Pregunta: {{ p.texto|truncatechars:80 }}. Presione Enter para editarla."
+         data-url-editar="{% url 'encuestas:editar_pregunta' p.id %}"
+         data-url-eliminar="{% url 'encuestas:eliminar_pregunta' p.id %}"
+         data-url-duplicar="{% url 'encuestas:duplicar_pregunta' p.id %}"
+         data-url-subir="{% url 'encuestas:mover_pregunta' p.id 'arriba' %}"
+         data-url-bajar="{% url 'encuestas:mover_pregunta' p.id 'abajo' %}"{% endif %}>
+    {% if editable %}
+        <div class="enc-asa" data-asa title="Arrastra para cambiar el orden" aria-hidden="true"><i class="bi bi-grip-horizontal"></i></div>
+    {% endif %}
+    <div data-vista>
+        <div class="enc-tarjeta-meta">
+            <span class="enc-tipo"><i class="bi {{ item.icono }} me-1" aria-hidden="true"></i>{{ item.tipo_nombre }}</span>
+            {% if item.condicion %}<span class="enc-condicion"><i class="bi bi-diagram-3 me-1" aria-hidden="true"></i>{{ item.condicion }}</span>{% endif %}
+        </div>
+        <fieldset disabled class="enc-vista-previa">
+            {% include "encuestas/includes/pregunta.html" %}
+        </fieldset>
+        {% if item.restricciones %}
+            <ul class="enc-restricciones">
+                {% for r in item.restricciones %}
+                    <li><i class="bi bi-funnel me-1" aria-hidden="true"></i>«{{ r.opcion|truncatechars:50 }}» solo en {{ r.programas }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+    <div class="enc-tarjeta-editor" data-editor hidden></div>
+    {% if editable %}
+        <div class="enc-acciones-rapidas" data-acciones-rapidas>
+            <a class="btn btn-accion btn-sm" href="{% url 'encuestas:editar_pregunta' p.id %}" data-accion="abrir" title="Editar" aria-label="Editar pregunta"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+            <button type="button" class="btn btn-accion btn-sm" data-accion="subir" title="Subir" aria-label="Subir pregunta"><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-accion btn-sm" data-accion="bajar" title="Bajar" aria-label="Bajar pregunta"><i class="bi bi-arrow-down" aria-hidden="true"></i></button>
+        </div>
+    {% endif %}
+</article>
+{% endwith %}

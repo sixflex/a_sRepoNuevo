@@ -48,6 +48,9 @@ from .models import EnlaceRegistroEquipo
 def coordinador_contexto(request):
     return render(request, "proyectos/coordinador_contexto.html")
 
+@coordinador_required
+def formulario_prueba(request):
+    return render(request, 'proyectos/formulario_prueba.html')
 
 @coordinador_required
 def gestionar_enlaces_planificacion(request):
@@ -284,7 +287,6 @@ def gestionar_enlaces_planificacion(request):
                 )
 
             return redirect("proyectos:gestionar_enlaces")
-
     enlaces = list(
         PlanificacionEnlace.objects.select_related(
             "unidad_academica",
