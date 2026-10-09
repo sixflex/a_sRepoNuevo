@@ -1,0 +1,26 @@
+# Entorno
+.env
+
+# Base de datos local de Django
+db.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Archivos temporales
+*.log
+
+# VS Code
+.vscode/
+
+# Archivos estáticos recolectados
+staticfiles/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos privados subidos por usuarios
+private_uploads/

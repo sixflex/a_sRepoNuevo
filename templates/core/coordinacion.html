@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard de Coordinación A+S | Universidad Autónoma de Chile{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/coordinacion.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+    <!-- Encabezado de Sección -->
+    <div class="coord-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h2 class="coord-title mb-1">Panel de Coordinación A+S</h2>
+            <p class="coord-subtitle mb-0">Resumen operativo, flujo de validación, seguimiento semestral y enlaces institucionales.</p>
+        </div>
+        <div>
+            <span class="badge bg-white border text-secondary px-3 py-2 rounded-2 fw-semibold">
+                <i class="bi bi-geo-alt-fill text-danger me-1"></i> Sede Santiago · Providencia
+            </span>
+        </div>
+    </div>
+
+    <!-- 1. Métricas Principales (Grid de 4 Cards) -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="metric-card">
+                <div>
+                    <div class="metric-label">Secciones activas</div>
+                    <div class="metric-number">{{ total_secciones|default:"0" }}</div>
+                </div>
+                <div class="metric-icon-box">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="metric-card">
+                <div>
+                    <div class="metric-label">Docentes</div>
+                    <div class="metric-number">{{ total_docentes|default:"0" }}</div>
+                </div>
+                <div class="metric-icon-box">
+                    <i class="bi bi-person-badge"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="metric-card">
+                <div>
+                    <div class="metric-label">Asignaturas activas</div>
+                    <div class="metric-number">{{ total_asignaturas|default:"0" }}</div>
+                </div>
+                <div class="metric-icon-box">
+                    <i class="bi bi-book"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="metric-card">
+                <div>
+                    <div class="metric-label">Períodos académicos</div>
+                    <div class="metric-number">{{ total_periodos|default:"1" }}</div>
+                </div>
+                <div class="metric-icon-box">
+                    <i class="bi bi-calendar3"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+<!-- 2. Accesos Operativos Principales -->
+<h4 class="fw-bold mb-3" style="font-size: 1.25rem; color: #111827;">Flujo Operativo y Validación</h4>
+<div class="row g-4">
+
+    <!-- Módulo 1: Gestión Académica -->
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="module-card border-top border-4 border-danger">
+            <div>
+                <span class="module-badge">Curricular</span>
+                <h5 class="module-title">Gestión Académica</h5>
+                <p class="module-desc">
+                    Consulta y administra la información curricular de asignaturas,
+                    secciones y nóminas requeridas para el desarrollo del programa A+S.
+                </p>
+            </div>
+            <div>
+                <a href="{% url 'home' %}" class="btn-ua-action">
+                    Ir a gestión académica <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+        <!-- Módulo 2: Enlaces de Planificación -->
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="module-card border-top border-4 border-danger">
+                <div>
+                    <span class="module-badge">Planificación</span>
+                    <h5 class="module-title">Enlaces de Planificación</h5>
+                    <p class="module-desc">
+                        Genera y comparte enlaces individuales con vigencia para Dirección de Carrera y Secretaría de Estudios.
+                    </p>
+                </div>
+                <div class="d-flex gap-2 flex-column flex-sm-row flex-wrap">
+                    <a href="{% url 'proyectos:gestionar_enlaces' %}" class="btn-ua-action">
+                        <i class="bi bi-link-45deg"></i> Enlaces
+                    </a>
+                    <a href="{% url 'core:planificacion_coordinacion' %}" class="btn-ua-outline-action">
+                        Registros
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo 3: Consulta de Planificación -->
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="module-card border-top border-4 border-danger">
+                <div>
+                    <span class="module-badge">Consulta</span>
+                    <h5 class="module-title">Planificación Académica</h5>
+                    <p class="module-desc">
+                        Consulta las secciones académicas registradas y filtra por período, carrera, asignatura, NRC y docente.
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'core:planificacion_coordinacion' %}" class="btn-ua-action">
+                        <i class="bi bi-search"></i> Consultar
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo 4: Validación y Estado A+S -->
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="module-card border-top border-4 border-danger">
+                <div>
+                    <span class="module-badge">Validación A+S</span>
+                    <h5 class="module-title">Validación y Seguimiento</h5>
+                    <p class="module-desc">
+                        Verifica el cumplimiento de los criterios A+S, valida las propuestas de docentes y supervisa la asignación de socios comunitarios.
+                    </p>
+                </div>
+                <div class="d-flex gap-2 flex-column flex-sm-row flex-wrap">
+                    <a href="{% url 'core:validar_planificacion' %}" class="btn-ua-action">
+                        <i class="bi bi-check2-circle"></i> Validar
+                    </a>
+                    <a href="#" class="btn-ua-outline-action">
+                        <i class="bi bi-bar-chart"></i> Reporte
+                    </a>
+                </div>
+            </div>
+        </div>
+
+                <div class="col-12 col-md-6 col-xl-3">
+            <div class="module-card border-top border-4 border-danger">
+                <div>
+                    <span class="module-badge">Cartas</span>
+                    <h5 class="module-title">Cartas de Presentación</h5>
+                    <p class="module-desc">
+                        Revisa las solicitudes de Cartas de Presentación enviadas por docentes y gestiona su aprobación u observación.
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'cartas:listar_solicitudes_coordinacion' %}" class="btn-ua-action">
+                        <i class="bi bi-envelope-paper"></i> Revisar solicitudes
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="module-card border-top border-4 border-danger">
+                <div>
+                    <span class="module-badge">Ruta A+S</span>
+                    <h5 class="module-title">Seguimiento de Rutas A+S</h5>
+                    <p class="module-desc">
+                        Supervisa el avance de las Rutas A+S de los docentes, sus actividades pendientes y las evidencias registradas.
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'rutas:seguimiento_rutas_coordinacion' %}" class="btn-ua-action">
+                        <i class="bi bi-list-check"></i> Consultar Rutas
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

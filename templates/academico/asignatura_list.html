@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestión de Asignaturas{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+
+    <!-- TÍTULO Y BOTÓN -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Gestión de Asignaturas</h2>
+            <p class="text-muted mb-0">
+                Administra las asignaturas y sus carreras asociadas en el sistema.
+            </p>
+        </div>
+
+        <a href="{% url 'asignatura_create' %}" class="btn btn-rojo">
+            + Crear Asignatura
+        </a>
+    </div>
+
+    <!-- TABLA DE ANCHO MÁXIMO -->
+    <div class="card shadow-sm border-0 w-100">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 w-100">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Carreras</th>
+                            <th>Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for asignatura in asignaturas %}
+                        <tr>
+                            <!-- CÓDIGO -->
+                            <td>
+                                {% if asignatura.codigo %}
+                                    <span class="fw-semibold">
+                                        {{ asignatura.codigo }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">
+                                        Sin código
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <!-- NOMBRE -->
+                            <td class="fw-semibold">
+                                {{ asignatura.nombre }}
+                            </td>
+
+                            <!-- CARRERAS -->
+                            <td>
+                                {% for carrera in asignatura.carreras.all %}
+                                    <span class="badge bg-light text-dark border me-1 mb-1">
+                                        {{ carrera.nombre }}
+                                    </span>
+                                {% empty %}
+                                    <span class="text-muted">
+                                        Sin carreras asociadas
+                                    </span>
+                                {% endfor %}
+                            </td>
+
+                            <!-- ESTADO -->
+                            <td>
+                                {% if asignatura.activo %}
+                                    <span class="badge bg-success">
+                                        Activa
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">
+                                        Inactiva
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <!-- ACCIONES -->
+                            <td class="text-center text-nowrap">
+                                <a href="{% url 'asignatura_update' asignatura.id %}"
+                                   class="btn btn-sm btn-outline-secondary me-1">
+                                    Editar
+                                </a>
+
+                                <a href="{% url 'asignatura_delete' asignatura.id %}"
+                                   class="btn btn-sm btn-outline-danger">
+                                    Eliminar
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">
+                                No hay asignaturas registradas.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- VOLVER -->
+    <div class="mt-4">
+        <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+            ← Volver a Gestión Académica
+        </a>
+    </div>
+
+</div>
+{% endblock %}

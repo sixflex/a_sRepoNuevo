@@ -1,0 +1,1 @@
+// JavaScript base del Portal A+S

@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if periodo %}Editar Periodo{% else %}Nuevo Periodo{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+
+    <div class="card shadow-sm border-0 w-100">
+
+        <!-- ENCABEZADO -->
+        <div class="card-header bg-white border-bottom py-3">
+            <h4 class="mb-1 fw-bold">
+                {% if periodo %}
+                    Editar Periodo
+                {% else %}
+                    Nuevo Periodo
+                {% endif %}
+            </h4>
+            <p class="text-muted mb-0 small">
+                Ingresa los datos correspondientes al periodo académico.
+            </p>
+        </div>
+
+        <!-- CONTENIDO -->
+        <div class="card-body p-4">
+
+            <!-- MENSAJE DE VALIDACIÓN -->
+            {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+            {% endif %}
+
+            <form method="POST" novalidate>
+                {% csrf_token %}
+
+                <div class="row g-3 mb-4">
+
+                    <!-- AÑO -->
+                    <div class="col-12 col-md-3 col-lg-2">
+                        <label for="anio" class="form-label fw-semibold">
+                            Año
+                        </label>
+                        <input
+                            type="number"
+                            class="form-control"
+                            id="anio"
+                            name="anio"
+                            min="2000"
+                            max="2100"
+                            placeholder="Ej: 2026"
+                            value="{{ periodo.anio|default:'' }}"
+                            required>
+                    </div>
+
+                    <!-- TIPO -->
+                    <div class="col-12 col-md-4 col-lg-3">
+                        <label for="tipo" class="form-label fw-semibold">
+                            Tipo de periodo
+                        </label>
+                        <select
+                            class="form-select"
+                            id="tipo"
+                            name="tipo"
+                            required>
+                            <option value="" disabled {% if not periodo %}selected{% endif %}>
+                                Seleccione un periodo
+                            </option>
+                            <option value="Primer semestre"
+                                {% if periodo.tipo == "Primer semestre" %}selected{% endif %}>
+                                Primer semestre
+                            </option>
+                            <option value="Segundo semestre"
+                                {% if periodo.tipo == "Segundo semestre" %}selected{% endif %}>
+                                Segundo semestre
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- NOMBRE -->
+                    <div class="col-12 col-md-5 col-lg-4">
+                        <label for="nombre" class="form-label fw-semibold">
+                            Nombre del periodo
+                        </label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="nombre"
+                            name="nombre"
+                            maxlength="80"
+                            placeholder="Ej: 2026 - Primer Semestre"
+                            value="{{ periodo.nombre|default:'' }}"
+                            required>
+                        <div class="form-text">
+                            Identificador único del periodo.
+                        </div>
+                    </div>
+
+                    <!-- ESTADO -->
+                    <div class="col-12 col-md-4 col-lg-3">
+                        <label for="estado" class="form-label fw-semibold">
+                            Estado
+                        </label>
+                        <select
+                            class="form-select"
+                            id="estado"
+                            name="estado"
+                            required>
+                            <option value="" disabled {% if not periodo %}selected{% endif %}>
+                                Seleccione un estado
+                            </option>
+                            <option value="Planificado"
+                                {% if periodo.estado == "Planificado" %}selected{% endif %}>
+                                Planificado
+                            </option>
+                            <option value="Activo"
+                                {% if periodo.estado == "Activo" %}selected{% endif %}>
+                                Activo
+                            </option>
+                            <option value="Finalizado"
+                                {% if periodo.estado == "Finalizado" %}selected{% endif %}>
+                                Finalizado
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- FECHA INICIO -->
+                    <div class="col-12 col-md-6">
+                        <label for="fecha_inicio" class="form-label fw-semibold">
+                            Fecha de inicio
+                        </label>
+                        <input
+                            type="date"
+                            class="form-control"
+                            id="fecha_inicio"
+                            name="fecha_inicio"
+                            value="{% if periodo.fecha_inicio %}{{ periodo.fecha_inicio|date:'Y-m-d' }}{% endif %}">
+                    </div>
+
+                    <!-- FECHA FIN -->
+                    <div class="col-12 col-md-6">
+                        <label for="fecha_fin" class="form-label fw-semibold">
+                            Fecha de término
+                        </label>
+                        <input
+                            type="date"
+                            class="form-control"
+                            id="fecha_fin"
+                            name="fecha_fin"
+                            value="{% if periodo.fecha_fin %}{{ periodo.fecha_fin|date:'Y-m-d' }}{% endif %}">
+                    </div>
+
+                </div>
+
+                <!-- BOTONES -->
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'periodo_list' %}" class="btn btn-outline-secondary">
+                        ← Volver
+                    </a>
+
+                    <button type="submit" class="btn btn-rojo px-4">
+                        {% if periodo %}
+                            Guardar cambios
+                        {% else %}
+                            Guardar
+                        {% endif %}
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

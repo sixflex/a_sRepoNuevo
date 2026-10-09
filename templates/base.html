@@ -1,0 +1,120 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{% block title %}Portal A+S | Universidad Autónoma de Chile{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+
+    {% block layout_completo %}
+        {% block main_navbar %}
+        <nav class="navbar navbar-expand-lg navbar-dark navbar-sistema py-2">
+            <div class="container-fluid">
+                <a class="navbar-brand d-flex align-items-center gap-3 text-white fw-bold py-0" href="{% url 'core:inicio' %}">
+                    <div class="brand-logo-container d-flex align-items-center" style="height: 48px;">
+                        <img src="{% static 'img/logo_ua.png' %}" 
+                             alt="Universidad Autónoma de Chile" 
+                             class="brand-logo-img"
+                             style="height: 44px; max-height: 44px; width: auto; object-fit: contain;"
+                             onerror="this.style.display='none'; document.getElementById('fallback-ua-badge').style.display='inline-block';">
+                        
+                        <span id="fallback-ua-badge" class="d-none fw-bold" style="color: #FFFFFF; font-size: 0.9rem; background: rgba(0,0,0,0.2); padding: 3px 8px; border-radius: 4px;">
+                            UA
+                        </span>
+                    </div>
+
+                    <span style="letter-spacing: 0.02em; font-size: 1.2rem;">Portal A+S</span>
+                </a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarPrincipal">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarPrincipal">
+                    <ul class="navbar-nav ms-auto align-items-center gap-2">
+                        <li class="nav-item">
+                            <a class="nav-link text-white opacity-75" href="{% url 'core:inicio' %}">
+                                <i class="bi bi-house-door me-1"></i>Inicio
+                            </a>
+                        </li>
+                        {% if user.is_authenticated %}
+                            <li class="nav-item">
+                                <span class="nav-link text-white fw-semibold">
+                                    <i class="bi bi-person-circle me-1"></i>{{ user.username }}
+                                </span>
+                            </li>
+                            <li class="nav-item">
+                                <form method="post" action="{% url 'usuarios:logout' %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-link nav-link text-white text-decoration-none opacity-75">
+                                        <i class="bi bi-box-arrow-right me-1"></i>Cerrar sesión
+                                    </button>
+                                </form>
+                            </li>
+                        {% else %}
+                            <li class="nav-item">
+                                <a class="nav-link text-white" href="{% url 'usuarios:login' %}">
+                                    <i class="bi bi-box-arrow-in-right me-1"></i>Iniciar sesión
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </nav>
+        {% endblock %}
+
+        <div class="container-fluid p-0">
+            <div class="row g-0">
+                {% if user.is_authenticated and not hide_sidebar %}
+                    <!-- SIDEBAR LATERAL -->
+                    <aside class="col-md-3 col-lg-2 bg-white border-end min-vh-100 p-3">
+                        {% include "includes/sidebar.html" %}
+                    </aside>
+
+                    <!-- CONTENIDO PRINCIPAL AUTENTICADO -->
+                    <main class="col-md-9 col-lg-10 p-4" style="background-color: #f8fafc; min-vh-100;">
+                        {% block content %}{% endblock %}
+                    </main>
+
+                {% else %}
+                    <!-- CONTENIDO NO AUTENTICADO -->
+                    <main class="col-12 p-0">
+                        {% block unauthenticated_content %}
+                            {% block content_full %}
+                                {% block content_public %}{% endblock %}
+                            {% endblock %}
+                        {% endblock %}
+                    </main>
+                {% endif %}
+            </div>
+        </div>
+
+        {% block main_footer %}
+        <footer class="{% if user.is_authenticated and not hide_sidebar %}app-footer {% endif %}border-top py-3 bg-white mt-auto">
+            <div class="container text-center text-muted small">
+                Portal Integrado de Aprendizaje + Servicio · Universidad Autónoma de Chile
+            </div>
+        </footer>
+        {% endblock %}
+    {% endblock layout_completo %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'js/app.js' %}"></script>
+</body>
+</html>

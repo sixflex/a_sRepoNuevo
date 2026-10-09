@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Formulario cerrado | Portal A+S{% endblock %}
+
+{% block extra_css %}{% include "encuestas/includes/css.html" %}{% endblock %}
+
+{% block content_public %}
+<div class="enc-tema{% if tema.fondo_url %} con-fondo{% endif %}" style="{{ tema.estilo }}">
+<div class="container enc-contenedor py-5">
+    <div class="card-ua enc-encabezado p-4 text-center">
+        <i class="bi bi-lock fs-1 text-muted" aria-hidden="true"></i>
+        <h1 class="enc-titulo mt-2">{{ version.plantilla.titulo }}</h1>
+        <p class="mb-0">Este formulario no está recibiendo respuestas en este momento.</p>
+    </div>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white border-bottom py-3">
+        <h5 class="fw-bold mb-0">Docentes asociados</h5>
+    </div>
+    <div class="card-body p-4">
+        {% for relacion in seccion.seccion_docentes.all %}
+            <div class="border rounded p-3 mb-3">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <small class="text-muted">Docente</small>
+                        <p class="fw-semibold mb-0">
+                            {{ relacion.docente.nombres }} {{ relacion.docente.apellidos }}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">RUT</small>
+                        <p class="fw-semibold mb-0">{{ relacion.docente.rut }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">Correo institucional</small>
+                        <p class="fw-semibold mb-0">{{ relacion.docente.correo_institucional }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">Teléfono</small>
+                        <p class="fw-semibold mb-0">
+                            {{ relacion.docente.telefono|default:"No registrado" }}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">Tipo de contrato</small>
+                        <p class="fw-semibold mb-0">
+                            {{ relacion.tipo_contrato|default:"No especificado" }}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">Capacitado A+S</small>
+                        <p class="fw-semibold mb-0">
+                            {% if relacion.capacitado_as == True %}
+                                Sí
+                            {% elif relacion.capacitado_as == False %}
+                                No
+                            {% else %}
+                                No especificado
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <p class="text-muted mb-0">No existen docentes asociados a esta sección.</p>
+        {% endfor %}
+    </div>
+</div>

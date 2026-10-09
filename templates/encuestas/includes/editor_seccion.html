@@ -1,0 +1,19 @@
+{% comment %}Editor de una sección: en la cabecera de la sección del constructor o en su página de respaldo.{% endcomment %}
+<form method="post" novalidate class="enc-editor-seccion" action="{% url 'encuestas:editar_seccion' bloque.id %}">
+    {% csrf_token %}
+    <div data-error-para="__all__">{% for error in form.non_field_errors %}<div class="alert alert-danger py-2">{{ error }}</div>{% endfor %}</div>
+    <label class="visually-hidden" for="titulo-seccion-{{ bloque.id }}">Título de la sección</label>
+    <input type="text" name="titulo" id="titulo-seccion-{{ bloque.id }}" maxlength="220" class="form-control enc-input-titulo"
+           value="{{ form.titulo.value|default_if_none:'' }}" placeholder="Título de la sección">
+    <div data-error-para="titulo">{% for error in form.titulo.errors %}<div class="enc-error">{{ error }}</div>{% endfor %}</div>
+    <label class="visually-hidden" for="descripcion-seccion-{{ bloque.id }}">Descripción de la sección</label>
+    <textarea name="descripcion" id="descripcion-seccion-{{ bloque.id }}" rows="2" data-autoalto class="form-control enc-input-ayuda mt-2"
+              placeholder="Descripción (opcional), por ejemplo la invitación de un programa">{{ form.descripcion.value|default_if_none:'' }}</textarea>
+    <div class="mt-3">{% include "encuestas/includes/regla.html" %}</div>
+    {% if pagina_completa %}
+        <div class="d-flex justify-content-end gap-2 mt-3">
+            <a class="btn btn-light-ua" href="{% url 'encuestas:editor' version.id %}">Cancelar</a>
+            <button type="submit" class="btn btn-ua">Guardar sección</button>
+        </div>
+    {% endif %}
+</form>

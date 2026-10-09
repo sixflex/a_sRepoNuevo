@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid py-3">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold mb-0 text-secondary">
+            <i class="bi bi-link-45deg text-primary me-2"></i>
+            Gestión de Enlaces de Planificación Académica
+        </h4>
+
+        <button
+            class="btn btn-primary"
+            data-bs-toggle="modal"
+            data-bs-target="#modalNuevoEnlace"
+        >
+            <i class="bi bi-plus-circle me-1"></i>
+            Generar Nuevo Enlace
+        </button>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3">
+            <h6 class="card-title mb-0 fw-bold">
+                Enlaces generados y estado de vigencia
+            </h6>
+        </div>
+
+        <div class="card-body p-0 table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small text-secondary">
+                    <tr>
+                        <th>Destinatario</th>
+                        <th>Unidad académica</th>
+                        <th>Sede / Campus</th>
+                        <th>Período</th>
+                        <th>Expiración</th>
+                        <th>Estado</th>
+                        <th class="text-end pe-3">Acciones</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for e in enlaces %}
+                        <tr>
+                            <td>
+                                <strong>{{ e.destinatario_nombre }}</strong><br>
+                                <span class="text-muted small">
+                                    {{ e.destinatario_correo }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {{ e.unidad_academica.nombre }}
+                            </td>
+
+                            <td>
+                                {{ e.campus.sede.nombre }}<br>
+                                <small class="text-muted">
+                                    {{ e.campus.nombre }}
+                                </small>
+                            </td>
+
+                            <td>{{ e.periodo.nombre }}</td>
+
+                            <td>
+                                {% if e.fecha_expiracion %}
+                                    {{ e.fecha_expiracion|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    Sin expiración
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if e.esta_vigente %}
+                                    <span class="badge bg-success">Vigente</span>
+                                {% elif e.activo %}
+                                    <span class="badge bg-warning text-dark">Expirado</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactivo</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-end pe-3">
+                                <div class="btn-group btn-group-sm">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-secondary btn-copiar"
+                                        data-url="{{ request.scheme }}://{{ request.get_host }}{% url 'planificacion:formulario_tabular_as' token=e.token %}"
+                                        title="Copiar enlace"
+                                    >
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+
+                                    <a
+                                        href="{% url 'planificacion:formulario_tabular_as' token=e.token %}"
+                                        target="_blank"
+                                        class="btn btn-outline-primary"
+                                        title="Abrir formulario"
+                                    >
+                                        <i class="bi bi-box-arrow-up-right"></i>
+                                    </a>
+                                </div>
+                                {% if e.esta_vigente %}
+                                    <form method="POST" class="d-inline">
+                                        {% csrf_token %}
+
+                                        <input
+                                            type="hidden"
+                                            name="accion"
+                                            value="reenviar"
+                                        >
+
+                                        <input
+                                            type="hidden"
+                                            name="enlace_id"
+                                            value="{{ e.id }}"
+                                        >
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-sm btn-outline-primary ms-1"
+                                            title="Reenviar enlace por correo"
+                                        >
+                                            <i class="bi bi-envelope"></i>
+                                            Reenviar
+                                        </button>
+                                    </form>
+                                {% endif %}
+
+                                <form method="POST" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="accion" value="toggle_estado">
+                                    <input type="hidden" name="enlace_id" value="{{ e.id }}">
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-sm {% if e.activo %}btn-outline-danger{% else %}btn-outline-success{% endif %} ms-1"
+                                    >
+                                        {% if e.activo %}
+                                            Desactivar
+                                        {% else %}
+                                            Activar
+                                        {% endif %}
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">
+                                No se han generado enlaces de planificación todavía.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<div
+    class="modal fade"
+    id="modalNuevoEnlace"
+    tabindex="-1"
+    aria-hidden="true"
+>
+    <div class="modal-dialog modal-lg">
+        <form method="POST" class="modal-content">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="crear">
+
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">
+                    Generar Enlace Individual de Planificación
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body row g-3">
+
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold">
+                        Unidad académica *
+                    </label>
+                    <select
+                        name="unidad_academica"
+                        class="form-select"
+                        required
+                    >
+                        <option value="">
+                            Seleccione una unidad
+                        </option>
+
+                        {% for u in unidades %}
+                            <option value="{{ u.id }}">{{ u.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold">
+                        Nombre del destinatario *
+                    </label>
+                    <input
+                        type="text"
+                        name="destinatario_nombre"
+                        class="form-control"
+                        required
+                    >
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold">
+                        Correo electrónico *
+                    </label>
+                    <input
+                        type="email"
+                        name="destinatario_email"
+                        class="form-control"
+                        required
+                    >
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold">
+                        Fecha límite de vigencia *
+                    </label>
+                    <input
+                        type="date"
+                        name="fecha_expiracion"
+                        class="form-control"
+                        min="{{ hoy }}"
+                        required
+                    >
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold">
+                        Campus *
+                    </label>
+                    <select
+                        name="campus"
+                        class="form-select"
+                        required
+                    >
+                        <option value="">
+                            Seleccione un campus
+                        </option>
+                        {% for c in campus %}
+                            <option value="{{ c.id }}">
+                                {{ c.sede.nombre }} — {{ c.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold">
+                        Período académico *
+                    </label>
+                    <select
+                        name="periodo"
+                        class="form-select"
+                        required
+                    >
+                        <option value="">
+                            Seleccione un período
+                        </option>
+                        {% for p in periodos %}
+                            <option value="{{ p.id }}">
+                                {{ p.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    type="submit"
+                    class="btn btn-primary px-4"
+                >
+                    Generar enlace
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".btn-copiar").forEach(function (boton) {
+        boton.addEventListener("click", function () {
+            const url = this.getAttribute("data-url");
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(url).then(function () {
+                    alert("Enlace copiado al portapapeles:\n" + url);
+                });
+            } else {
+                const tempInput = document.createElement("input");
+                tempInput.value = url;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand("copy");
+                document.body.removeChild(tempInput);
+                alert("Enlace copiado al portapapeles:\n" + url);
+            }
+        });
+    });
+});
+</script>
+
+{% endblock %}

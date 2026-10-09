@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Iniciar sesión en la cuenta | Cloud UAutónoma{% endblock %}
+
+{% block main_navbar %}{% endblock %}
+{% block main_footer %}{% endblock %}
+
+{% block layout_completo %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+    header, .navbar-sistema, aside, .sidebar {
+        display: none !important;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif !important;
+        
+        background-color: #79A3B9;
+        background-image: url("{% static 'img/bg_login.png' %}");
+        background-size: cover;
+        background-position: center bottom;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        position: relative;
+    }
+
+    .login-wrapper {
+        position: relative;
+        z-index: 10;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .login-card-microsoft {
+        background: #FFFFFF;
+        width: 100%;
+        max-width: 440px;
+        padding: 44px 44px 36px 44px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.22);
+        border-radius: 2px;
+    }
+
+    .brand-logo-img {
+        max-height: 48px;
+        width: auto;
+        display: block;
+        margin-bottom: 24px;
+        object-fit: contain;
+    }
+
+    .ms-input {
+        width: 100%;
+        border: none;
+        border-bottom: 1px solid #666666;
+        border-radius: 0;
+        padding: 8px 0;
+        font-size: 0.95rem;
+        color: #1b1b1b;
+        outline: none;
+        transition: border-color 0.2s ease;
+        background: transparent;
+    }
+    .ms-input:focus {
+        border-bottom: 2px solid #0067b8;
+    }
+
+    .btn-ms-primary {
+        background-color: #0067b8;
+        border: 1px solid #0067b8;
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 0.92rem;
+        padding: 6px 24px;
+        border-radius: 2px;
+        min-width: 108px;
+        transition: background-color 0.2s ease;
+    }
+    .btn-ms-primary:hover {
+        background-color: #005da6;
+        color: #ffffff;
+    }
+
+    .btn-ms-secondary {
+        background-color: #cccccc;
+        border: 1px solid #cccccc;
+        color: #333333;
+        font-weight: 600;
+        font-size: 0.92rem;
+        padding: 6px 24px;
+        border-radius: 2px;
+        min-width: 108px;
+        margin-right: 8px;
+        transition: background-color 0.2s ease;
+    }
+    .btn-ms-secondary:hover {
+        background-color: #bcbcbc;
+        color: #222222;
+    }
+
+    .ms-link {
+        color: #0067b8;
+        font-size: 0.82rem;
+        text-decoration: none;
+    }
+    .ms-link:hover {
+        text-decoration: underline;
+    }
+
+    .login-options-card {
+        background: #FFFFFF;
+        width: 100%;
+        max-width: 440px;
+        margin: 20px auto 0 auto;
+        padding: 12px 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+        border-radius: 2px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 0.9rem;
+        color: #333;
+        cursor: pointer;
+    }
+
+    .ms-footer {
+        position: relative;
+        z-index: 10;
+        padding: 14px 24px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 20px;
+        font-size: 0.75rem;
+        color: #FFFFFF;
+    }
+    .ms-footer a {
+        color: #FFFFFF;
+        text-decoration: none;
+        opacity: 0.9;
+    }
+    .ms-footer a:hover {
+        text-decoration: underline;
+        opacity: 1;
+    }
+</style>
+
+<div class="login-wrapper">
+    <div style="width: 100%; max-width: 440px;">
+        
+        <div class="login-card-microsoft">
+            
+            <div class="mb-4">
+                <img src="{% static 'img/logo_ua.png' %}" 
+                     alt="Universidad Autónoma de Chile" 
+                     class="brand-logo-img"
+                     onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='flex';">
+
+                <div id="logo-fallback" class="d-none align-items-stretch" style="height: 38px; width: fit-content;">
+                    <div style="background-color: #C8232C; width: 34px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px; border-radius: 2px 0 0 2px;">
+                        <span style="color: rgba(255,255,255,0.7); font-size: 3.5px; font-weight: 700;">DUC IN ALTUM</span>
+                        <span style="color: #FFFFFF; font-size: 15px; font-weight: 900; line-height: 1;">UA</span>
+                    </div>
+                    <div style="background-color: #2F3235; color: #FFFFFF; display: flex; flex-direction: column; justify-content: center; padding: 0 10px; border-radius: 0 2px 2px 0;">
+                        <div style="font-size: 8px; font-weight: 800; line-height: 1.1;">UNIVERSIDAD</div>
+                        <div style="font-size: 8px; font-weight: 800; line-height: 1.1;">AUTONOMA</div>
+                        <div style="font-size: 6px; font-weight: 500; color: #D1D5DB;">DE CHILE</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="fw-bold mb-4" style="font-size: 1.55rem; color: #1b1b1b;">Iniciar sesión</h3>
+
+            {% if form.errors %}
+                <div class="alert alert-danger py-2 small mb-3 border-0 rounded-1" style="background-color: #FDF2F2; color: #C8232C;">
+                    Nombre de usuario o contraseña incorrectos.
+                </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'usuarios:login' %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}">
+
+                <div class="mb-3">
+                    <input type="text" 
+                           name="username" 
+                           class="ms-input" 
+                           placeholder="tucorreo@cloud.uautonoma.cl" 
+                           required 
+                           autofocus>
+                </div>
+
+                <div class="mb-4">
+                    <input type="password" 
+                           name="password" 
+                           class="ms-input" 
+                           placeholder="Contraseña" 
+                           required>
+                </div>
+
+                <div class="mb-4">
+                    <a href="#" class="ms-link">¿No puede acceder a su cuenta?</a>
+                </div>
+
+                <div class="d-flex justify-content-end align-items-center mt-4">
+                    <a href="{% url 'core:inicio' %}" class="btn btn-ms-secondary text-decoration-none text-center">Atrás</a>
+                    <button type="submit" class="btn btn-ms-primary">Siguiente</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="login-options-card">
+            <i class="bi bi-key fs-5 text-secondary"></i>
+            <span>Opciones de inicio de sesión</span>
+        </div>
+    </div>
+</div>
+
+<div class="ms-footer">
+    <a href="#">Términos de uso</a>
+    <a href="#">Privacidad y cookies</a>
+</div>
+{% endblock %}

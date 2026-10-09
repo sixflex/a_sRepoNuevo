@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <div
+        class="card shadow-sm border-0 mx-auto"
+        style="max-width: 650px;"
+    >
+        <div class="card-body p-4 text-center">
+
+            <div
+                class="mx-auto mb-3 d-flex align-items-center justify-content-center"
+                style="
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 50%;
+                    background-color: #f8d7da;
+                    color: #a90000;
+                    font-size: 28px;
+                "
+            >
+                !
+            </div>
+
+            <h3 class="fw-bold mb-2">
+                Formulario no disponible
+            </h3>
+
+            <p class="text-muted mb-4">
+                No es posible acceder al registro de equipos en este momento.
+            </p>
+
+            <div class="alert alert-danger mb-0">
+                {{ motivo }}
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

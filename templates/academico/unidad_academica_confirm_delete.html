@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}Eliminar Unidad Académica{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+
+    <div class="card shadow-sm border-0 w-100">
+
+        <!-- ENCABEZADO -->
+        <div class="card-header bg-white border-bottom py-3">
+            <h4 class="mb-1 fw-bold">
+                Eliminar Unidad Académica
+            </h4>
+            <p class="text-muted mb-0 small">
+                Confirma la eliminación de la unidad académica seleccionada.
+            </p>
+        </div>
+
+        <!-- CONTENIDO -->
+        <div class="card-body p-4">
+
+            <div class="alert alert-danger" role="alert">
+                <h5 class="alert-heading fw-bold">
+                    ¿Estás seguro?
+                </h5>
+
+                <p class="mb-2">
+                    Estás a punto de eliminar la unidad académica
+                    <strong>{{ unidad.nombre }}</strong>.
+                </p>
+
+                {% if unidad.tipo %}
+                    <p class="mb-2">
+                        Tipo: <strong>{{ unidad.tipo }}</strong>
+                    </p>
+                {% endif %}
+
+                {% if unidad.facultad %}
+                    <p class="mb-2">
+                        Facultad: <strong>{{ unidad.facultad.nombre }}</strong>
+                    </p>
+                {% endif %}
+
+                {% if unidad.carrera %}
+                    <p class="mb-2">
+                        Carrera: <strong>{{ unidad.carrera.nombre }}</strong>
+                    </p>
+                {% endif %}
+
+                <p class="mb-0">
+                    Esta acción no se puede deshacer y puede afectar los registros académicos vinculados a esta unidad.
+                </p>
+            </div>
+
+            <!-- BOTONES -->
+            <form method="POST">
+                {% csrf_token %}
+
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <a href="{% url 'unidad_academica_list' %}" class="btn btn-outline-secondary">
+                        ← Volver
+                    </a>
+
+                    <button type="submit" class="btn btn-danger px-4">
+                        Sí, eliminar
+                    </button>
+                </div>
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

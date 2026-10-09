@@ -1,0 +1,38 @@
+{% comment %}Una sección del constructor: su cabecera (editable con un clic) y sus tarjetas de pregunta.{% endcomment %}
+{% with b=seccion.bloque %}
+<section class="enc-seccion" id="seccion-{{ b.id }}" data-seccion="{{ b.id }}">
+    <div class="enc-tarjeta enc-tarjeta-seccion" data-tarjeta="seccion" data-id="{{ b.id }}"
+         {% if editable %}tabindex="0" aria-label="Sección {{ b.titulo|truncatechars:80 }}. Presione Enter para editarla."
+         data-url-editar="{% url 'encuestas:editar_seccion' b.id %}"
+         data-url-eliminar="{% url 'encuestas:eliminar_seccion' b.id %}"
+         data-url-subir="{% url 'encuestas:mover_seccion' b.id 'arriba' %}"
+         data-url-bajar="{% url 'encuestas:mover_seccion' b.id 'abajo' %}"{% endif %}>
+        <div class="enc-seccion-etiqueta">Sección <span data-numero>{{ numero|default:"" }}</span> de <span data-total>{{ total_secciones }}</span></div>
+        <div data-vista>
+            <h2 class="enc-seccion-nombre">{{ b.titulo }}</h2>
+            {% if seccion.condicion %}<span class="enc-condicion"><i class="bi bi-diagram-3 me-1" aria-hidden="true"></i>{{ seccion.condicion }}</span>{% endif %}
+            {% if b.descripcion %}<p class="enc-texto enc-texto-recortado mt-2 mb-0">{{ b.descripcion }}</p>{% endif %}
+        </div>
+        <div class="enc-tarjeta-editor" data-editor hidden></div>
+        {% if editable %}
+            <div class="enc-acciones-rapidas" data-acciones-rapidas>
+                <a class="btn btn-accion btn-sm" href="{% url 'encuestas:editar_seccion' b.id %}" data-accion="abrir" title="Editar sección" aria-label="Editar sección"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                <button type="button" class="btn btn-accion btn-sm" data-accion="subir" title="Subir sección" aria-label="Subir sección"><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-accion btn-sm" data-accion="bajar" title="Bajar sección" aria-label="Bajar sección"><i class="bi bi-arrow-down" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-accion btn-sm" data-accion="eliminar" title="Eliminar sección" aria-label="Eliminar sección"><i class="bi bi-trash" aria-hidden="true"></i></button>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="enc-lista-preguntas" data-lista-preguntas data-bloque="{{ b.id }}">
+        {% for item in seccion.tarjetas %}
+            {% include "encuestas/includes/tarjeta_pregunta.html" %}
+        {% endfor %}
+    </div>
+    {% if editable %}
+        <button type="button" class="enc-agregar-aqui" data-accion="agregar-en-seccion">
+            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Agregar pregunta en esta sección
+        </button>
+    {% endif %}
+</section>
+{% endwith %}

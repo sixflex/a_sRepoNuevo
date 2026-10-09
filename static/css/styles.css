@@ -1,0 +1,280 @@
+/* =========================================================
+   styles.css — Portal A+S
+
+   1. Tokens de diseño (única fuente de verdad de colores, forma y layout)
+   2. Base
+   3. Barra superior
+   4. Menú lateral
+   5. Botones
+   6. Layout (barra fija + contenido)
+
+   Regla: no escribir colores a mano en otros archivos; usar var(--ua-...).
+   ========================================================= */
+
+
+/* ---------- 1. TOKENS ---------- */
+:root {
+    /* Marca */
+    --ua-red: #C8232C;
+    --ua-red-hover: #A71C23;
+    --ua-red-soft: #FDEDEE;
+    --ua-red-rgb: 200, 35, 44;
+
+    /* Texto */
+    --ua-text-dark: #1F2937;
+    --ua-text-secondary: #4B5563;
+    --ua-text-muted: #6B7280;
+    --ua-text-disabled: #9CA3AF;
+
+    /* Superficies y bordes */
+    --ua-bg-page: #F9FAFB;
+    --ua-bg-card: #FFFFFF;
+    --ua-bg-subtle: #F3F4F6;
+    --ua-border: #E5E7EB;
+    --ua-border-strong: #D1D5DB;
+
+    /* Estados: texto + fondo suave (todos con contraste AA) */
+    --ua-success: #166534;
+    --ua-success-soft: #DCFCE7;
+    --ua-warning: #92400E;
+    --ua-warning-soft: #FEF3C7;
+    --ua-info: #075985;
+    --ua-info-soft: #E0F2FE;
+    --ua-available: #5B21B6;
+    --ua-available-soft: #EDE9FE;
+
+    /* Forma */
+    --ua-radius-sm: 6px;
+    --ua-radius: 10px;
+    --ua-radius-lg: 12px;
+    --ua-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    --ua-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.06);
+
+    /* Layout */
+    --app-navbar-height: 64px;
+
+    /* Alias de los nombres anteriores (por si algún archivo aún los usa) */
+    --color-primary: var(--ua-red);
+    --color-primary-rgb: var(--ua-red-rgb);
+    --color-primary-dark: var(--ua-red-hover);
+    --color-secondary: #344054;
+    --color-accent: #f79009;
+    --color-surface: var(--ua-bg-page);
+    --color-text: var(--ua-text-dark);
+
+    /* Bootstrap usa el rojo institucional como color primario */
+    --bs-primary: var(--ua-red);
+    --bs-primary-rgb: var(--ua-red-rgb);
+    --bs-secondary: var(--color-secondary);
+    --bs-secondary-rgb: 52, 64, 84;
+}
+
+
+/* ---------- 2. BASE ---------- */
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: var(--ua-bg-page);
+    color: var(--ua-text-dark);
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    min-height: 70vh;
+}
+
+.container-fluid.p-0 {
+    flex: 1 0 auto;
+}
+
+
+/* ---------- 3. BARRA SUPERIOR ---------- */
+.navbar-brand {
+    font-weight: bold;
+}
+
+.navbar-sistema {
+    background-color: var(--ua-red) !important;
+    padding: 8px 1.5rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+}
+
+/* Contenedor transparente y logo ampliado */
+.brand-logo-container {
+    background: transparent !important;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+}
+
+.brand-logo-img {
+    height: 48px; /* Escala institucional nítida y legible */
+    width: auto;
+    object-fit: contain;
+    display: block;
+}
+
+
+/* ---------- 4. MENÚ LATERAL ---------- */
+.sidebar {
+    min-height: calc(100vh - 58px);
+    background-color: var(--ua-bg-card) !important;
+    border-right: 1px solid var(--ua-border);
+}
+
+.sidebar-inner {
+    width: 100%;
+}
+
+.sidebar .nav-link {
+    color: var(--ua-text-secondary);
+    font-size: 0.92rem;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: var(--ua-radius-sm);
+    margin: 2px 8px;
+    display: flex;
+    align-items: center;
+    transition: all 0.15s ease;
+}
+
+.sidebar .nav-link:hover {
+    background-color: var(--ua-bg-subtle);
+    color: var(--ua-red);
+}
+
+.sidebar .nav-link.active {
+    background-color: var(--ua-red-soft);
+    color: var(--ua-red);
+    font-weight: 600;
+}
+
+.sidebar-toggle {
+    width: auto;
+    justify-content: space-between;
+    background: transparent;
+    border: 0;
+}
+
+.sidebar-toggle > span {
+    display: flex;
+    align-items: center;
+}
+
+.sidebar-chevron {
+    font-size: 0.75rem;
+    transition: transform 0.2s ease;
+}
+
+.sidebar-toggle[aria-expanded="true"] .sidebar-chevron {
+    transform: rotate(180deg);
+}
+
+.sidebar-submenu {
+    margin: 2px 8px 6px 28px;
+    padding-left: 8px;
+    border-left: 1px solid var(--ua-border);
+}
+
+.sidebar-submenu .nav-link {
+    margin: 1px 0;
+    padding: 7px 10px;
+    font-size: 0.86rem;
+}
+
+
+/* ---------- 5. BOTONES ---------- */
+.btn-sistema {
+    background-color: var(--ua-red);
+    border-color: var(--ua-red);
+    color: #fff;
+}
+
+.btn-sistema:hover,
+.btn-sistema:focus {
+    background-color: var(--ua-red-hover);
+    border-color: var(--ua-red-hover);
+    color: #fff;
+}
+
+/* Botón principal de los CRUD. Antes usaba #8B0000; ahora es el rojo institucional,
+   igual que los botones de socios y coordinación. */
+.btn-rojo {
+    background-color: var(--ua-red);
+    color: #fff;
+    border: none;
+}
+
+.btn-rojo:hover,
+.btn-rojo:focus {
+    background-color: var(--ua-red-hover);
+    color: #fff;
+}
+
+
+/* ---------- 6. LAYOUT: barra fija + contenido ---------- */
+@media (min-width: 768px) {
+    .sidebar {
+        position: fixed;
+        top: var(--app-navbar-height);
+        left: 0;
+        bottom: 0;
+
+        width: 25%;
+        height: auto;
+
+        overflow-y: auto;
+
+        z-index: 1020;
+    }
+
+    .app-main {
+        margin-left: 25%;
+    }
+
+    .app-footer {
+        margin-left: 25%;
+    }
+}
+
+@media (min-width: 992px) {
+    .sidebar {
+        width: 16.666667%;
+    }
+
+    .app-main {
+        margin-left: 16.666667%;
+    }
+
+    .app-footer {
+        margin-left: 16.666667%;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .navbar-sistema {
+        position: relative;
+    }
+
+    .sidebar {
+        position: static;
+        width: 100%;
+        min-height: auto;
+        height: auto;
+        overflow: visible;
+    }
+
+    .app-main {
+        margin-left: 0;
+    }
+
+    .app-footer {
+        margin-left: 0;
+    }
+}

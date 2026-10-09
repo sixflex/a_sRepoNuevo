@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ version.plantilla.titulo }} · Editor | Portal A+S{% endblock %}
+{% block extra_css %}{% include "encuestas/includes/css.html" %}{% endblock %}
+
+{% block content %}
+{% include "encuestas/includes/cabecera.html" %}
+
+<div class="enc-constructor" data-constructor
+     data-url-crear-pregunta="{% url 'encuestas:crear_pregunta' version.id %}"
+     data-url-crear-seccion="{% url 'encuestas:crear_seccion' version.id %}"
+     data-url-ordenar="{% url 'encuestas:ordenar_preguntas' version.id %}">
+    {% csrf_token %}
+
+    <div class="enc-lienzo">
+        <div class="enc-tarjeta enc-encabezado-editor" style="{{ tema.estilo }}" data-tema-vivo>
+            {% if editable %}
+                <form method="post" action="{% url 'encuestas:editar_datos' version.id %}" novalidate data-datos-formulario>
+                    {% csrf_token %}
+                    <label class="visually-hidden" for="titulo-formulario">Título del formulario</label>
+                    <input type="text" name="titulo" id="titulo-formulario" maxlength="220" class="form-control enc-input-titulo-formulario"
+                           value="{{ datos_form.titulo.value|default_if_none:'' }}" placeholder="Formulario sin título">
+                    <div data-error-para="titulo"></div>
+                    <label class="visually-hidden" for="descripcion-formulario">Descripción del formulario</label>
+                    <textarea name="descripcion" id="descripcion-formulario" rows="2" data-autoalto class="form-control enc-input-ayuda mt-2"
+                              placeholder="Descripción del formulario (se muestra arriba, antes de las preguntas)">{{ datos_form.descripcion.value|default_if_none:'' }}</textarea>
+                    <details class="enc-ajustes mt-3">
+                        <summary class="enc-nota">Ajustes internos (no los ve quien responde)</summary>
+                        <div class="row g-2 mt-1">
+                            <div class="col-sm-6">
+                                <label class="enc-nota" for="proceso-formulario">{{ datos_form.proceso.label }}</label>
+                                <input type="text" name="proceso" id="proceso-formulario" maxlength="60" class="form-control form-control-sm"
+                                       value="{{ datos_form.proceso.value|default_if_none:'' }}">
+                                <div class="enc-nota mt-1">{{ datos_form.proceso.help_text }}</div>
+                                <div data-error-para="proceso"></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="enc-nota" for="contexto-formulario">{{ datos_form.contexto_tipo.label }}</label>
+                                <input type="text" name="contexto_tipo" id="contexto-formulario" maxlength="60" class="form-control form-control-sm"
+                                       value="{{ datos_form.contexto_tipo.value|default_if_none:'' }}">
+                                <div class="enc-nota mt-1">{{ datos_form.contexto_tipo.help_text }}</div>
+                            </div>
+                        </div>
+                    </details>
+                </form>
+            {% else %}
+                <h2 class="enc-titulo mb-1">{{ version.plantilla.titulo }}</h2>
+                {% if version.plantilla.descripcion %}<p class="enc-texto mb-0">{{ version.plantilla.descripcion }}</p>{% endif %}
+            {% endif %}
+        </div>
+
+        <div data-secciones>
+            {% for seccion in secciones %}
+                {% include "encuestas/includes/tarjeta_seccion.html" with numero=forloop.counter %}
+            {% endfor %}
+        </div>
+
+        {% if editable %}
+            <p class="enc-nota text-center mt-3 mb-0">
+                <i class="bi bi-cloud-check me-1" aria-hidden="true"></i>Los cambios se guardan solos.
+                Haz clic en una pregunta para editarla y arrastra <i class="bi bi-grip-horizontal" aria-label="la manija"></i> para ordenarla.
+            </p>
+        {% endif %}
+    </div>
+
+    {% if editable %}
+        <div class="enc-barra" data-barra role="toolbar" aria-label="Agregar al formulario">
+            <button type="button" class="enc-barra-boton" data-accion="agregar-pregunta" title="Agregar pregunta">
+                <i class="bi bi-plus-circle" aria-hidden="true"></i><span>Pregunta</span>
+            </button>
+            <button type="button" class="enc-barra-boton" data-accion="agregar-seccion" title="Agregar sección">
+                <i class="bi bi-distribute-vertical" aria-hidden="true"></i><span>Sección</span>
+            </button>
+        </div>
+    {% endif %}
+</div>
+
+<div class="enc-avisos" data-avisos aria-live="assertive"></div>
+
+{% include "encuestas/includes/panel_tema.html" %}
+
+<script src="{% static 'js/encuestas_comun.js' %}"></script>
+<script src="{% static 'js/encuestas_tema.js' %}"></script>
+{% if editable %}
+    <script src="{% static 'js/encuestas_editor.js' %}"></script>
+    <script src="{% static 'js/encuestas_constructor.js' %}"></script>
+{% endif %}
+{% endblock %}

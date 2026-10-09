@@ -1,0 +1,451 @@
+{% extends "base.html" %}
+
+{% block title %}Socios Comunitarios | Portal A+S{% endblock %}
+
+{% block content %}
+<style>
+    .page-title {
+        font-family: 'Montserrat', 'Inter', sans-serif;
+        font-weight: 700;
+        color: var(--ua-text-dark);
+        font-size: 1.5rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .page-subtitle {
+        color: var(--ua-text-muted);
+        font-size: 0.92rem;
+    }
+
+    .card-ua {
+        background: #FFFFFF;
+        border: 1px solid var(--ua-border);
+        border-radius: 10px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    .card-ua .card-header-ua {
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--ua-border);
+        font-family: 'Montserrat', 'Inter', sans-serif;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: var(--ua-text-dark);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .form-label-ua {
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ua-text-muted);
+        margin-bottom: 4px;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--ua-red);
+        box-shadow: 0 0 0 0.2rem rgba(200, 35, 44, 0.15);
+    }
+
+    .btn-ua {
+        background-color: var(--ua-red);
+        border-color: var(--ua-red);
+        color: #FFFFFF;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .btn-ua:hover,
+    .btn-ua:focus {
+        background-color: var(--ua-red-hover);
+        border-color: var(--ua-red-hover);
+        color: #FFFFFF;
+    }
+
+    .btn-ua-outline {
+        background-color: transparent;
+        border: 1px solid var(--ua-red);
+        color: var(--ua-red);
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .btn-ua-outline:hover {
+        background-color: #FDEDEE;
+        border-color: var(--ua-red);
+        color: var(--ua-red-hover);
+    }
+
+    .btn-light-ua {
+        background-color: #F3F4F6;
+        border: 1px solid var(--ua-border);
+        color: #4B5563;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+
+    .btn-light-ua:hover {
+        background-color: #E5E7EB;
+        color: var(--ua-text-dark);
+    }
+
+    .tabla-ua thead th {
+        background-color: #F9FAFB;
+        color: var(--ua-text-muted);
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid var(--ua-border);
+        padding: 12px 16px;
+        white-space: nowrap;
+    }
+
+    .tabla-ua tbody td {
+        padding: 12px 16px;
+        vertical-align: middle;
+        font-size: 0.92rem;
+        border-color: var(--ua-border);
+    }
+
+    .tabla-ua tbody tr:hover {
+        background-color: #FEF7F7;
+    }
+
+    .socio-nombre {
+        font-weight: 600;
+        color: var(--ua-text-dark);
+    }
+
+    .socio-rut {
+        font-size: 0.8rem;
+        color: var(--ua-text-muted);
+    }
+
+    /* Badges de estado */
+    .badge-estado {
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 5px 10px;
+        border-radius: 999px;
+        letter-spacing: 0.02em;
+    }
+
+    .estado-RECIBIDO { background-color: #E0F2FE; color: #075985; }
+    .estado-APROBADO { background-color: #DCFCE7; color: #166534; }
+    .estado-RECHAZADO { background-color: #FDEDEE; color: var(--ua-red-hover); }
+    .estado-DISPONIBLE { background-color: #EDE9FE; color: #5B21B6; }
+    .estado-TRABAJO_TERMINADO { background-color: #F3F4F6; color: #374151; }
+
+    .badge-provisional {
+        background-color: #FEF3C7;
+        color: #92400E;
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 5px 10px;
+        border-radius: 999px;
+    }
+
+    .btn-accion {
+        border: 1px solid var(--ua-border);
+        background: #FFFFFF;
+        color: #4B5563;
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 0.85rem;
+        transition: all 0.15s ease;
+    }
+
+    .btn-accion:hover {
+        background-color: #FDEDEE;
+        border-color: var(--ua-red);
+        color: var(--ua-red);
+    }
+
+    .modal-title-ua {
+        font-family: 'Montserrat', 'Inter', sans-serif;
+        font-weight: 700;
+        font-size: 1.05rem;
+    }
+
+    .empty-state {
+        padding: 48px 16px;
+        text-align: center;
+        color: var(--ua-text-muted);
+    }
+
+    .empty-state i {
+        font-size: 2.5rem;
+        color: #D1D5DB;
+    }
+
+    .form-check-input:checked {
+        background-color: var(--ua-red);
+        border-color: var(--ua-red);
+    }
+</style>
+
+<!-- ENCABEZADO -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+        <h1 class="page-title">Socios Comunitarios</h1>
+        <p class="page-subtitle mb-0">Busca, filtra y revisa los socios comunitarios registrados en el portal.</p>
+    </div>
+    <span class="badge rounded-pill text-bg-light border px-3 py-2" style="color: var(--ua-text-dark);">
+        <i class="bi bi-people me-1" style="color: var(--ua-red);"></i>
+        {{ socios|length }} resultado{{ socios|length|pluralize }}
+    </span>
+</div>
+
+<!-- BÚSQUEDA Y FILTROS -->
+<div class="card-ua mb-4">
+    <div class="card-header-ua">
+        <span><i class="bi bi-funnel me-2" style="color: var(--ua-red);"></i>Búsqueda y filtros</span>
+    </div>
+    <div class="p-3 p-md-4">
+        <form method="get" action="{% url 'socios:lista_coordinador' %}">
+            <div class="row g-3">
+                <!-- Búsqueda textual -->
+                <div class="col-12 col-lg-6">
+                    <label for="q" class="form-label-ua">Buscar</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="bi bi-search text-muted" aria-hidden="true"></i></span>
+                        <input type="text" id="q" name="q" class="form-control"
+                               placeholder="Nombre de organización, RUT o contacto"
+                               value="{{ filtros.q|default:'' }}">
+                    </div>
+                </div>
+
+                <div class="col-6 col-lg-3">
+                    <label for="clasificacion" class="form-label-ua">Clasificación</label>
+                    <select id="clasificacion" name="clasificacion" class="form-select">
+                        <option value="">Todas</option>
+                        {% for c in clasificaciones %}
+                            <option value="{{ c.id }}" {% if filtros.clasificacion == c.id|stringformat:"s" %}selected{% endif %}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-6 col-lg-3">
+                    <label for="comuna" class="form-label-ua">Comuna</label>
+                    <select id="comuna" name="comuna" class="form-select">
+                        <option value="">Todas</option>
+                        {% for c in comunas %}
+                            <option value="{{ c.id }}" {% if filtros.comuna == c.id|stringformat:"s" %}selected{% endif %}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Filtros combinados -->
+                <div class="col-6 col-lg-3">
+                    <label for="estado" class="form-label-ua">Estado de revisión</label>
+                    <select id="estado" name="estado" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="RECIBIDO" {% if filtros.estado == "RECIBIDO" %}selected{% endif %}>Recibido</option>
+                        <option value="APROBADO" {% if filtros.estado == "APROBADO" %}selected{% endif %}>Aprobado</option>
+                        <option value="RECHAZADO" {% if filtros.estado == "RECHAZADO" %}selected{% endif %}>Rechazado</option>
+                        <option value="DISPONIBLE" {% if filtros.estado == "DISPONIBLE" %}selected{% endif %}>Disponible</option>
+                        <option value="TRABAJO_TERMINADO" {% if filtros.estado == "TRABAJO_TERMINADO" %}selected{% endif %}>Trabajo terminado</option>
+                    </select>
+                </div>
+
+                <div class="col-6 col-lg-3">
+                    <label for="provisional" class="form-label-ua">Tipo de registro</label>
+                    <select id="provisional" name="provisional" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="1" {% if filtros.provisional == "1" %}selected{% endif %}>Provisional</option>
+                        <option value="0" {% if filtros.provisional == "0" %}selected{% endif %}>Definitivo</option>
+                    </select>
+                </div>
+
+                <div class="col-6 col-lg-3">
+                    <label for="periodo" class="form-label-ua">Período académico</label>
+                    <select id="periodo" name="periodo" class="form-select">
+                        <option value="">Todos</option>
+                        {% for p in periodos %}
+                            <option value="{{ p.id }}" {% if filtros.periodo == p.id|stringformat:"s" %}selected{% endif %}>{{ p }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-6 col-lg-3">
+                    <label for="sede" class="form-label-ua">Sede</label>
+                    <select id="sede" name="sede" class="form-select">
+                        <option value="">Todas</option>
+                        {% for s in sedes %}
+                            <option value="{{ s.id }}" {% if filtros.sede == s.id|stringformat:"s" %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-6 col-lg-3">
+                    <label for="campus" class="form-label-ua">Campus</label>
+                    <select id="campus" name="campus" class="form-select">
+                        <option value="">Todos</option>
+                        {% for c in campus_list %}
+                            <option value="{{ c.id }}" {% if filtros.campus == c.id|stringformat:"s" %}selected{% endif %}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-6 col-lg-3">
+                    <label for="carrera" class="form-label-ua">Carrera</label>
+                    <select id="carrera" name="carrera" class="form-select">
+                        <option value="">Todas</option>
+                        {% for c in carreras %}
+                            <option value="{{ c.id }}" {% if filtros.carrera == c.id|stringformat:"s" %}selected{% endif %}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-6 col-lg-3">
+                    <label for="anio" class="form-label-ua">Año</label>
+                    <select id="anio" name="anio" class="form-select">
+                        <option value="">Todos</option>
+                        {% for a in anios %}
+                            <option value="{{ a }}" {% if filtros.anio == a|stringformat:"s" %}selected{% endif %}>{{ a }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-6 col-lg-3">
+                    <label for="vista" class="form-label-ua">Disponibilidad</label>
+                    <select id="vista" name="vista" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="disponibles" {% if filtros.vista == "disponibles" %}selected{% endif %}>Disponibles para docentes</option>
+                        <option value="historial" {% if filtros.vista == "historial" %}selected{% endif %}>Solo historial</option>
+                    </select>
+                </div>
+
+                <!-- Botones -->
+                <div class="col-12 col-lg-3 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-ua flex-grow-1">
+                        <i class="bi bi-search me-1" aria-hidden="true"></i>Aplicar
+                    </button>
+                    <a href="{% url 'socios:lista_coordinador' %}" class="btn btn-light-ua" title="Limpiar filtros" aria-label="Limpiar filtros">
+                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- TABLA DE SOCIOS -->
+<div class="card-ua">
+    <div class="card-header-ua">
+        <span><i class="bi bi-people me-2" style="color: var(--ua-red);"></i>Listado de socios</span>
+    </div>
+
+    {% if socios %}
+        <div class="table-responsive">
+            <table class="table tabla-ua mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Organización</th>
+                        <th scope="col">Clasificación</th>
+                        <th scope="col">Comuna</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col">Registro</th>
+                        <th scope="col" class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for socio in socios %}
+                        <tr>
+                            <td>
+                                <div class="socio-nombre">{{ socio.nombre_organizacion }}</div>
+                                <div class="socio-rut">{{ socio.rut|default:"Sin RUT" }}</div>
+                            </td>
+                            <td>{{ socio.clasificacion|default:"—" }}</td>
+                            <td>{{ socio.comuna|default:"—" }}</td>
+                            <td>
+                                <span class="badge-estado estado-{{ socio.estado_revision }}">
+                                    {{ socio.estado_revision|cut:"_"|title }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if socio.es_provisional %}
+                                    <span class="badge-provisional"><i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>Provisional</span>
+                                {% else %}
+                                    <span class="text-muted small">Definitivo</span>
+                                {% endif %}
+                                {% if not socio.activo or socio.estado_revision == "TRABAJO_TERMINADO" %}
+                                    <div class="mt-1"><span class="badge-estado"><i class="bi bi-archive me-1" aria-hidden="true"></i>Solo historial</span></div>
+                                {% endif %}
+                            </td>
+                            <td class="text-end text-nowrap">
+                                <a href="{% url 'socios:detalle_historial' socio.id %}" class="btn-accion text-decoration-none" title="Ver ficha e historial">
+                                    <i class="bi bi-eye me-1" aria-hidden="true"></i>Historial
+                                </a>
+                                <button type="button" class="btn-accion ms-1" data-bs-toggle="modal"
+                                        data-bs-target="#modalEstado{{ socio.id }}" title="Cambiar estado">
+                                    <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Estado
+                                </button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="bi bi-inbox" aria-hidden="true"></i>
+            <p class="mt-2 mb-0 fw-semibold">No se encontraron socios comunitarios</p>
+            <p class="small mb-0">Prueba ajustando la búsqueda o los filtros aplicados.</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- MODALES PARA CAMBIAR ESTADO -->
+{% for socio in socios %}
+<div class="modal fade" id="modalEstado{{ socio.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 10px; border: 1px solid var(--ua-border);">
+            <form method="post" action="{% url 'socios:cambiar_estado' socio.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title modal-title-ua">
+                        <i class="bi bi-pencil-square me-2" style="color: var(--ua-red);"></i>Cambiar estado
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3">
+                        <span class="socio-nombre">{{ socio.nombre_organizacion }}</span><br>
+                        <span class="socio-rut">{{ socio.rut|default:"Sin RUT" }}</span>
+                    </p>
+
+                    <label for="estado_revision_{{ socio.id }}" class="form-label-ua">Estado de revisión</label>
+                    <select id="estado_revision_{{ socio.id }}" name="estado_revision" class="form-select mb-3">
+                        <option value="RECIBIDO" {% if socio.estado_revision == "RECIBIDO" %}selected{% endif %}>Recibido</option>
+                        <option value="APROBADO" {% if socio.estado_revision == "APROBADO" %}selected{% endif %}>Aprobado</option>
+                        <option value="RECHAZADO" {% if socio.estado_revision == "RECHAZADO" %}selected{% endif %}>Rechazado</option>
+                        <option value="DISPONIBLE" {% if socio.estado_revision == "DISPONIBLE" %}selected{% endif %}>Disponible</option>
+                        <option value="TRABAJO_TERMINADO" {% if socio.estado_revision == "TRABAJO_TERMINADO" %}selected{% endif %}>Trabajo terminado</option>
+                    </select>
+
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="es_provisional" value="1"
+                               id="provisional_{{ socio.id }}" {% if socio.es_provisional %}checked{% endif %}>
+                        <label class="form-check-label" for="provisional_{{ socio.id }}">
+                            Mantener como socio provisional
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light-ua" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-ua">
+                        <i class="bi bi-check2 me-1" aria-hidden="true"></i>Guardar cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
