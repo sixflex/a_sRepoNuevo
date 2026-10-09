@@ -76,66 +76,8 @@
 <h4 class="fw-bold mb-3" style="font-size: 1.25rem; color: #111827;">Flujo Operativo y Validación</h4>
 <div class="row g-4">
 
-    <!-- Módulo 1: Gestión Académica -->
-    <div class="col-12 col-md-6 col-xl-3">
-        <div class="module-card border-top border-4 border-danger">
-            <div>
-                <span class="module-badge">Curricular</span>
-                <h5 class="module-title">Gestión Académica</h5>
-                <p class="module-desc">
-                    Consulta y administra la información curricular de asignaturas,
-                    secciones y nóminas requeridas para el desarrollo del programa A+S.
-                </p>
-            </div>
-            <div>
-                <a href="{% url 'home' %}" class="btn-ua-action">
-                    Ir a gestión académica <i class="bi bi-arrow-right"></i>
-                </a>
-            </div>
-        </div>
-    </div>
-
-        <!-- Módulo 2: Enlaces de Planificación -->
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="module-card border-top border-4 border-danger">
-                <div>
-                    <span class="module-badge">Planificación</span>
-                    <h5 class="module-title">Enlaces de Planificación</h5>
-                    <p class="module-desc">
-                        Genera y comparte enlaces individuales con vigencia para Dirección de Carrera y Secretaría de Estudios.
-                    </p>
-                </div>
-                <div class="d-flex gap-2 flex-column flex-sm-row flex-wrap">
-                    <a href="{% url 'proyectos:gestionar_enlaces' %}" class="btn-ua-action">
-                        <i class="bi bi-link-45deg"></i> Enlaces
-                    </a>
-                    <a href="{% url 'core:planificacion_coordinacion' %}" class="btn-ua-outline-action">
-                        Registros
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Módulo 3: Consulta de Planificación -->
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="module-card border-top border-4 border-danger">
-                <div>
-                    <span class="module-badge">Consulta</span>
-                    <h5 class="module-title">Planificación Académica</h5>
-                    <p class="module-desc">
-                        Consulta las secciones académicas registradas y filtra por período, carrera, asignatura, NRC y docente.
-                    </p>
-                </div>
-                <div>
-                    <a href="{% url 'core:planificacion_coordinacion' %}" class="btn-ua-action">
-                        <i class="bi bi-search"></i> Consultar
-                    </a>
-                </div>
-            </div>
-        </div>
-
         <!-- Módulo 4: Validación y Estado A+S -->
-        <div class="col-12 col-md-6 col-xl-3">
+        <div class="col-12 col-md-6 col-xl-4">
             <div class="module-card border-top border-4 border-danger">
                 <div>
                     <span class="module-badge">Validación A+S</span>
@@ -155,7 +97,7 @@
             </div>
         </div>
 
-                <div class="col-12 col-md-6 col-xl-3">
+                <div class="col-12 col-md-6 col-xl-4">
             <div class="module-card border-top border-4 border-danger">
                 <div>
                     <span class="module-badge">Cartas</span>
@@ -172,7 +114,7 @@
             </div>
         </div>
 
-        <div class="col-12 col-md-6 col-xl-3">
+        <div class="col-12 col-md-6 col-xl-4">
             <div class="module-card border-top border-4 border-danger">
                 <div>
                     <span class="module-badge">Ruta A+S</span>
