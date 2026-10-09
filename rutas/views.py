@@ -13,6 +13,9 @@ from archivos.validators import validar_cantidad_archivos
 from usuarios.permissions import es_coordinador, es_docente
 
 from .models import Evidencia, ExpedienteSeccion, SeccionActividad, SeccionRuta
+from django.urls import reverse
+from encuestas.models import EnlaceFormulario
+from encuestas import services as encuestas_services
 
 
 def verificar_acceso_ruta(user, seccion_ruta):
@@ -122,7 +125,59 @@ def detalle_ruta_docente(request, seccion_ruta_id):
         ).exists()
         and seccion_ruta.estado != "COMPLETADA"
     )
+    formularios_por_actividad = {
+        19: [
+            "EVALUACION_AS_ESTUDIANTES",
+            "EVALUACION_AS_DOCENTES",
+            "EVALUACION_AS_SOCIOS",
+        ],
+        23: [
+            "RESUMEN_IMPLEMENTACION_DOCENTE",
+        ],
+    }
 
+    codigos = [
+        codigo
+        for lista in formularios_por_actividad.values()
+        for codigo in lista
+    ]
+
+    enlaces = (
+        EnlaceFormulario.objects
+        .filter(
+            version__plantilla__codigo__in=codigos,
+            activo=True,
+            seccion__isnull=True,
+        )
+        .select_related("version__plantilla")
+        .order_by("id")
+    )
+
+    enlaces_por_codigo = {}
+
+    for enlace in enlaces:
+        if (
+            enlace.version.plantilla.codigo not in enlaces_por_codigo
+            and encuestas_services.enlace_abierto(enlace)
+        ):
+            enlaces_por_codigo[enlace.version.plantilla.codigo] = enlace
+
+    for actividad in actividades:
+        actividad.formularios_ruta = []
+
+        for codigo in formularios_por_actividad.get(
+            actividad.ruta_actividad.orden, []
+        ):
+            enlace = enlaces_por_codigo.get(codigo)
+
+            if enlace:
+                actividad.formularios_ruta.append({
+                    "nombre": enlace.version.plantilla.titulo,
+                    "url": reverse(
+                        "encuestas:responder",
+                        args=[enlace.token],
+                    ),
+                })
     return render(
         request,
         "rutas/detalle_ruta_docente.html",
