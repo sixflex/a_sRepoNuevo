@@ -13,7 +13,6 @@ from academico.models import (
 )
 from .models import CargaPlanificacion, DetalleFilaObservada
 
-
 def inicio(request):
     if request.user.is_authenticated:
         if es_coordinador(request.user):
