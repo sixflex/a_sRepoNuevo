@@ -93,9 +93,10 @@ def planificacion_coordinacion(request):
     )
 
 
+
 @docente_required
 def panel_docente(request):
-    secciones = (
+    secciones_docente = (
         Seccion.objects
         .filter(docentes__usuario=request.user)
         .select_related(
@@ -107,11 +108,150 @@ def panel_docente(request):
         .distinct()
     )
 
+    periodos = (
+        PeriodoAcademico.objects
+        .filter(secciones__in=secciones_docente)
+        .distinct()
+        .order_by("-anio", "-id")
+    )
+
+    anios = (
+        periodos
+        .order_by("-anio")
+        .values_list("anio", flat=True)
+        .distinct()
+    )
+
+    anio_seleccionado = request.GET.get("anio", "").strip()
+    periodo_seleccionado = request.GET.get("periodo", "").strip()
+
+    secciones = secciones_docente
+
+    if anio_seleccionado:
+        if anio_seleccionado.isdigit():
+            secciones = secciones.filter(
+                periodo__anio=int(anio_seleccionado)
+            )
+        else:
+            secciones = secciones.none()
+
+    if periodo_seleccionado:
+        if periodo_seleccionado.isdigit():
+            secciones = secciones.filter(
+                periodo_id=int(periodo_seleccionado)
+            )
+        else:
+            secciones = secciones.none()
+
+    if anio_seleccionado:
+        periodos = periodos.filter(
+            anio=anio_seleccionado
+        ) if anio_seleccionado.isdigit() else periodos.none()
+
+    secciones = secciones.order_by(
+        "-periodo__anio",
+        "-periodo_id",
+        "asignatura__nombre",
+    )
+
     return render(
         request,
         "core/docente.html",
         {
             "secciones": secciones,
+            "anios": anios,
+            "periodos": periodos,
+            "anio_seleccionado": anio_seleccionado,
+            "periodo_seleccionado": periodo_seleccionado,
+            "filtros_activos": bool(
+                anio_seleccionado or periodo_seleccionado
+            ),
+        },
+    )
+
+
+@docente_required
+def inicio_docente(request):
+    from django.db.models import Count, Q
+    from rutas.models import SeccionRuta
+
+    secciones = (
+        Seccion.objects
+        .filter(docentes__usuario=request.user)
+        .distinct()
+    )
+
+    rutas = list(
+        SeccionRuta.objects
+        .filter(seccion__in=secciones)
+        .select_related(
+            "seccion",
+            "seccion__asignatura",
+            "seccion__periodo",
+        )
+        .annotate(
+            total_obligatorias=Count(
+                "actividades",
+                filter=Q(
+                    actividades__ruta_actividad__es_obligatoria=True
+                ),
+            ),
+            completadas_obligatorias=Count(
+                "actividades",
+                filter=Q(
+                    actividades__ruta_actividad__es_obligatoria=True,
+                    actividades__completada_por_docente__isnull=False,
+                ),
+            ),
+        )
+        .order_by(
+            "-seccion__periodo__anio",
+            "seccion__asignatura__nombre",
+        )
+    )
+
+    total_obligatorias = 0
+    total_completadas = 0
+    total_pendientes = 0
+
+    for ruta in rutas:
+        ruta.pendientes_obligatorias = (
+            ruta.total_obligatorias
+            - ruta.completadas_obligatorias
+        )
+
+        ruta.avance_calculado = (
+            round(
+                ruta.completadas_obligatorias
+                * 100
+                / ruta.total_obligatorias
+            )
+            if ruta.total_obligatorias
+            else 0
+        )
+
+        total_obligatorias += ruta.total_obligatorias
+        total_completadas += ruta.completadas_obligatorias
+        total_pendientes += ruta.pendientes_obligatorias
+
+    avance_general = (
+        round(total_completadas * 100 / total_obligatorias)
+        if total_obligatorias
+        else 0
+    )
+
+    return render(
+        request,
+        "core/inicio_docente.html",
+        {
+            "total_secciones": secciones.count(),
+            "rutas_completadas": sum(
+                ruta.estado == "COMPLETADA"
+                for ruta in rutas
+            ),
+            "total_pendientes": total_pendientes,
+            "avance_general": avance_general,
+            "rutas": rutas,
         },
     )
 

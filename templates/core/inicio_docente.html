@@ -1,0 +1,101 @@
+
+{% extends "base.html" %}
+
+{% block title %}Inicio Docente | Portal A+S{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+    <div class="mb-4">
+        <h2 class="fw-bold mb-1">Inicio Docente</h2>
+        <p class="text-muted">
+            Resumen de tus secciones y Rutas A+S.
+        </p>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h3 class="fw-bold">{{ total_secciones }}</h3>
+                    <span class="text-muted">Mis secciones</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h3 class="fw-bold">{{ rutas_completadas }}</h3>
+                    <span class="text-muted">Rutas completadas</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h3 class="fw-bold">{{ total_pendientes }}</h3>
+                    <span class="text-muted">Actividades pendientes</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h3 class="fw-bold">{{ avance_general }}%</h3>
+                    <span class="text-muted">Avance general</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+            <h5 class="fw-bold mb-4">Mis Rutas A+S</h5>
+
+            {% for ruta in rutas %}
+                <div class="border rounded-3 p-3 mb-3">
+                    <h6 class="fw-bold">
+                        {{ ruta.seccion.asignatura.nombre }}
+                    </h6>
+
+                    <p class="text-muted small">
+                        NRC {{ ruta.seccion.nrc }} · {{ ruta.seccion.periodo.nombre }}
+                    </p>
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Avance</span>
+                        <strong>{{ ruta.avance_calculado }}%</strong>
+                    </div>
+
+                    <div class="progress mb-3" style="height: 10px;">
+                        <div class="progress-bar bg-danger"
+                             role="progressbar"
+                             style="width: {{ ruta.avance_calculado }}%;"
+                             aria-valuenow="{{ ruta.avance_calculado }}"
+                             aria-valuemin="0"
+                             aria-valuemax="100">
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <span class="text-muted small">
+                            {{ ruta.pendientes_obligatorias }} actividades obligatorias pendientes
+                        </span>
+
+                        <a href="{% url 'rutas:detalle_ruta_docente' ruta.id %}"
+                           class="btn btn-rojo btn-sm">
+                            Ver Ruta A+S
+                        </a>
+                    </div>
+                </div>
+            {% empty %}
+                <p class="text-muted mb-0">
+                    Todavía no tienes Rutas A+S asignadas.
+                </p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
