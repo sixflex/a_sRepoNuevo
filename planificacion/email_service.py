@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.mail import send_mail
 from django.urls import reverse
+from django.utils import timezone
 
 
 def construir_url_planificacion(request, enlace):
@@ -28,8 +29,9 @@ def enviar_correo_planificacion(request, enlace, reenvio=False):
             "académica A+S."
         )
 
+    # La vigencia se muestra en hora de Chile, no en UTC.
     expiracion = (
-        enlace.fecha_expiracion.strftime("%d/%m/%Y %H:%M")
+        timezone.localtime(enlace.fecha_expiracion).strftime("%d/%m/%Y %H:%M")
         if enlace.fecha_expiracion
         else "Sin fecha de expiración definida"
     )
@@ -42,7 +44,8 @@ def enviar_correo_planificacion(request, enlace, reenvio=False):
         f"Período: {enlace.periodo}\n"
         f"Vigencia: {expiracion}\n\n"
         f"Enlace de planificación:\n{url}\n\n"
-        "Este enlace es individual. No debe ser compartido.\n\n"
+        "Este enlace corresponde a su unidad. Si otra persona debe completar "
+        "la planificación, puede reenviárselo bajo su responsabilidad.\n\n"
         "Portal A+S"
     )
 

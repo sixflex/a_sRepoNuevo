@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    {% if seccion %}Editar Sección{% else %}Nueva Sección{% endif %}
+    {% if seccion.pk %}Editar Sección{% else %}Nueva Sección{% endif %} | Portal A+S
 {% endblock %}
 
 {% block content %}
@@ -12,7 +12,7 @@
         <!-- ENCABEZADO -->
         <div class="card-header bg-white border-bottom py-3">
             <h4 class="mb-1 fw-bold">
-                {% if seccion %}
+                {% if seccion.pk %}
                     Editar Sección
                 {% else %}
                     Nueva Sección
@@ -48,11 +48,13 @@
                             id="nrc"
                             name="nrc"
                             maxlength="20"
+                            inputmode="numeric"
                             placeholder="Ej: 12345"
+                            aria-describedby="nrc-ayuda"
                             value="{{ seccion.nrc|default:'' }}"
                             required>
-                        <div class="form-text">
-                            Debe ser único en el periodo.
+                        <div class="form-text" id="nrc-ayuda">
+                            NRC de la oferta académica (Banner), tal como lo entrega la universidad. Debe ser único en el período.
                         </div>
                     </div>
 
@@ -67,7 +69,7 @@
                             id="seccion"
                             name="seccion"
                             maxlength="20"
-                            placeholder="Ej: 001"
+                            placeholder="Ej: 01"
                             value="{{ seccion.seccion|default:'' }}"
                             required>
                     </div>
@@ -78,14 +80,14 @@
                             Periodo académico
                         </label>
                         <select class="form-select" id="periodo" name="periodo" required>
-                            <option value="" disabled {% if not seccion %}selected{% endif %}>
+                            <option value="" disabled {% if not seccion.periodo_id %}selected{% endif %}>
                                 Seleccione un periodo
                             </option>
                             {% for periodo in periodos %}
                                 <option
                                     value="{{ periodo.id }}"
-                                    {% if seccion and seccion.periodo_id == periodo.id %}selected{% endif %}>
-                                    {{ periodo.anio }} - {{ periodo.tipo }} - {{ periodo.nombre }}
+                                    {% if seccion.periodo_id == periodo.id %}selected{% endif %}>
+                                    {{ periodo }} ({{ periodo.tipo }})
                                 </option>
                             {% endfor %}
                         </select>
@@ -97,13 +99,13 @@
                             Campus
                         </label>
                         <select class="form-select" id="campus" name="campus" required>
-                            <option value="" disabled {% if not seccion %}selected{% endif %}>
+                            <option value="" disabled {% if not seccion.campus_id %}selected{% endif %}>
                                 Seleccione un campus
                             </option>
                             {% for campus in campus_list %}
                                 <option
                                     value="{{ campus.id }}"
-                                    {% if seccion and seccion.campus_id == campus.id %}selected{% endif %}>
+                                    {% if seccion.campus_id == campus.id %}selected{% endif %}>
                                     {{ campus.nombre }} - {{ campus.sede.nombre }}
                                 </option>
                             {% endfor %}
@@ -119,13 +121,13 @@
                             Asignatura
                         </label>
                         <select class="form-select" id="asignatura" name="asignatura" required>
-                            <option value="" disabled {% if not seccion %}selected{% endif %}>
+                            <option value="" disabled {% if not seccion.asignatura_id %}selected{% endif %}>
                                 Seleccione una asignatura
                             </option>
                             {% for asignatura in asignaturas %}
                                 <option
                                     value="{{ asignatura.id }}"
-                                    {% if seccion and seccion.asignatura_id == asignatura.id %}selected{% endif %}>
+                                    {% if seccion.asignatura_id == asignatura.id %}selected{% endif %}>
                                     {% if asignatura.codigo %}{{ asignatura.codigo }} - {% endif %}{{ asignatura.nombre }}
                                 </option>
                             {% endfor %}
@@ -137,14 +139,16 @@
                         <label for="jornada" class="form-label fw-semibold">
                             Jornada
                         </label>
-                        <input
-                            type="text"
-                            class="form-control"
-                            id="jornada"
-                            name="jornada"
-                            maxlength="40"
-                            placeholder="Ej: Diurna"
-                            value="{{ seccion.jornada|default:'' }}">
+                        <select class="form-select" id="jornada" name="jornada">
+                            <option value="" {% if not seccion.jornada %}selected{% endif %}>
+                                Sin jornada
+                            </option>
+                            {% for valor, etiqueta in jornadas %}
+                                <option value="{{ valor }}" {% if seccion.jornada == valor %}selected{% endif %}>
+                                    {{ etiqueta }}
+                                </option>
+                            {% endfor %}
+                        </select>
                     </div>
 
                     <!-- ESTADO -->
@@ -153,18 +157,14 @@
                             Estado
                         </label>
                         <select class="form-select" id="estado" name="estado" required>
-                            <option value="" disabled {% if not seccion %}selected{% endif %}>
+                            <option value="" disabled {% if not seccion.estado %}selected{% endif %}>
                                 Seleccione un estado
                             </option>
-                            <option value="Planificada" {% if seccion.estado == "Planificada" %}selected{% endif %}>
-                                Planificada
-                            </option>
-                            <option value="Activa" {% if seccion.estado == "Activa" %}selected{% endif %}>
-                                Activa
-                            </option>
-                            <option value="Finalizada" {% if seccion.estado == "Finalizada" %}selected{% endif %}>
-                                Finalizada
-                            </option>
+                            {% for valor, etiqueta in estados %}
+                                <option value="{{ valor }}" {% if seccion.estado == valor %}selected{% endif %}>
+                                    {{ etiqueta }}
+                                </option>
+                            {% endfor %}
                         </select>
                     </div>
 
@@ -245,7 +245,7 @@
                     </a>
 
                     <button type="submit" class="btn btn-rojo px-4">
-                        {% if seccion %}
+                        {% if seccion.pk %}
                             Guardar cambios
                         {% else %}
                             Guardar

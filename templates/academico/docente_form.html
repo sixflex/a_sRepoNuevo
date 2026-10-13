@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    {% if docente %}Editar Docente{% else %}Nuevo Docente{% endif %}
+    {% if docente.pk %}Editar Docente{% else %}Nuevo Docente{% endif %} | Portal A+S
 {% endblock %}
 
 {% block content %}
@@ -12,7 +12,7 @@
         <!-- ENCABEZADO -->
         <div class="card-header bg-white border-bottom py-3">
             <h4 class="mb-1 fw-bold">
-                {% if docente %}
+                {% if docente.pk %}
                     Editar Docente
                 {% else %}
                     Nuevo Docente
@@ -49,11 +49,12 @@
                             id="rut"
                             name="rut"
                             maxlength="12"
-                            placeholder="Ej: 12.345.678-9"
+                            placeholder="Ej: 12345678-5"
+                            aria-describedby="rut-ayuda"
                             value="{{ docente.rut|default:'' }}"
                             required>
-                        <div class="form-text">
-                            RUT del docente con guión.
+                        <div class="form-text" id="rut-ayuda">
+                            Sin puntos y con guion, ej. 12345678-5.
                         </div>
                     </div>
 
@@ -133,7 +134,7 @@
                                 type="checkbox"
                                 id="activo"
                                 name="activo"
-                                {% if not docente or docente.activo %}checked{% endif %}>
+                                {% if docente.activo %}checked{% endif %}>
 
                             <label class="form-check-label fw-semibold" for="activo">
                                 Docente activo
@@ -153,7 +154,7 @@
                     </a>
 
                     <button type="submit" class="btn btn-rojo px-4">
-                        {% if docente %}
+                        {% if docente.pk %}
                             Guardar cambios
                         {% else %}
                             Guardar

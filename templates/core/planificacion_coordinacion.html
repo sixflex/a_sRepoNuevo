@@ -53,7 +53,7 @@ Planificaciones recibidas | Portal A+S
                                     </td>
 
                                     <td>
-                                        {{ planificacion.enlace.periodo.nombre }}
+                                        {{ planificacion.enlace.periodo }}
                                     </td>
 
                                     <td>
@@ -100,15 +100,6 @@ Planificaciones recibidas | Portal A+S
                     Aún no existen planificaciones registradas.
                 </div>
             {% endif %}
-
-            <div class="mt-4">
-                <a
-                    href="{% url 'core:coordinacion' %}"
-                    class="btn btn-outline-secondary"
-                >
-                    Volver al dashboard
-                </a>
-            </div>
         </div>
     </div>
 </div>

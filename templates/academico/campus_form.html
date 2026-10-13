@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    {% if campus %}Editar Campus{% else %}Nuevo Campus{% endif %}
+    {% if campus.pk %}Editar Campus{% else %}Nuevo Campus{% endif %} | Portal A+S
 {% endblock %}
 
 {% block content %}
@@ -14,7 +14,7 @@
         <div class="card-header bg-white border-bottom py-3">
 
             <h1 class="h4 mb-1 fw-bold">
-                {% if campus %}
+                {% if campus.pk %}
                     Editar Campus
                 {% else %}
                     Nuevo Campus
@@ -129,7 +129,7 @@
                                 id="activo"
                                 name="activo"
                             aria-describedby="activo-ayuda"
-                                {% if not campus or campus.activo %}checked{% endif %}>
+                                {% if campus.activo %}checked{% endif %}>
 
                             <label
                                 class="form-check-label fw-semibold"
@@ -157,7 +157,7 @@
                         type="submit"
                         class="btn btn-rojo px-4">
 
-                        {% if campus %}
+                        {% if campus.pk %}
                             Guardar cambios
                         {% else %}
                             Guardar

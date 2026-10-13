@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block title %}Ruta A+S · NRC {{ seccion.nrc }} | Portal A+S{% endblock %}
+
 {% block content %}
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
@@ -73,16 +75,16 @@
 
                 <div class="col-md-4">
                     <div class="text-muted small">Período</div>
-                    <strong>{{ seccion.periodo.nombre }}</strong>
+                    <strong>{{ seccion.periodo }}</strong>
                 </div>
 
                 <div class="col-md-4">
                     <div class="text-muted small">Estado</div>
 
                     {% if seccion_ruta.estado == "COMPLETADA" %}
-                        <span class="badge bg-success">COMPLETADA</span>
+                        <span class="badge bg-success">Completada</span>
                     {% else %}
-                        <span class="badge bg-primary">EN PROGRESO</span>
+                        <span class="badge bg-primary">En progreso</span>
                     {% endif %}
                 </div>
             </div>

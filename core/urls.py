@@ -21,6 +21,4 @@ urlpatterns = [
 
     path("coordinacion/planificacion/<int:planificacion_id>/", views.detalle_planificacion_coordinacion, name="detalle_planificacion_coordinacion"),
 
-    
-    path("coordinacion/validar-planificacion/", views.validar_planificacion_view, name="validar_planificacion"),
 ]

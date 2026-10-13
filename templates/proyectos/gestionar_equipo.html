@@ -15,7 +15,7 @@
             <p class="text-muted mb-0">
                 {{ equipo.seccion.asignatura.nombre }}
                 · NRC {{ equipo.seccion.nrc }}
-                · {{ equipo.seccion.periodo.nombre }}
+                · {{ equipo.seccion.periodo }}
             </p>
         </div>
 
@@ -25,13 +25,6 @@
         </a>
     </div>
 
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">
-                {{ message }}
-            </div>
-        {% endfor %}
-    {% endif %}
 
 
     <!-- DATOS GENERALES -->
@@ -378,11 +371,11 @@
 
                 <div class="mt-2">
 
-                    {% if equipo.socio_comunitario %}
+                    {% if equipo.socio_vigente %}
 
-                        {{ equipo.socio_comunitario.nombre_organizacion }}
+                        {{ equipo.socio_vigente.nombre_organizacion }}
 
-                        {% if equipo.socio_comunitario.es_provisional %}
+                        {% if equipo.socio_vigente.es_provisional %}
                             <span class="badge bg-warning text-dark ms-1">
                                 Provisional
                             </span>
@@ -463,6 +456,57 @@
                 </button>
 
             </form>
+
+        </div>
+    </div>
+
+
+    <!-- PERÍODOS DE ASOCIACIÓN (ParticipacionSocio) -->
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-header">
+            <strong>Socios Comunitarios asociados al equipo</strong>
+        </div>
+
+        <div class="card-body">
+
+            {% if participaciones_socio %}
+
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Socio Comunitario</th>
+                                <th>Desde</th>
+                                <th>Hasta</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for participacion in participaciones_socio %}
+                                <tr>
+                                    <td>{{ participacion.socio.nombre_organizacion }}</td>
+                                    <td>{{ participacion.fecha_inicio|date:"d/m/Y"|default:"-" }}</td>
+                                    <td>
+                                        {% if participacion.vigente %}
+                                            <span class="badge text-bg-success">Vigente</span>
+                                        {% else %}
+                                            {{ participacion.fecha_fin|date:"d/m/Y" }}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            {% else %}
+
+                <div class="alert alert-light border mb-0">
+                    Este equipo todavía no registra asociaciones con
+                    Socios Comunitarios.
+                </div>
+
+            {% endif %}
 
         </div>
     </div>

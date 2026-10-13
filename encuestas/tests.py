@@ -120,6 +120,15 @@ class FormularioBaseTestCase(TestCase):
 class VisibilidadTests(FormularioBaseTestCase):
     """CDE-102 y CDE-103: secciones, preguntas y opciones según el programa."""
 
+    def test_formulario_publico_sin_barra_del_portal(self):
+        self.client.logout()
+
+        response = self.client.get(self.url_responder)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "navbar-sistema")
+        self.assertNotContains(response, "Iniciar sesión")
+
     def test_seccion_de_otro_programa_no_se_muestra(self):
         bloques, preguntas = services.cargar_estructura(self.version)
         visibles_b = services.calcular_visibilidad(bloques, preguntas, {self.selector.id: {"B"}})

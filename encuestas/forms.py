@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 
 from archivos.validators import get_extensiones_permitidas, validar_extension_archivo, validar_tamano_archivo
-from socios.validators import validar_rut_chileno
+from core.validators import validar_rut_chileno
 
 from . import constantes as c
 from . import services

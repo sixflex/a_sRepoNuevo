@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    {% if unidad %}Editar Unidad Académica{% else %}Nueva Unidad Académica{% endif %}
+    {% if unidad.pk %}Editar Unidad Académica{% else %}Nueva Unidad Académica{% endif %} | Portal A+S
 {% endblock %}
 
 {% block content %}
@@ -12,7 +12,7 @@
         <!-- ENCABEZADO -->
         <div class="card-header bg-white border-bottom py-3">
             <h4 class="mb-1 fw-bold">
-                {% if unidad %}
+                {% if unidad.pk %}
                     Editar Unidad Académica
                 {% else %}
                     Nueva Unidad Académica
@@ -50,7 +50,7 @@
                             name="nombre"
                             maxlength="180"
                             placeholder="Ej: Escuela de Informática"
-                            value="{% if request.POST.nombre %}{{ request.POST.nombre }}{% elif unidad %}{{ unidad.nombre }}{% endif %}"
+                            value="{{ unidad.nombre|default:'' }}"
                             required>
                         <div class="form-text">
                             Ingresa el nombre oficial de la unidad académica.
@@ -62,17 +62,14 @@
                         <label for="tipo" class="form-label fw-semibold">
                             Tipo
                         </label>
-                        <input
-                            type="text"
-                            class="form-control"
-                            id="tipo"
-                            name="tipo"
-                            maxlength="40"
-                            placeholder="Ej: Escuela, Departamento, Dirección"
-                            value="{% if request.POST.tipo %}{{ request.POST.tipo }}{% elif unidad %}{{ unidad.tipo }}{% endif %}"
-                            required>
-                        <div class="form-text">
-                            Indica el tipo de unidad académica.
+                        <select class="form-select" id="tipo" name="tipo" aria-describedby="tipo-ayuda" required>
+                            <option value="" disabled {% if not unidad.tipo %}selected{% endif %}>Seleccione un tipo</option>
+                            {% for valor, etiqueta in tipos %}
+                                <option value="{{ valor }}" {% if unidad.tipo == valor %}selected{% endif %}>{{ etiqueta }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text" id="tipo-ayuda">
+                            Una Dirección de Carrera debe indicar su carrera.
                         </div>
                     </div>
 
@@ -86,17 +83,13 @@
                             {% for facultad in facultades %}
                                 <option
                                     value="{{ facultad.pk }}"
-                                    {% if request.POST.facultad == facultad.pk|stringformat:"s" %}
-                                        selected
-                                    {% elif not request.POST and unidad and unidad.facultad_id == facultad.pk %}
-                                        selected
-                                    {% endif %}>
+                                    {% if unidad.facultad_id == facultad.pk %}selected{% endif %}>
                                     {{ facultad.nombre }}
                                 </option>
                             {% endfor %}
                         </select>
                         <div class="form-text">
-                            Selecciona la facultad asociada, si corresponde.
+                            Facultad a la que pertenece la unidad.
                         </div>
                     </div>
 
@@ -110,17 +103,14 @@
                             {% for carrera in carreras %}
                                 <option
                                     value="{{ carrera.pk }}"
-                                    {% if request.POST.carrera == carrera.pk|stringformat:"s" %}
-                                        selected
-                                    {% elif not request.POST and unidad and unidad.carrera_id == carrera.pk %}
-                                        selected
-                                    {% endif %}>
+                                    data-facultad="{{ carrera.facultad_id }}"
+                                    {% if unidad.carrera_id == carrera.pk %}selected{% endif %}>
                                     {{ carrera.nombre }}
                                 </option>
                             {% endfor %}
                         </select>
                         <div class="form-text">
-                            Selecciona la carrera asociada, si corresponde.
+                            Solo se muestran las carreras de la facultad elegida.
                         </div>
                     </div>
 
@@ -136,7 +126,7 @@
                             name="correo_oficial"
                             maxlength="254"
                             placeholder="Ej: unidad@uautonoma.cl"
-                            value="{% if request.POST.correo_oficial %}{{ request.POST.correo_oficial }}{% elif unidad and unidad.correo_oficial %}{{ unidad.correo_oficial }}{% endif %}">
+                            value="{{ unidad.correo_oficial|default:'' }}">
                         <div class="form-text">
                             Ingresa el correo oficial institucional de contacto de la unidad académica.
                         </div>
@@ -150,13 +140,7 @@
                                 type="checkbox"
                                 id="activo"
                                 name="activo"
-                                {% if request.method == "POST" %}
-                                    {% if request.POST.activo %}checked{% endif %}
-                                {% elif unidad %}
-                                    {% if unidad.activo %}checked{% endif %}
-                                {% else %}
-                                    checked
-                                {% endif %}>
+                                {% if unidad.activo %}checked{% endif %}>
                             <label class="form-check-label fw-semibold" for="activo">
                                 Unidad académica activa
                             </label>
@@ -175,7 +159,7 @@
                     </a>
 
                     <button type="submit" class="btn btn-rojo px-4">
-                        {% if unidad %}
+                        {% if unidad.pk %}
                             Guardar cambios
                         {% else %}
                             Guardar
@@ -190,4 +174,27 @@
     </div>
 
 </div>
+<script>
+    // Carrera depende de Facultad: se ocultan las carreras de otras facultades
+    // (cada opción trae data-facultad). Sin llamadas al servidor.
+    (function () {
+        const facultad = document.getElementById("facultad");
+        const carrera = document.getElementById("carrera");
+
+        function filtrarCarreras() {
+            const elegida = facultad.value;
+
+            for (const opcion of carrera.options) {
+                if (!opcion.value) continue;
+                const visible = !elegida || opcion.dataset.facultad === elegida;
+                opcion.hidden = !visible;
+                opcion.disabled = !visible;
+                if (!visible && opcion.selected) carrera.value = "";
+            }
+        }
+
+        facultad.addEventListener("change", filtrarCarreras);
+        filtrarCarreras();
+    })();
+</script>
 {% endblock %}

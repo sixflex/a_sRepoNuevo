@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}
-    {% if facultad %}Editar Facultad{% else %}Nueva Facultad{% endif %}
+    {% if facultad.pk %}Editar Facultad{% else %}Nueva Facultad{% endif %} | Portal A+S
 {% endblock %}
 
 {% block content %}
@@ -14,7 +15,7 @@
         <div class="card-header bg-white border-bottom py-3">
 
             <h1 class="h4 mb-1 fw-bold">
-                {% if facultad %}
+                {% if facultad.pk %}
                     Editar Facultad
                 {% else %}
                     Nueva Facultad
@@ -49,7 +50,7 @@
 
                         <label for="codigo"
                                class="form-label fw-semibold">
-                            Código
+                            Código <span class="fw-normal text-muted">(se sugiere solo)</span>
                         </label>
 
                         <input
@@ -59,11 +60,12 @@
                             name="codigo"
                             aria-describedby="codigo-ayuda"
                             maxlength="30"
-                            placeholder="Ej: FING"
+                            placeholder="Ej: INGE"
+                            data-codigo-desde="nombre"
                             value="{{ facultad.codigo|default:'' }}">
 
                         <div class="form-text" id="codigo-ayuda">
-                            Código identificador de la facultad. Este campo es opcional.
+                            Se propone con las iniciales del nombre y se puede cambiar. Si lo deja vacío, se genera al guardar.
                         </div>
 
                     </div>
@@ -99,7 +101,7 @@
                                 id="activo"
                                 name="activo"
                             aria-describedby="activo-ayuda"
-                                {% if not facultad or facultad.activo %}checked{% endif %}>
+                                {% if facultad.activo %}checked{% endif %}>
 
                             <label
                                 class="form-check-label fw-semibold"
@@ -125,7 +127,7 @@
 
                     <button type="submit"
                             class="btn btn-rojo px-4">
-                        {% if facultad %}
+                        {% if facultad.pk %}
                             Guardar cambios
                         {% else %}
                             Guardar
@@ -142,4 +144,10 @@
 
 </div>
 
+{% if not facultad.pk %}
+    {{ codigos_usados|json_script:"codigos-usados" }}
+    {{ palabras_sin_inicial|json_script:"palabras-sin-inicial" }}
+    {{ largo_codigo|json_script:"largo-codigo" }}
+    <script src="{% static 'js/codigo_sugerido.js' %}"></script>
+{% endif %}
 {% endblock %}

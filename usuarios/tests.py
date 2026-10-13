@@ -253,7 +253,7 @@ class PermisosTestCase(TestCase):
         self.client.force_login(self.docente1_usuario)
 
         response = self.client.get(
-            reverse("planificacion_list")
+            reverse("seccion_list")
         )
 
         self.assertEqual(response.status_code, 403)
@@ -263,7 +263,7 @@ class PermisosTestCase(TestCase):
         self.client.force_login(self.coordinador)
 
         response = self.client.get(
-            reverse("planificacion_list")
+            reverse("seccion_list")
         )
 
         self.assertEqual(response.status_code, 200)
@@ -288,7 +288,7 @@ class PermisosTestCase(TestCase):
 
     def test_anonimo_no_accede_a_planificacion_academica(self):
         response = self.client.get(
-            reverse("planificacion_list")
+            reverse("seccion_list")
         )
 
         self.assertEqual(response.status_code, 302)
