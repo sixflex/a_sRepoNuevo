@@ -156,7 +156,11 @@ main {
 }
 
 .sidebar-toggle {
-    width: auto;
+    /* Ocupa todo el ancho del menú (menos el margen del nav-link) para que
+       el chevron quede alineado a la derecha y el texto no se centre. */
+    width: calc(100% - 16px);
+    text-align: left;
+    gap: 0.5rem;
     justify-content: space-between;
     background: transparent;
     border: 0;

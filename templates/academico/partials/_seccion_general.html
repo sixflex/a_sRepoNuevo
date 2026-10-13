@@ -6,25 +6,13 @@
         <div class="row g-4">
             <div class="col-md-6">
                 <small class="text-muted">Período</small>
-                <p class="fw-semibold mb-0">
-                    {{ seccion.periodo.anio }} - {{ seccion.periodo.tipo }}
-                </p>
-                {% if seccion.periodo.nombre %}
-                    <small class="text-muted">{{ seccion.periodo.nombre }}</small>
-                {% endif %}
+                <p class="fw-semibold mb-0">{{ seccion.periodo }}</p>
+                <small class="text-muted">{{ seccion.periodo.tipo }}</small>
             </div>
 
             <div class="col-md-6">
                 <small class="text-muted d-block mb-1">Estado</small>
-                {% if seccion.estado == "Activa" %}
-                    <span class="badge bg-success">Activa</span>
-                {% elif seccion.estado == "Planificada" %}
-                    <span class="badge bg-warning text-dark">Planificada</span>
-                {% elif seccion.estado == "Finalizada" %}
-                    <span class="badge bg-secondary">Finalizada</span>
-                {% else %}
-                    <span class="badge bg-light text-dark border">{{ seccion.estado }}</span>
-                {% endif %}
+                {% include "academico/partials/_seccion_estado.html" %}
             </div>
 
             <div class="col-md-6">

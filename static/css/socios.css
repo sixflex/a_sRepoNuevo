@@ -87,6 +87,7 @@
 .estado-APROBADO, .estado-APROBADA { background-color: var(--ua-success-soft); color: var(--ua-success); }
 .estado-RECHAZADO, .estado-RECHAZADA { background-color: var(--ua-red-soft); color: var(--ua-red-hover); }
 .estado-DISPONIBLE { background-color: var(--ua-available-soft); color: var(--ua-available); }
+.estado-ASIGNADO { background-color: var(--ua-warning-soft); color: var(--ua-warning); }
 .estado-TRABAJO_TERMINADO { background-color: var(--ua-bg-subtle); color: var(--ua-text-secondary); }
 
 .badge-provisional { background-color: var(--ua-warning-soft); color: var(--ua-warning); font-size: 0.72rem; font-weight: 600; padding: 5px 10px; border-radius: 999px; }

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    {% if periodo %}Editar Periodo{% else %}Nuevo Periodo{% endif %}
+    {% if periodo.pk %}Editar Periodo{% else %}Nuevo Periodo{% endif %} | Portal A+S
 {% endblock %}
 
 {% block content %}
@@ -12,7 +12,7 @@
         <!-- ENCABEZADO -->
         <div class="card-header bg-white border-bottom py-3">
             <h4 class="mb-1 fw-bold">
-                {% if periodo %}
+                {% if periodo.pk %}
                     Editar Periodo
                 {% else %}
                     Nuevo Periodo
@@ -58,29 +58,54 @@
                     <!-- TIPO -->
                     <div class="col-12 col-md-4 col-lg-3">
                         <label for="tipo" class="form-label fw-semibold">
-                            Tipo de periodo
+                            Tipo de período
                         </label>
                         <select
                             class="form-select"
                             id="tipo"
                             name="tipo"
+                            aria-describedby="tipo-ayuda"
                             required>
-                            <option value="" disabled {% if not periodo %}selected{% endif %}>
-                                Seleccione un periodo
+                            <option value="" disabled {% if not periodo.tipo %}selected{% endif %}>
+                                Seleccione un tipo
                             </option>
-                            <option value="Primer semestre"
-                                {% if periodo.tipo == "Primer semestre" %}selected{% endif %}>
-                                Primer semestre
-                            </option>
-                            <option value="Segundo semestre"
-                                {% if periodo.tipo == "Segundo semestre" %}selected{% endif %}>
-                                Segundo semestre
-                            </option>
+                            {% for valor, etiqueta in tipos %}
+                                <option value="{{ valor }}" {% if periodo.tipo == valor %}selected{% endif %}>
+                                    {{ etiqueta }}
+                                </option>
+                            {% endfor %}
                         </select>
+                        <div class="form-text" id="tipo-ayuda">
+                            Duración del período (RF-ACA-01).
+                        </div>
+                    </div>
+
+                    <!-- PARTE DEL AÑO (arma el nombre; no se guarda aparte) -->
+                    <div class="col-12 col-md-5 col-lg-3">
+                        <label for="parte" class="form-label fw-semibold">
+                            Parte del año
+                        </label>
+                        <select
+                            class="form-select"
+                            id="parte"
+                            name="parte"
+                            aria-describedby="parte-ayuda">
+                            <option value="">Elegir según el tipo</option>
+                            {% for tipo_periodo, partes in partes_periodo.items %}
+                                <optgroup label="{{ tipo_periodo }}" data-tipo="{{ tipo_periodo }}">
+                                    {% for etiqueta, plantilla in partes %}
+                                        <option value="{{ etiqueta }}" data-plantilla="{{ plantilla }}">{{ etiqueta }}</option>
+                                    {% endfor %}
+                                </optgroup>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text" id="parte-ayuda">
+                            Indica qué semestre, trimestre o bimestre es. Con el año arma el nombre.
+                        </div>
                     </div>
 
                     <!-- NOMBRE -->
-                    <div class="col-12 col-md-5 col-lg-4">
+                    <div class="col-12 col-md-7 col-lg-4">
                         <label for="nombre" class="form-label fw-semibold">
                             Nombre del periodo
                         </label>
@@ -90,11 +115,12 @@
                             id="nombre"
                             name="nombre"
                             maxlength="80"
-                            placeholder="Ej: 2026 - Primer Semestre"
+                            placeholder="Ej: Primavera 2026 (2º semestre)"
+                            aria-describedby="nombre-ayuda"
                             value="{{ periodo.nombre|default:'' }}"
                             required>
-                        <div class="form-text">
-                            Identificador único del periodo.
+                        <div class="form-text" id="nombre-ayuda">
+                            Se completa solo («Primavera 2026 (2º semestre)», «2º trimestre 2026») y se puede editar. Así se muestra el período en todo el portal.
                         </div>
                     </div>
 
@@ -108,21 +134,14 @@
                             id="estado"
                             name="estado"
                             required>
-                            <option value="" disabled {% if not periodo %}selected{% endif %}>
+                            <option value="" disabled {% if not periodo.estado %}selected{% endif %}>
                                 Seleccione un estado
                             </option>
-                            <option value="Planificado"
-                                {% if periodo.estado == "Planificado" %}selected{% endif %}>
-                                Planificado
-                            </option>
-                            <option value="Activo"
-                                {% if periodo.estado == "Activo" %}selected{% endif %}>
-                                Activo
-                            </option>
-                            <option value="Finalizado"
-                                {% if periodo.estado == "Finalizado" %}selected{% endif %}>
-                                Finalizado
-                            </option>
+                            {% for valor, etiqueta in estados %}
+                                <option value="{{ valor }}" {% if periodo.estado == valor %}selected{% endif %}>
+                                    {{ etiqueta }}
+                                </option>
+                            {% endfor %}
                         </select>
                     </div>
 
@@ -161,7 +180,7 @@
                     </a>
 
                     <button type="submit" class="btn btn-rojo px-4">
-                        {% if periodo %}
+                        {% if periodo.pk %}
                             Guardar cambios
                         {% else %}
                             Guardar
@@ -176,4 +195,46 @@
     </div>
 
 </div>
+<script>
+    // Muestra solo las partes del año que corresponden al tipo elegido y
+    // sugiere el nombre ("Primavera 2026 (2º semestre)", "2º trimestre 2026")
+    // mientras el usuario no lo haya escrito a mano.
+    (function () {
+        const anio = document.getElementById("anio");
+        const tipo = document.getElementById("tipo");
+        const parte = document.getElementById("parte");
+        const nombre = document.getElementById("nombre");
+        let automatico = !nombre.value;
+
+        function filtrarPartes() {
+            parte.querySelectorAll("optgroup").forEach(function (grupo) {
+                const visible = grupo.dataset.tipo === tipo.value;
+                grupo.hidden = !visible;
+                grupo.disabled = !visible;
+            });
+            const elegida = parte.selectedOptions[0];
+            if (elegida && elegida.parentElement.disabled) {
+                parte.value = "";
+            }
+        }
+
+        function sugerir() {
+            const opcion = parte.selectedOptions[0];
+            if (automatico && opcion && opcion.dataset.plantilla) {
+                nombre.value = opcion.dataset.plantilla.replace("{anio}", anio.value).trim();
+            }
+        }
+
+        nombre.addEventListener("input", function () {
+            automatico = !nombre.value;
+        });
+        tipo.addEventListener("change", function () {
+            filtrarPartes();
+            sugerir();
+        });
+        parte.addEventListener("change", sugerir);
+        anio.addEventListener("input", sugerir);
+        filtrarPartes();
+    })();
+</script>
 {% endblock %}

@@ -119,7 +119,7 @@ class Command(BaseCommand):
 
         periodo, _ = PeriodoAcademico.objects.get_or_create(
             anio=2026,
-            tipo="Segundo semestre",
+            tipo="Semestral",
             nombre="Primavera 2026",
             defaults={
                 "estado": "Activo",
@@ -156,7 +156,7 @@ class Command(BaseCommand):
                 "asignatura": asignatura,
                 "seccion": "1",
                 "jornada": "Diurna",
-                "estado": "Activo",
+                "estado": "Activa",
             },
         )
 
@@ -168,7 +168,7 @@ class Command(BaseCommand):
                 "asignatura": asignatura,
                 "seccion": "2",
                 "jornada": "Diurna",
-                "estado": "Activo",
+                "estado": "Activa",
             },
         )
 

@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}
-    {% if carrera %}Editar Carrera{% else %}Nueva Carrera{% endif %}
+    {% if carrera.pk %}Editar Carrera{% else %}Nueva Carrera{% endif %} | Portal A+S
 {% endblock %}
 
 {% block content %}
@@ -12,7 +13,7 @@
         <!-- ENCABEZADO -->
         <div class="card-header bg-white border-bottom py-3">
             <h4 class="mb-1 fw-bold">
-                {% if carrera %}
+                {% if carrera.pk %}
                     Editar Carrera
                 {% else %}
                     Nueva Carrera
@@ -71,7 +72,7 @@
                     <!-- CÓDIGO -->
                     <div class="col-12 col-md-6 col-lg-3">
                         <label for="codigo" class="form-label fw-semibold">
-                            Código
+                            Código <span class="fw-normal text-muted">(se sugiere solo)</span>
                         </label>
 
                         <input
@@ -81,10 +82,12 @@
                             name="codigo"
                             maxlength="30"
                             placeholder="Ej: ICI"
+                            aria-describedby="codigo-ayuda"
+                            data-codigo-desde="nombre"
                             value="{{ carrera.codigo|default:'' }}">
 
-                        <div class="form-text">
-                            Código identificador de la carrera (opcional).
+                        <div class="form-text" id="codigo-ayuda">
+                            Se propone con las iniciales del nombre (Ingeniería Civil Informática → ICI) y se puede cambiar. Si lo deja vacío, se genera al guardar.
                         </div>
                     </div>
 
@@ -113,7 +116,7 @@
                                 type="checkbox"
                                 id="activo"
                                 name="activo"
-                                {% if not carrera or carrera.activo %}checked{% endif %}>
+                                {% if carrera.activo %}checked{% endif %}>
 
                             <label class="form-check-label fw-semibold" for="activo">
                                 Carrera activa
@@ -134,7 +137,7 @@
                     </a>
 
                     <button type="submit" class="btn btn-rojo px-4">
-                        {% if carrera %}
+                        {% if carrera.pk %}
                             Guardar cambios
                         {% else %}
                             Guardar
@@ -149,4 +152,10 @@
     </div>
 
 </div>
+{% if not carrera.pk %}
+    {{ codigos_usados|json_script:"codigos-usados" }}
+    {{ palabras_sin_inicial|json_script:"palabras-sin-inicial" }}
+    {{ largo_codigo|json_script:"largo-codigo" }}
+    <script src="{% static 'js/codigo_sugerido.js' %}"></script>
+{% endif %}
 {% endblock %}

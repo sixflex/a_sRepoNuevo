@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    {% if asignatura %}Editar Asignatura{% else %}Nueva Asignatura{% endif %}
+    {% if asignatura.pk %}Editar Asignatura{% else %}Nueva Asignatura{% endif %} | Portal A+S
 {% endblock %}
 
 {% block content %}
@@ -12,7 +12,7 @@
         <!-- ENCABEZADO -->
         <div class="card-header bg-white border-bottom py-3">
             <h4 class="mb-1 fw-bold">
-                {% if asignatura %}
+                {% if asignatura.pk %}
                     Editar Asignatura
                 {% else %}
                     Nueva Asignatura
@@ -51,10 +51,11 @@
                             name="codigo"
                             maxlength="30"
                             placeholder="Ej: INF101"
+                            aria-describedby="codigo-ayuda"
                             value="{{ asignatura.codigo|default:'' }}">
 
-                        <div class="form-text">
-                            Código identificador (opcional).
+                        <div class="form-text" id="codigo-ayuda">
+                            Sigla del programa de la asignatura, tal como la usa la universidad. Si no la conoce, déjela vacía: no se inventa. Se guarda en mayúsculas y sin espacios.
                         </div>
                     </div>
 
@@ -117,7 +118,7 @@
                                 type="checkbox"
                                 id="activo"
                                 name="activo"
-                                {% if not asignatura or asignatura.activo %}checked{% endif %}>
+                                {% if asignatura.activo %}checked{% endif %}>
 
                             <label class="form-check-label fw-semibold" for="activo">
                                 Asignatura activa
@@ -138,7 +139,7 @@
                     </a>
 
                     <button type="submit" class="btn btn-rojo px-4">
-                        {% if asignatura %}
+                        {% if asignatura.pk %}
                             Guardar cambios
                         {% else %}
                             Guardar

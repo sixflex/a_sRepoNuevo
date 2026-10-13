@@ -12,7 +12,6 @@ alguno de esos valores. Una regla vacía (None) siempre se cumple.
 """
 
 import copy
-import re
 import uuid
 from collections import Counter
 from datetime import datetime, time
@@ -24,6 +23,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 from PIL import Image, UnidentifiedImageError
+
+from core.validators import normalizar_rut
 
 from . import constantes as c
 from .models import (
@@ -598,10 +599,6 @@ def guardar_opciones(pregunta, filas):
 # Respuestas (CDE-106)
 # ---------------------------------------------------------------------------
 
-def _limpiar_rut(rut):
-    return re.sub(r"[^0-9kK-]", "", rut or "").upper()
-
-
 def _contexto_desde_enlace(enlace):
     contexto = {}
     if enlace is None:
@@ -642,6 +639,9 @@ def datos_respondente(preguntas, valores, visibles):
                 campo = "correo"
         if campo and campo not in datos:
             datos[campo] = str(valores[pregunta.id])
+    if datos.get("rut"):
+        # Mismo formato que se guarda, para que la búsqueda de duplicados coincida.
+        datos["rut"] = normalizar_rut(datos["rut"])
     return datos
 
 
@@ -697,7 +697,7 @@ def guardar_respuesta(version, preguntas, valores, otros, visibles, seleccion,
         respondente_tipo=version.contexto_tipo,
         respondente_nombre=datos.get("nombre"),
         respondente_correo=datos.get("correo"),
-        respondente_rut=_limpiar_rut(datos.get("rut")) or None,
+        respondente_rut=datos.get("rut") or None,
         estado_registro=c.ESTADO_REGISTRO_COMPLETO,
         **_contexto_desde_enlace(enlace),
     )
