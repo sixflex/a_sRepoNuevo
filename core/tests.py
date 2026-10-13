@@ -10,7 +10,7 @@ from academico.models import Asignatura, Campus, Docente, PeriodoAcademico, Secc
 from planificacion.services import _resolver_docente
 
 from .validators import es_rut_valido, normalizar_rut, validar_rut_chileno
-
+from academico.models import Asignatura, Campus, Docente, PeriodoAcademico, Seccion, SeccionDocente, Sede
 
 class ValidadorRutTestCase(TestCase):
 
@@ -186,3 +186,201 @@ class NavegacionTestCase(TestCase):
         self.assertContains(response, "Validación y Seguimiento")
         # La validación real (RF-ACA-04) está en Planificaciones recibidas
         self.assertContains(response, reverse("core:planificacion_coordinacion"))
+    
+class FiltroPeriodoDocenteTestCase(TestCase):
+    def setUp(self):
+        User = get_user_model()
+
+        grupo, _ = Group.objects.get_or_create(name="Docente")
+
+        self.usuario = User.objects.create_user(
+            username="docente_filtro",
+            password="Prueba12345"
+        )
+        self.usuario.groups.add(grupo)
+
+        self.otro_usuario = User.objects.create_user(
+            username="otro_docente_filtro",
+            password="Prueba12345"
+        )
+        self.otro_usuario.groups.add(grupo)
+
+        self.docente = Docente.objects.create(
+            usuario=self.usuario,
+            rut="11111111-1",
+            nombres="Docente",
+            apellidos="Prueba",
+            correo_institucional="docente.filtro@universidad.cl",
+            activo=True
+        )
+
+        self.otro_docente = Docente.objects.create(
+            usuario=self.otro_usuario,
+            rut="22222222-2",
+            nombres="Otro",
+            apellidos="Docente",
+            correo_institucional="otro.filtro@universidad.cl",
+            activo=True
+        )
+
+        sede = Sede.objects.create(
+            nombre="Sede Filtro",
+            activo=True
+        )
+
+        campus = Campus.objects.create(
+            sede=sede,
+            nombre="Campus Filtro",
+            activo=True
+        )
+
+        asignatura = Asignatura.objects.create(
+            codigo="FILTRO01",
+            nombre="Asignatura Filtro",
+            activo=True
+        )
+
+        self.periodo_otono = PeriodoAcademico.objects.create(
+            anio=2026,
+            tipo="Semestral",
+            nombre="Otoño 2026 (1.º semestre)",
+            estado="Activo"
+        )
+
+        self.periodo_primavera = PeriodoAcademico.objects.create(
+            anio=2026,
+            tipo="Semestral",
+            nombre="Primavera 2026 (2.º semestre)",
+            estado="Activo"
+        )
+
+        self.seccion_otono = Seccion.objects.create(
+            periodo=self.periodo_otono,
+            campus=campus,
+            asignatura=asignatura,
+            nrc="FILTRO001",
+            seccion="1",
+            estado="Activa"
+        )
+
+        self.seccion_primavera = Seccion.objects.create(
+            periodo=self.periodo_primavera,
+            campus=campus,
+            asignatura=asignatura,
+            nrc="FILTRO002",
+            seccion="2",
+            estado="Activa"
+        )
+
+        self.seccion_ajena = Seccion.objects.create(
+            periodo=self.periodo_otono,
+            campus=campus,
+            asignatura=asignatura,
+            nrc="FILTRO003",
+            seccion="3",
+            estado="Activa"
+        )
+
+        SeccionDocente.objects.create(
+            seccion=self.seccion_otono,
+            docente=self.docente
+        )
+
+        SeccionDocente.objects.create(
+            seccion=self.seccion_primavera,
+            docente=self.docente
+        )
+
+        SeccionDocente.objects.create(
+            seccion=self.seccion_ajena,
+            docente=self.otro_docente
+        )
+
+        self.client.force_login(self.usuario)
+
+    def test_muestra_secciones_de_todos_los_periodos(self):
+        respuesta = self.client.get(reverse("core:docente"))
+
+        self.assertEqual(respuesta.status_code, 200)
+
+        secciones = list(respuesta.context["secciones"])
+
+        self.assertIn(self.seccion_otono, secciones)
+        self.assertIn(self.seccion_primavera, secciones)
+        self.assertNotIn(self.seccion_ajena, secciones)
+
+    def test_filtra_por_primer_semestre(self):
+        respuesta = self.client.get(
+            reverse("core:docente"),
+            {"periodo": str(self.periodo_otono.id)}
+        )
+
+        secciones = list(respuesta.context["secciones"])
+
+        self.assertEqual(secciones, [self.seccion_otono])
+
+    def test_filtra_por_segundo_semestre(self):
+        respuesta = self.client.get(
+            reverse("core:docente"),
+            {"periodo": str(self.periodo_primavera.id)}
+        )
+
+        secciones = list(respuesta.context["secciones"])
+
+        self.assertEqual(secciones, [self.seccion_primavera])
+
+    def test_periodo_invalido_no_muestra_secciones(self):
+        respuesta = self.client.get(
+            reverse("core:docente"),
+            {"periodo": "invalido"}
+        )
+
+        self.assertEqual(
+            list(respuesta.context["secciones"]),
+            []
+        )
+
+    def test_periodo_sin_secciones_asignadas_no_muestra_resultados(self):
+        otro_periodo = PeriodoAcademico.objects.create(
+            anio=2025,
+            tipo="Semestral",
+            nombre="Otoño 2025",
+            estado="Activo"
+        )
+
+        respuesta = self.client.get(
+            reverse("core:docente"),
+            {"periodo": str(otro_periodo.id)}
+        )
+
+        self.assertEqual(
+            list(respuesta.context["secciones"]),
+            []
+        )
+
+    def test_filtra_por_anio(self):
+        respuesta = self.client.get(
+            reverse("core:docente"),
+            {"anio": "2026"}
+        )
+
+        secciones = list(respuesta.context["secciones"])
+
+        self.assertEqual(len(secciones), 2)
+        self.assertNotIn(self.seccion_ajena, secciones)
+
+    def test_selector_solo_muestra_periodos_del_docente(self):
+        otro_periodo = PeriodoAcademico.objects.create(
+            anio=2025,
+            tipo="Semestral",
+            nombre="Otoño 2025",
+            estado="Activo"
+        )
+
+        respuesta = self.client.get(reverse("core:docente"))
+
+        periodos = list(respuesta.context["periodos"])
+
+        self.assertIn(self.periodo_otono, periodos)
+        self.assertIn(self.periodo_primavera, periodos)
+        self.assertNotIn(otro_periodo, periodos)
