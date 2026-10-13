@@ -157,7 +157,7 @@
     }
 </style>
 
-<div class="login-wrapper">
+<main id="contenido-principal" class="login-wrapper">
     <div style="width: 100%; max-width: 440px;">
         
         <div class="login-card-microsoft">
@@ -181,7 +181,14 @@
                 </div>
             </div>
 
-            <h3 class="fw-bold mb-4" style="font-size: 1.55rem; color: #1b1b1b;">Iniciar sesión</h3>
+            <h3 class="fw-bold mb-3" style="font-size: 1.55rem; color: #1b1b1b;">Iniciar sesión</h3>
+
+            {% if user.is_authenticated %}
+                <div class="small mb-4 p-2" style="background: #EEF5FB; color: #1b1b1b;" role="status">
+                    Tienes la sesión iniciada como <strong>{{ user.username }}</strong>.
+                    Si ingresas con otra cuenta, esa sesión se cerrará.
+                </div>
+            {% endif %}
 
             {% if form.errors %}
                 <div class="alert alert-danger py-2 small mb-3 border-0 rounded-1" style="background-color: #FDF2F2; color: #C8232C;">
@@ -221,12 +228,20 @@
             </form>
         </div>
 
+        {% if entra_activo %}
+        <a href="{% url 'usuarios:entra_login' %}{% if next %}?next={{ next|urlencode }}{% endif %}"
+           class="login-options-card text-decoration-none">
+            <i class="bi bi-microsoft fs-5 text-secondary" aria-hidden="true"></i>
+            <span>Iniciar sesión con Microsoft <small class="text-muted">(acceso simulado)</small></span>
+        </a>
+        {% else %}
         <div class="login-options-card">
-            <i class="bi bi-key fs-5 text-secondary"></i>
+            <i class="bi bi-key fs-5 text-secondary" aria-hidden="true"></i>
             <span>Opciones de inicio de sesión</span>
         </div>
+        {% endif %}
     </div>
-</div>
+</main>
 
 <div class="ms-footer">
     <a href="#">Términos de uso</a>
