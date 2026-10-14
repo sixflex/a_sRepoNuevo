@@ -136,3 +136,329 @@
     color: var(--ua-red);
     border-color: var(--ua-red);
 }
+
+/* ---------- Panel de indicadores del coordinador ---------- */
+.metric-detalle {
+    margin-top: 0.35rem;
+    font-size: 0.8rem;
+    color: var(--ua-text-muted);
+}
+.tarjeta-indicador .metric-number {
+    font-size: 1.85rem;
+}
+@media (min-width: 1200px) {
+    .tarjeta-indicador {
+        flex: 1 0 0;
+    }
+}
+
+.btn-ua-filtros {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 44px;
+    padding: 0 1rem;
+    border: 1px solid var(--ua-border-strong);
+    border-radius: var(--ua-radius-sm);
+    background: var(--ua-bg-card);
+    color: var(--ua-text-dark);
+    font-weight: 600;
+}
+.btn-ua-filtros:hover {
+    border-color: var(--ua-red);
+    color: var(--ua-red);
+}
+.filtros-cantidad {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    margin-left: 0.25rem;
+    border-radius: 11px;
+    background: var(--ua-red);
+    color: #fff;
+    font-size: 0.75rem;
+}
+.filtro-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.25rem 0.2rem 0.75rem;
+    border: 1px solid var(--ua-border-strong);
+    border-radius: 999px;
+    background: var(--ua-bg-card);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+.filtro-chip-quitar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    color: var(--ua-text-secondary);
+    text-decoration: none;
+}
+.filtro-chip-quitar:hover {
+    background: var(--ua-red-soft);
+    color: var(--ua-red);
+}
+
+.panel-filtros {
+    width: 400px;
+    max-width: 100vw;
+}
+.filtro-grupo-boton {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 48px;
+    padding: 0;
+    border: none;
+    border-top: 1px solid var(--ua-border);
+    background: transparent;
+    color: var(--ua-text-dark);
+    font-weight: 600;
+}
+.filtro-grupo-boton:first-of-type {
+    border-top: none;
+}
+.filtro-grupo-boton .bi {
+    transition: transform 0.15s ease;
+}
+.filtro-grupo-boton.collapsed .bi {
+    transform: rotate(-90deg);
+}
+.filtro-grupo-cuerpo {
+    padding-bottom: 1rem;
+}
+
+.panel-card {
+    background: var(--ua-bg-card);
+    border: 1px solid var(--ua-border);
+    border-radius: var(--ua-radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--ua-shadow);
+}
+.panel-titulo {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--ua-text-dark);
+    margin-bottom: 0.25rem;
+}
+.panel-ayuda {
+    font-size: 0.875rem;
+    color: var(--ua-text-muted);
+}
+.estado-vacio {
+    margin: 0;
+    padding: 1.5rem;
+    border: 1px dashed var(--ua-border-strong);
+    border-radius: var(--ua-radius);
+    color: var(--ua-text-muted);
+    text-align: center;
+}
+
+/* Avance de la Ruta: el color va siempre con su texto (Bajo, Medio, Alto) */
+.avance-leyenda {
+    font-size: 0.8rem;
+    color: var(--ua-text-secondary);
+}
+.avance-punto {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 0.35rem;
+    border-radius: 50%;
+}
+.avance-bajo { background: var(--ua-red); }
+.avance-medio { background: var(--ua-warning); }
+.avance-alto { background: var(--ua-success); }
+.avance-texto-bajo { color: var(--ua-red); background: var(--ua-red-soft); }
+.avance-texto-medio { color: var(--ua-warning); background: var(--ua-warning-soft); }
+.avance-texto-alto { color: var(--ua-success); background: var(--ua-success-soft); }
+
+.avance-carrera {
+    border-top: 1px solid var(--ua-border);
+}
+.avance-carrera:first-of-type {
+    border-top: none;
+}
+.avance-fila {
+    display: grid;
+    grid-template-columns: minmax(120px, 1.2fr) 2fr 3.5rem 4.5rem;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 48px;
+    cursor: pointer;
+    list-style: none;
+}
+.avance-fila::-webkit-details-marker {
+    display: none;
+}
+.avance-fila:hover .avance-nombre {
+    color: var(--ua-red);
+}
+.avance-nombre {
+    font-weight: 600;
+}
+.avance-barra {
+    position: relative;
+    height: 12px;
+    border-radius: 6px;
+    background: var(--ua-bg-subtle);
+    overflow: hidden;
+}
+.avance-barra-delgada {
+    height: 8px;
+}
+.avance-relleno {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 6px;
+}
+.avance-porcentaje {
+    font-weight: 700;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+.avance-etiqueta {
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: center;
+}
+.avance-docentes {
+    margin: 0 0 0.75rem;
+    padding: 0.5rem 1rem;
+    border-radius: var(--ua-radius);
+    background: var(--ua-bg-page);
+}
+.avance-docente {
+    display: grid;
+    grid-template-columns: minmax(160px, 1.4fr) 1.5fr 3.5rem minmax(140px, 1fr);
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+}
+.avance-docente-nombre {
+    display: flex;
+    flex-direction: column;
+}
+@media (max-width: 767.98px) {
+    .avance-fila,
+    .avance-docente {
+        grid-template-columns: 1fr 3.5rem;
+    }
+    .avance-fila .avance-barra,
+    .avance-docente .avance-barra {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+}
+
+/* Anillos de satisfacción */
+.anillo {
+    --valor: 0;
+    display: grid;
+    place-items: center;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+    border-radius: 50%;
+    background: conic-gradient(var(--ua-red) calc(var(--valor) * 1%), var(--ua-bg-subtle) 0);
+}
+.anillo span {
+    display: grid;
+    place-items: center;
+    width: 92px;
+    height: 92px;
+    border-radius: 50%;
+    background: var(--ua-bg-card);
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+.anillo-vacio {
+    background: var(--ua-bg-subtle);
+}
+.anillo-vacio span {
+    color: var(--ua-text-muted);
+}
+.tabla-dimensiones caption {
+    font-weight: 600;
+    color: var(--ua-text-dark);
+}
+
+/* Mapa territorial */
+.mapa-territorial {
+    height: 380px;
+    border-radius: var(--ua-radius);
+    border: 1px solid var(--ua-border);
+}
+.mapa-top li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--ua-border);
+}
+.btn-ua-toggle {
+    min-height: 36px;
+    border: 1px solid var(--ua-border-strong);
+    background: var(--ua-bg-card);
+    color: var(--ua-text-secondary);
+    font-weight: 600;
+}
+.btn-ua-toggle.active,
+.btn-ua-toggle:hover {
+    border-color: var(--ua-red);
+    background: var(--ua-red-soft);
+    color: var(--ua-red);
+}
+
+/* Evolución por año */
+.evolucion-grafico {
+    display: flex;
+    align-items: flex-end;
+    gap: 1.5rem;
+    height: 220px;
+    padding-top: 1.5rem;
+}
+.evolucion-columna {
+    display: flex;
+    flex: 1;
+    max-width: 120px;
+    height: 100%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.35rem;
+}
+.evolucion-barra {
+    width: 100%;
+    min-height: 2px;
+    border-radius: 6px 6px 0 0;
+    background: var(--ua-red);
+}
+.evolucion-valor {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.evolucion-anio {
+    font-size: 0.85rem;
+    color: var(--ua-text-muted);
+}
+.leaflet-tooltip.mapa-etiqueta {
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    color: #fff;
+    font-weight: 700;
+}
+.leaflet-tooltip.mapa-etiqueta::before {
+    display: none;
+}
