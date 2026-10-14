@@ -8,6 +8,7 @@ from django.core.exceptions import PermissionDenied
 from django.views.decorators.http import require_POST
 from proyectos.models import Equipo, HistorialSocioEquipo
 from rutas.models import SeccionActividad
+from auditoria.services import registrar_auditoria
 
 from django.core.exceptions import ValidationError
 from encuestas.models import EnlaceFormulario, FormularioVersion, RespuestaFormulario
@@ -229,8 +230,8 @@ def lista_postulaciones(request):
 @coordinador_required
 def revisar_postulacion(request, postulacion_id):
     """
-    Transición de estado para postulaciones externas con motivo de rechazo,
-    notificación por correo y registro en auditoría (CDE-54, CDE-55, CDE-56).
+    Transición de estado para postulaciones externas con motivo de rechazo obligatorio,
+    notificación por correo y registro en auditoría (SP5-T12 / CDE-54, CDE-55, CDE-56).
     """
     postulacion = get_object_or_404(PostulacionSocio, pk=postulacion_id)
 
@@ -239,9 +240,16 @@ def revisar_postulacion(request, postulacion_id):
         motivo = request.POST.get("motivo_rechazo", "").strip()
 
         if nuevo_estado in ["APROBADA", "RECHAZADA"]:
+            
+            
             if nuevo_estado == "RECHAZADA" and not motivo:
-                messages.error(request, "Debes indicar un motivo de rechazo.")
-                return redirect('socios:lista_postulaciones')
+                messages.error(
+                    request, 
+                    "Debes indicar un motivo de rechazo."
+                )
+                return redirect("socios:lista_postulaciones")
+
+            estado_anterior = postulacion.estado
 
             postulacion.estado = nuevo_estado
             postulacion.motivo_rechazo = motivo if nuevo_estado == "RECHAZADA" else None
@@ -260,11 +268,28 @@ def revisar_postulacion(request, postulacion_id):
                 motivo=motivo,
             )
 
-            messages.success(request, f"Postulación #{postulacion.id} actualizada a {nuevo_estado} y notificada.")
+            
+            registrar_auditoria(
+                request=request,
+                entidad="PostulacionSocio",
+                entidad_id=postulacion.pk,
+                accion=f"REVISAR_POSTULACION_{nuevo_estado}",
+                valores_anteriores={"estado": estado_anterior},
+                valores_nuevos={
+                    "estado": postulacion.estado,
+                    "motivo_rechazo": postulacion.motivo_rechazo,
+                    "fecha_revision": str(postulacion.fecha_revision),
+                },
+            )
+
+            messages.success(
+                request, 
+                f"Postulación #{postulacion.id} actualizada a {nuevo_estado} y notificada por correo."
+            )
         else:
             messages.error(request, "La decisión seleccionada no es válida.")
 
-    return redirect('socios:lista_postulaciones')
+    return redirect("socios:lista_postulaciones")
 
 @docente_required
 def asociar_socio_equipo(request, actividad_id):

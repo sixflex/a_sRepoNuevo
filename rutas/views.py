@@ -10,8 +10,10 @@ from django.views.decorators.http import require_POST
 
 from archivos.services import guardar_archivo, obtener_storage_privado
 from archivos.validators import validar_cantidad_archivos
+from auditoria.services import registrar_auditoria
+from academico.models import Campus, Sede
 from usuarios.permissions import es_coordinador, es_docente
-
+from . import services as servicios
 from .models import Evidencia, ExpedienteSeccion, SeccionActividad, SeccionRuta
 
 
@@ -184,6 +186,8 @@ def completar_actividad(request, actividad_id):
             seccion_ruta_id=seccion_ruta.id,
         )
 
+    estado_anterior = actividad.estado
+
     if actividad.completada_por_docente_id is None:
         actividad.completada_por_docente = docente
         actividad.estado = "COMPLETADA"
@@ -193,16 +197,32 @@ def completar_actividad(request, actividad_id):
         actividad.estado = "PENDIENTE"
         actividad.fecha_completada = None
 
+        if actividad.observacion == servicios.OBSERVACION_SIN_CIERRE:
+            actividad.observacion = None
+
     actividad.save(
         update_fields=[
             "completada_por_docente",
             "estado",
             "fecha_completada",
+            "observacion",
         ]
     )
 
     recalcular_avance(
         seccion_ruta
+    )
+
+    registrar_auditoria(
+        request=request,
+        entidad="SeccionActividad",
+        entidad_id=actividad.pk,
+        accion="MARCAR_ACTIVIDAD" if actividad.estado == "COMPLETADA" else "DESMARCAR_ACTIVIDAD",
+        valores_anteriores={"estado": estado_anterior},
+        valores_nuevos={
+            "estado": actividad.estado,
+            "fecha_completada": str(actividad.fecha_completada) if actividad.fecha_completada else None,
+        },
     )
 
     return redirect(
@@ -275,6 +295,9 @@ def completar_ruta(request, seccion_ruta_id):
             seccion_ruta_id=seccion_ruta.id,
         )
 
+    # Captura del estado previo a la modificacion
+    estado_anterior = seccion_ruta.estado
+
     seccion_ruta.estado = "COMPLETADA"
     seccion_ruta.cerrada_por_docente = docente
     seccion_ruta.fecha_cierre = timezone.now()
@@ -287,6 +310,19 @@ def completar_ruta(request, seccion_ruta_id):
             "fecha_cierre",
             "porcentaje_final",
         ]
+    )
+
+    registrar_auditoria(
+        request=request,
+        entidad="SeccionRuta",
+        entidad_id=seccion_ruta.pk,
+        accion="COMPLETAR_RUTA",
+        valores_anteriores={"estado": estado_anterior},
+        valores_nuevos={
+            "estado": seccion_ruta.estado,
+            "fecha_cierre": str(seccion_ruta.fecha_cierre),
+            "porcentaje_final": str(seccion_ruta.porcentaje_final),
+        },
     )
 
     messages.success(
@@ -394,11 +430,22 @@ def subir_evidencia(request, actividad_id):
                 autor=request.user,
             )
 
-            Evidencia.objects.create(
+            evidencia = Evidencia.objects.create(
                 expediente=expediente,
                 seccion_actividad=actividad,
                 archivo=archivo,
                 descripcion=descripcion or None,
+            )
+
+            registrar_auditoria(
+                request=request,
+                entidad="Evidencia",
+                entidad_id=evidencia.pk,
+                accion="SUBIR_EVIDENCIA",
+                valores_nuevos={
+                    "actividad_id": actividad.pk,
+                    "archivo": archivo.nombre_original,
+                },
             )
 
     except ValidationError as error:
@@ -474,6 +521,7 @@ def eliminar_evidencia(request, evidencia_id):
 
     archivo = evidencia.archivo
     storage_key = archivo.storage_key
+    evidencia_id_backup = evidencia.pk
 
     evidencia.delete()
     archivo.delete()
@@ -482,6 +530,14 @@ def eliminar_evidencia(request, evidencia_id):
 
     if storage.exists(storage_key):
         storage.delete(storage_key)
+
+    registrar_auditoria(
+        request=request,
+        entidad="Evidencia",
+        entidad_id=evidencia_id_backup,
+        accion="ELIMINAR_EVIDENCIA",
+        valores_anteriores={"actividad_id": actividad.pk},
+    )
 
     messages.success(
         request,
@@ -492,10 +548,17 @@ def eliminar_evidencia(request, evidencia_id):
         "rutas:detalle_ruta_docente",
         seccion_ruta_id=seccion_ruta.id,
     )
+
+
 @login_required
 def seguimiento_rutas_coordinacion(request):
     if not es_coordinador(request.user):
         raise PermissionDenied
+
+    campus_id = request.GET.get("campus", "").strip()
+    sede_id = request.GET.get("sede", "").strip()
+    periodo_id = request.GET.get("periodo", "").strip()
+    estado_filtro = request.GET.get("estado", "").strip()
 
     rutas = (
         SeccionRuta.objects
@@ -510,6 +573,7 @@ def seguimiento_rutas_coordinacion(request):
         .prefetch_related(
             "seccion__docentes",
             "actividades",
+            "actividades__ruta_actividad",
         )
         .order_by(
             "seccion__asignatura__nombre",
@@ -517,11 +581,42 @@ def seguimiento_rutas_coordinacion(request):
         )
     )
 
+    if campus_id:
+        rutas = rutas.filter(seccion__campus_id=campus_id)
+
+    if sede_id:
+        rutas = rutas.filter(seccion__campus__sede_id=sede_id)
+
+    if periodo_id:
+        rutas = rutas.filter(seccion__periodo_id=periodo_id)
+
+    if estado_filtro:
+        rutas = rutas.filter(estado=estado_filtro)
+
+    for ruta in rutas:
+        acts = list(ruta.actividades.all())
+        total_acts = len(acts)
+        completadas = sum(1 for a in acts if a.completada_por_docente_id is not None)
+        ruta.total_actividades = total_acts
+        ruta.total_completadas = completadas
+        ruta.actividades_pendientes = total_acts - completadas
+
+    sedes_list = Sede.objects.all().order_by("nombre")
+    campus_list = Campus.objects.all().order_by("nombre")
+
     return render(
         request,
         "rutas/seguimiento_coordinacion.html",
         {
             "rutas": rutas,
+            "sedes": sedes_list,
+            "campus_list": campus_list,
+            "filtros_seleccionados": {
+                "campus": campus_id,
+                "sede": sede_id,
+                "periodo": periodo_id,
+                "estado": estado_filtro,
+            },
         },
     )
 
