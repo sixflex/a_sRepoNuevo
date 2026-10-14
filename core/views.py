@@ -6,10 +6,7 @@ from django.urls import reverse
 from usuarios.permissions import es_coordinador, es_docente
 from usuarios.decorators import coordinador_required, docente_required
 
-from academico.constantes import SECCION_ACTIVA
 from academico.models import (
-    Asignatura,
-    Docente,
     PeriodoAcademico,
     Seccion,
 )
@@ -28,26 +25,18 @@ def inicio(request):
 
 @coordinador_required
 def panel_coordinacion(request):
+    """
+    Panel del coordinador (HU-08): indicadores del período, avance de la Ruta
+    por carrera, satisfacción, mapa y evolución, con los filtros del panel
+    lateral (RF-IND-01). Los cálculos están en core/indicadores.py.
+    """
     from cartas.models import SolicitudCarta
     from planificacion.models import Planificacion
     from socios.models import PostulacionSocio
 
-    total_secciones = Seccion.objects.filter(
-        estado=SECCION_ACTIVA
-    ).count()
+    from . import indicadores
 
-    total_docentes = Docente.objects.filter(
-        activo=True
-    ).count()
-
-    total_asignaturas = Asignatura.objects.filter(
-        activo=True
-    ).count()
-
-    total_periodos = PeriodoAcademico.objects.filter(
-        estado="Activo"
-    ).count()
-
+    filtros = indicadores.leer_filtros(request.GET)
     periodo_actual = (
         PeriodoAcademico.objects
         .filter(estado="Activo")
@@ -77,16 +66,25 @@ def panel_coordinacion(request):
         },
     ]
 
+    chips = indicadores.chips(filtros)
+    mapa = indicadores.mapa(filtros)
+
     return render(
         request,
         "core/coordinacion.html",
         {
-            "total_secciones": total_secciones,
-            "total_docentes": total_docentes,
-            "total_asignaturas": total_asignaturas,
-            "total_periodos": total_periodos,
+            "filtros": filtros,
+            "chips": chips,
+            "cantidad_filtros": len(chips),
+            "opciones": indicadores.opciones_filtros(),
             "periodo_actual": periodo_actual,
+            "tarjetas": indicadores.tarjetas(filtros),
+            "avance_carreras": indicadores.avance_por_carrera(filtros),
+            "umbrales": {"medio": indicadores.UMBRAL_MEDIO, "alto": indicadores.UMBRAL_ALTO},
             "pendientes": pendientes,
+            "satisfaccion": indicadores.satisfaccion(filtros),
+            "mapa": mapa,
+            "evolucion": indicadores.evolucion(filtros),
         },
     )
 
@@ -201,8 +199,8 @@ def panel_docente(request):
 
 @docente_required
 def inicio_docente(request):
-    from django.db.models import Count, Q
     from rutas.models import SeccionRuta
+    from rutas.services import con_avance
 
     secciones = (
         Seccion.objects
@@ -211,27 +209,14 @@ def inicio_docente(request):
     )
 
     rutas = list(
-        SeccionRuta.objects
-        .filter(seccion__in=secciones)
-        .select_related(
-            "seccion",
-            "seccion__asignatura",
-            "seccion__periodo",
-        )
-        .annotate(
-            total_obligatorias=Count(
-                "actividades",
-                filter=Q(
-                    actividades__ruta_actividad__es_obligatoria=True
-                ),
-            ),
-            completadas_obligatorias=Count(
-                "actividades",
-                filter=Q(
-                    actividades__ruta_actividad__es_obligatoria=True,
-                    actividades__completada_por_docente__isnull=False,
-                ),
-            ),
+        con_avance(
+            SeccionRuta.objects
+            .filter(seccion__in=secciones)
+            .select_related(
+                "seccion",
+                "seccion__asignatura",
+                "seccion__periodo",
+            )
         )
         .order_by(
             "-seccion__periodo__anio",

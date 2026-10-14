@@ -58,13 +58,21 @@
             </section>
         {% endfor %}
 
-        <div class="d-flex justify-content-end">
-            <button type="submit" class="btn btn-ua px-4 py-2" data-enviar {% if vista_previa %}disabled{% endif %}>
+        {# Navegación por secciones, como en Microsoft Forms: formulario_dinamico.js muestra una sección por página. Sin JS se ven todas y solo "Enviar". #}
+        <div class="enc-navegacion d-flex align-items-center gap-2 flex-wrap">
+            <button type="button" class="btn btn-light-ua px-4 py-2" data-anterior hidden>
+                <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Atrás
+            </button>
+            <span class="enc-progreso small text-muted me-auto" data-progreso aria-live="polite" hidden></span>
+            <button type="button" class="btn btn-ua px-4 py-2 ms-auto" data-siguiente hidden>
+                Siguiente<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
+            </button>
+            <button type="submit" class="btn btn-ua px-4 py-2 ms-auto" data-enviar {% if vista_previa %}disabled{% endif %}>
                 <span class="spinner-border spinner-border-sm me-1" aria-hidden="true" hidden data-enviando></span>Enviar
             </button>
         </div>
     </form>
 </div>
 </div>
-<script src="{% static 'js/formulario_dinamico.js' %}"></script>
+<script src="{% static 'js/formulario_dinamico.js' %}?v=2026-10-13b"></script>
 {% endblock %}
