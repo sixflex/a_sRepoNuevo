@@ -933,7 +933,7 @@ def acceso_registro_equipos(request, token):
                                 clave_idempotencia=clave_uuid,
                                 informante_nombre=nombre_informante,
                                 informante_correo=correo_informante,
-                                informante_entra_id=None,
+                                informante_entra_id=request.user.entra_oid or None,
                                 estado="Registrado",
                             )
 
