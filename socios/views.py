@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.db.models import Exists, OuterRef, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from academico.models import Asignatura, Campus, Carrera, PeriodoAcademico, Sede
 from usuarios.decorators import coordinador_required, docente_required
@@ -8,6 +9,7 @@ from django.core.exceptions import PermissionDenied
 from django.views.decorators.http import require_POST
 from proyectos.models import Equipo
 from rutas.models import SeccionActividad
+from rutas.services import url_recurso
 
 from django.core.exceptions import ValidationError
 from encuestas.models import EnlaceFormulario, FormularioVersion, RespuestaFormulario
@@ -308,7 +310,10 @@ def asociar_socio_equipo(request, actividad_id):
     if not seccion.docentes.filter(id=docente.id).exists():
         raise PermissionDenied
 
-    if actividad.ruta_actividad.orden != 13:
+    # Solo la actividad de la Ruta configurada con esta acción (recurso_url).
+    if url_recurso(actividad) != reverse(
+        "socios:asociar_socio_equipo", args=[actividad.id]
+    ):
         raise PermissionDenied
 
     equipos = (

@@ -199,8 +199,14 @@ def panel_docente(request):
 
 @docente_required
 def inicio_docente(request):
-    from rutas.models import SeccionRuta
-    from rutas.services import con_avance
+    from django.db.models import Prefetch
+
+    from rutas.models import SeccionActividad, SeccionRuta
+    from rutas.services import (
+        con_avance,
+        es_actividad_cierre,
+        recordatorios_cierre,
+    )
 
     secciones = (
         Seccion.objects
@@ -217,6 +223,19 @@ def inicio_docente(request):
                 "seccion__asignatura",
                 "seccion__periodo",
             )
+            .prefetch_related(
+                Prefetch(
+                    "actividades",
+                    queryset=(
+                        SeccionActividad.objects
+                        .filter(completada_por_docente__isnull=True)
+                        .select_related("ruta_actividad")
+                        .order_by("ruta_actividad__orden")
+                    ),
+                    to_attr="actividades_pendientes",
+                ),
+                "invitaciones_cierre__socio",
+            )
         )
         .order_by(
             "-seccion__periodo__anio",
@@ -229,6 +248,26 @@ def inicio_docente(request):
     total_pendientes = 0
 
     for ruta in rutas:
+        # Recordatorio visible en el panel, sin correo programado (RF-RUT-04).
+        ruta.recordatorios = []
+
+        if ruta.estado != "COMPLETADA":
+            for actividad in ruta.actividades_pendientes:
+                nombre = actividad.ruta_actividad.nombre
+
+                if (
+                    es_actividad_cierre(actividad.ruta_actividad)
+                    and not ruta.invitaciones_cierre.all()
+                ):
+                    nombre += ": indica si habrá cierre e invita al Socio"
+
+                if not actividad.ruta_actividad.es_obligatoria:
+                    nombre += " (opcional)"
+
+                ruta.recordatorios.append(nombre)
+
+            ruta.recordatorios += recordatorios_cierre(ruta)
+
         ruta.pendientes_obligatorias = (
             ruta.total_obligatorias
             - ruta.completadas_obligatorias
