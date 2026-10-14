@@ -1,7 +1,7 @@
 from django.contrib.auth.views import LogoutView
 from django.urls import path
 
-from .views import LoginTemporalView
+from .views import EntraLoginSimuladoView, LoginTemporalView
 
 
 app_name = "usuarios"
@@ -12,6 +12,12 @@ urlpatterns = [
         "login/",
         LoginTemporalView.as_view(),
         name="login",
+    ),
+
+    path(
+        "login/microsoft/",
+        EntraLoginSimuladoView.as_view(),
+        name="entra_login",
     ),
 
     path(

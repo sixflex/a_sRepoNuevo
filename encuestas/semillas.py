@@ -40,6 +40,34 @@ def pregunta(texto, tipo, opciones=(), obligatoria=True, clave=None, **config):
     }
 
 
+def cuadricula(numero, enunciado, filas, dimension=None, minimo="Muy en Desacuerdo",
+               maximo="Muy de Acuerdo", valoracion_general=False, perfil_egreso=None):
+    """
+    Pregunta de valoración 1 a 5 en cuadrícula, como en Microsoft Forms: un
+    enunciado y una fila por afirmación (A, B, C...). Cada fila es una pregunta
+    de tipo escala con su propia respuesta; la plantilla las agrupa en una
+    tabla por la clave "cuadricula". "dimension" y "valoracion_general" son las
+    que lee el panel del coordinador (satisfacción); "perfil_egreso" marca la
+    fila (letra) sobre el perfil de egreso, para poder excluirla.
+    """
+    preguntas = []
+    for indice, texto in enumerate(filas):
+        letra = chr(ord("A") + indice)
+        config = {
+            "estilo": "numeros", "minimo": 1, "maximo": 5,
+            "cuadricula": f"p{numero}", "enunciado": enunciado, "numero": numero,
+            "etiqueta_minimo": minimo, "etiqueta_maximo": maximo,
+        }
+        if dimension:
+            config["dimension"] = dimension
+        if valoracion_general:
+            config["valoracion_general"] = True
+        if perfil_egreso == letra:
+            config["perfil_egreso"] = True
+        preguntas.append(pregunta(f"{letra}) {texto}", c.ESCALA, **config))
+    return preguntas
+
+
 def opcion(texto, valor=None, otras=False, solo_si=None, carrera=None):
     """Opción con algo más que su texto: «Otros» con texto, valor fijo, condición o carrera."""
     return {"texto": texto, "valor": valor, "otras": otras, "solo_si": solo_si, "carrera": carrera}
@@ -129,6 +157,53 @@ def crear_formulario(definicion):
         contexto_tipo=definicion.get("contexto_tipo"),
         fecha_creacion=timezone.now(),
     )
+    _crear_contenido(version, definicion)
+    return version
+
+
+def _firma_definicion(definicion):
+    return [
+        (datos_seccion["titulo"], [(datos["texto"], datos["tipo"]) for datos in datos_seccion["preguntas"]])
+        for datos_seccion in definicion["secciones"]
+    ]
+
+
+def _firma_version(version):
+    return [
+        (bloque.titulo, [
+            (pregunta.texto, pregunta.tipo)
+            for pregunta in version.preguntas.filter(bloque=bloque).order_by("orden", "id")
+        ])
+        for bloque in version.bloques.order_by("orden", "id")
+    ]
+
+
+@transaction.atomic
+def actualizar_formulario(definicion):
+    """
+    Trae al portal los cambios de una definición ya cargada (RN-17): crea la
+    versión siguiente en borrador con el contenido nuevo, sin tocar las
+    versiones anteriores ni sus respuestas. Si el formulario no existe, lo
+    crea; si la última versión ya tiene ese contenido, devuelve None.
+    """
+    plantilla = FormularioPlantilla.objects.filter(codigo=definicion["codigo"]).first()
+    if plantilla is None:
+        return crear_formulario(definicion)
+    ultima = plantilla.versiones.order_by("-numero_version").first()
+    if ultima and _firma_version(ultima) == _firma_definicion(definicion):
+        return None
+    version = FormularioVersion.objects.create(
+        plantilla=plantilla,
+        numero_version=(ultima.numero_version if ultima else 0) + 1,
+        estado=c.BORRADOR,
+        contexto_tipo=definicion.get("contexto_tipo"),
+        fecha_creacion=timezone.now(),
+    )
+    _crear_contenido(version, definicion)
+    return version
+
+
+def _crear_contenido(version, definicion):
     claves = _Claves()
     for orden_bloque, datos_seccion in enumerate(definicion["secciones"], start=1):
         bloque = BloqueFormulario.objects.create(
@@ -152,7 +227,6 @@ def crear_formulario(definicion):
             if datos["clave"]:
                 claves.guardar(datos["clave"], pregunta_creada, valores)
     services.validar_orden_condiciones(version)
-    return version
 
 
 def contar(definicion):

@@ -1,13 +1,16 @@
-{# Tarjeta de métrica del panel. Uso: {% include "core/partials/_metric_card.html" with label="..." value=n icon="bi-..." %}; con url="..." la tarjeta entera es un enlace. #}
-<div class="col-12 col-sm-6 col-xl-{{ ancho|default:'3' }}">
+{# Tarjeta de métrica del panel. Uso: {% include "core/partials/_metric_card.html" with label="..." value=n icon="bi-..." %}; con url="..." la tarjeta entera es un enlace; detalle="..." agrega una línea bajo el número; clase="..." reemplaza las columnas. #}
+<div class="{% if clase %}{{ clase }}{% else %}col-12 col-sm-6 col-xl-{{ ancho|default:'3' }}{% endif %}">
     <div class="metric-card position-relative h-100">
         <div>
             <div class="metric-label">{{ label }}</div>
             <div class="metric-number">{{ value|default:"0" }}</div>
+            {% if detalle %}<div class="metric-detalle">{{ detalle }}</div>{% endif %}
         </div>
-        <div class="metric-icon-box">
-            <i class="bi {{ icon }}" aria-hidden="true"></i>
-        </div>
+        {% if icon %}
+            <div class="metric-icon-box">
+                <i class="bi {{ icon }}" aria-hidden="true"></i>
+            </div>
+        {% endif %}
         {% if url %}
             <a href="{{ url }}" class="stretched-link" aria-label="{{ label }}: {{ value|default:'0' }}. Ver listado"></a>
         {% endif %}

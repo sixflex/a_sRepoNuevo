@@ -2,6 +2,7 @@
 Una pregunta del formulario público. Recibe `item` desde RespuestaFormularioForm.secciones().
 Las reglas de visibilidad van en data-regla para que formulario_dinamico.js muestre u oculte.
 {% endcomment %}
+{% if item.cuadricula %}{% include "encuestas/includes/fila_cuadricula.html" %}{% else %}
 {% with p=item.pregunta campo=item.campo %}
 <div class="enc-pregunta{% if campo.errors %} tiene-error{% endif %}"
      id="pregunta-{{ p.id }}"
@@ -123,3 +124,4 @@ Las reglas de visibilidad van en data-regla para que formulario_dinamico.js mues
     {% endfor %}
 </div>
 {% endwith %}
+{% endif %}
