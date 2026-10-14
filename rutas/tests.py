@@ -9,6 +9,11 @@ from django.core.exceptions import PermissionDenied
 from django.urls import reverse
 from academico.models import Docente, SeccionDocente
 from rutas.views import recalcular_avance
+from django.test import TestCase
+
+from .models import RutaActividad, RutaPlantilla, RutaVersion
+from .services import crear_nueva_version_ruta
+from django.core.exceptions import ValidationError
 
 class RutaDocenteTestCase(TestCase):
     def setUp(self):
@@ -28,10 +33,13 @@ class RutaDocenteTestCase(TestCase):
 
         self.plantilla = RutaPlantilla.objects.create(nombre="Ruta del Docente A+S",descripcion="Ruta 2026",activo=True,)
 
-        self.version = RutaVersion.objects.create(plantilla=self.plantilla,numero_version=1,estado="ACTIVA",)
+        self.version = RutaVersion.objects.create(plantilla=self.plantilla,numero_version=1,estado="BORRADOR",)
 
         for orden in range(1, 24):
             RutaActividad.objects.create(ruta_version=self.version,etapa="Etapa de prueba",nombre=f"Actividad {orden}",es_obligatoria=True,orden=orden,)
+
+        self.version.estado = "ACTIVA"
+        self.version.save(update_fields=["estado"])
 
     def crear_seccion(self, nrc, declaracion_as=True):
         seccion = Seccion.objects.create(
@@ -105,6 +113,65 @@ class RutaDocenteTestCase(TestCase):
 
         self.assertIsNone(resultado)
         self.assertFalse(SeccionRuta.objects.filter(seccion=seccion).exists())
+
+    def test_seccion_conserva_version_original(self):
+        seccion_antigua = self.crear_seccion("RUTA006")
+
+        ruta_antigua = asignar_ruta_as_si_corresponde(seccion_antigua)
+
+        version_nueva = crear_nueva_version_ruta(self.version)
+
+        actividad_nueva = version_nueva.actividades.get(orden=1)
+        actividad_nueva.nombre = "Actividad actualizada para nueva versión"
+        actividad_nueva.save()
+
+        version_nueva.estado = "ACTIVA"
+        version_nueva.save(update_fields=["estado"])
+
+        seccion_nueva = self.crear_seccion("RUTA007")
+
+        ruta_nueva = asignar_ruta_as_si_corresponde(seccion_nueva)
+
+        ruta_antigua.refresh_from_db()
+        ruta_nueva.refresh_from_db()
+
+        self.assertEqual(ruta_antigua.ruta_version, self.version)
+        self.assertEqual(ruta_nueva.ruta_version, version_nueva)
+
+        self.assertEqual(ruta_antigua.actividades.count(), 23)
+        self.assertEqual(ruta_nueva.actividades.count(), 23)
+
+        actividad_antigua = ruta_antigua.actividades.get(
+            ruta_actividad__orden=1
+        )
+
+        actividad_actualizada = ruta_nueva.actividades.get(
+            ruta_actividad__orden=1
+        )
+
+        self.assertEqual(
+            actividad_antigua.ruta_actividad.nombre,
+            "Actividad 1"
+        )
+
+        self.assertEqual(
+            actividad_actualizada.ruta_actividad.nombre,
+            "Actividad actualizada para nueva versión"
+        )
+    def test_reasignacion_conserva_version_anterior(self):
+        seccion = self.crear_seccion("RUTA008")
+
+        ruta_original = asignar_ruta_as_si_corresponde(seccion)
+
+        version_nueva = crear_nueva_version_ruta(self.version)
+        version_nueva.estado = "ACTIVA"
+        version_nueva.save(update_fields=["estado"])
+
+        ruta_reasignada = asignar_ruta_as_si_corresponde(seccion)
+
+        self.assertEqual(ruta_original.pk, ruta_reasignada.pk)
+        self.assertEqual(ruta_reasignada.ruta_version, self.version)
+        self.assertEqual(ruta_reasignada.actividades.count(), 23)
 
 
 class SeguimientoRutaTestCase(TestCase):
@@ -200,7 +267,7 @@ class SeguimientoRutaTestCase(TestCase):
         version = RutaVersion.objects.create(
             plantilla=plantilla,
             numero_version=1,
-            estado="ACTIVA"
+            estado="BORRADOR"
         )
 
         self.ruta = SeccionRuta.objects.create(
@@ -225,6 +292,8 @@ class SeguimientoRutaTestCase(TestCase):
             es_obligatoria=False,
             orden=2
         )
+        version.estado = "ACTIVA"
+        version.save(update_fields=["estado"])
 
         self.actividad_obligatoria = SeccionActividad.objects.create(
             seccion_ruta=self.ruta,
@@ -336,3 +405,165 @@ class SeguimientoRutaTestCase(TestCase):
 
         self.assertNotEqual(self.ruta.estado, "COMPLETADA")
         self.assertNotEqual(self.ruta.porcentaje_final, 100)
+
+class VersionadoRutaTestCase(TestCase):
+    def setUp(self):
+        self.plantilla = RutaPlantilla.objects.create(
+            nombre="Ruta del Docente A+S",
+            descripcion="Ruta de prueba",
+            activo=True,
+        )
+
+        self.version_original = RutaVersion.objects.create(
+            plantilla=self.plantilla,
+            numero_version=1,
+            estado="BORRADOR",
+        )
+
+        for numero in range(1, 24):
+            RutaActividad.objects.create(
+                ruta_version=self.version_original,
+                etapa=f"Etapa {(numero - 1) // 5 + 1}",
+                nombre=f"Actividad {numero}",
+                descripcion=f"Descripción {numero}",
+                es_obligatoria=True,
+                orden=numero,
+            )
+
+        self.version_original.estado = "ACTIVA"
+        self.version_original.save()
+
+    def test_crea_una_nueva_version(self):
+        nueva_version = crear_nueva_version_ruta(self.version_original)
+
+        self.assertEqual(nueva_version.numero_version, 2)
+        self.assertEqual(nueva_version.estado, "BORRADOR")
+        self.assertEqual(nueva_version.plantilla, self.plantilla)
+
+    def test_copia_las_23_actividades(self):
+        nueva_version = crear_nueva_version_ruta(self.version_original)
+
+        self.assertEqual(nueva_version.actividades.count(), 23)
+        self.assertEqual(self.version_original.actividades.count(), 23)
+
+    def test_conserva_actividades_obligatorias(self):
+        nueva_version = crear_nueva_version_ruta(self.version_original)
+
+        self.assertEqual(
+            nueva_version.actividades.filter(es_obligatoria=True).count(),
+            23,
+        )
+
+    def test_no_modifica_la_version_original(self):
+        nueva_version = crear_nueva_version_ruta(self.version_original)
+
+        actividad_nueva = nueva_version.actividades.get(orden=1)
+        actividad_nueva.nombre = "Actividad modificada"
+        actividad_nueva.save()
+
+        actividad_original = self.version_original.actividades.get(orden=1)
+
+        self.assertEqual(actividad_original.nombre, "Actividad 1")
+        self.assertEqual(actividad_nueva.nombre, "Actividad modificada")
+
+    def test_genera_numeros_consecutivos(self):
+        version_dos = crear_nueva_version_ruta(self.version_original)
+        version_tres = crear_nueva_version_ruta(version_dos)
+
+        self.assertEqual(version_dos.numero_version, 2)
+        self.assertEqual(version_tres.numero_version, 3)
+
+    def test_no_comparte_registros_de_actividades(self):
+        nueva_version = crear_nueva_version_ruta(self.version_original)
+
+        ids_originales = set(
+            self.version_original.actividades.values_list("id", flat=True)
+        )
+        ids_nuevos = set(
+            nueva_version.actividades.values_list("id", flat=True)
+        )
+
+        self.assertTrue(ids_originales.isdisjoint(ids_nuevos))
+    def test_no_permite_modificar_actividad_publicada(self):
+        actividad = self.version_original.actividades.get(orden=1)
+
+        actividad.nombre = "Actividad modificada"
+
+        with self.assertRaises(ValidationError):
+            actividad.save()
+
+        actividad.refresh_from_db()
+
+        self.assertEqual(actividad.nombre, "Actividad 1")
+
+    def test_no_permite_eliminar_actividad_publicada(self):
+        actividad = self.version_original.actividades.get(orden=1)
+
+        with self.assertRaises(ValidationError):
+            actividad.delete()
+
+        self.assertTrue(
+            RutaActividad.objects.filter(pk=actividad.pk).exists()
+        )
+
+    def test_permite_modificar_actividad_en_borrador(self):
+        nueva_version = crear_nueva_version_ruta(self.version_original)
+
+        actividad = nueva_version.actividades.get(orden=1)
+        actividad.nombre = "Actividad actualizada"
+        actividad.save()
+
+        actividad.refresh_from_db()
+
+        self.assertEqual(actividad.nombre, "Actividad actualizada")
+
+    def test_no_permite_update_en_version_publicada(self):
+        actividad = self.version_original.actividades.get(orden=1)
+        nombre_original = actividad.nombre
+
+        with self.assertRaises(ValidationError):
+            RutaActividad.objects.filter(pk=actividad.pk).update(
+                nombre="Actividad modificada"
+            )
+
+        actividad.refresh_from_db()
+        self.assertEqual(actividad.nombre, nombre_original)
+
+    def test_no_permite_bulk_update_en_version_publicada(self):
+        actividad = self.version_original.actividades.get(orden=1)
+        nombre_original = actividad.nombre
+        actividad.nombre = "Actividad modificada"
+
+        with self.assertRaises(ValidationError):
+            RutaActividad.objects.bulk_update(
+                [actividad], ["nombre"]
+            )
+
+        actividad.refresh_from_db()
+        self.assertEqual(actividad.nombre, nombre_original)
+
+    def test_no_permite_delete_masivo_en_version_publicada(self):
+        actividad = self.version_original.actividades.get(orden=1)
+
+        with self.assertRaises(ValidationError):
+            RutaActividad.objects.filter(pk=actividad.pk).delete()
+
+        self.assertTrue(
+            RutaActividad.objects.filter(pk=actividad.pk).exists()
+        )
+    def test_no_permite_bulk_create_en_version_publicada(self):
+        nueva_actividad = RutaActividad(
+            ruta_version=self.version_original,
+            etapa="Etapa nueva",
+            nombre="Actividad no permitida",
+            es_obligatoria=True,
+            orden=24,
+        )
+
+        with self.assertRaises(ValidationError):
+            RutaActividad.objects.bulk_create([nueva_actividad])
+
+        self.assertEqual(
+            self.version_original.actividades.count(),
+            23,
+        )

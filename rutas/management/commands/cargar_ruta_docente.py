@@ -1,13 +1,13 @@
 from datetime import date
 
 from django.core.management.base import BaseCommand
-
+from django.db import transaction
 from rutas.models import RutaActividad, RutaPlantilla, RutaVersion
 
 
 class Command(BaseCommand):
     help = "Carga la Ruta del Docente A+S 2026"
-
+    @transaction.atomic
     def handle(self, *args, **options):
         plantilla, _ = RutaPlantilla.objects.get_or_create(
             nombre="Ruta del Docente A+S",
@@ -17,14 +17,22 @@ class Command(BaseCommand):
             },
         )
 
-        version, _ = RutaVersion.objects.get_or_create(
+        version, version_creada = RutaVersion.objects.get_or_create(
             plantilla=plantilla,
             numero_version=1,
             defaults={
-                "estado": "ACTIVA",
+                "estado": "BORRADOR",
                 "fecha_vigencia_desde": date(2026, 1, 1),
             },
         )
+
+        if not version_creada:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    "La versión 1 ya existe. Se conserva sin modificaciones."
+                )
+            )
+            return
 
         actividades = [
             (
@@ -167,31 +175,29 @@ class Command(BaseCommand):
             ),
         ]
 
-        creadas = 0
-        actualizadas = 0
 
-        for orden, etapa, nombre, descripcion in actividades:
-            _, creada = RutaActividad.objects.update_or_create(
+
+        nuevas_actividades = [
+            RutaActividad(
                 ruta_version=version,
                 orden=orden,
-                defaults={
-                    "etapa": etapa,
-                    "nombre": nombre,
-                    "descripcion": descripcion,
-                    "es_obligatoria": True,
-                },
+                etapa=etapa,
+                nombre=nombre,
+                descripcion=descripcion,
+                es_obligatoria=True,
             )
+            for orden, etapa, nombre, descripcion in actividades
+        ]
 
-            if creada:
-                creadas += 1
-            else:
-                actualizadas += 1
+        RutaActividad.objects.bulk_create(nuevas_actividades)
+
+        version.estado = "ACTIVA"
+        version.save(update_fields=["estado"])
 
         self.stdout.write(
             self.style.SUCCESS(
                 f"Ruta del Docente A+S cargada correctamente. "
-                f"Actividades creadas: {creadas}. "
-                f"Actividades actualizadas: {actualizadas}. "
-                f"Total: {len(actividades)}."
+                f"Versión: {version.numero_version}. "
+                f"Actividades creadas: {len(nuevas_actividades)}."
             )
         )
