@@ -206,11 +206,25 @@ class ArchivoDownloadTests(TestCase):
         from rutas.models import RutaActividad, RutaPlantilla, RutaVersion
 
         plantilla = RutaPlantilla.objects.create(nombre="Ruta", activo=True)
-        version = RutaVersion.objects.create(plantilla=plantilla, numero_version=1, estado="ACTIVA")
-        RutaActividad.objects.create(
-            ruta_version=version, etapa="Formalización", nombre="Firmar el Acuerdo Formal",
-            es_obligatoria=True, orden=11, archivo_recurso=self.archivo,
+
+        version = RutaVersion.objects.create(
+            plantilla=plantilla,
+            numero_version=1,
+            estado="BORRADOR"
         )
 
-        self.assertTrue(puede_descargar_archivo(self.otro_usuario, self.archivo))
+        RutaActividad.objects.create(
+            ruta_version=version,
+            etapa="Formalización",
+            nombre="Firmar el Acuerdo Formal",
+            es_obligatoria=True,
+            orden=11,
+            archivo_recurso=self.archivo,
+        )
 
+        version.estado = "ACTIVA"
+        version.save(update_fields=["estado"])
+
+        self.assertTrue(
+            puede_descargar_archivo(self.otro_usuario, self.archivo)
+        )

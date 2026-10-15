@@ -1,6 +1,8 @@
+
 from datetime import date
 
 from django.core.management.base import BaseCommand
+from django.db import transaction
 from django.urls import reverse
 
 from encuestas.models import FormularioVersion
@@ -24,6 +26,7 @@ def _ultima_version(codigo_plantilla):
 class Command(BaseCommand):
     help = "Carga la Ruta del Docente A+S 2026"
 
+    @transaction.atomic
     def handle(self, *args, **options):
         plantilla, _ = RutaPlantilla.objects.get_or_create(
             nombre="Ruta del Docente A+S",
@@ -33,18 +36,22 @@ class Command(BaseCommand):
             },
         )
 
-        version, _ = RutaVersion.objects.get_or_create(
+        version, version_creada = RutaVersion.objects.get_or_create(
             plantilla=plantilla,
             numero_version=1,
             defaults={
-                "estado": "ACTIVA",
+                "estado": "BORRADOR",
                 "fecha_vigencia_desde": date(2026, 1, 1),
             },
         )
 
-        # Orden y contenido según la Ruta docente entregada por Coordinación
-        # (knowledge/Ruta docente.txt). Todas obligatorias por indicación del
-        # cliente mientras se valida PV-03.
+        if not version_creada:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    "La versión 1 ya existe. Se conserva sin modificaciones."
+                )
+            )
+            return
         actividades = [
             (1, "Inicio y habilitación", "Completar curso habilitante en metodología A+S",
              "Completar el curso de metodología A+S disponible en Canvas durante las primeras tres semanas."),
@@ -93,47 +100,59 @@ class Command(BaseCommand):
             (23, "Cierre y reporte", "Completar Formulario Resumen",
              "Completar el Formulario Resumen del proyecto antes de cerrar el proceso de reporte."),
         ]
-
-        # Acción o formulario de cada actividad (RF-RUT-01). recurso_url admite
-        # {seccion} y {actividad}; se editan desde el admin sin tocar código.
         recursos = {
-            10: {"recurso_url": _url_con_marcador("cartas:solicitar_carta_docente", "{seccion}")},
-            13: {"recurso_url": _url_con_marcador("socios:asociar_socio_equipo", "{actividad}")},
-            # Actividad de cierre: pregunta si habrá cierre e invita al Socio (RF-EVI-04, RF-RUT-04).
-            18: {"config_recordatorio_json": {"recordatorio": RECORDATORIO_INVITACION_CIERRE}},
-            19: {"recurso_url": reverse("rutas:formularios_qr") + "?proceso=EVALUACION_AS"},
-            23: {"formulario_version": _ultima_version("RESUMEN_IMPLEMENTACION_DOCENTE")},
+            10: {
+                "recurso_url": _url_con_marcador(
+                    "cartas:solicitar_carta_docente",
+                    "{seccion}",
+                ),
+            },
+            13: {
+                "recurso_url": _url_con_marcador(
+                    "socios:asociar_socio_equipo",
+                    "{actividad}",
+                ),
+            },
+            18: {
+                "config_recordatorio_json": {
+                    "recordatorio": RECORDATORIO_INVITACION_CIERRE,
+                },
+            },
+            19: {
+                "recurso_url": (
+                    reverse("rutas:formularios_qr")
+                    + "?proceso=EVALUACION_AS"
+                ),
+            },
+            23: {
+                "formulario_version": _ultima_version(
+                    "RESUMEN_IMPLEMENTACION_DOCENTE"
+                ),
+            },
         }
 
-        creadas = 0
-        actualizadas = 0
-
-        for orden, etapa, nombre, descripcion in actividades:
-            _, creada = RutaActividad.objects.update_or_create(
+        nuevas_actividades = [
+            RutaActividad(
                 ruta_version=version,
                 orden=orden,
-                defaults={
-                    "etapa": etapa,
-                    "nombre": nombre,
-                    "descripcion": descripcion,
-                    "es_obligatoria": True,
-                    "formulario_version": None,
-                    "recurso_url": None,
-                    "config_recordatorio_json": None,
-                    **recursos.get(orden, {}),
-                },
+                etapa=etapa,
+                nombre=nombre,
+                descripcion=descripcion,
+                es_obligatoria=True,
+                **recursos.get(orden, {}),
             )
+            for orden, etapa, nombre, descripcion in actividades
+        ]
 
-            if creada:
-                creadas += 1
-            else:
-                actualizadas += 1
+        RutaActividad.objects.bulk_create(nuevas_actividades)
+
+        version.estado = "ACTIVA"
+        version.save(update_fields=["estado"])
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Ruta del Docente A+S cargada correctamente. "
-                f"Actividades creadas: {creadas}. "
-                f"Actividades actualizadas: {actualizadas}. "
-                f"Total: {len(actividades)}."
+                "Ruta del Docente A+S cargada correctamente. "
+                f"Versión: {version.numero_version}. "
+                f"Actividades creadas: {len(nuevas_actividades)}."
             )
         )

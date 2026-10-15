@@ -399,7 +399,8 @@ class PanelIndicadoresTestCase(TestCase):
 
         version = RutaVersion.objects.create(
             plantilla=RutaPlantilla.objects.create(nombre="Ruta A+S", activo=True),
-            numero_version=1, estado="VIGENTE",
+            numero_version=1,
+            estado="BORRADOR",
         )
         obligatorias = [
             RutaActividad.objects.create(
@@ -410,6 +411,8 @@ class PanelIndicadoresTestCase(TestCase):
         opcional = RutaActividad.objects.create(
             ruta_version=version, etapa="Cierre", nombre="Opcional", es_obligatoria=False, orden=9,
         )
+        version.estado = "VIGENTE"
+        version.save(update_fields=["estado"])
 
         def seccion(nrc, carrera, completadas, periodo=None, docente="Ana"):
             seccion = Seccion.objects.create(
