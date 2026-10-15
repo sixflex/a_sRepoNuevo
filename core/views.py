@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
-
+from rutas.services import obtener_recordatorios_ruta
 from usuarios.permissions import es_coordinador, es_docente
 from usuarios.decorators import coordinador_required, docente_required
 
@@ -95,6 +95,16 @@ def planificacion_coordinacion(request):
 
 @docente_required
 def panel_docente(request):
+    periodos = (
+        PeriodoAcademico.objects
+        .all()
+        .order_by(
+            "-anio",
+            "tipo",
+            "nombre",
+        )
+    )
+
     secciones = (
         Seccion.objects
         .filter(docentes__usuario=request.user)
@@ -107,14 +117,40 @@ def panel_docente(request):
         .distinct()
     )
 
+    periodo_id = request.GET.get("periodo", "").strip()
+    periodo_seleccionado = None
+
+    if periodo_id and periodo_id.isdigit():
+        secciones = secciones.filter(periodo_id=int(periodo_id))
+        periodo_seleccionado = periodos.filter(id=int(periodo_id)).first()
+    else:
+        periodo_id = ""
+
+    secciones = secciones.order_by(
+        "-periodo__anio",
+        "periodo__tipo",
+        "asignatura__nombre",
+        "nrc",
+    )
+
+    secciones = list(secciones)
+    
+
+    recordatorios = obtener_recordatorios_ruta(secciones)
+    for seccion in secciones:
+        seccion.recordatorio_ruta = recordatorios.get(seccion.id)
+
+
     return render(
         request,
         "core/docente.html",
         {
             "secciones": secciones,
+            "periodos": periodos,
+            "periodo_id": periodo_id,
+            "periodo_seleccionado": periodo_seleccionado,
         },
     )
-
 
 @login_required
 def detalle_seccion(request, seccion_id):

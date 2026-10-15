@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from django.db import transaction
-
+from django.db.models import Prefetch
 from .models import RutaActividad, RutaVersion, SeccionActividad, SeccionRuta
 
 
@@ -67,3 +67,63 @@ def asignar_ruta_as_si_corresponde(seccion):
         seccion,
         ruta_version,
     )
+
+def obtener_recordatorios_ruta(secciones):
+    from socios.models import InvitacionCierre
+
+    seccion_ids = [seccion.id for seccion in secciones]
+
+    if not seccion_ids:
+        return {}
+
+    seccion_rutas = (
+        SeccionRuta.objects
+        .filter(seccion_id__in=seccion_ids)
+        .exclude(estado="COMPLETADA")
+        .prefetch_related(
+            Prefetch(
+                "actividades",
+                queryset=(
+                    SeccionActividad.objects
+                    .filter(completada_por_docente__isnull=True)
+                    .select_related("ruta_actividad")
+                    .order_by("ruta_actividad__orden")
+                ),
+                to_attr="actividades_pendientes",
+            ),
+            Prefetch(
+                "invitaciones_cierre",
+                queryset=InvitacionCierre.objects.select_related("socio"),
+                to_attr="invitaciones_cargadas",
+            ),
+        )
+    )
+
+    recordatorios = {}
+
+    for seccion_ruta in seccion_rutas:
+        pendientes = seccion_ruta.actividades_pendientes
+        invitaciones = seccion_ruta.invitaciones_cargadas
+
+        hay_actividad_cierre = (
+            seccion_ruta.tiene_actividad_cierre is True
+            or len(invitaciones) > 0
+        )
+
+        recordatorios[seccion_ruta.seccion_id] = {
+            "seccion_ruta": seccion_ruta,
+            "pendientes": pendientes,
+            "total_pendientes": len(pendientes),
+            "obligatorias_pendientes": sum(
+                1
+                for actividad in pendientes
+                if actividad.ruta_actividad.es_obligatoria
+            ),
+            "hay_actividad_cierre": hay_actividad_cierre,
+            "invitaciones": invitaciones,
+            "falta_invitar_socio": (
+                hay_actividad_cierre and len(invitaciones) == 0
+            ),
+        }
+
+    return recordatorios

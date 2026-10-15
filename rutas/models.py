@@ -82,7 +82,8 @@ class RutaActividad(models.Model):
         blank=True,
     )
 
-    es_obligatoria = models.BooleanField()
+    es_obligatoria = models.BooleanField(default=True)
+    acepta_evidencias = models.BooleanField(default=False)
     orden = models.IntegerField()
 
     recurso_url = models.CharField(
@@ -134,6 +135,21 @@ class SeccionRuta(models.Model):
         null=True,
         blank=True,
     )
+
+    tiene_actividad_cierre = models.BooleanField(
+        null=True,
+        blank=True,
+        default=None,
+        verbose_name="Tiene actividad de cierre",
+    )
+
+    @property
+    def hay_actividad_cierre(self):
+        if self.tiene_actividad_cierre is True:
+            return True
+        if self.invitaciones_cierre.exists():
+            return True
+        return False
 
     def __str__(self):
         return f"{self.seccion} - {self.ruta_version}"

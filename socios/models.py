@@ -396,3 +396,22 @@ class HistorialEstadoSocio(models.Model):
 
     def __str__(self):
         return f"{self.socio} · {self.estado_anterior} → {self.estado_nuevo}"
+    
+class PostulacionSocioPublica(models.Model):
+    ESTADOS = (
+        ('PENDIENTE', 'Pendiente'),
+        ('APROBADA', 'Aprobada'),
+        ('RECHAZADA', 'Rechazada'),
+    )
+    
+    identificador = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    nombre_organizacion = models.CharField(max_length=255)
+    nombre_contacto = models.CharField(max_length=255)
+    email_contacto = models.EmailField()
+    descripcion_proyecto = models.TextField()
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='PENDIENTE')
+    motivo_rechazo = models.TextField(blank=True, null=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.nombre_organizacion} - {self.identificador}"

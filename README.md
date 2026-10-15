@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Portal Integrado A+S
 
 Proyecto web desarrollado en Django para la gestión del Portal Integrado de Aprendizaje + Servicio.
@@ -138,3 +139,6 @@ AuditService.registrar_evento(
 ### rama personal = trabajo de cada integrante
 ### develop = unión de todo el trabajo del sprint
 #### main = versión estable/final
+=======
+# a_sRepoNuevo
+>>>>>>> 36ebc7614817635fa65f5142c89265a611daa0d8

@@ -82,6 +82,9 @@ def detalle_ruta_docente(request, seccion_ruta_id):
         seccion_ruta,
     )
 
+    if seccion_ruta.estado != "COMPLETADA":
+        recalcular_avance(seccion_ruta)
+
     actividades = (
         SeccionActividad.objects
         .filter(
@@ -89,6 +92,9 @@ def detalle_ruta_docente(request, seccion_ruta_id):
         )
         .select_related(
             "ruta_actividad",
+            "ruta_actividad__archivo_recurso",
+            "ruta_actividad__formulario_version",
+            "ruta_actividad__formulario_version__plantilla",
             "completada_por_docente",
         )
         .prefetch_related(
@@ -123,6 +129,12 @@ def detalle_ruta_docente(request, seccion_ruta_id):
         and seccion_ruta.estado != "COMPLETADA"
     )
 
+    actividades_con_evidencia = [
+        act.ruta_actividad.orden
+        for act in actividades
+        if act.ruta_actividad.acepta_evidencias
+    ]
+
     return render(
         request,
         "rutas/detalle_ruta_docente.html",
@@ -130,12 +142,7 @@ def detalle_ruta_docente(request, seccion_ruta_id):
             "seccion_ruta": seccion_ruta,
             "seccion": seccion_ruta.seccion,
             "etapas": etapas,
-            "actividades_con_evidencia": [
-                11,
-                16,
-                20,
-                21,
-            ],
+            "actividades_con_evidencia": actividades_con_evidencia,
             "puede_completar_ruta": puede_completar_ruta,
         },
     )
@@ -333,12 +340,7 @@ def subir_evidencia(request, actividad_id):
             seccion_ruta_id=seccion_ruta.id,
         )
 
-    if actividad.ruta_actividad.orden not in [
-        11,
-        16,
-        20,
-        21,
-    ]:
+    if not actividad.ruta_actividad.acepta_evidencias:
         raise PermissionDenied
 
     if actividad.completada_por_docente_id is not None:
@@ -546,6 +548,9 @@ def detalle_ruta_coordinacion(request, seccion_ruta_id):
         id=seccion_ruta_id,
     )
 
+    if seccion_ruta.estado != "COMPLETADA":
+        recalcular_avance(seccion_ruta)
+
     actividades = (
         SeccionActividad.objects
         .filter(
@@ -553,6 +558,9 @@ def detalle_ruta_coordinacion(request, seccion_ruta_id):
         )
         .select_related(
             "ruta_actividad",
+            "ruta_actividad__archivo_recurso",
+            "ruta_actividad__formulario_version",
+            "ruta_actividad__formulario_version__plantilla",
             "completada_por_docente",
         )
         .prefetch_related(

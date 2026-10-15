@@ -1,0 +1,8 @@
+<p>Estimado/a {{ postulacion.nombre_contacto }},</p>
+<p>Le escribimos en relación a su postulación para la organización <strong>{{ postulacion.nombre_organizacion }}</strong>.</p>
+<p>Lamentamos informarle que en esta ocasión su propuesta no ha sido seleccionada. El motivo de esta decisión es el siguiente:</p>
+<blockquote style="border-left: 4px solid #ccc; padding-left: 10px;">
+    {{ postulacion.motivo_rechazo|linebreaks }}
+</blockquote>
+<p>Agradecemos su interés y le invitamos a participar en futuras convocatorias.</p>
+<p>Atentamente,<br>Equipo de Coordinación A+S</p>

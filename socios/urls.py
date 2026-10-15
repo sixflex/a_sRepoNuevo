@@ -15,4 +15,9 @@ urlpatterns = [
     path("postular/", views.postular_publico, name="postular_publico"),
     path("postular/<int:convocatoria_id>/", views.postular_publico, name="postular_convocatoria"),
     path("postular/confirmacion/<int:postulacion_id>/", views.postulacion_exitosa, name="postulacion_exitosa"),
+    
+
+    path("postular-fijo/", views.postular_publico_fijo, name="postular_publico_fijo"),
+    path("postular-fijo/exito/<uuid:identificador>/", views.postulacion_exitosa_fija, name="postulacion_exitosa_fija"),
+    path("rechazar-fijo/<int:pk>/", views.rechazar_postulacion_fija, name="rechazar_postulacion_fija"),
 ]

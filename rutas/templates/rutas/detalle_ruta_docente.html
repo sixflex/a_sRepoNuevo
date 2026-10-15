@@ -87,14 +87,65 @@
                                     </span>
 
                                     <div class="flex-grow-1">
-                                        <h5 class="mb-1">
-                                            {{ actividad.ruta_actividad.nombre }}
-                                        </h5>
+                                        <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
+                                            <h5 class="mb-0">
+                                                {{ actividad.ruta_actividad.nombre }}
+                                            </h5>
+                                            {% if actividad.ruta_actividad.es_obligatoria %}
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle small">
+                                                    Obligatoria
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle small">
+                                                    Opcional
+                                                </span>
+                                            {% endif %}
+                                            {% if actividad.ruta_actividad.acepta_evidencias %}
+                                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle small">
+                                                    <i class="bi bi-paperclip me-1"></i>Acepta evidencia
+                                                </span>
+                                            {% endif %}
+                                        </div>
 
                                         {% if actividad.ruta_actividad.descripcion %}
                                             <p class="text-muted mb-2">
                                                 {{ actividad.ruta_actividad.descripcion }}
                                             </p>
+                                        {% endif %}
+
+                                        <!-- RECURSO ASOCIADO -->
+                                        {% if actividad.ruta_actividad.archivo_recurso %}
+                                            <div class="mt-2 mb-2">
+                                                <a
+                                                    href="{% url 'archivos:descargar' actividad.ruta_actividad.archivo_recurso.id %}"
+                                                    class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1"
+                                                >
+                                                    <i class="bi bi-file-earmark-arrow-down"></i>
+                                                    Descargar recurso: {{ actividad.ruta_actividad.archivo_recurso.nombre_original }}
+                                                </a>
+                                            </div>
+                                        {% endif %}
+
+                                        {% if actividad.ruta_actividad.recurso_url %}
+                                            <div class="mt-2 mb-2">
+                                                <a
+                                                    href="{{ actividad.ruta_actividad.recurso_url }}"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
+                                                >
+                                                    <i class="bi bi-box-arrow-up-right"></i>
+                                                    Ver recurso asociado
+                                                </a>
+                                            </div>
+                                        {% endif %}
+
+                                        {% if actividad.ruta_actividad.formulario_version %}
+                                            <div class="mt-2 mb-2">
+                                                <span class="badge bg-light text-secondary border">
+                                                    <i class="bi bi-ui-checks me-1"></i>Formulario: {{ actividad.ruta_actividad.formulario_version.plantilla.titulo }}
+                                                </span>
+                                            </div>
                                         {% endif %}
 
                                         {% if actividad.ruta_actividad.orden == 10 %}
@@ -157,7 +208,7 @@
                                         {% endif %}
 
                                         {% if seccion_ruta.estado != "COMPLETADA" %}
-                                            {% if not actividad.completada_por_docente and actividad.ruta_actividad.orden in actividades_con_evidencia %}
+                                            {% if not actividad.completada_por_docente and actividad.ruta_actividad.acepta_evidencias %}
                                                 <div class="mt-3 border rounded p-3">
                                                     <div class="fw-semibold mb-2">
                                                         Subir evidencia
