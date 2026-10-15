@@ -11,6 +11,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .models import Archivo
+from .permissions import puede_descargar_archivo
 from .services import abrir_archivo, guardar_archivo
 from .validators import (
     validar_cantidad_archivos,
@@ -200,3 +201,30 @@ class ArchivoDownloadTests(TestCase):
             f"/private_uploads/{self.archivo.storage_key}"
         )
         self.assertEqual(response.status_code, 404)
+
+    def test_formato_de_la_ruta_se_puede_descargar(self):
+        from rutas.models import RutaActividad, RutaPlantilla, RutaVersion
+
+        plantilla = RutaPlantilla.objects.create(nombre="Ruta", activo=True)
+
+        version = RutaVersion.objects.create(
+            plantilla=plantilla,
+            numero_version=1,
+            estado="BORRADOR"
+        )
+
+        RutaActividad.objects.create(
+            ruta_version=version,
+            etapa="Formalización",
+            nombre="Firmar el Acuerdo Formal",
+            es_obligatoria=True,
+            orden=11,
+            archivo_recurso=self.archivo,
+        )
+
+        version.estado = "ACTIVA"
+        version.save(update_fields=["estado"])
+
+        self.assertTrue(
+            puede_descargar_archivo(self.otro_usuario, self.archivo)
+        )

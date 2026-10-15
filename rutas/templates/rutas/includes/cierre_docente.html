@@ -1,0 +1,133 @@
+{# Actividad de cierre e invitación al Socio Comunitario (RF-EVI-04 a RF-EVI-06). Nada de esto bloquea la Ruta. #}
+<div class="mt-3 border rounded p-3 bg-light">
+    <div class="fw-semibold mb-2">
+        <i class="bi bi-people me-1"></i>
+        Actividad de cierre con Socios Comunitarios
+    </div>
+
+    {% if actividad.observacion == observacion_sin_cierre %}
+        <p class="text-muted mb-0">
+            Indicaste que no habrá actividad de cierre. Si cambias de opinión, vuelve la actividad a pendiente.
+        </p>
+    {% else %}
+        {% if actividad.invitaciones %}
+            <div class="table-responsive mb-2">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Socio Comunitario</th>
+                            <th>Contacto</th>
+                            <th>Asistencia</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invitacion in actividad.invitaciones %}
+                            <tr>
+                                <td>{{ invitacion.socio.nombre_organizacion }}</td>
+                                <td class="small">
+                                    {% if invitacion.modo_contacto == "PLATAFORMA" %}
+                                        {% if invitacion.fecha_envio %}
+                                            Correo enviado el {{ invitacion.fecha_envio|date:"d/m/Y" }}
+                                        {% else %}
+                                            <span class="text-danger">Correo no enviado</span>
+                                        {% endif %}
+                                    {% else %}
+                                        Por su cuenta
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if invitacion.respuesta == "ASISTIRA" %}
+                                        <span class="badge bg-success">Asistirá</span>
+                                    {% elif invitacion.respuesta == "NO" %}
+                                        <span class="badge bg-secondary">No asistirá</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">Sin respuesta</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if seccion_ruta.estado != "COMPLETADA" %}
+                                        {% if invitacion.modo_contacto == "EXTERNO" %}
+                                            <form method="post" action="{% url 'rutas:registrar_respuesta_cierre' invitacion.id %}" class="d-flex gap-1 justify-content-end">
+                                                {% csrf_token %}
+                                                <select name="respuesta" class="form-select form-select-sm w-auto" aria-label="Asistencia de {{ invitacion.socio.nombre_organizacion }}">
+                                                    <option value="ASISTIRA" {% if invitacion.respuesta == "ASISTIRA" %}selected{% endif %}>Asistirá</option>
+                                                    <option value="NO" {% if invitacion.respuesta == "NO" %}selected{% endif %}>No asistirá</option>
+                                                    <option value="SIN_RESPUESTA" {% if invitacion.respuesta == "SIN_RESPUESTA" %}selected{% endif %}>Sin respuesta</option>
+                                                </select>
+                                                <button type="submit" class="btn btn-sm btn-outline-primary">Guardar</button>
+                                            </form>
+                                        {% elif not invitacion.fecha_envio %}
+                                            <form method="post" action="{% url 'rutas:reenviar_invitacion_cierre' invitacion.id %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-primary">Reintentar envío</button>
+                                            </form>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+
+        {% if seccion_ruta.estado != "COMPLETADA" %}
+            {% if not actividad.invitaciones and not actividad.completada_por_docente %}
+                <p class="mb-2">
+                    ¿Habrá una actividad de cierre con los Socios Comunitarios? No es obligatoria y no bloquea la Ruta.
+                </p>
+                <form method="post" action="{% url 'rutas:indicar_sin_cierre' actividad.id %}" class="mb-2">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">
+                        No habrá actividad de cierre
+                    </button>
+                </form>
+            {% endif %}
+
+            {% if actividad.socios_por_invitar %}
+                <details {% if not actividad.invitaciones %}open{% endif %}>
+                    <summary class="fw-semibold mb-2">
+                        {% if actividad.invitaciones %}Invitar a otro Socio{% else %}Sí, invitar a los Socios{% endif %}
+                    </summary>
+
+                    <form method="post" action="{% url 'rutas:invitar_socios_cierre' actividad.id %}">
+                        {% csrf_token %}
+
+                        <div class="mb-2">
+                            {% for socio in actividad.socios_por_invitar %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="socios" value="{{ socio.id }}" id="socio-{{ actividad.id }}-{{ socio.id }}" checked>
+                                    <label class="form-check-label" for="socio-{{ actividad.id }}-{{ socio.id }}">
+                                        {{ socio.nombre_organizacion }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="modo_contacto" value="PLATAFORMA" id="modo-plataforma-{{ actividad.id }}" checked>
+                                <label class="form-check-label" for="modo-plataforma-{{ actividad.id }}">
+                                    Enviar la invitación desde la plataforma (correo con Asistiré / No asistiré)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="modo_contacto" value="EXTERNO" id="modo-externo-{{ actividad.id }}">
+                                <label class="form-check-label" for="modo-externo-{{ actividad.id }}">
+                                    Lo contactaré por mi cuenta y anotaré su respuesta aquí
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-sm btn-primary">Invitar</button>
+                    </form>
+                </details>
+            {% elif not actividad.invitaciones %}
+                <p class="small text-muted mb-0">
+                    La sección aún no tiene Socios Comunitarios asociados a sus equipos. Asócialos en "Registrar Socio Comunitario" para poder invitarlos.
+                </p>
+            {% endif %}
+        {% endif %}
+    {% endif %}
+</div>

@@ -846,6 +846,7 @@ class VistasAsociacionSocioTests(TestCase):
         ruta = SeccionRuta.objects.create(seccion=self.seccion, ruta_version=version, estado="EN_PROGRESO", porcentaje_final=0)
         actividad = RutaActividad.objects.create(
             ruta_version=version, etapa="Etapa", nombre="Asociar socio", es_obligatoria=True, orden=13,
+            recurso_url="/socios/ruta/actividad/{actividad}/asociar-socio/",
         )
         version.estado = "ACTIVA"
         version.save(update_fields=["estado"])

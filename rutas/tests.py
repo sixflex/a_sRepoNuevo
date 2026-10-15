@@ -9,6 +9,15 @@ from django.core.exceptions import PermissionDenied
 from django.urls import reverse
 from academico.models import Docente, SeccionDocente
 from rutas.views import recalcular_avance
+import os
+import uuid
+from unittest.mock import patch
+from django.core.files.storage import InMemoryStorage
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils import timezone
+from encuestas import services as encuestas_services
+from encuestas.models import EnlaceFormulario
+from rutas.services import url_recurso
 from django.test import TestCase
 
 from .models import RutaActividad, RutaPlantilla, RutaVersion
@@ -405,6 +414,438 @@ class SeguimientoRutaTestCase(TestCase):
 
         self.assertNotEqual(self.ruta.estado, "COMPLETADA")
         self.assertNotEqual(self.ruta.porcentaje_final, 100)
+
+    @patch("archivos.services.obtener_storage_privado", return_value=InMemoryStorage())
+    def test_cualquier_actividad_acepta_evidencia(self, _storage):
+        self.client.force_login(self.usuario_docente)
+
+        self.client.post(
+            reverse("rutas:subir_evidencia", args=[self.actividad_obligatoria.id]),
+            {"archivo": SimpleUploadedFile("acuerdo.pdf", b"%PDF-1.4", content_type="application/pdf")},
+        )
+
+        self.assertEqual(self.actividad_obligatoria.evidencias.count(), 1)
+
+    def test_recurso_url_reemplaza_seccion_y_actividad(self):
+        ruta_actividad = self.actividad_obligatoria.ruta_actividad
+        version = ruta_actividad.ruta_version
+        version.estado = "BORRADOR"
+        version.save(update_fields=["estado"])
+        ruta_actividad.recurso_url = "/a/{seccion}/b/{actividad}/"
+        ruta_actividad.save()
+        version.estado = "ACTIVA"
+        version.save(update_fields=["estado"])
+        self.assertEqual(
+            url_recurso(self.actividad_obligatoria),
+            f"/a/{self.seccion.id}/b/{self.actividad_obligatoria.id}/",
+        )
+
+    def test_formularios_qr_muestra_solo_el_proceso_pedido(self):
+        for titulo, proceso in (("Encuesta estudiantes", "EVALUACION_AS"), ("Otro formulario", "GENERAL")):
+            version = encuestas_services.crear_formulario(titulo, proceso=proceso)
+            version.estado = "PUBLICADA"
+            version.save()
+            EnlaceFormulario.objects.create(version=version, token=uuid.uuid4(), activo=True, fecha_inicio=timezone.now())
+
+        self.client.force_login(self.usuario_docente)
+
+        respuesta = self.client.get(reverse("rutas:formularios_qr") + "?proceso=EVALUACION_AS")
+
+        self.assertContains(respuesta, "Encuesta estudiantes")
+        self.assertNotContains(respuesta, "Otro formulario")
+
+
+
+class CargarRutaDocenteTestCase(TestCase):
+    def test_carga_orden_de_la_ruta_y_recursos(self):
+        from django.core.management import call_command
+
+        call_command("cargar_ruta_docente", stdout=open(os.devnull, "w"))
+
+        actividades = {a.orden: a for a in RutaActividad.objects.all()}
+
+        self.assertEqual(len(actividades), 23)
+        self.assertEqual(actividades[18].nombre, "Organizar el evento de cierre")
+        self.assertEqual(actividades[22].nombre, "Enviar documentación final")
+        self.assertIn("{seccion}", actividades[10].recurso_url)
+        self.assertIn("{actividad}", actividades[13].recurso_url)
+        self.assertIn("proceso=EVALUACION_AS", actividades[19].recurso_url)
+
+
+class CierreYExpedienteTestCase(TestCase):
+    """CDE-518 (cierre e invitación), CDE-515 (pendientes) y CDE-522 (ZIP)."""
+
+    def setUp(self):
+        SeguimientoRutaTestCase.setUp(self)
+
+        from socios.models import ContactoSocio, ParticipacionSocio, SocioComunitario
+
+        ruta_cierre = self.actividad_obligatoria.ruta_actividad
+        ruta_cierre.nombre = "Organizar el evento de cierre"
+        ruta_cierre.config_recordatorio_json = {"recordatorio": "invitacion_cierre"}
+        ruta_cierre.save()
+        self.actividad_cierre = self.actividad_obligatoria
+
+        self.socio = SocioComunitario.objects.create(
+            nombre_organizacion="Junta de Vecinos",
+            estado_revision="APROBADO",
+            es_provisional=False,
+            activo=True,
+            fecha_creacion=timezone.now(),
+        )
+        ContactoSocio.objects.create(
+            socio=self.socio,
+            nombre="Contacto",
+            correo="socio@example.com",
+            es_principal=True,
+            activo=True,
+        )
+        ParticipacionSocio.objects.create(
+            socio=self.socio,
+            seccion=self.seccion,
+            origen="OPERATIVO",
+        )
+
+    def _invitar(self, modo):
+        self.client.force_login(self.usuario_docente)
+        return self.client.post(
+            reverse("rutas:invitar_socios_cierre", args=[self.actividad_cierre.id]),
+            {"socios": [self.socio.id], "modo_contacto": modo},
+        )
+
+    def test_sin_cierre_completa_la_actividad_sin_incumplimiento(self):
+        self.client.force_login(self.usuario_docente)
+
+        self.client.post(reverse("rutas:indicar_sin_cierre", args=[self.actividad_cierre.id]))
+
+        self.actividad_cierre.refresh_from_db()
+        self.ruta.refresh_from_db()
+        self.assertEqual(self.actividad_cierre.estado, "COMPLETADA")
+        self.assertEqual(self.actividad_cierre.observacion, "No habrá actividad de cierre.")
+        self.assertEqual(self.ruta.porcentaje_final, 100)
+
+    def test_sin_cierre_solo_en_la_actividad_de_cierre(self):
+        self.client.force_login(self.usuario_docente)
+
+        respuesta = self.client.post(
+            reverse("rutas:indicar_sin_cierre", args=[self.actividad_opcional.id])
+        )
+
+        self.assertEqual(respuesta.status_code, 403)
+
+    def test_invitacion_por_plataforma_envia_enlaces_unicos(self):
+        from django.core import mail
+        from socios.models import InvitacionCierre
+
+        self._invitar("PLATAFORMA")
+
+        invitacion = InvitacionCierre.objects.get()
+        self.assertEqual(invitacion.respuesta, "SIN_RESPUESTA")
+        self.assertIsNotNone(invitacion.fecha_envio)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(f"/rutas/cierre/{invitacion.token}/asistire/", mail.outbox[0].body)
+        self.assertIn(f"/rutas/cierre/{invitacion.token}/no-asistire/", mail.outbox[0].body)
+        # La invitación no completa ni bloquea la Ruta.
+        self.actividad_cierre.refresh_from_db()
+        self.assertEqual(self.actividad_cierre.estado, "PENDIENTE")
+
+    def test_socio_responde_desde_pagina_publica_sin_barra(self):
+        from socios.models import InvitacionCierre
+
+        self._invitar("PLATAFORMA")
+        self.client.logout()
+        invitacion = InvitacionCierre.objects.get()
+        url = reverse("rutas:responder_invitacion_cierre", args=[invitacion.token, "asistire"])
+
+        pagina = self.client.get(url)
+        invitacion.refresh_from_db()
+        self.assertEqual(invitacion.respuesta, "SIN_RESPUESTA")
+        self.assertNotContains(pagina, "navbar-sistema")
+        self.assertContains(pagina, "Junta de Vecinos")
+
+        self.client.post(url)
+        invitacion.refresh_from_db()
+        self.assertEqual(invitacion.respuesta, "ASISTIRA")
+        self.assertIsNotNone(invitacion.fecha_respuesta)
+
+    def test_contacto_externo_docente_registra_resultado(self):
+        from django.core import mail
+        from socios.models import InvitacionCierre
+
+        self._invitar("EXTERNO")
+        invitacion = InvitacionCierre.objects.get()
+        self.assertEqual(len(mail.outbox), 0)
+
+        self.client.post(
+            reverse("rutas:registrar_respuesta_cierre", args=[invitacion.id]),
+            {"respuesta": "NO"},
+        )
+
+        invitacion.refresh_from_db()
+        self.assertEqual(invitacion.respuesta, "NO")
+
+    def test_panel_docente_lista_pendientes_e_invitacion(self):
+        self.client.force_login(self.usuario_docente)
+
+        respuesta = self.client.get(reverse("core:inicio_docente"))
+        self.assertContains(respuesta, "indica si habrá cierre e invita al Socio")
+        self.assertContains(respuesta, "Actividad opcional (opcional)")
+
+        self._invitar("EXTERNO")
+        respuesta = self.client.get(reverse("core:inicio_docente"))
+        self.assertContains(respuesta, "Registrar si Junta de Vecinos asistirá al cierre")
+
+    @patch("archivos.services.obtener_storage_privado")
+    def test_coordinacion_descarga_zip_con_solo_ese_expediente(self, obtener_storage):
+        import io
+        import zipfile
+
+        from academico.models import Carrera, Facultad, SeccionCarrera
+
+        obtener_storage.return_value = InMemoryStorage()
+
+        facultad = Facultad.objects.create(nombre="Ingeniería", activo=True)
+        carrera = Carrera.objects.create(facultad=facultad, nombre="Ingeniería Civil Informática", activo=True)
+        SeccionCarrera.objects.create(seccion=self.seccion, carrera=carrera, declaracion_as=True)
+
+        self.client.force_login(self.usuario_docente)
+        self.client.post(
+            reverse("rutas:subir_evidencia", args=[self.actividad_cierre.id]),
+            {"archivo": SimpleUploadedFile("acuerdo.pdf", b"%PDF-1.4", content_type="application/pdf")},
+        )
+
+        url = reverse("rutas:descargar_expediente", args=[self.ruta.id])
+        self.assertEqual(self.client.get(url).status_code, 403)
+
+        self.client.force_login(self.usuario_coordinador)
+        respuesta = self.client.get(url)
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertIn(
+            "campus-de-prueba_sede-de-prueba_2026_primavera-2026_ingenieria-civil-informatica_"
+            "asignatura-hu-02_seccion-1_docente-prueba.zip",
+            respuesta["Content-Disposition"],
+        )
+
+        contenido = zipfile.ZipFile(io.BytesIO(b"".join(respuesta.streaming_content)))
+        self.assertEqual(contenido.namelist(), ["01 - Organizar el evento de cierre/acuerdo.pdf"])
+
+    @patch("archivos.services.obtener_storage_privado", return_value=InMemoryStorage())
+    def test_cualquier_actividad_acepta_evidencia(self, _storage):
+        self.client.force_login(self.usuario_docente)
+
+        self.client.post(
+            reverse("rutas:subir_evidencia", args=[self.actividad_obligatoria.id]),
+            {"archivo": SimpleUploadedFile("acuerdo.pdf", b"%PDF-1.4", content_type="application/pdf")},
+        )
+
+        self.assertEqual(self.actividad_obligatoria.evidencias.count(), 1)
+
+    def test_recurso_url_reemplaza_seccion_y_actividad(self):
+        ruta_actividad = self.actividad_obligatoria.ruta_actividad
+        ruta_actividad.recurso_url = "/a/{seccion}/b/{actividad}/"
+        ruta_actividad.save()
+
+        self.assertEqual(
+            url_recurso(self.actividad_obligatoria),
+            f"/a/{self.seccion.id}/b/{self.actividad_obligatoria.id}/",
+        )
+
+    def test_formularios_qr_muestra_solo_el_proceso_pedido(self):
+        for titulo, proceso in (("Encuesta estudiantes", "EVALUACION_AS"), ("Otro formulario", "GENERAL")):
+            version = encuestas_services.crear_formulario(titulo, proceso=proceso)
+            version.estado = "PUBLICADA"
+            version.save()
+            EnlaceFormulario.objects.create(version=version, token=uuid.uuid4(), activo=True, fecha_inicio=timezone.now())
+
+        self.client.force_login(self.usuario_docente)
+
+        respuesta = self.client.get(reverse("rutas:formularios_qr") + "?proceso=EVALUACION_AS")
+
+        self.assertContains(respuesta, "Encuesta estudiantes")
+        self.assertNotContains(respuesta, "Otro formulario")
+
+
+
+class CargarRutaDocenteTestCase(TestCase):
+    def test_carga_orden_de_la_ruta_y_recursos(self):
+        from django.core.management import call_command
+
+        call_command("cargar_ruta_docente", stdout=open(os.devnull, "w"))
+
+        actividades = {a.orden: a for a in RutaActividad.objects.all()}
+
+        self.assertEqual(len(actividades), 23)
+        self.assertEqual(actividades[18].nombre, "Organizar el evento de cierre")
+        self.assertEqual(actividades[22].nombre, "Enviar documentación final")
+        self.assertIn("{seccion}", actividades[10].recurso_url)
+        self.assertIn("{actividad}", actividades[13].recurso_url)
+        self.assertIn("proceso=EVALUACION_AS", actividades[19].recurso_url)
+
+
+class CierreYExpedienteTestCase(TestCase):
+    def setUp(self):
+        SeguimientoRutaTestCase.setUp(self)
+
+        from socios.models import ContactoSocio, ParticipacionSocio, SocioComunitario
+
+        ruta_cierre = self.actividad_obligatoria.ruta_actividad
+        version = ruta_cierre.ruta_version
+        version.estado = "BORRADOR"
+        version.save(update_fields=["estado"])
+        ruta_cierre.nombre = "Organizar el evento de cierre"
+        ruta_cierre.config_recordatorio_json = {
+            "recordatorio": "invitacion_cierre"
+        }
+        ruta_cierre.save()
+        version.estado = "ACTIVA"
+        version.save(update_fields=["estado"])
+
+        self.actividad_cierre = self.actividad_obligatoria
+
+        self.socio = SocioComunitario.objects.create(
+            nombre_organizacion="Junta de Vecinos",
+            estado_revision="APROBADO",
+            es_provisional=False,
+            activo=True,
+            fecha_creacion=timezone.now(),
+        )
+        ContactoSocio.objects.create(
+            socio=self.socio,
+            nombre="Contacto",
+            correo="socio@example.com",
+            es_principal=True,
+            activo=True,
+        )
+        ParticipacionSocio.objects.create(
+            socio=self.socio,
+            seccion=self.seccion,
+            origen="OPERATIVO",
+        )
+
+    def _invitar(self, modo):
+        self.client.force_login(self.usuario_docente)
+        return self.client.post(
+            reverse("rutas:invitar_socios_cierre", args=[self.actividad_cierre.id]),
+            {"socios": [self.socio.id], "modo_contacto": modo},
+        )
+
+    def test_sin_cierre_completa_la_actividad_sin_incumplimiento(self):
+        self.client.force_login(self.usuario_docente)
+
+        self.client.post(reverse("rutas:indicar_sin_cierre", args=[self.actividad_cierre.id]))
+
+        self.actividad_cierre.refresh_from_db()
+        self.ruta.refresh_from_db()
+        self.assertEqual(self.actividad_cierre.estado, "COMPLETADA")
+        self.assertEqual(self.actividad_cierre.observacion, "No habrá actividad de cierre.")
+        self.assertEqual(self.ruta.porcentaje_final, 100)
+
+    def test_sin_cierre_solo_en_la_actividad_de_cierre(self):
+        self.client.force_login(self.usuario_docente)
+
+        respuesta = self.client.post(
+            reverse("rutas:indicar_sin_cierre", args=[self.actividad_opcional.id])
+        )
+
+        self.assertEqual(respuesta.status_code, 403)
+
+    def test_invitacion_por_plataforma_envia_enlaces_unicos(self):
+        from django.core import mail
+        from socios.models import InvitacionCierre
+
+        self._invitar("PLATAFORMA")
+
+        invitacion = InvitacionCierre.objects.get()
+        self.assertEqual(invitacion.respuesta, "SIN_RESPUESTA")
+        self.assertIsNotNone(invitacion.fecha_envio)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(f"/rutas/cierre/{invitacion.token}/asistire/", mail.outbox[0].body)
+        self.assertIn(f"/rutas/cierre/{invitacion.token}/no-asistire/", mail.outbox[0].body)
+        # La invitación no completa ni bloquea la Ruta.
+        self.actividad_cierre.refresh_from_db()
+        self.assertEqual(self.actividad_cierre.estado, "PENDIENTE")
+
+    def test_socio_responde_desde_pagina_publica_sin_barra(self):
+        from socios.models import InvitacionCierre
+
+        self._invitar("PLATAFORMA")
+        self.client.logout()
+        invitacion = InvitacionCierre.objects.get()
+        url = reverse("rutas:responder_invitacion_cierre", args=[invitacion.token, "asistire"])
+
+        pagina = self.client.get(url)
+        invitacion.refresh_from_db()
+        self.assertEqual(invitacion.respuesta, "SIN_RESPUESTA")
+        self.assertNotContains(pagina, "navbar-sistema")
+        self.assertContains(pagina, "Junta de Vecinos")
+
+        self.client.post(url)
+        invitacion.refresh_from_db()
+        self.assertEqual(invitacion.respuesta, "ASISTIRA")
+        self.assertIsNotNone(invitacion.fecha_respuesta)
+
+    def test_contacto_externo_docente_registra_resultado(self):
+        from django.core import mail
+        from socios.models import InvitacionCierre
+
+        self._invitar("EXTERNO")
+        invitacion = InvitacionCierre.objects.get()
+        self.assertEqual(len(mail.outbox), 0)
+
+        self.client.post(
+            reverse("rutas:registrar_respuesta_cierre", args=[invitacion.id]),
+            {"respuesta": "NO"},
+        )
+
+        invitacion.refresh_from_db()
+        self.assertEqual(invitacion.respuesta, "NO")
+
+    def test_panel_docente_lista_pendientes_e_invitacion(self):
+        self.client.force_login(self.usuario_docente)
+
+        respuesta = self.client.get(reverse("core:inicio_docente"))
+        self.assertContains(respuesta, "indica si habrá cierre e invita al Socio")
+        self.assertContains(respuesta, "Actividad opcional (opcional)")
+
+        self._invitar("EXTERNO")
+        respuesta = self.client.get(reverse("core:inicio_docente"))
+        self.assertContains(respuesta, "Registrar si Junta de Vecinos asistirá al cierre")
+
+    @patch("archivos.services.obtener_storage_privado")
+    def test_coordinacion_descarga_zip_con_solo_ese_expediente(self, obtener_storage):
+        import io
+        import zipfile
+
+        from academico.models import Carrera, Facultad, SeccionCarrera
+
+        obtener_storage.return_value = InMemoryStorage()
+
+        facultad = Facultad.objects.create(nombre="Ingeniería", activo=True)
+        carrera = Carrera.objects.create(facultad=facultad, nombre="Ingeniería Civil Informática", activo=True)
+        SeccionCarrera.objects.create(seccion=self.seccion, carrera=carrera, declaracion_as=True)
+
+        self.client.force_login(self.usuario_docente)
+        self.client.post(
+            reverse("rutas:subir_evidencia", args=[self.actividad_cierre.id]),
+            {"archivo": SimpleUploadedFile("acuerdo.pdf", b"%PDF-1.4", content_type="application/pdf")},
+        )
+
+        url = reverse("rutas:descargar_expediente", args=[self.ruta.id])
+        self.assertEqual(self.client.get(url).status_code, 403)
+
+        self.client.force_login(self.usuario_coordinador)
+        respuesta = self.client.get(url)
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertIn(
+            "campus-de-prueba_sede-de-prueba_2026_primavera-2026_ingenieria-civil-informatica_"
+            "asignatura-hu-02_seccion-1_docente-prueba.zip",
+            respuesta["Content-Disposition"],
+        )
+
+        contenido = zipfile.ZipFile(io.BytesIO(b"".join(respuesta.streaming_content)))
+        self.assertEqual(contenido.namelist(), ["01 - Organizar el evento de cierre/acuerdo.pdf"])
 
 class VersionadoRutaTestCase(TestCase):
     def setUp(self):

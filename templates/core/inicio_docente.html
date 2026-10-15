@@ -79,6 +79,25 @@
                         </div>
                     </div>
 
+                    {% if ruta.recordatorios %}
+                        <div class="mb-3">
+                            <div class="small fw-semibold mb-1">
+                                <i class="bi bi-bell me-1"></i>
+                                Pendientes
+                            </div>
+                            <ul class="small mb-0 ps-3">
+                                {% for recordatorio in ruta.recordatorios|slice:":5" %}
+                                    <li>{{ recordatorio }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% if ruta.recordatorios|length > 5 %}
+                                <div class="small text-muted ps-3">
+                                    y {{ ruta.recordatorios|length|add:"-5" }} más en la Ruta.
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <span class="text-muted small">
                             {{ ruta.pendientes_obligatorias }} actividades obligatorias pendientes
