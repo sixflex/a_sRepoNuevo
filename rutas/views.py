@@ -11,7 +11,7 @@ from django.views.decorators.http import require_POST
 from archivos.services import guardar_archivo, obtener_storage_privado
 from archivos.validators import validar_cantidad_archivos
 from auditoria.services import registrar_auditoria
-from academico.models import Campus, Sede
+from academico.models import Campus, PeriodoAcademico, Sede
 from usuarios.permissions import es_coordinador, es_docente
 from . import services as servicios
 from .models import Evidencia, ExpedienteSeccion, SeccionActividad, SeccionRuta
@@ -603,6 +603,7 @@ def seguimiento_rutas_coordinacion(request):
 
     sedes_list = Sede.objects.all().order_by("nombre")
     campus_list = Campus.objects.all().order_by("nombre")
+    periodos_list = PeriodoAcademico.objects.all().order_by("-nombre")
 
     return render(
         request,
@@ -611,6 +612,7 @@ def seguimiento_rutas_coordinacion(request):
             "rutas": rutas,
             "sedes": sedes_list,
             "campus_list": campus_list,
+            "periodos": periodos_list,
             "filtros_seleccionados": {
                 "campus": campus_id,
                 "sede": sede_id,
