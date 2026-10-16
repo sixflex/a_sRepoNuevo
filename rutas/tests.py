@@ -19,6 +19,7 @@ from encuestas import services as encuestas_services
 from encuestas.models import EnlaceFormulario
 from rutas.services import url_recurso
 from django.test import TestCase
+from auditoria.models import AuditoriaCambio
 
 from .models import RutaActividad, RutaPlantilla, RutaVersion
 from .services import crear_nueva_version_ruta
@@ -1008,3 +1009,102 @@ class VersionadoRutaTestCase(TestCase):
             self.version_original.actividades.count(),
             23,
         )
+class AuditoriaYPruebasAvanzadasRutaTestCase(SeguimientoRutaTestCase):
+    """
+    CDE-528 / CDE-529 / CDE-530: Cobertura de auditoría, porcentaje,
+    cierre, evidencias y control de acceso a secciones ajenas.
+    """
+
+    def test_auditoria_al_completar_desmarcar_actividad(self):
+        self.client.force_login(self.usuario_docente)
+
+        # 1. Completar actividad
+        self.client.post(
+            reverse("rutas:completar_actividad", args=[self.actividad_obligatoria.id])
+        )
+        auditoria_marcar = AuditoriaCambio.objects.filter(
+            entidad="SeccionActividad",
+            entidad_id=self.actividad_obligatoria.id,
+            accion="MARCAR_ACTIVIDAD",
+        ).first()
+
+        self.assertIsNotNone(auditoria_marcar)
+        self.assertEqual(auditoria_marcar.valores_nuevos_json.get("estado"), "COMPLETADA")
+
+        # 2. Desmarcar actividad
+        self.client.post(
+            reverse("rutas:completar_actividad", args=[self.actividad_obligatoria.id])
+        )
+        auditoria_desmarcar = AuditoriaCambio.objects.filter(
+            entidad="SeccionActividad",
+            entidad_id=self.actividad_obligatoria.id,
+            accion="DESMARCAR_ACTIVIDAD",
+        ).first()
+
+        self.assertIsNotNone(auditoria_desmarcar)
+        self.assertEqual(auditoria_desmarcar.valores_nuevos_json.get("estado"), "PENDIENTE")
+
+    @patch("archivos.services.obtener_storage_privado", return_value=InMemoryStorage())
+    def test_auditoria_al_subir_y_eliminar_evidencia(self, _storage):
+        self.client.force_login(self.usuario_docente)
+
+        # 1. Subir evidencia
+        self.client.post(
+            reverse("rutas:subir_evidencia", args=[self.actividad_obligatoria.id]),
+            {"archivo": SimpleUploadedFile("informe.pdf", b"%PDF-1.4", content_type="application/pdf")},
+        )
+        evidencia = self.actividad_obligatoria.evidencias.first()
+        self.assertIsNotNone(evidencia)
+
+        auditoria_subir = AuditoriaCambio.objects.filter(
+            entidad="Evidencia",
+            entidad_id=evidencia.pk,
+            accion="SUBIR_EVIDENCIA",
+        ).first()
+        self.assertIsNotNone(auditoria_subir)
+
+        # 2. Eliminar evidencia
+        self.client.post(reverse("rutas:eliminar_evidencia", args=[evidencia.id]))
+        auditoria_eliminar = AuditoriaCambio.objects.filter(
+            entidad="Evidencia",
+            entidad_id=evidencia.pk,
+            accion="ELIMINAR_EVIDENCIA",
+        ).first()
+        self.assertIsNotNone(auditoria_eliminar)
+
+    def test_auditoria_al_completar_ruta(self):
+        self.client.force_login(self.usuario_docente)
+
+        # Marcar actividad obligatoria para permitir el cierre
+        self.actividad_obligatoria.completada_por_docente = self.docente
+        self.actividad_obligatoria.estado = "COMPLETADA"
+        self.actividad_obligatoria.save()
+
+        self.client.post(reverse("rutas:completar_ruta", args=[self.ruta.id]))
+
+        auditoria_cierre = AuditoriaCambio.objects.filter(
+            entidad="SeccionRuta",
+            entidad_id=self.ruta.id,
+            accion="COMPLETAR_RUTA",
+        ).first()
+
+        self.assertIsNotNone(auditoria_cierre)
+        self.assertEqual(auditoria_cierre.valores_nuevos_json.get("estado"), "COMPLETADA")
+
+    def test_docente_no_puede_modificar_actividad_seccion_ajena(self):
+        self.client.force_login(self.usuario_otro)
+
+        respuesta = self.client.post(
+            reverse("rutas:completar_actividad", args=[self.actividad_obligatoria.id])
+        )
+        self.assertEqual(respuesta.status_code, 403)
+
+    @patch("archivos.services.obtener_storage_privado", return_value=InMemoryStorage())
+    def test_docente_no_puede_subir_evidencia_seccion_ajena(self, _storage):
+        self.client.force_login(self.usuario_otro)
+
+        respuesta = self.client.post(
+            reverse("rutas:subir_evidencia", args=[self.actividad_obligatoria.id]),
+            {"archivo": SimpleUploadedFile("hack.pdf", b"%PDF-1.4", content_type="application/pdf")},
+        )
+        self.assertEqual(respuesta.status_code, 403)

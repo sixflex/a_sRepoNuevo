@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 from proyectos.models import Equipo
 from rutas.models import SeccionActividad
 from rutas.services import url_recurso
+from auditoria.services import registrar_auditoria
 
 from django.core.exceptions import ValidationError
 from encuestas.models import EnlaceFormulario, FormularioVersion, RespuestaFormulario
@@ -265,30 +266,32 @@ def lista_postulaciones(request):
 @coordinador_required
 def revisar_postulacion(request, postulacion_id):
     """
-    Transición de estado para postulaciones externas con motivo de rechazo,
-    notificación por correo y registro en auditoría (CDE-54, CDE-55, CDE-56).
+    Transición de estado para postulaciones externas con motivo de rechazo obligatorio,
+    notificación por correo y registro en auditoría (SP5-T12 / CDE-531).
     """
     postulacion = get_object_or_404(PostulacionSocio, pk=postulacion_id)
 
     if request.method == "POST":
-        decision = request.POST.get("estado")
+        nuevo_estado = request.POST.get("estado")
+        motivo = request.POST.get("motivo_rechazo", "").strip()
+
         try:
             services.revisar_postulacion(
                 request,
                 postulacion,
-                decision,
-                motivo=request.POST.get("motivo_rechazo", ""),
+                nuevo_estado,
+                motivo=motivo,
             )
         except ValidationError as error:
             messages.error(request, error.messages[0])
         else:
             messages.success(
                 request,
-                f"Postulación #{postulacion.id} {etiqueta(ESTADOS_POSTULACION, postulacion.estado).lower()} y notificada.",
+                f"Postulación #{postulacion.id} actualizada a "
+                f"{etiqueta(ESTADOS_POSTULACION, postulacion.estado).lower()} y notificada.",
             )
 
-    return redirect('socios:lista_postulaciones')
-
+    return redirect("socios:lista_postulaciones")
 @docente_required
 def asociar_socio_equipo(request, actividad_id):
     actividad = get_object_or_404(
