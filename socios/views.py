@@ -267,7 +267,7 @@ def lista_postulaciones(request):
 def revisar_postulacion(request, postulacion_id):
     """
     Transición de estado para postulaciones externas con motivo de rechazo obligatorio,
-    notificación por correo y registro en auditoría (SP5-T12 / CDE-54, CDE-55, CDE-56).
+    notificación por correo y registro en auditoría (SP5-T12 / CDE-531).
     """
     postulacion = get_object_or_404(PostulacionSocio, pk=postulacion_id)
 
@@ -275,37 +275,23 @@ def revisar_postulacion(request, postulacion_id):
         nuevo_estado = request.POST.get("estado")
         motivo = request.POST.get("motivo_rechazo", "").strip()
 
-        if nuevo_estado in ["APROBADA", "RECHAZADA"]:
-            if nuevo_estado == "RECHAZADA" and not motivo:
-                messages.error(request, "Debes indicar un motivo de rechazo.")
-                return redirect('socios:lista_postulaciones')
-
-            postulacion.estado = nuevo_estado
-            postulacion.motivo_rechazo = motivo if nuevo_estado == "RECHAZADA" else None
-            postulacion.revisado_por_usuario = request.user
-            postulacion.fecha_revision = timezone.now()
-            postulacion.save()
-
-            if nuevo_estado == "APROBADA" and postulacion.socio:
-                postulacion.socio.estado_revision = "APROBADO"
-                postulacion.socio.es_provisional = False
-                postulacion.socio.save(update_fields=["estado_revision", "es_provisional"])
-
-            enviar_notificacion_postulacion(
+        try:
+            services.revisar_postulacion(
+                request,
                 postulacion,
-                decision,
-                motivo=request.POST.get("motivo_rechazo", ""),
+                nuevo_estado,
+                motivo=motivo,
             )
-
-            messages.success(request, f"Postulación #{postulacion.id} actualizada a {nuevo_estado} y notificada.")
+        except ValidationError as error:
+            messages.error(request, error.messages[0])
         else:
             messages.success(
                 request,
-                f"Postulación #{postulacion.id} {etiqueta(ESTADOS_POSTULACION, postulacion.estado).lower()} y notificada.",
+                f"Postulación #{postulacion.id} actualizada a "
+                f"{etiqueta(ESTADOS_POSTULACION, postulacion.estado).lower()} y notificada.",
             )
 
     return redirect("socios:lista_postulaciones")
-
 @docente_required
 def asociar_socio_equipo(request, actividad_id):
     actividad = get_object_or_404(
