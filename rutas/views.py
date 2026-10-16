@@ -13,6 +13,7 @@ from django.views.decorators.http import require_POST
 from archivos.services import guardar_archivo, obtener_storage_privado
 from archivos.validators import validar_cantidad_archivos
 from auditoria.services import registrar_auditoria
+from usuarios.decorators import coordinador_required
 from usuarios.permissions import es_coordinador, es_docente
 
 from .models import Evidencia, ExpedienteSeccion, SeccionActividad, SeccionRuta
@@ -24,6 +25,7 @@ from . import services as servicios
 from .services import enlaces_abiertos_por_plantilla, url_recurso
 from socios.models import InvitacionCierre
 
+from academico.models import Sede, Campus, PeriodoAcademico
 
 def verificar_acceso_ruta(user, seccion_ruta):
     if es_coordinador(user):
@@ -858,11 +860,6 @@ def registrar_respuesta_cierre(request, invitacion_id):
 
     return _volver_a_ruta(invitacion.seccion_ruta)
 
-
-# Enlaces únicos del correo (RF-EVI-05). La página pública muestra solo
-# contenido y pie institucional. El GET muestra la invitación y el POST
-# registra la respuesta, así un antivirus que abra el enlace no responde
-# por el Socio.
 RESPUESTAS_ENLACE = {
     "asistire": servicios.ASISTIRA,
     "no-asistire": servicios.NO_ASISTIRA,
@@ -915,7 +912,6 @@ def responder_invitacion_cierre(request, token, respuesta):
 
 @login_required
 def descargar_expediente(request, seccion_ruta_id):
-    """Coordinación descarga todas las evidencias de la sección (RF-EVI-03)."""
     if not es_coordinador(request.user):
         raise PermissionDenied
 
@@ -960,3 +956,47 @@ def descargar_expediente(request, seccion_ruta_id):
         filename=nombre,
         content_type="application/zip",
     )
+
+def filtrar_seguimiento_rutas(queryset, request):
+
+    campus_id = request.GET.get('campus')
+    sede_id = request.GET.get('sede')
+    periodo_id = request.GET.get('periodo')
+    estado = request.GET.get('estado')
+
+    if campus_id:
+        queryset = queryset.filter(seccion__campus_id=campus_id)
+    if sede_id:
+        queryset = queryset.filter(seccion__campus__sede_id=sede_id)
+    if periodo_id:
+        queryset = queryset.filter(seccion__periodo_id=periodo_id)
+    if estado:
+        queryset = queryset.filter(estado=estado)
+
+    return queryset
+
+@login_required
+@coordinador_required
+def seguimiento_rutas_coordinacion(request):
+    secciones_rutas = SeccionRuta.objects.select_related(
+        'seccion__asignatura',
+        'seccion__periodo',
+        'seccion__campus__sede',
+    ).prefetch_related(
+        'seccion__docentes',
+        'actividades__ruta_actividad'
+    ).order_by('-id')
+
+    secciones_filtradas = filtrar_seguimiento_rutas(secciones_rutas, request)
+
+    context = {
+        'rutas': secciones_filtradas,
+        'sedes': Sede.objects.all(),
+        'campus_list': Campus.objects.all(),
+        'periodos': PeriodoAcademico.objects.all(),
+        'filtro_campus': request.GET.get('campus', ''),
+        'filtro_sede': request.GET.get('sede', ''),
+        'filtro_periodo': request.GET.get('periodo', ''),
+        'filtro_estado': request.GET.get('estado', ''),
+    }
+    return render(request, 'rutas/seguimiento_coordinacion.html', context)

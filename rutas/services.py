@@ -95,11 +95,6 @@ def asignar_ruta_as_si_corresponde(seccion):
     )
 
 def con_avance(rutas):
-    """
-    Anota en cada SeccionRuta sus actividades obligatorias totales y
-    completadas (RF-RUT-03: las opcionales no cuentan). Es el mismo cálculo
-    del inicio docente; el panel del coordinador lo usa por carrera.
-    """
     return rutas.annotate(
         total_obligatorias=Count(
             "actividades",
@@ -116,16 +111,10 @@ def con_avance(rutas):
 
 
 def porcentaje_avance(completadas, total):
-    """Porcentaje entero de obligatorias completadas (0 si no hay obligatorias)."""
     return round(completadas * 100 / total) if total else 0
 
 
 def url_recurso(seccion_actividad):
-    """
-    URL de la acción asociada a la actividad (recurso_url). Admite {seccion}
-    y {actividad} para acciones que dependen de la sección, como solicitar
-    la carta o registrar al Socio Comunitario.
-    """
     url = seccion_actividad.ruta_actividad.recurso_url
 
     if not url:
@@ -139,10 +128,6 @@ def url_recurso(seccion_actividad):
 
 
 def enlaces_abiertos_por_plantilla(plantilla_ids):
-    """
-    Primer enlace general abierto de cada plantilla. Se busca por plantilla
-    y no por versión porque al publicar una versión nueva el enlace pasa a ella.
-    """
     enlaces = (
         EnlaceFormulario.objects
         .filter(
@@ -168,19 +153,12 @@ def enlaces_abiertos_por_plantilla(plantilla_ids):
     return resultado
 
 
-# ---------------------------------------------------------------------------
-# Actividad de cierre e invitación al Socio Comunitario (RF-EVI-04 a RF-EVI-06)
-# ---------------------------------------------------------------------------
-
-# La actividad de cierre se reconoce por su configuración de recordatorio
-# (RF-RUT-04), no por su número de orden.
 RECORDATORIO_INVITACION_CIERRE = "invitacion_cierre"
 OBSERVACION_SIN_CIERRE = "No habrá actividad de cierre."
 
 MODO_PLATAFORMA = "PLATAFORMA"
 MODO_EXTERNO = "EXTERNO"
 
-# Valores del modelo de BD: ASISTIRA / NO / SIN_RESPUESTA
 ASISTIRA = "ASISTIRA"
 NO_ASISTIRA = "NO"
 SIN_RESPUESTA = "SIN_RESPUESTA"
@@ -232,11 +210,7 @@ def socios_de_seccion(seccion):
 
 
 def indicar_sin_cierre(seccion_actividad, docente, request):
-    """
-    El Docente indica que no habrá actividad de cierre. No genera
-    incumplimiento (RF-EVI-04): la actividad queda completada con esa
-    observación.
-    """
+
     seccion_actividad.completada_por_docente = docente
     seccion_actividad.estado = "COMPLETADA"
     seccion_actividad.fecha_completada = timezone.now()
@@ -302,10 +276,7 @@ def _plantilla_invitacion_cierre():
 
 
 def enviar_invitacion_cierre(invitacion, request):
-    """
-    Envía el correo con los enlaces únicos Asistiré / No asistiré (RF-EVI-05).
-    Devuelve el EnvioCorreo, o None si el socio no tiene correo de contacto.
-    """
+
     correo = correo_contacto_principal(invitacion.socio)
 
     if not correo:
@@ -351,7 +322,7 @@ def enviar_invitacion_cierre(invitacion, request):
 
 
 def registrar_respuesta_cierre(invitacion, respuesta, request, actor_externo=None):
-    """Registra Asistirá / No asistirá / Sin respuesta (RF-EVI-06); no bloquea la Ruta."""
+
     anterior = invitacion.respuesta
 
     invitacion.respuesta = respuesta
@@ -372,11 +343,7 @@ def registrar_respuesta_cierre(invitacion, respuesta, request, actor_externo=Non
 
 
 def recordatorios_cierre(seccion_ruta):
-    """
-    Acciones pendientes de la invitación al Socio (RF-RUT-04): invitaciones
-    por plataforma que no se pudieron enviar y contactos externos sin
-    resultado registrado.
-    """
+
     recordatorios = []
 
     for invitacion in seccion_ruta.invitaciones_cierre.all():
@@ -389,16 +356,8 @@ def recordatorios_cierre(seccion_ruta):
 
     return recordatorios
 
-
-# ---------------------------------------------------------------------------
-# Expediente de evidencias en ZIP para acreditación (RF-EVI-03)
-# ---------------------------------------------------------------------------
-
 def nombre_zip_expediente(seccion):
-    """
-    campus_sede_año_período_carrera_asignatura_sección_docente.zip
-    (RF-EVI-03 CA1). Varias carreras o docentes se unen con "-".
-    """
+
     partes = [
         seccion.campus.nombre,
         seccion.campus.sede.nombre,
@@ -417,11 +376,7 @@ def nombre_zip_expediente(seccion):
 
 
 def generar_zip_expediente(expediente, destino):
-    """
-    Escribe en destino un ZIP con las evidencias del expediente, una carpeta
-    por actividad. Solo incluye archivos de este expediente. Devuelve los
-    nombres de los archivos que no estaban en el almacenamiento.
-    """
+
     evidencias = (
         expediente.evidencias
         .select_related("archivo", "seccion_actividad__ruta_actividad")
@@ -434,11 +389,10 @@ def generar_zip_expediente(expediente, destino):
     with zipfile.ZipFile(destino, "w", zipfile.ZIP_DEFLATED) as zip_expediente:
         for evidencia in evidencias:
             actividad = evidencia.seccion_actividad.ruta_actividad
-            carpeta = f"{actividad.orden:02d} - {actividad.nombre}".replace("/", "-")
+            carpeta = f"{actividad.orden:02d}_{actividad.nombre}".replace("/", "-")
             nombre = Path(evidencia.archivo.nombre_original).name
             ruta = f"{carpeta}/{nombre}"
 
-            # Dos archivos con el mismo nombre en una actividad no se pisan.
             contador = 2
             while ruta in usados:
                 ruta = f"{carpeta}/{Path(nombre).stem} ({contador}){Path(nombre).suffix}"
@@ -457,11 +411,7 @@ def generar_zip_expediente(expediente, destino):
 
 
 def url_recurso(seccion_actividad):
-    """
-    URL de la acción asociada a la actividad (recurso_url). Admite {seccion}
-    y {actividad} para acciones que dependen de la sección, como solicitar
-    la carta o registrar al Socio Comunitario.
-    """
+
     url = seccion_actividad.ruta_actividad.recurso_url
 
     if not url:
@@ -475,10 +425,7 @@ def url_recurso(seccion_actividad):
 
 
 def enlaces_abiertos_por_plantilla(plantilla_ids):
-    """
-    Primer enlace general abierto de cada plantilla. Se busca por plantilla
-    y no por versión porque al publicar una versión nueva el enlace pasa a ella.
-    """
+
     enlaces = (
         EnlaceFormulario.objects
         .filter(
@@ -504,19 +451,12 @@ def enlaces_abiertos_por_plantilla(plantilla_ids):
     return resultado
 
 
-# ---------------------------------------------------------------------------
-# Actividad de cierre e invitación al Socio Comunitario (RF-EVI-04 a RF-EVI-06)
-# ---------------------------------------------------------------------------
-
-# La actividad de cierre se reconoce por su configuración de recordatorio
-# (RF-RUT-04), no por su número de orden.
 RECORDATORIO_INVITACION_CIERRE = "invitacion_cierre"
 OBSERVACION_SIN_CIERRE = "No habrá actividad de cierre."
 
 MODO_PLATAFORMA = "PLATAFORMA"
 MODO_EXTERNO = "EXTERNO"
 
-# Valores del modelo de BD: ASISTIRA / NO / SIN_RESPUESTA
 ASISTIRA = "ASISTIRA"
 NO_ASISTIRA = "NO"
 SIN_RESPUESTA = "SIN_RESPUESTA"
@@ -553,7 +493,6 @@ def es_actividad_cierre(ruta_actividad):
 
 
 def socios_de_seccion(seccion):
-    """Socios con una participación vigente en la sección o en sus equipos."""
     participaciones = ParticipacionSocio.objects.filter(
         Q(equipo__seccion=seccion) | Q(seccion=seccion),
         fecha_fin__isnull=True,
@@ -568,11 +507,6 @@ def socios_de_seccion(seccion):
 
 
 def indicar_sin_cierre(seccion_actividad, docente, request):
-    """
-    El Docente indica que no habrá actividad de cierre. No genera
-    incumplimiento (RF-EVI-04): la actividad queda completada con esa
-    observación.
-    """
     seccion_actividad.completada_por_docente = docente
     seccion_actividad.estado = "COMPLETADA"
     seccion_actividad.fecha_completada = timezone.now()
@@ -638,10 +572,6 @@ def _plantilla_invitacion_cierre():
 
 
 def enviar_invitacion_cierre(invitacion, request):
-    """
-    Envía el correo con los enlaces únicos Asistiré / No asistiré (RF-EVI-05).
-    Devuelve el EnvioCorreo, o None si el socio no tiene correo de contacto.
-    """
     correo = correo_contacto_principal(invitacion.socio)
 
     if not correo:
@@ -687,7 +617,6 @@ def enviar_invitacion_cierre(invitacion, request):
 
 
 def registrar_respuesta_cierre(invitacion, respuesta, request, actor_externo=None):
-    """Registra Asistirá / No asistirá / Sin respuesta (RF-EVI-06); no bloquea la Ruta."""
     anterior = invitacion.respuesta
 
     invitacion.respuesta = respuesta
@@ -708,11 +637,6 @@ def registrar_respuesta_cierre(invitacion, respuesta, request, actor_externo=Non
 
 
 def recordatorios_cierre(seccion_ruta):
-    """
-    Acciones pendientes de la invitación al Socio (RF-RUT-04): invitaciones
-    por plataforma que no se pudieron enviar y contactos externos sin
-    resultado registrado.
-    """
     recordatorios = []
 
     for invitacion in seccion_ruta.invitaciones_cierre.all():
@@ -726,15 +650,7 @@ def recordatorios_cierre(seccion_ruta):
     return recordatorios
 
 
-# ---------------------------------------------------------------------------
-# Expediente de evidencias en ZIP para acreditación (RF-EVI-03)
-# ---------------------------------------------------------------------------
-
 def nombre_zip_expediente(seccion):
-    """
-    campus_sede_año_período_carrera_asignatura_sección_docente.zip
-    (RF-EVI-03 CA1). Varias carreras o docentes se unen con "-".
-    """
     partes = [
         seccion.campus.nombre,
         seccion.campus.sede.nombre,
@@ -753,11 +669,7 @@ def nombre_zip_expediente(seccion):
 
 
 def generar_zip_expediente(expediente, destino):
-    """
-    Escribe en destino un ZIP con las evidencias del expediente, una carpeta
-    por actividad. Solo incluye archivos de este expediente. Devuelve los
-    nombres de los archivos que no estaban en el almacenamiento.
-    """
+
     evidencias = (
         expediente.evidencias
         .select_related("archivo", "seccion_actividad__ruta_actividad")
@@ -774,7 +686,6 @@ def generar_zip_expediente(expediente, destino):
             nombre = Path(evidencia.archivo.nombre_original).name
             ruta = f"{carpeta}/{nombre}"
 
-            # Dos archivos con el mismo nombre en una actividad no se pisan.
             contador = 2
             while ruta in usados:
                 ruta = f"{carpeta}/{Path(nombre).stem} ({contador}){Path(nombre).suffix}"
