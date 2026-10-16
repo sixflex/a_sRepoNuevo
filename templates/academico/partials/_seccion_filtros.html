@@ -1,0 +1,105 @@
+{# Filtros del listado Secciones / NRC. Todos se pueden combinar (RNF-ALC-01: sede y campus). #}
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <form method="get">
+            <div class="row g-3">
+                <div class="col-md-4 col-lg-3">
+                    <label for="periodo" class="form-label fw-semibold">Período</label>
+                    <select id="periodo" name="periodo" class="form-select">
+                        <option value="">Todos</option>
+                        {% for periodo in periodos %}
+                            <option value="{{ periodo.id }}"
+                                    {% if filtros.periodo == periodo.id|stringformat:"s" %}selected{% endif %}>
+                                {{ periodo }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4 col-lg-3">
+                    <label for="sede" class="form-label fw-semibold">Sede</label>
+                    <select id="sede" name="sede" class="form-select">
+                        <option value="">Todas</option>
+                        {% for sede in sedes %}
+                            <option value="{{ sede.id }}"
+                                    {% if filtros.sede == sede.id|stringformat:"s" %}selected{% endif %}>
+                                {{ sede.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4 col-lg-3">
+                    <label for="campus" class="form-label fw-semibold">Campus</label>
+                    <select id="campus" name="campus" class="form-select">
+                        <option value="">Todos</option>
+                        {% for campus in campus_list %}
+                            <option value="{{ campus.id }}"
+                                    {% if filtros.campus == campus.id|stringformat:"s" %}selected{% endif %}>
+                                {{ campus.nombre }} ({{ campus.sede.nombre }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4 col-lg-3">
+                    <label for="carrera" class="form-label fw-semibold">Carrera</label>
+                    <select id="carrera" name="carrera" class="form-select">
+                        <option value="">Todas</option>
+                        {% for carrera in carreras %}
+                            <option value="{{ carrera.id }}"
+                                    {% if filtros.carrera == carrera.id|stringformat:"s" %}selected{% endif %}>
+                                {{ carrera.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4 col-lg-3">
+                    <label for="asignatura" class="form-label fw-semibold">Asignatura</label>
+                    <select id="asignatura" name="asignatura" class="form-select">
+                        <option value="">Todas</option>
+                        {% for asignatura in asignaturas %}
+                            <option value="{{ asignatura.id }}"
+                                    {% if filtros.asignatura == asignatura.id|stringformat:"s" %}selected{% endif %}>
+                                {% if asignatura.codigo %}{{ asignatura.codigo }} - {% endif %}{{ asignatura.nombre }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4 col-lg-3">
+                    <label for="docente" class="form-label fw-semibold">Docente</label>
+                    <select id="docente" name="docente" class="form-select">
+                        <option value="">Todos</option>
+                        {% for docente in docentes %}
+                            <option value="{{ docente.id }}"
+                                    {% if filtros.docente == docente.id|stringformat:"s" %}selected{% endif %}>
+                                {{ docente.nombres }} {{ docente.apellidos }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4 col-lg-3">
+                    <label for="nrc" class="form-label fw-semibold">NRC</label>
+                    <input id="nrc"
+                           name="nrc"
+                           type="text"
+                           value="{{ filtros.nrc }}"
+                           class="form-control"
+                           placeholder="Buscar NRC">
+                </div>
+
+                <div class="col-md-4 col-lg-3 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-rojo">Filtrar</button>
+                    {% if filtros_activos %}
+                        <a href="{% url 'seccion_list' %}" class="btn btn-outline-secondary">
+                            Limpiar
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

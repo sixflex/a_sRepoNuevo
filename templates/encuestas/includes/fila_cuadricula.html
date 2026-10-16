@@ -1,0 +1,55 @@
+{% comment %}
+Una fila de una cuadrícula de valoración 1 a 5 (como en Microsoft Forms). La primera
+fila abre la tabla con el enunciado y las columnas; la última la cierra. Cada fila es
+su propia pregunta de escala: guarda su respuesta y sus reglas de visibilidad.
+{% endcomment %}
+{% with p=item.pregunta campo=item.campo %}
+{% if item.cuadricula_inicio %}
+<div class="enc-pregunta enc-cuadricula" id="cuadricula-{{ p.id }}">
+    <p class="enc-pregunta-texto" id="enunciado-{{ p.id }}">
+        {{ item.config.enunciado }}{% if p.obligatoria %}<span class="enc-obligatoria" aria-hidden="true">*</span>{% endif %}
+    </p>
+    {% if item.config.etiqueta_minimo or item.config.etiqueta_maximo %}
+        {# En el celular la tabla se apila y los extremos se leen aquí. #}
+        <p class="enc-cuadricula-leyenda">{{ item.escala.0 }} = {{ item.config.etiqueta_minimo|default:"mínimo" }} · {{ item.escala|last }} = {{ item.config.etiqueta_maximo|default:"máximo" }}</p>
+    {% endif %}
+    <div class="table-responsive">
+        <table class="table enc-cuadricula-tabla align-middle mb-0" aria-describedby="enunciado-{{ p.id }}">
+            <thead>
+                <tr>
+                    <td></td>
+                    {% for n in item.escala %}
+                        <th scope="col" class="text-center">
+                            {{ n }}
+                            {% if forloop.first and item.config.etiqueta_minimo %}<span class="enc-cuadricula-extremo">{{ item.config.etiqueta_minimo }}</span>{% endif %}
+                            {% if forloop.last and item.config.etiqueta_maximo %}<span class="enc-cuadricula-extremo">{{ item.config.etiqueta_maximo }}</span>{% endif %}
+                        </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+{% endif %}
+                <tr class="enc-pregunta{% if campo.errors %} tiene-error{% endif %}" id="pregunta-{{ p.id }}" data-pregunta="{{ p.id }}"
+                    {% if item.regla_json %}data-regla="{{ item.regla_json }}"{% endif %}
+                    {% if not item.visible %}hidden{% endif %}>
+                    <th scope="row" class="enc-cuadricula-fila" id="fila-{{ p.id }}">
+                        {{ p.texto }}
+                        {% for error in campo.errors %}
+                            <div class="enc-error" id="error-{{ campo.html_name }}"><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>{{ error }}</div>
+                        {% endfor %}
+                    </th>
+                    {% for n in item.escala %}
+                        <td class="text-center" data-valor="{{ n }}">
+                            <input class="form-check-input" type="radio" name="{{ campo.html_name }}" value="{{ n }}"
+                                   aria-label="{{ n }}: {{ p.texto }}"
+                                   {% if item.valor == n %}checked{% endif %}{% if p.obligatoria %} required{% endif %}>
+                        </td>
+                    {% endfor %}
+                </tr>
+{% if item.cuadricula_fin %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endwith %}

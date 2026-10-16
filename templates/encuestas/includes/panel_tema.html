@@ -1,0 +1,61 @@
+{% comment %}
+Panel lateral "Tema" del editor: color y foto de fondo del formulario público,
+como en Google o Microsoft Forms. Lo maneja static/js/encuestas_tema.js; sin
+JavaScript, el botón "Guardar tema" envía el formulario normal.
+{% endcomment %}
+<div class="offcanvas offcanvas-end enc-panel-tema" tabindex="-1" id="panel-tema" aria-labelledby="panel-tema-titulo">
+    <div class="offcanvas-header">
+        <h2 class="offcanvas-title enc-seccion-titulo mb-0" id="panel-tema-titulo"><i class="bi bi-palette me-2" aria-hidden="true"></i>Tema</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+    </div>
+    <div class="offcanvas-body">
+        <form method="post" enctype="multipart/form-data" action="{% url 'encuestas:editar_tema' version.id %}" data-tema>
+            {% csrf_token %}
+            <p class="enc-nota">Así se verá el formulario para quien responde. El tema se puede cambiar aunque ya haya respuestas.</p>
+
+            <div class="enc-tema-muestra{% if tema.fondo_url %} con-fondo{% endif %}" style="{{ tema.estilo }}" data-tema-muestra data-tema-vivo aria-hidden="true">
+                <div class="enc-tema-muestra-tarjeta">
+                    <span class="enc-tema-muestra-titulo">{{ version.plantilla.titulo|truncatechars:40 }}</span>
+                    <span class="enc-tema-muestra-linea"></span>
+                    <span class="enc-tema-muestra-linea corta"></span>
+                    <span class="enc-tema-muestra-boton">Enviar</span>
+                </div>
+            </div>
+
+            <fieldset class="mt-4">
+                <legend class="form-label-ua">Color</legend>
+                <div class="enc-colores">
+                    {% for clave, datos in temas.items %}
+                        <input type="radio" class="btn-check" name="color" id="color-{{ clave }}" value="{{ clave }}"
+                               {% if tema.color == clave %}checked{% endif %}>
+                        <label class="enc-color" for="color-{{ clave }}" style="--muestra: {{ datos.base }};" title="{{ datos.nombre }}">
+                            <i class="bi bi-check-lg" aria-hidden="true"></i><span class="visually-hidden">{{ datos.nombre }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+            </fieldset>
+
+            <fieldset class="mt-4">
+                <legend class="form-label-ua">Foto de fondo</legend>
+                <div class="enc-fondo-actual" data-fondo-actual {% if not tema.fondo_url %}hidden{% endif %}>
+                    <img src="{{ tema.fondo_url }}" alt="Foto de fondo actual" data-fondo-miniatura>
+                    <button type="submit" name="quitar_fondo" value="1" class="btn btn-light-ua btn-sm" data-quitar-fondo>
+                        <i class="bi bi-trash me-1" aria-hidden="true"></i>Quitar foto
+                    </button>
+                </div>
+                <input type="file" name="fondo" id="fondo-tema" accept=".jpg,.jpeg,.png,image/jpeg,image/png" class="visually-hidden" aria-describedby="fondo-ayuda">
+                <label class="enc-subir-fondo mt-2" for="fondo-tema">
+                    <i class="bi bi-image fs-4" aria-hidden="true"></i>
+                    <span data-texto-subir>{% if tema.fondo_url %}Cambiar foto{% else %}Subir una foto{% endif %}</span>
+                </label>
+                <p class="enc-nota mt-2 mb-0" id="fondo-ayuda">
+                    JPG o PNG de hasta {{ tema.fondo_max_mb }} MB. Usa una foto horizontal de al menos 1600 px de ancho.
+                    En celulares se muestra arriba, como cabecera.
+                </p>
+            </fieldset>
+
+            <div class="enc-error mt-3" role="alert" data-error-tema></div>
+            <noscript><button type="submit" class="btn btn-ua mt-3">Guardar tema</button></noscript>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Sección · {{ version.plantilla.titulo }} | Portal A+S{% endblock %}
+{% block extra_css %}{% include "encuestas/includes/css.html" %}{% endblock %}
+
+{% block content %}
+{# Página de respaldo: el editor normal es la cabecera de la sección dentro del constructor. #}
+<a class="small text-muted text-decoration-none" href="{% url 'encuestas:editor' version.id %}#seccion-{{ bloque.id }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Volver al editor</a>
+<h1 class="page-title mt-2">Editar sección</h1>
+<p class="page-subtitle">{{ version.plantilla.titulo }} · versión {{ version.numero_version }}</p>
+
+<div class="card-ua p-4" style="max-width: 820px;">
+    {% include "encuestas/includes/editor_seccion.html" with pagina_completa=True %}
+</div>
+<script src="{% static 'js/encuestas_editor.js' %}"></script>
+{% endblock %}

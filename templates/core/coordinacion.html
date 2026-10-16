@@ -1,193 +1,330 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Dashboard de Coordinación A+S | Universidad Autónoma de Chile{% endblock %}
+{% block title %}Inicio | Portal A+S{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/coordinacion.css' %}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="{% static 'css/coordinacion.css' %}?v=2026-10-13">
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-2">
-    <!-- Encabezado de Sección -->
-    <div class="coord-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+
+    <!-- Encabezado y filtros aplicados -->
+    <div class="coord-header d-flex justify-content-between align-items-start flex-wrap gap-3">
         <div>
-            <h2 class="coord-title mb-1">Panel de Coordinación A+S</h2>
-            <p class="coord-subtitle mb-0">Resumen operativo, flujo de validación, seguimiento semestral y enlaces institucionales.</p>
+            <h1 class="coord-title mb-1">Inicio</h1>
+            <p class="coord-subtitle mb-0">Indicadores A+S de la Coordinación y tareas pendientes.</p>
         </div>
-        <div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
             <span class="badge bg-white border text-secondary px-3 py-2 rounded-2 fw-semibold">
-                <i class="bi bi-geo-alt-fill text-danger me-1"></i> Sede Santiago · Providencia
+                <i class="bi bi-geo-alt-fill text-danger me-1" aria-hidden="true"></i> Sede Santiago
+                · {% if periodo_actual %}Período actual: {{ periodo_actual }}{% else %}Sin período activo{% endif %}
             </span>
+            <button type="button" class="btn btn-ua-filtros" data-bs-toggle="offcanvas"
+                    data-bs-target="#panelFiltros" aria-controls="panelFiltros" aria-haspopup="dialog">
+                <i class="bi bi-funnel me-1" aria-hidden="true"></i>Filtros
+                {% if cantidad_filtros %}<span class="filtros-cantidad">{{ cantidad_filtros }}</span>{% endif %}
+            </button>
         </div>
     </div>
 
-    <!-- 1. Métricas Principales (Grid de 4 Cards) -->
-    <div class="row g-3 mb-4">
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="metric-card">
-                <div>
-                    <div class="metric-label">Secciones activas</div>
-                    <div class="metric-number">{{ total_secciones|default:"0" }}</div>
-                </div>
-                <div class="metric-icon-box">
-                    <i class="bi bi-grid-3x3-gap"></i>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="metric-card">
-                <div>
-                    <div class="metric-label">Docentes</div>
-                    <div class="metric-number">{{ total_docentes|default:"0" }}</div>
-                </div>
-                <div class="metric-icon-box">
-                    <i class="bi bi-person-badge"></i>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="metric-card">
-                <div>
-                    <div class="metric-label">Asignaturas activas</div>
-                    <div class="metric-number">{{ total_asignaturas|default:"0" }}</div>
-                </div>
-                <div class="metric-icon-box">
-                    <i class="bi bi-book"></i>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="metric-card">
-                <div>
-                    <div class="metric-label">Períodos académicos</div>
-                    <div class="metric-number">{{ total_periodos|default:"1" }}</div>
-                </div>
-                <div class="metric-icon-box">
-                    <i class="bi bi-calendar3"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-<!-- 2. Accesos Operativos Principales -->
-<h4 class="fw-bold mb-3" style="font-size: 1.25rem; color: #111827;">Flujo Operativo y Validación</h4>
-<div class="row g-4">
-
-    <!-- Módulo 1: Gestión Académica -->
-    <div class="col-12 col-md-6 col-xl-3">
-        <div class="module-card border-top border-4 border-danger">
-            <div>
-                <span class="module-badge">Curricular</span>
-                <h5 class="module-title">Gestión Académica</h5>
-                <p class="module-desc">
-                    Consulta y administra la información curricular de asignaturas,
-                    secciones y nóminas requeridas para el desarrollo del programa A+S.
-                </p>
-            </div>
-            <div>
-                <a href="{% url 'home' %}" class="btn-ua-action">
-                    Ir a gestión académica <i class="bi bi-arrow-right"></i>
+    <div class="filtros-chips d-flex align-items-center flex-wrap gap-2 mb-4" aria-label="Filtros aplicados">
+        <span class="text-muted small fw-semibold">Viendo:</span>
+        {% for chip in chips %}
+            <span class="filtro-chip">
+                {{ chip.etiqueta }}
+                <a href="{{ chip.url }}" class="filtro-chip-quitar" aria-label="Quitar filtro {{ chip.etiqueta }}">
+                    <i class="bi bi-x" aria-hidden="true"></i>
                 </a>
-            </div>
-        </div>
+            </span>
+        {% empty %}
+            <span class="text-muted small">Todos los períodos, sedes y carreras</span>
+        {% endfor %}
+        {% if chips %}
+            <a href="?f=1" class="small fw-semibold ms-1">Limpiar todo</a>
+        {% endif %}
     </div>
 
-        <!-- Módulo 2: Enlaces de Planificación -->
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="module-card border-top border-4 border-danger">
-                <div>
-                    <span class="module-badge">Planificación</span>
-                    <h5 class="module-title">Enlaces de Planificación</h5>
-                    <p class="module-desc">
-                        Genera y comparte enlaces individuales con vigencia para Dirección de Carrera y Secretaría de Estudios.
-                    </p>
-                </div>
-                <div class="d-flex gap-2 flex-column flex-sm-row flex-wrap">
-                    <a href="{% url 'proyectos:gestionar_enlaces' %}" class="btn-ua-action">
-                        <i class="bi bi-link-45deg"></i> Enlaces
-                    </a>
-                    <a href="{% url 'core:planificacion_coordinacion' %}" class="btn-ua-outline-action">
-                        Registros
-                    </a>
-                </div>
-            </div>
-        </div>
+    <!-- 1. Indicadores del período -->
+    <section aria-label="Indicadores del período" class="row g-3 mb-4">
+        {% for tarjeta in tarjetas %}
+            {% include "core/partials/_metric_card.html" with label=tarjeta.etiqueta value=tarjeta.valor detalle=tarjeta.detalle clase="col-12 col-sm-6 col-xl tarjeta-indicador" %}
+        {% endfor %}
+    </section>
 
-        <!-- Módulo 3: Consulta de Planificación -->
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="module-card border-top border-4 border-danger">
-                <div>
-                    <span class="module-badge">Consulta</span>
-                    <h5 class="module-title">Planificación Académica</h5>
-                    <p class="module-desc">
-                        Consulta las secciones académicas registradas y filtra por período, carrera, asignatura, NRC y docente.
-                    </p>
+    <div class="row g-4 mb-4">
+        <!-- 2. Avance de la Ruta A+S por carrera (RF-RUT-03, RF-RUT-05) -->
+        <section class="col-12 col-xl-8" aria-labelledby="avance-titulo">
+            <div class="panel-card h-100">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+                    <div>
+                        <h2 id="avance-titulo" class="panel-titulo">Avance de la Ruta A+S por carrera</h2>
+                        <p class="panel-ayuda mb-0">Promedio de actividades obligatorias completadas por sus docentes. Toca una carrera para ver a cada docente.</p>
+                    </div>
+                    <div class="avance-leyenda d-flex flex-wrap gap-3">
+                        <span><span class="avance-punto avance-bajo"></span>Bajo, menos de {{ umbrales.medio }}%</span>
+                        <span><span class="avance-punto avance-medio"></span>Medio, {{ umbrales.medio }} a {{ umbrales.alto|add:"-1" }}%</span>
+                        <span><span class="avance-punto avance-alto"></span>Alto, {{ umbrales.alto }}% o más</span>
+                    </div>
                 </div>
-                <div>
-                    <a href="{% url 'core:planificacion_coordinacion' %}" class="btn-ua-action">
-                        <i class="bi bi-search"></i> Consultar
-                    </a>
-                </div>
-            </div>
-        </div>
 
-        <!-- Módulo 4: Validación y Estado A+S -->
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="module-card border-top border-4 border-danger">
-                <div>
-                    <span class="module-badge">Validación A+S</span>
-                    <h5 class="module-title">Validación y Seguimiento</h5>
-                    <p class="module-desc">
-                        Verifica el cumplimiento de los criterios A+S, valida las propuestas de docentes y supervisa la asignación de socios comunitarios.
-                    </p>
-                </div>
-                <div class="d-flex gap-2 flex-column flex-sm-row flex-wrap">
-                    <a href="{% url 'core:validar_planificacion' %}" class="btn-ua-action">
-                        <i class="bi bi-check2-circle"></i> Validar
-                    </a>
-                    <a href="#" class="btn-ua-outline-action">
-                        <i class="bi bi-bar-chart"></i> Reporte
-                    </a>
-                </div>
-            </div>
-        </div>
+                {% for carrera in avance_carreras %}
+                    <details class="avance-carrera">
+                        <summary class="avance-fila">
+                            <span class="avance-nombre">{{ carrera.carrera }}</span>
+                            <span class="avance-barra" aria-hidden="true">
+                                <span class="avance-relleno avance-{{ carrera.nivel.clave }}" style="width: {{ carrera.porcentaje }}%"></span>
+                            </span>
+                            <span class="avance-porcentaje">{{ carrera.porcentaje }}%</span>
+                            <span class="avance-etiqueta avance-texto-{{ carrera.nivel.clave }}">{{ carrera.nivel.texto }}</span>
+                        </summary>
+                        <div class="avance-docentes">
+                            {% for docente in carrera.docentes %}
+                                <div class="avance-docente">
+                                    <span class="avance-docente-nombre">
+                                        <span class="fw-semibold">{{ docente.docente }}</span>
+                                        <span class="text-muted small">{{ docente.seccion }}</span>
+                                    </span>
+                                    <span class="avance-barra avance-barra-delgada" aria-hidden="true">
+                                        <span class="avance-relleno avance-{{ docente.nivel.clave }}" style="width: {{ docente.porcentaje }}%"></span>
+                                    </span>
+                                    <span class="avance-porcentaje">{{ docente.porcentaje }}%</span>
+                                    <span class="text-muted small">
+                                        {{ docente.pendientes }} pendiente{{ docente.pendientes|pluralize }}
+                                        · Ruta {% if docente.cerrada %}cerrada{% else %}abierta{% endif %}
+                                    </span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </details>
+                {% empty %}
+                    <p class="estado-vacio">No hay Rutas A+S asignadas para estos filtros.</p>
+                {% endfor %}
 
-                <div class="col-12 col-md-6 col-xl-3">
-            <div class="module-card border-top border-4 border-danger">
-                <div>
-                    <span class="module-badge">Cartas</span>
-                    <h5 class="module-title">Cartas de Presentación</h5>
-                    <p class="module-desc">
-                        Revisa las solicitudes de Cartas de Presentación enviadas por docentes y gestiona su aprobación u observación.
-                    </p>
-                </div>
-                <div>
-                    <a href="{% url 'cartas:listar_solicitudes_coordinacion' %}" class="btn-ua-action">
-                        <i class="bi bi-envelope-paper"></i> Revisar solicitudes
-                    </a>
-                </div>
+                {% if avance_carreras %}
+                    <p class="panel-ayuda mt-3 mb-0">Ordenado de menor a mayor avance, para ver primero qué carrera necesita apoyo.</p>
+                {% endif %}
             </div>
-        </div>
+        </section>
 
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="module-card border-top border-4 border-danger">
-                <div>
-                    <span class="module-badge">Ruta A+S</span>
-                    <h5 class="module-title">Seguimiento de Rutas A+S</h5>
-                    <p class="module-desc">
-                        Supervisa el avance de las Rutas A+S de los docentes, sus actividades pendientes y las evidencias registradas.
-                    </p>
-                </div>
-                <div>
-                    <a href="{% url 'rutas:seguimiento_rutas_coordinacion' %}" class="btn-ua-action">
-                        <i class="bi bi-list-check"></i> Consultar Rutas
-                    </a>
-                </div>
+        <!-- 3. Pendientes -->
+        <section class="col-12 col-xl-4" aria-labelledby="pend-titulo">
+            <h2 id="pend-titulo" class="panel-titulo mb-3">Pendientes</h2>
+            <div class="row g-3">
+                {% for pendiente in pendientes %}
+                    {% include "core/partials/_metric_card.html" with label=pendiente.label value=pendiente.value icon=pendiente.icon url=pendiente.url ancho="12" %}
+                {% endfor %}
             </div>
-        </div>
+        </section>
     </div>
+
+    <!-- 4. Satisfacción con A+S -->
+    <section class="panel-card mb-4" aria-labelledby="sat-titulo">
+        <h2 id="sat-titulo" class="panel-titulo">Satisfacción con A+S</h2>
+        <p class="panel-ayuda">Porcentaje que respondió 4 o 5 (de acuerdo o muy positivo) en la valoración general de cada encuesta de evaluación.</p>
+
+        {% if satisfaccion.hay_datos %}
+            <div class="row g-4 align-items-center">
+                <div class="col-12 col-lg-5">
+                    <div class="d-flex flex-wrap justify-content-around gap-3">
+                        {% for anillo in satisfaccion.anillos %}
+                            <div class="anillo-contenedor text-center">
+                                {% if anillo.porcentaje is not None %}
+                                    <div class="anillo" style="--valor: {{ anillo.porcentaje|stringformat:'s' }}" role="img"
+                                         aria-label="{{ anillo.publico }}: {{ anillo.porcentaje }}% satisfechos">
+                                        <span>{{ anillo.porcentaje|floatformat:1 }}%</span>
+                                    </div>
+                                {% else %}
+                                    <div class="anillo anillo-vacio" role="img" aria-label="{{ anillo.publico }}: sin respuestas">
+                                        <span>—</span>
+                                    </div>
+                                {% endif %}
+                                <strong class="d-block mt-2">{{ anillo.publico }}</strong>
+                                <span class="text-muted small">
+                                    {% if anillo.personas %}{{ anillo.personas }} respuesta{{ anillo.personas|pluralize }}{% else %}Sin respuestas{% endif %}{% if anillo.pregunta %} · pregunta {{ anillo.pregunta }}{% endif %}
+                                </span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="col-12 col-lg-7">
+                    <div class="table-responsive">
+                        <table class="table tabla-dimensiones align-middle mb-0">
+                            <caption class="caption-top">Promedio por dimensión (1 a 5)</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Dimensión</th>
+                                    {% for publico in satisfaccion.publicos %}<th scope="col">{{ publico }}</th>{% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for fila in satisfaccion.tabla %}
+                                    <tr>
+                                        <th scope="row">{{ fila.dimension }}</th>
+                                        {% for valor in fila.valores %}
+                                            <td>{% if valor is not None %}{{ valor|floatformat:1 }}{% else %}<span class="text-muted small">no se pregunta</span>{% endif %}</td>
+                                        {% endfor %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <p class="estado-vacio">Aún no hay respuestas de las encuestas de evaluación A+S para estos filtros.</p>
+        {% endif %}
+    </section>
+
+    <!-- 5. Mapa territorial (RF-IND-03): agregado por comuna, sin direcciones -->
+    <section class="panel-card mb-4" aria-labelledby="mapa-titulo">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+            <div>
+                <h2 id="mapa-titulo" class="panel-titulo">Mapa territorial</h2>
+                <p class="panel-ayuda mb-0">Proyectos y socios agrupados por comuna, según los filtros de arriba.</p>
+            </div>
+            <div class="btn-group" role="group" aria-label="Qué mostrar en el mapa">
+                <button type="button" class="btn btn-sm btn-ua-toggle active" aria-pressed="true" data-mapa-modo="proyectos">Proyectos</button>
+                <button type="button" class="btn btn-sm btn-ua-toggle" aria-pressed="false" data-mapa-modo="socios">Socios comunitarios</button>
+            </div>
+        </div>
+        {% if mapa.puntos %}
+            <div class="row g-3">
+                <div class="col-12 col-lg-9">
+                    <div id="mapaTerritorial" class="mapa-territorial" role="region" aria-label="Mapa de comunas con socios y proyectos"></div>
+                </div>
+                <div class="col-12 col-lg-3">
+                    <h3 class="h6 fw-bold" data-mapa-titulo>Comunas con más proyectos</h3>
+                    <ol class="list-unstyled mapa-top mb-0" data-mapa-lista="proyectos">
+                        {% for punto in mapa.top_proyectos %}
+                            <li><span>{{ punto.comuna }}</span><span class="fw-bold">{{ punto.proyectos }}</span></li>
+                        {% endfor %}
+                    </ol>
+                    <ol class="list-unstyled mapa-top mb-0 d-none" data-mapa-lista="socios">
+                        {% for punto in mapa.top_socios %}
+                            <li><span>{{ punto.comuna }}</span><span class="fw-bold">{{ punto.socios }}</span></li>
+                        {% endfor %}
+                    </ol>
+                </div>
+            </div>
+            {{ mapa.puntos|json_script:"mapa-puntos" }}
+        {% else %}
+            <p class="estado-vacio">Aún no hay socios con comuna georreferenciada para estos filtros.</p>
+        {% endif %}
+    </section>
+
+    <!-- 6. Evolución por año -->
+    <section class="panel-card mb-4" aria-labelledby="evo-titulo">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+            <div>
+                <h2 id="evo-titulo" class="panel-titulo">Evolución por año</h2>
+                <p class="panel-ayuda mb-0">Los años anteriores salen de la carga histórica.</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2" role="group" aria-label="Indicador del gráfico">
+                {% for indicador in evolucion %}
+                    <button type="button" class="btn btn-sm btn-ua-toggle{% if forloop.first %} active{% endif %}"
+                            aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
+                            data-evolucion="{{ indicador.clave }}">{{ indicador.etiqueta }}</button>
+                {% endfor %}
+            </div>
+        </div>
+        {% for indicador in evolucion %}
+            <div class="evolucion-grafico{% if not forloop.first %} d-none{% endif %}" data-evolucion-grafico="{{ indicador.clave }}">
+                {% for barra in indicador.barras %}
+                    <div class="evolucion-columna">
+                        <span class="evolucion-valor">{{ barra.valor }}</span>
+                        <span class="evolucion-barra" style="height: {{ barra.alto }}%"></span>
+                        <span class="evolucion-anio">{{ barra.anio }}</span>
+                    </div>
+                {% empty %}
+                    <p class="estado-vacio">Aún no hay años con datos.</p>
+                {% endfor %}
+            </div>
+        {% endfor %}
+    </section>
 </div>
+
+<!-- Panel de filtros (a la derecha, se abre con el botón "Filtros") -->
+<div class="offcanvas offcanvas-end panel-filtros" tabindex="-1" id="panelFiltros" aria-labelledby="panelFiltrosTitulo">
+    <form method="get" class="d-flex flex-column h-100">
+        <input type="hidden" name="f" value="1">
+        <div class="offcanvas-header border-bottom">
+            <h2 class="offcanvas-title h5 fw-bold" id="panelFiltrosTitulo">Filtros</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar filtros"></button>
+        </div>
+        <div class="offcanvas-body">
+            {% include "core/partials/_grupo_filtro.html" with id="filtroPeriodo" titulo="Período" abierto=True %}
+            <div class="collapse show filtro-grupo-cuerpo" id="filtroPeriodo">
+                <label class="form-label fw-semibold small" for="filtroAnio">Año</label>
+                <select class="form-select mb-3" id="filtroAnio" name="anio">
+                    <option value="">Todos</option>
+                    {% for anio in opciones.anios %}<option value="{{ anio }}" {% if filtros.anio == anio %}selected{% endif %}>{{ anio }}</option>{% endfor %}
+                </select>
+                <label class="form-label fw-semibold small" for="filtroPeriodoSelect">Período</label>
+                <select class="form-select mb-3" id="filtroPeriodoSelect" name="periodo">
+                    <option value="">Todos</option>
+                    {% for periodo in opciones.periodos %}<option value="{{ periodo.id }}" data-anio="{{ periodo.anio }}" {% if filtros.periodo == periodo.id %}selected{% endif %}>{{ periodo.nombre }}</option>{% endfor %}
+                </select>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="comparar" value="1" id="filtroComparar" {% if filtros.comparar %}checked{% endif %}>
+                    <label class="form-check-label" for="filtroComparar">Comparar con el período anterior</label>
+                </div>
+            </div>
+
+            {% include "core/partials/_grupo_filtro.html" with id="filtroSede" titulo="Sede y campus" abierto=True %}
+            <div class="collapse show filtro-grupo-cuerpo" id="filtroSede">
+                <label class="form-label fw-semibold small" for="filtroSedeSelect">Sede</label>
+                <select class="form-select mb-3" id="filtroSedeSelect" name="sede">
+                    <option value="">Todas</option>
+                    {% for sede in opciones.sedes %}<option value="{{ sede.id }}" {% if filtros.sede == sede.id %}selected{% endif %}>{{ sede.nombre }}</option>{% endfor %}
+                </select>
+                <label class="form-label fw-semibold small" for="filtroCampus">Campus</label>
+                <select class="form-select" id="filtroCampus" name="campus" data-depende-de="filtroSedeSelect">
+                    <option value="">Todos</option>
+                    {% for campus in opciones.campus %}<option value="{{ campus.id }}" data-padre="{{ campus.sede_id }}" {% if filtros.campus == campus.id %}selected{% endif %}>{{ campus.nombre }}</option>{% endfor %}
+                </select>
+            </div>
+
+            {% include "core/partials/_grupo_filtro.html" with id="filtroAcademico" titulo="Académico" abierto=True %}
+            <div class="collapse show filtro-grupo-cuerpo" id="filtroAcademico">
+                <label class="form-label fw-semibold small" for="filtroFacultad">Facultad</label>
+                <select class="form-select mb-3" id="filtroFacultad" name="facultad">
+                    <option value="">Todas</option>
+                    {% for facultad in opciones.facultades %}<option value="{{ facultad.id }}" {% if filtros.facultad == facultad.id %}selected{% endif %}>{{ facultad.nombre }}</option>{% endfor %}
+                </select>
+                <label class="form-label fw-semibold small" for="filtroCarrera">Carrera</label>
+                <select class="form-select" id="filtroCarrera" name="carrera" data-depende-de="filtroFacultad" aria-describedby="filtroCarreraAyuda">
+                    <option value="">Todas</option>
+                    {% for carrera in opciones.carreras %}<option value="{{ carrera.id }}" data-padre="{{ carrera.facultad_id }}" {% if filtros.carrera == carrera.id %}selected{% endif %}>{{ carrera.nombre }}</option>{% endfor %}
+                </select>
+                <div class="form-text mb-3" id="filtroCarreraAyuda">Muestra solo las carreras de la facultad elegida.</div>
+                <label class="form-label fw-semibold small" for="filtroAsignatura">Asignatura</label>
+                <select class="form-select" id="filtroAsignatura" name="asignatura">
+                    <option value="">Todas</option>
+                    {% for asignatura in opciones.asignaturas %}<option value="{{ asignatura.id }}" {% if filtros.asignatura == asignatura.id %}selected{% endif %}>{{ asignatura.nombre }}</option>{% endfor %}
+                </select>
+            </div>
+
+            {% include "core/partials/_grupo_filtro.html" with id="filtroTerritorio" titulo="Territorio" abierto=filtros.comuna %}
+            <div class="collapse{% if filtros.comuna %} show{% endif %} filtro-grupo-cuerpo" id="filtroTerritorio">
+                <label class="form-label fw-semibold small" for="filtroComuna">Comuna</label>
+                <select class="form-select" id="filtroComuna" name="comuna">
+                    <option value="">Todas</option>
+                    {% for comuna in opciones.comunas %}<option value="{{ comuna.id }}" {% if filtros.comuna == comuna.id %}selected{% endif %}>{{ comuna.nombre }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="d-flex gap-2 p-3 border-top">
+            <a href="?f=1" class="btn btn-outline-secondary flex-fill">Limpiar</a>
+            <button type="submit" class="btn btn-rojo flex-fill">Ver resultados</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'js/panel_coordinador.js' %}?v=2026-10-13"></script>
 {% endblock %}

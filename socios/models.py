@@ -2,7 +2,10 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.db.models import F, Q
 from django.utils import timezone
+
+from .constantes import ORIGENES_PARTICIPACION
 
 class ClasificacionSocio(models.Model):
     nombre = models.CharField(
@@ -152,15 +155,21 @@ class ParticipacionSocio(models.Model):
         related_name="participaciones",
     )
 
+    # Opcionales según el modelo de BD: una participación histórica puede no
+    # tener equipo ni proyecto operativo (RF-MIG-02).
     equipo = models.ForeignKey(
         "proyectos.Equipo",
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         related_name="participaciones_socios",
     )
 
     proyecto = models.ForeignKey(
         "proyectos.ProyectoAS",
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         related_name="participaciones_socios",
     )
 
@@ -242,10 +251,33 @@ class ParticipacionSocio(models.Model):
         blank=True,
     )
 
-    origen = models.CharField(max_length=30)
+    origen = models.CharField(max_length=30, choices=ORIGENES_PARTICIPACION)
+
+    class Meta:
+        constraints = [
+            # Como máximo una asociación vigente (fecha_fin NULL) por equipo
+            # (RN-09, RF-EQP-08). Las cerradas forman el historial.
+            models.UniqueConstraint(
+                fields=["equipo"],
+                condition=Q(equipo__isnull=False, fecha_fin__isnull=True),
+                name="uq_part_socio_equipo_abierta",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(fecha_inicio__isnull=True)
+                    | Q(fecha_fin__isnull=True)
+                    | Q(fecha_fin__gte=F("fecha_inicio"))
+                ),
+                name="ck_part_socio_fechas_validas",
+            ),
+        ]
+
+    @property
+    def vigente(self):
+        return self.fecha_fin is None
 
     def __str__(self):
-        return f"{self.socio} - {self.proyecto}"
+        return f"{self.socio} - {self.equipo or self.proyecto or 'histórica'}"
 
 
 class InvitacionCierre(models.Model):

@@ -10,6 +10,7 @@ from academico.models import (Asignatura,Campus,Carrera,Docente,Facultad,Periodo
 from auditoria.models import AuditoriaCambio
 from auditoria.services import registrar_auditoria
 from planificacion.email_service import enviar_correo_planificacion
+from planificacion.forms import DocenteFilaForm, FilaPlanificacionForm
 from planificacion.models import (FilaPlanificacion,FilaPlanificacionDocente,Planificacion,PlanificacionEnlace,PlanificacionError,)
 from planificacion.services import validar_y_consolidar_planificacion
 
@@ -329,7 +330,7 @@ class PlanificacionHU01TestCase(TestCase):
 
         self.assertEqual(
             seccion.estado,
-            "Activo",
+            "Activa",
         )
 
         self.assertIsNotNone(
@@ -340,6 +341,32 @@ class PlanificacionHU01TestCase(TestCase):
         EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
         DEFAULT_FROM_EMAIL="portal-as@uautonoma.cl",
     )
+    def test_formulario_tabular_usa_listas(self):
+        # RNF-USA-03: facultad, carrera, nivel, jornada y tipo de contrato
+        # se eligen de una lista; se sigue enviando el mismo texto.
+        response = self.client.get(
+            reverse("planificacion:formulario_tabular_as", kwargs={"token": self.enlace.token})
+        )
+
+        self.assertContains(response, '<optgroup label="Facultad de Ingeniería">')
+        self.assertContains(response, '<option value="Ingeniería Civil Informática"')
+        self.assertContains(response, '<option value="Vespertina TECH">')
+        self.assertContains(response, '<option value="Adjunto">')
+        # Formulario público: sin la barra superior del portal.
+        self.assertNotContains(response, "navbar-sistema")
+
+    def test_formulario_tabular_conserva_valores_fuera_de_la_lista(self):
+        form = FilaPlanificacionForm(
+            instance=FilaPlanificacion(carrera_texto="Carrera Antigua", jornada="Nocturna", nivel="Nivel 3"),
+        )
+
+        self.assertIn('<option value="Carrera Antigua" selected>', str(form["carrera_texto"]))
+        self.assertIn('<option value="Nocturna" selected>', str(form["jornada"]))
+        self.assertIn('<option value="Nivel 3" selected>', str(form["nivel"]))
+
+        docente = DocenteFilaForm(initial={"tipo_contrato": "Honorarios"})
+        self.assertIn('<option value="Honorarios" selected>', str(docente["tipo_contrato"]))
+
     def test_envio_correo_planificacion(self):
         request = RequestFactory().get("/")
 

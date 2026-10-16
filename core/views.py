@@ -1,63 +1,90 @@
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from usuarios.permissions import es_coordinador, es_docente
 from usuarios.decorators import coordinador_required, docente_required
 
 from academico.models import (
-    Asignatura,
-    Docente,
     PeriodoAcademico,
     Seccion,
 )
-from .models import CargaPlanificacion, DetalleFilaObservada
-
 
 def inicio(request):
     if request.user.is_authenticated:
         if es_coordinador(request.user):
             return redirect("core:coordinacion")
         if es_docente(request.user):
-            return redirect("core:docente")
+            # El inicio del docente es el resumen de sus Rutas A+S;
+            # "Mis secciones" (core:docente) queda como opción del menú.
+            return redirect("core:inicio_docente")
 
     return render(request, "core/inicio.html")
 
 
 @coordinador_required
 def panel_coordinacion(request):
-    total_secciones = Seccion.objects.filter(
-        estado__iexact="Activo"
-    ).count()
+    """
+    Panel del coordinador (HU-08): indicadores del período, avance de la Ruta
+    por carrera, satisfacción, mapa y evolución, con los filtros del panel
+    lateral (RF-IND-01). Los cálculos están en core/indicadores.py.
+    """
+    from cartas.models import SolicitudCarta
+    from planificacion.models import Planificacion
+    from socios.models import PostulacionSocio
 
-    total_docentes = Docente.objects.filter(
-        activo=True
-    ).count()
+    from . import indicadores
 
-    total_asignaturas = Asignatura.objects.filter(
-        activo=True
-    ).count()
-
-    total_periodos = PeriodoAcademico.objects.filter(
-        estado__iexact="Activo"
-    ).count()
-
+    filtros = indicadores.leer_filtros(request.GET)
     periodo_actual = (
         PeriodoAcademico.objects
-        .filter(estado__iexact="Activo")
+        .filter(estado="Activo")
         .order_by("-anio", "-id")
         .first()
     )
+
+    # Pendientes del coordinador: solo flujos que ya existen en el portal.
+    pendientes = [
+        {
+            "label": "Cartas por revisar",
+            "value": SolicitudCarta.objects.filter(estado="PENDIENTE").count(),
+            "icon": "bi-envelope-paper",
+            "url": reverse("cartas:listar_solicitudes_coordinacion"),
+        },
+        {
+            "label": "Planificaciones con filas observadas",
+            "value": Planificacion.objects.filter(filas_observadas__gt=0).count(),
+            "icon": "bi-exclamation-triangle",
+            "url": reverse("core:planificacion_coordinacion"),
+        },
+        {
+            "label": "Postulaciones de socios por revisar",
+            "value": PostulacionSocio.objects.filter(estado="RECIBIDA").count(),
+            "icon": "bi-person-plus",
+            "url": reverse("socios:lista_postulaciones"),
+        },
+    ]
+
+    chips = indicadores.chips(filtros)
+    mapa = indicadores.mapa(filtros)
 
     return render(
         request,
         "core/coordinacion.html",
         {
-            "total_secciones": total_secciones,
-            "total_docentes": total_docentes,
-            "total_asignaturas": total_asignaturas,
-            "total_periodos": total_periodos,
+            "filtros": filtros,
+            "chips": chips,
+            "cantidad_filtros": len(chips),
+            "opciones": indicadores.opciones_filtros(),
             "periodo_actual": periodo_actual,
+            "tarjetas": indicadores.tarjetas(filtros),
+            "avance_carreras": indicadores.avance_por_carrera(filtros),
+            "umbrales": {"medio": indicadores.UMBRAL_MEDIO, "alto": indicadores.UMBRAL_ALTO},
+            "pendientes": pendientes,
+            "satisfaccion": indicadores.satisfaccion(filtros),
+            "mapa": mapa,
+            "evolucion": indicadores.evolucion(filtros),
         },
     )
 
@@ -93,9 +120,10 @@ def planificacion_coordinacion(request):
     )
 
 
+
 @docente_required
 def panel_docente(request):
-    secciones = (
+    secciones_docente = (
         Seccion.objects
         .filter(docentes__usuario=request.user)
         .select_related(
@@ -107,17 +135,188 @@ def panel_docente(request):
         .distinct()
     )
 
+    periodos = (
+        PeriodoAcademico.objects
+        .filter(secciones__in=secciones_docente)
+        .distinct()
+        .order_by("-anio", "-id")
+    )
+
+    anios = (
+        periodos
+        .order_by("-anio")
+        .values_list("anio", flat=True)
+        .distinct()
+    )
+
+    anio_seleccionado = request.GET.get("anio", "").strip()
+    periodo_seleccionado = request.GET.get("periodo", "").strip()
+
+    secciones = secciones_docente
+
+    if anio_seleccionado:
+        if anio_seleccionado.isdigit():
+            secciones = secciones.filter(
+                periodo__anio=int(anio_seleccionado)
+            )
+        else:
+            secciones = secciones.none()
+
+    if periodo_seleccionado:
+        if periodo_seleccionado.isdigit():
+            secciones = secciones.filter(
+                periodo_id=int(periodo_seleccionado)
+            )
+        else:
+            secciones = secciones.none()
+
+    if anio_seleccionado:
+        periodos = periodos.filter(
+            anio=anio_seleccionado
+        ) if anio_seleccionado.isdigit() else periodos.none()
+
+    secciones = secciones.order_by(
+        "-periodo__anio",
+        "-periodo_id",
+        "asignatura__nombre",
+    )
+
     return render(
         request,
         "core/docente.html",
         {
             "secciones": secciones,
+            "anios": anios,
+            "periodos": periodos,
+            "anio_seleccionado": anio_seleccionado,
+            "periodo_seleccionado": periodo_seleccionado,
+            "filtros_activos": bool(
+                anio_seleccionado or periodo_seleccionado
+            ),
+        },
+    )
+
+
+@docente_required
+def inicio_docente(request):
+    from django.db.models import Prefetch
+
+    from rutas.models import SeccionActividad, SeccionRuta
+    from rutas.services import (
+        con_avance,
+        es_actividad_cierre,
+        recordatorios_cierre,
+    )
+
+    secciones = (
+        Seccion.objects
+        .filter(docentes__usuario=request.user)
+        .distinct()
+    )
+
+    rutas = list(
+        con_avance(
+            SeccionRuta.objects
+            .filter(seccion__in=secciones)
+            .select_related(
+                "seccion",
+                "seccion__asignatura",
+                "seccion__periodo",
+            )
+            .prefetch_related(
+                Prefetch(
+                    "actividades",
+                    queryset=(
+                        SeccionActividad.objects
+                        .filter(completada_por_docente__isnull=True)
+                        .select_related("ruta_actividad")
+                        .order_by("ruta_actividad__orden")
+                    ),
+                    to_attr="actividades_pendientes",
+                ),
+                "invitaciones_cierre__socio",
+            )
+        )
+        .order_by(
+            "-seccion__periodo__anio",
+            "seccion__asignatura__nombre",
+        )
+    )
+
+    total_obligatorias = 0
+    total_completadas = 0
+    total_pendientes = 0
+
+    for ruta in rutas:
+        # Recordatorio visible en el panel, sin correo programado (RF-RUT-04).
+        ruta.recordatorios = []
+
+        if ruta.estado != "COMPLETADA":
+            for actividad in ruta.actividades_pendientes:
+                nombre = actividad.ruta_actividad.nombre
+
+                if (
+                    es_actividad_cierre(actividad.ruta_actividad)
+                    and not ruta.invitaciones_cierre.all()
+                ):
+                    nombre += ": indica si habrá cierre e invita al Socio"
+
+                if not actividad.ruta_actividad.es_obligatoria:
+                    nombre += " (opcional)"
+
+                ruta.recordatorios.append(nombre)
+
+            ruta.recordatorios += recordatorios_cierre(ruta)
+
+        ruta.pendientes_obligatorias = (
+            ruta.total_obligatorias
+            - ruta.completadas_obligatorias
+        )
+
+        ruta.avance_calculado = (
+            round(
+                ruta.completadas_obligatorias
+                * 100
+                / ruta.total_obligatorias
+            )
+            if ruta.total_obligatorias
+            else 0
+        )
+
+        total_obligatorias += ruta.total_obligatorias
+        total_completadas += ruta.completadas_obligatorias
+        total_pendientes += ruta.pendientes_obligatorias
+
+    avance_general = (
+        round(total_completadas * 100 / total_obligatorias)
+        if total_obligatorias
+        else 0
+    )
+
+    return render(
+        request,
+        "core/inicio_docente.html",
+        {
+            "total_secciones": secciones.count(),
+            "rutas_completadas": sum(
+                ruta.estado == "COMPLETADA"
+                for ruta in rutas
+            ),
+            "total_pendientes": total_pendientes,
+            "avance_general": avance_general,
+            "rutas": rutas,
         },
     )
 
 
 @login_required
 def detalle_seccion(request, seccion_id):
+    """
+    Ficha única de la sección para ambos roles. El docente ve sus
+    herramientas (registro de equipos, equipos y Ruta); el coordinador ve
+    además los docentes y consulta equipos y Ruta en modo lectura, sin
+    botones que lo lleven a páginas exclusivas del docente.
+    """
     seccion = get_object_or_404(
         Seccion.objects
         .select_related(
@@ -126,11 +325,17 @@ def detalle_seccion(request, seccion_id):
             "campus",
             "campus__sede",
         )
-        .prefetch_related("docentes"),
+        .prefetch_related(
+            "docentes",
+            "seccion_carreras__carrera__facultad",
+            "seccion_docentes__docente",
+        ),
         id=seccion_id,
     )
 
-    if es_coordinador(request.user):
+    vista_coordinador = es_coordinador(request.user)
+
+    if vista_coordinador:
         pass
 
     elif es_docente(request.user):
@@ -144,11 +349,23 @@ def detalle_seccion(request, seccion_id):
     else:
         raise PermissionDenied
 
+    equipos = None
+
+    if vista_coordinador:
+        equipos = (
+            seccion.equipos
+            .con_socio_vigente()
+            .prefetch_related("integrantes")
+            .order_by("numero_grupo")
+        )
+
     return render(
         request,
         "core/detalle_seccion.html",
         {
             "seccion": seccion,
+            "vista_coordinador": vista_coordinador,
+            "equipos": equipos,
         },
     )
 
@@ -192,96 +409,3 @@ def detalle_planificacion_coordinacion(
             "filas": filas,
         },
     )
-
-
-
-@coordinador_required
-def validar_planificacion_view(request):
-    resumen = None
-    errores_filas = []
-
-    if request.method == 'POST':
-        enlace = request.POST.get('enlace_planificacion', '')
-        unidad = request.POST.get('unidad', 'Departamento de Informática')
-        periodo = request.POST.get('periodo', '2026-10')
-
-        # Datos simulados de entrada
-        filas_recibidas_raw = [
-            {'fila': 1, 'nrc': '12345', 'asignatura': 'Programación Backend'},
-            {'fila': 2, 'nrc': '12345', 'asignatura': 'Base de Datos'},         # Duplicado
-            {'fila': 3, 'nrc': '67890', 'asignatura': 'Ingeniería de Software'},
-            {'fila': 4, 'nrc': '', 'asignatura': ''},                           # Faltan obligatorios
-            {'fila': 5, 'nrc': 'ABCDE', 'asignatura': 'Arquitectura Cloud'},    # Formato inválido
-        ]
-
-        nrcs_procesados = set()
-        filas_aceptadas_list = []
-
-        for item in filas_recibidas_raw:
-            fila_num = item['fila']
-            nrc = item['nrc'].strip() if item['nrc'] else ''
-            asignatura = item['asignatura'].strip() if item['asignatura'] else ''
-
-            causas = []
-
-            # 1. Validación de obligatorios
-            if not nrc or not asignatura:
-                causas.append("Faltan campos obligatorios (NRC o Asignatura).")
-
-            # 2. Validación de formatos
-            if nrc and not nrc.isdigit():
-                causas.append(f"El NRC '{nrc}' tiene un formato inválido (debe ser numérico).")
-
-            # 3. Detección de NRC duplicado
-            if nrc in nrcs_procesados and nrc != '':
-                causas.append(f"NRC '{nrc}' duplicado en la misma entrega.")
-
-            # 4. Separar filas válidas/observadas
-            if causas:
-                errores_filas.append({
-                    'fila': fila_num,
-                    'nrc': nrc if nrc else 'N/A',
-                    'causa': " | ".join(causas)
-                })
-            else:
-                filas_aceptadas_list.append(item)
-                if nrc:
-                    nrcs_procesados.add(nrc)
-
-        # 5 y 7. Guardar resumen en la base de datos PostgreSQL
-        resumen = CargaPlanificacion.objects.create(
-            unidad=unidad,
-            periodo=periodo,
-            filas_recibidas=len(filas_recibidas_raw),
-            filas_aceptadas=len(filas_aceptadas_list),
-            filas_observadas=len(errores_filas)
-        )
-
-        # 6. Registrar errores por fila en la base de datos
-        for err in errores_filas:
-            DetalleFilaObservada.objects.create(
-                carga=resumen,
-                numero_fila=err['fila'],
-                nrc=err['nrc'],
-                causa_error=err['causa']
-            )
-
-    elif request.method == 'GET':
-        # Consultar la última carga registrada si es una petición GET
-        resumen = CargaPlanificacion.objects.order_by('-id').first()
-        if resumen:
-            detalles_db = DetalleFilaObservada.objects.filter(carga=resumen)
-            for d in detalles_db:
-                errores_filas.append({
-                    'fila': d.numero_fila,
-                    'nrc': d.nrc,
-                    'causa': d.causa_error
-                })
-
-    historial_cargas = CargaPlanificacion.objects.all().order_by('-id')
-
-    return render(request, 'coordinacion/validar_planificacion.html', {
-        'resumen': resumen,
-        'errores_filas': errores_filas,
-        'historial_cargas': historial_cargas
-    })

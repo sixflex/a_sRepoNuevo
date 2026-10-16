@@ -1,0 +1,6 @@
+{# Encabezado plegable de un grupo del panel de filtros. Uso: {% include "core/partials/_grupo_filtro.html" with id="..." titulo="..." abierto=True %} #}
+<button type="button" class="filtro-grupo-boton{% if not abierto %} collapsed{% endif %}" data-bs-toggle="collapse"
+        data-bs-target="#{{ id }}" aria-expanded="{% if abierto %}true{% else %}false{% endif %}" aria-controls="{{ id }}">
+    {{ titulo }}
+    <i class="bi bi-chevron-down" aria-hidden="true"></i>
+</button>

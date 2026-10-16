@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Pregunta · {{ version.plantilla.titulo }} | Portal A+S{% endblock %}
+{% block extra_css %}{% include "encuestas/includes/css.html" %}{% endblock %}
+
+{% block content %}
+{# Página de respaldo: el editor normal es la tarjeta dentro del constructor. #}
+<a class="small text-muted text-decoration-none" href="{% url 'encuestas:editor' version.id %}{% if pregunta %}#pregunta-{{ pregunta.id }}{% endif %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Volver al editor</a>
+<h1 class="page-title mt-2">{% if pregunta %}Editar pregunta{% else %}Nueva pregunta{% endif %}</h1>
+<p class="page-subtitle">{{ version.plantilla.titulo }} · versión {{ version.numero_version }}</p>
+
+<div class="card-ua enc-tarjeta activa p-4" style="max-width: 860px;">
+    {% include "encuestas/includes/editor_pregunta.html" %}
+</div>
+<script src="{% static 'js/encuestas_editor.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Publicación · {{ version.plantilla.titulo }} | Portal A+S{% endblock %}
+{% block extra_css %}{% include "encuestas/includes/css.html" %}{% endblock %}
+
+{% block content %}
+{% include "encuestas/includes/cabecera.html" %}
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card-ua p-4 mb-3">
+            <h2 class="h6 fw-bold">Vigencia</h2>
+            {% if version.estado == "PUBLICADA" %}
+                <p class="small mb-2">{% if abierta %}<i class="bi bi-broadcast text-success me-1" aria-hidden="true"></i>Recibiendo respuestas.{% else %}<i class="bi bi-pause-circle me-1" aria-hidden="true"></i>Publicado, pero fuera de las fechas de vigencia.{% endif %}</p>
+            {% endif %}
+            <p class="small text-muted">Déjalo vacío para recibir respuestas desde ya y hasta que lo cierres.</p>
+
+            {% if errores_publicar %}
+                <div class="alert alert-warning py-2">
+                    <strong>Antes de publicar:</strong>
+                    <ul class="mb-0">{% for e in errores_publicar %}<li>{{ e }}</li>{% endfor %}</ul>
+                </div>
+            {% endif %}
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+                {% include "encuestas/includes/campos.html" with form=vigencia %}
+                <div class="d-flex flex-wrap gap-2">
+                    {% if version.estado == "BORRADOR" %}
+                        <button class="btn btn-ua" type="submit" name="accion" value="publicar" {% if errores_publicar %}disabled{% endif %}>
+                            <i class="bi bi-send me-1" aria-hidden="true"></i>Publicar
+                        </button>
+                    {% elif version.estado == "PUBLICADA" %}
+                        <button class="btn btn-ua" type="submit" name="accion" value="vigencia">Guardar vigencia</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+
+        <div class="card-ua p-4">
+            <h2 class="h6 fw-bold">Estado</h2>
+            <form method="post" class="d-flex flex-wrap gap-2">
+                {% csrf_token %}
+                {% if version.estado == "PUBLICADA" %}
+                    <button class="btn btn-light-ua" type="submit" name="accion" value="cerrar"
+                            onclick="return confirm('¿Cerrar el formulario? Dejará de recibir respuestas.');">
+                        <i class="bi bi-lock me-1" aria-hidden="true"></i>Cerrar (dejar de recibir respuestas)
+                    </button>
+                {% endif %}
+                {% if version.estado == "CERRADA" %}
+                    <button class="btn btn-light-ua" type="submit" name="accion" value="reabrir">
+                        <i class="bi bi-unlock me-1" aria-hidden="true"></i>Reabrir
+                    </button>
+                {% endif %}
+                {% if version.estado == "CERRADA" or version.estado == "BORRADOR" %}
+                    <button class="btn btn-light-ua" type="submit" name="accion" value="archivar"
+                            onclick="return confirm('¿Archivar esta versión? Su enlace dejará de funcionar.');">
+                        <i class="bi bi-archive me-1" aria-hidden="true"></i>Archivar
+                    </button>
+                {% endif %}
+                {% if version.estado == "ARCHIVADA" %}
+                    <p class="small text-muted mb-0">Versión archivada. Sus respuestas se conservan.</p>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card-ua p-4 enc-qr">
+            <h2 class="h6 fw-bold">Enlace para compartir</h2>
+            {% if url_publica %}
+                <div class="input-group input-group-sm mb-3">
+                    <input type="text" class="form-control" value="{{ url_publica }}" id="url-publica" readonly aria-label="Enlace del formulario">
+                    <button class="btn btn-light-ua" type="button" onclick="navigator.clipboard.writeText(document.getElementById('url-publica').value); this.innerHTML='<i class=&quot;bi bi-check2&quot;></i> Copiado';">Copiar</button>
+                </div>
+                <div class="text-center">
+                    <img src="data:image/png;base64,{{ qr_base64 }}" alt="Código QR del formulario {{ version.plantilla.titulo }}">
+                    <div class="mt-2">
+                        <a class="btn btn-light-ua btn-sm" download="qr-{{ version.plantilla.codigo|lower }}.png" href="data:image/png;base64,{{ qr_base64 }}">
+                            <i class="bi bi-download me-1" aria-hidden="true"></i>Descargar QR
+                        </a>
+                    </div>
+                </div>
+                <p class="small text-muted mt-3 mb-0">Al publicar una versión nueva, este mismo enlace y QR pasan a ella.</p>
+            {% else %}
+                <p class="small text-muted mb-0">El enlace y el QR se generan al publicar.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

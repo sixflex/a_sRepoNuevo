@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block title %}Rutas A+S | Portal A+S{% endblock %}
+
 {% block content %}
 <div class="container-fluid py-4">
     <!-- Encabezado -->
@@ -10,9 +12,6 @@
                 Consulta el avance de las Rutas del Docente por sección.
             </p>
         </div>
-        <a href="{% url 'core:coordinacion' %}" class="btn btn-outline-secondary">
-            ← Volver al Panel
-        </a>
     </div>
 
  <!-- Formulario de Filtros Combinables CDE-525 -->
@@ -125,11 +124,11 @@
                                     <td>
                                         {% if ruta.estado == "COMPLETADA" %}
                                             <span class="badge bg-success">
-                                                COMPLETADA
+                                                Completada
                                             </span>
                                         {% else %}
                                             <span class="badge bg-primary">
-                                                EN PROGRESO
+                                                En progreso
                                             </span>
                                         {% endif %}
                                     </td>

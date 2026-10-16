@@ -4,8 +4,6 @@ from dotenv import load_dotenv
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-print("BASE_DIR =", BASE_DIR)
-print("ENV PATH =", BASE_DIR / ".env")
 
 load_dotenv()
 
@@ -68,6 +66,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "core.context_processors.menu_lateral",
             ],
         },
     },

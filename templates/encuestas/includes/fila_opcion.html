@@ -1,0 +1,44 @@
+{% comment %}Una opción en el editor de preguntas. El marcador (círculo o cuadro) cambia según el tipo, como en Forms.{% endcomment %}
+<div class="enc-fila-opcion" data-fila-opcion>
+    <input type="hidden" name="opcion_id" value="{{ fila.id|default_if_none:'' }}">
+    <input type="hidden" name="opcion_otros" value="{% if fila.es_otras %}1{% else %}0{% endif %}" data-campo-otros>
+    <input type="hidden" name="opcion_programas" value="{{ fila.programas|join:',' }}" data-campo-programas>
+    <span class="enc-marcador" aria-hidden="true"></span>
+    <div class="flex-grow-1 min-w-0">
+        <input type="text" class="form-control enc-input-opcion" name="opcion_texto" value="{{ fila.texto|default:'' }}"
+               placeholder="{% if fila.es_otras %}Otras{% else %}Opción{% endif %}" aria-label="Texto de la opción">
+        <div class="enc-nota" data-etiqueta-otros {% if not fila.es_otras %}hidden{% endif %}>
+            <i class="bi bi-input-cursor-text me-1" aria-hidden="true"></i>Quien la elija deberá escribir el detalle.
+        </div>
+        {% if programas %}
+            <div class="enc-chips mt-1{% if fila.programas %} abierto{% endif %}" data-no-selector data-chips-programas>
+                <span class="enc-nota">Solo para:</span>
+                {% for valor, texto in programas %}
+                    <label class="enc-chip-check">
+                        <input type="checkbox" value="{{ valor }}" data-programa {% if valor in fila.programas %}checked{% endif %}>
+                        <span>{{ texto|truncatechars:38 }}</span>
+                    </label>
+                {% endfor %}
+                <span class="enc-nota">(sin marcar = todos)</span>
+            </div>
+        {% endif %}
+        <div class="mt-1" data-solo-selector>
+            <label class="enc-nota">Carrera asociada
+                <select class="form-select form-select-sm d-inline-block w-auto ms-1" name="opcion_carrera">
+                    <option value="">Sin carrera</option>
+                    {% for carrera in carreras %}
+                        <option value="{{ carrera.id }}" {% if fila.carrera_id == carrera.id %}selected{% endif %}>{{ carrera.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+    </div>
+    <div class="enc-fila-acciones">
+        {% if programas %}
+            <button type="button" class="btn btn-accion btn-sm" data-filtrar-opcion data-no-selector title="Mostrar solo en algunos programas" aria-label="Mostrar esta opción solo en algunos programas"><i class="bi bi-funnel" aria-hidden="true"></i></button>
+        {% endif %}
+        <button type="button" class="btn btn-accion btn-sm" data-subir-opcion title="Subir" aria-label="Subir opción"><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
+        <button type="button" class="btn btn-accion btn-sm" data-bajar-opcion title="Bajar" aria-label="Bajar opción"><i class="bi bi-arrow-down" aria-hidden="true"></i></button>
+        <button type="button" class="btn btn-accion btn-sm" data-quitar-opcion title="Quitar" aria-label="Quitar opción"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+    </div>
+</div>
