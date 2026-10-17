@@ -224,6 +224,9 @@ def completar_actividad(request, actividad_id):
             seccion_ruta_id=seccion_ruta.id,
         )
 
+    estado_anterior = actividad.estado
+    fecha_anterior = str(actividad.fecha_completada) if actividad.fecha_completada else None
+
     if actividad.completada_por_docente_id is None:
         actividad.completada_por_docente = docente
         actividad.estado = "COMPLETADA"
@@ -233,7 +236,6 @@ def completar_actividad(request, actividad_id):
         actividad.estado = "PENDIENTE"
         actividad.fecha_completada = None
 
-        # Volver a pendiente deshace también el "no habrá actividad de cierre".
         if actividad.observacion == servicios.OBSERVACION_SIN_CIERRE:
             actividad.observacion = None
 
@@ -245,6 +247,20 @@ def completar_actividad(request, actividad_id):
             "observacion",
         ]
     )
+    registrar_auditoria(
+        request=request,
+        entidad="SeccionActividad",
+        entidad_id=actividad.pk,
+        accion="CAMBIAR_ESTADO_ACTIVIDAD",
+        valores_anteriores={
+            "estado": estado_anterior,
+            "fecha_completada": fecha_anterior,
+        },
+        valores_nuevos={
+            "estado": actividad.estado,
+            "fecha_completada": str(actividad.fecha_completada) if actividad.fecha_completada else None,
+        },
+    )
 
     recalcular_avance(
         seccion_ruta
@@ -254,7 +270,6 @@ def completar_actividad(request, actividad_id):
         "rutas:detalle_ruta_docente",
         seccion_ruta_id=seccion_ruta.id,
     )
-
 
 @login_required
 @require_POST
@@ -320,6 +335,9 @@ def completar_ruta(request, seccion_ruta_id):
             seccion_ruta_id=seccion_ruta.id,
         )
 
+    estado_anterior = seccion_ruta.estado
+    porcentaje_anterior = str(seccion_ruta.porcentaje_final) if seccion_ruta.porcentaje_final else "0.00"
+
     seccion_ruta.estado = "COMPLETADA"
     seccion_ruta.cerrada_por_docente = docente
     seccion_ruta.fecha_cierre = timezone.now()
@@ -332,6 +350,23 @@ def completar_ruta(request, seccion_ruta_id):
             "fecha_cierre",
             "porcentaje_final",
         ]
+    )
+
+    registrar_auditoria(
+        request=request,
+        entidad="SeccionRuta",
+        entidad_id=seccion_ruta.pk,
+        accion="COMPLETAR_RUTA",
+        valores_anteriores={
+            "estado": estado_anterior,
+            "porcentaje_final": porcentaje_anterior,
+        },
+        valores_nuevos={
+            "estado": seccion_ruta.estado,
+            "porcentaje_final": str(seccion_ruta.porcentaje_final),
+            "cerrada_por_docente_id": docente.pk,
+            "fecha_cierre": str(seccion_ruta.fecha_cierre),
+        },
     )
 
     messages.success(
@@ -431,11 +466,24 @@ def subir_evidencia(request, actividad_id):
                 autor=request.user,
             )
 
-            Evidencia.objects.create(
+            evidencia = Evidencia.objects.create(
                 expediente=expediente,
                 seccion_actividad=actividad,
                 archivo=archivo,
                 descripcion=descripcion or None,
+            )
+
+            registrar_auditoria(
+                request=request,
+                entidad="Evidencia",
+                entidad_id=evidencia.pk,
+                accion="SUBIR_EVIDENCIA",
+                valores_nuevos={
+                    "archivo_id": archivo.pk,
+                    "nombre_archivo": archivo_subido.name,
+                    "actividad_id": actividad.pk,
+                    "descripcion": evidencia.descripcion,
+                },
             )
 
     except ValidationError as error:
@@ -458,7 +506,6 @@ def subir_evidencia(request, actividad_id):
         "rutas:detalle_ruta_docente",
         seccion_ruta_id=seccion_ruta.id,
     )
-
 
 @login_required
 @require_POST
@@ -512,6 +559,19 @@ def eliminar_evidencia(request, evidencia_id):
     archivo = evidencia.archivo
     storage_key = archivo.storage_key
 
+    registrar_auditoria(
+        request=request,
+        entidad="Evidencia",
+        entidad_id=evidencia.pk,
+        accion="ELIMINAR_EVIDENCIA",
+        valores_anteriores={
+            "evidencia_id": evidencia.pk,
+            "archivo_id": archivo.pk,
+            "actividad_id": actividad.pk,
+            "descripcion": evidencia.descripcion,
+        },
+    )
+
     evidencia.delete()
     archivo.delete()
 
@@ -529,6 +589,7 @@ def eliminar_evidencia(request, evidencia_id):
         "rutas:detalle_ruta_docente",
         seccion_ruta_id=seccion_ruta.id,
     )
+
 @login_required
 def seguimiento_rutas_coordinacion(request):
     if not es_coordinador(request.user):
@@ -645,11 +706,7 @@ def detalle_ruta_coordinacion(request, seccion_ruta_id):
 
 @login_required
 def formularios_qr(request):
-    """
-    QR de los formularios abiertos de un proceso, para proyectarlos en clase
-    (por ejemplo las encuestas A+S). La actividad lo enlaza desde recurso_url
-    con ?proceso=..., así el proceso se cambia sin tocar código.
-    """
+
     if not (es_docente(request.user) or es_coordinador(request.user)):
         raise PermissionDenied
 
@@ -692,7 +749,6 @@ def formularios_qr(request):
 
 
 def _actividad_cierre_del_docente(request, actividad_id):
-    """Actividad de cierre editable por el Docente de la sección."""
     actividad = get_object_or_404(
         SeccionActividad.objects.select_related(
             "seccion_ruta",

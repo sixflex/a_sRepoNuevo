@@ -92,7 +92,7 @@ class NavegacionTestCase(TestCase):
             "proyectos:gestionar_enlaces",
             "core:planificacion_coordinacion",
             "seccion_list",
-            "rutas:seguimiento_rutas_coordinacion",
+            "rutas:seguimiento_coordinacion",
             "cartas:listar_solicitudes_coordinacion",
             "socios:lista_coordinador",
             "socios:lista_postulaciones",
