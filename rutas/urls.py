@@ -61,9 +61,9 @@ urlpatterns = [
         name="formularios_qr",
     ),
     path(
-        "coordinacion/",
-        views.seguimiento_rutas_coordinacion,
-        name="seguimiento_rutas_coordinacion",
+        'coordinacion/',
+        views.seguimiento_rutas_coordinacion, 
+        name='seguimiento_coordinacion'
     ),
     path(
         "coordinacion/<int:seccion_ruta_id>/",
