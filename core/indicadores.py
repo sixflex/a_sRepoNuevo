@@ -11,6 +11,7 @@ from collections import defaultdict
 from urllib.parse import urlencode
 
 from django.db.models import Avg, Count, Q, Sum
+from django.urls import reverse
 
 from academico.models import (
     Asignatura,
@@ -31,6 +32,9 @@ from socios.models import Comuna, ParticipacionSocio
 
 # Parámetros GET del panel de filtros, en el orden en que se muestran los chips.
 FILTROS = ["sede", "campus", "anio", "periodo", "facultad", "carrera", "asignatura", "comuna"]
+
+# Filtros del mapa del portal público (RF-PUB-01): sin período ni asignatura.
+FILTROS_PUBLICOS = ["sede", "anio", "carrera", "comuna"]
 
 # Marca que indica que el usuario ya eligió filtros (aunque los haya quitado
 # todos): sin ella el panel parte en el período vigente.
@@ -95,6 +99,28 @@ def leer_filtros(get):
 
     filtros["comparar"] = get.get("comparar", "1" if not filtrado else "") == "1"
     return filtros
+
+
+def filtros_publicos(get):
+    """Filtros del mapa público: parte con todos los años (sin período vigente)."""
+    filtros = {nombre: None for nombre in FILTROS}
+    for nombre in FILTROS_PUBLICOS:
+        filtros[nombre] = _entero(get.get(nombre))
+    return filtros
+
+
+def opciones_publicas():
+    """Listas de los filtros públicos: solo valores que tienen participaciones."""
+    participaciones = ParticipacionSocio.objects.all()
+    return {
+        "sedes": Sede.objects.filter(
+            Q(participaciones_socios__in=participaciones)
+            | Q(campus__participaciones_socios__in=participaciones)
+        ).distinct().order_by("nombre"),
+        "anios": sorted(_anios_con_datos(), reverse=True),
+        "carreras": Carrera.objects.filter(participaciones_socios__in=participaciones).distinct().order_by("nombre"),
+        "comunas": Comuna.objects.filter(socios__participaciones__in=participaciones).distinct().order_by("nombre"),
+    }
 
 
 def _url(filtros, quitar=None):
@@ -246,6 +272,10 @@ def _valores(filtros, periodo=None, anio=None):
         "socios": participaciones.values("socio").distinct().count(),
         "participaciones": participaciones.count(),
     }
+
+
+def estudiantes_participantes(filtros):
+    return _valores(filtros)["estudiantes"]
 
 
 def _periodo_anterior(periodo_id):
@@ -476,12 +506,21 @@ def satisfaccion(filtros):
 # Mapa territorial (RF-IND-03): agregado por comuna, sin direcciones
 # ---------------------------------------------------------------------------
 
-def mapa(filtros):
+def mapa(filtros, detalle=False):
+    """
+    Puntos por comuna (centro de la comuna, nunca la dirección), con totales.
+
+    Con detalle=True (solo el mapa del coordinador, que requiere sesión) cada
+    punto incluye además sus socios con dirección exacta y contacto principal;
+    las intervenciones se revisan en el historial del socio. El portal público lo llama sin detalle (RF-IND-03 CA1).
+    """
     participaciones = (
         _participaciones(filtros)
         .filter(socio__comuna__lat_centro__isnull=False, socio__comuna__lon_centro__isnull=False)
         .select_related("socio__comuna", "carrera", "periodo")
     )
+    if detalle:
+        participaciones = participaciones.prefetch_related("socio__contactos")
 
     comunas = {}
     for participacion in participaciones:
@@ -494,6 +533,7 @@ def mapa(filtros):
             "proyectos": set(),
             "carreras": set(),
             "anios": set(),
+            "detalle": {},
         })
         datos["socios"].add(participacion.socio_id)
         if participacion.proyecto_id:
@@ -502,13 +542,15 @@ def mapa(filtros):
             datos["proyectos"].add(f"equipo-{participacion.equipo_id}")
         if participacion.carrera:
             datos["carreras"].add(participacion.carrera.nombre)
-        if participacion.periodo:
-            datos["anios"].add(participacion.periodo.anio)
-        elif participacion.fecha_inicio:
-            datos["anios"].add(participacion.fecha_inicio.year)
+        anio = _anio_participacion(participacion)
+        if anio:
+            datos["anios"].add(anio)
+        if detalle:
+            _agregar_detalle(datos["detalle"], participacion.socio)
 
-    puntos = [
-        {
+    puntos = []
+    for datos in comunas.values():
+        punto = {
             "comuna": datos["comuna"],
             "lat": datos["lat"],
             "lon": datos["lon"],
@@ -517,12 +559,40 @@ def mapa(filtros):
             "carreras": sorted(datos["carreras"]),
             "anios": sorted(datos["anios"]),
         }
-        for datos in comunas.values()
-    ]
+        if detalle:
+            punto["detalle"] = sorted(datos["detalle"].values(), key=lambda s: s["nombre"].lower())
+        puntos.append(punto)
+
     return {
         "puntos": puntos,
         "top_proyectos": sorted(puntos, key=lambda p: -p["proyectos"])[:5],
         "top_socios": sorted(puntos, key=lambda p: -p["socios"])[:5],
+        "total_socios": len({socio for datos in comunas.values() for socio in datos["socios"]}),
+        "total_proyectos": sum(p["proyectos"] for p in puntos),
+    }
+
+
+def _anio_participacion(participacion):
+    if participacion.periodo:
+        return participacion.periodo.anio
+    if participacion.fecha_inicio:
+        return participacion.fecha_inicio.year
+    return None
+
+
+def _agregar_detalle(socios, socio):
+    """Datos del socio para el mapa del coordinador (el detalle está en su historial)."""
+    if socio.id in socios:
+        return
+    contactos = list(socio.contactos.all())
+    contacto = next((c for c in contactos if c.es_principal), contactos[0] if contactos else None)
+    socios[socio.id] = {
+        "nombre": socio.nombre_organizacion,
+        "direccion": socio.direccion_exacta or "",
+        "contacto": contacto.nombre if contacto else "",
+        "telefono": (contacto.telefono or "") if contacto else "",
+        "correo": (contacto.correo or "") if contacto else "",
+        "url": reverse("socios:detalle_historial", args=[socio.id]),
     }
 
 
@@ -539,17 +609,22 @@ EVOLUCION_INDICADORES = [
 ]
 
 
-def evolucion(filtros):
-    """Indicadores por año con los demás filtros (el año y el período no aplican)."""
-    sin_periodo = {**filtros, "periodo": None, "anio": None}
-    anios = sorted(
+def _anios_con_datos():
+    """Años de los períodos más los de participaciones históricas sin período."""
+    return (
         set(PeriodoAcademico.objects.values_list("anio", flat=True))
         | {
             anio for anio in ParticipacionSocio.objects
             .filter(periodo__isnull=True, fecha_inicio__isnull=False)
             .values_list("fecha_inicio__year", flat=True)
         }
-    )[-6:]
+    )
+
+
+def evolucion(filtros):
+    """Indicadores por año con los demás filtros (el año y el período no aplican)."""
+    sin_periodo = {**filtros, "periodo": None, "anio": None}
+    anios = sorted(_anios_con_datos())[-6:]
 
     series = {clave: [] for clave, _ in EVOLUCION_INDICADORES}
     for anio in anios:

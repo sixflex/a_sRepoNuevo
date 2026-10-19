@@ -567,3 +567,21 @@ class PanelIndicadoresTestCase(TestCase):
         self.assertEqual(docentes["pregunta"], 18)
         self.assertIsNone(satisfaccion["anillos"][0]["porcentaje"])
         self.assertEqual(satisfaccion["tabla"][0]["valores"], [None, 4.0, None])
+
+
+class OrdenListadosTests(TestCase):
+    """Los listados de lo que se recibe se pueden ordenar por fecha."""
+
+    def test_ordenar_por_fecha_deja_sin_fecha_al_final(self):
+        from django.utils import timezone
+        from core.ordenamiento import ordenar_por_fecha
+        from socios.models import SocioComunitario
+
+        ahora = timezone.now()
+        datos = {"estado_revision": "APROBADO", "es_provisional": False, "activo": True}
+        antiguo = SocioComunitario.objects.create(nombre_organizacion="A", fecha_creacion=ahora - timezone.timedelta(days=2), **datos)
+        nuevo = SocioComunitario.objects.create(nombre_organizacion="B", fecha_creacion=ahora, **datos)
+        todos = SocioComunitario.objects.all()
+
+        self.assertEqual(list(ordenar_por_fecha(todos, "fecha_creacion", "recientes")), [nuevo, antiguo])
+        self.assertEqual(list(ordenar_por_fecha(todos, "fecha_creacion", "antiguos")), [antiguo, nuevo])

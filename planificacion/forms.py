@@ -194,7 +194,7 @@ class DocenteFilaForm(forms.Form):
         max_length=12,
         required=False,
         widget=forms.TextInput(
-            attrs={"class": "form-control form-control-sm"}
+            attrs={"class": "form-control form-control-sm", "placeholder": "12345678-5"}
         ),
     )
     nombre = forms.CharField(
@@ -223,7 +223,7 @@ class DocenteFilaForm(forms.Form):
     correo = forms.EmailField(
         required=False,
         widget=forms.EmailInput(
-            attrs={"class": "form-control form-control-sm"}
+            attrs={"class": "form-control form-control-sm", "placeholder": "correo@dominio.cl"}
         ),
     )
     telefono = forms.CharField(

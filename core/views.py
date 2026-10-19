@@ -3,6 +3,7 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
+from core.ordenamiento import OPCIONES_ORDEN, orden_pedido, ordenar_por_fecha
 from usuarios.permissions import es_coordinador, es_docente
 from usuarios.decorators import coordinador_required, docente_required
 
@@ -20,7 +21,16 @@ def inicio(request):
             # "Mis secciones" (core:docente) queda como opción del menú.
             return redirect("core:inicio_docente")
 
-    return render(request, "core/inicio.html")
+    # Mapa público (HU-10, RF-PUB-01): solo totales por comuna, sin datos personales.
+    from . import indicadores
+
+    filtros = indicadores.filtros_publicos(request.GET)
+    return render(request, "core/inicio.html", {
+        "filtros": filtros,
+        "opciones": indicadores.opciones_publicas(),
+        "mapa": indicadores.mapa(filtros),
+        "estudiantes": indicadores.estudiantes_participantes(filtros),
+    })
 
 
 @coordinador_required
@@ -67,7 +77,8 @@ def panel_coordinacion(request):
     ]
 
     chips = indicadores.chips(filtros)
-    mapa = indicadores.mapa(filtros)
+    # El mapa del coordinador sí trae dirección, contacto e intervenciones de cada socio.
+    mapa = indicadores.mapa(filtros, detalle=True)
 
     return render(
         request,
@@ -108,14 +119,17 @@ def planificacion_coordinacion(request):
             "filas__docentes",
             "filas__errores",
         )
-        .order_by("-fecha_envio_final", "-id")
     )
+    orden = orden_pedido(request)
+    planificaciones = ordenar_por_fecha(planificaciones, "fecha_envio_final", orden)
 
     return render(
         request,
         "core/planificacion_coordinacion.html",
         {
             "planificaciones": planificaciones,
+            "orden": orden,
+            "opciones_orden": OPCIONES_ORDEN,
         },
     )
 

@@ -19,12 +19,14 @@ from .constantes import (
     estados_siguientes,
     etiqueta,
 )
-from .models import ParticipacionSocio, SocioComunitario
+from .forms import DECISION_SOLO_EQUIPO
+from .models import ContactoSocio, ParticipacionSocio, SocioComunitario
 
 # Responsable y fecha de cada cambio (RF-SC-02 CA2) se registran en
 # AUDITORIA_CAMBIO, como indica el modelo de BD aprobado.
 ENTIDAD_SOCIO = "SocioComunitario"
 ACCION_CAMBIO_ESTADO_SOCIO = "CAMBIO_ESTADO_SOCIO"
+ACCION_EDICION_SOCIO = "EDICION_SOCIO"
 ENTIDAD_POSTULACION = "PostulacionSocio"
 ACCION_REVISION_POSTULACION = "REVISION_POSTULACION"
 ENTIDAD_EQUIPO = "Equipo"
@@ -140,6 +142,64 @@ def cambiar_estado_socio(request, socio, nuevo_estado, es_provisional=None, moti
         enviar_notificacion_rechazo_socio(socio, motivo)
 
     return registro
+
+
+def socios_propuestos_por_equipos():
+    """
+    Socios que un equipo registró al inscribirse (RF-SC-04) y que el
+    coordinador aún no revisa: siguen Recibidos y no vienen de una postulación.
+    """
+    return SocioComunitario.objects.filter(
+        estado_revision="RECIBIDO", postulaciones__isnull=True,
+    )
+
+
+CAMPOS_FICHA_SOCIO = [
+    "nombre_organizacion", "rut", "clasificacion_id", "clasificacion_otra",
+    "comuna_id", "direccion_exacta", "centro_servicio",
+]
+
+
+def revisar_socio_propuesto(request, socio, form):
+    """
+    Guarda los datos corregidos de un socio propuesto por un equipo y, si el
+    coordinador eligió, decide si queda disponible para otros grupos o solo en
+    el historial del equipo (RF-SC-04 CA2, RN-10). La revisión no cambia la
+    asociación con el equipo: el grupo sigue trabajando con él.
+    """
+    # El formulario ya copió los datos nuevos a la instancia: los anteriores se leen de la BD.
+    anteriores = SocioComunitario.objects.values(*CAMPOS_FICHA_SOCIO).get(pk=socio.pk)
+
+    with transaction.atomic():
+        socio = form.save()
+        datos = form.cleaned_data
+        if datos.get("contacto_nombre"):
+            contacto = form.contacto or ContactoSocio(socio=socio, es_principal=True, activo=True)
+            contacto.nombre = datos["contacto_nombre"]
+            contacto.cargo = datos.get("contacto_cargo") or None
+            contacto.correo = datos.get("contacto_correo") or None
+            contacto.telefono = datos.get("contacto_telefono") or None
+            contacto.save()
+
+        nuevos = {campo: getattr(socio, campo) for campo in CAMPOS_FICHA_SOCIO}
+        if nuevos != anteriores:
+            registrar_auditoria(
+                request=request,
+                entidad=ENTIDAD_SOCIO,
+                entidad_id=socio.pk,
+                accion=ACCION_EDICION_SOCIO,
+                valores_anteriores=anteriores,
+                valores_nuevos=nuevos,
+            )
+
+        # La decisión se toma una sola vez; después solo se corrigen datos.
+        decision = datos.get("decision") if socio.estado_revision == "RECIBIDO" else None
+        if decision:
+            cambiar_estado_socio(
+                request, socio, "APROBADO", es_provisional=decision == DECISION_SOLO_EQUIPO,
+            )
+
+    return decision
 
 
 def contexto_academico_equipo(equipo):

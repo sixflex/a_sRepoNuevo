@@ -5,7 +5,8 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="{% static 'css/coordinacion.css' %}?v=2026-10-13">
+<link rel="stylesheet" href="{% static 'css/coordinacion.css' %}?v=2026-10-17">
+<link rel="stylesheet" href="{% static 'css/mapa_territorial.css' %}?v=2026-10-19">
 {% endblock %}
 
 {% block content %}
@@ -178,12 +179,12 @@
         {% endif %}
     </section>
 
-    <!-- 5. Mapa territorial (RF-IND-03): agregado por comuna, sin direcciones -->
+    <!-- 5. Mapa territorial (RF-IND-03): por comuna; el detalle con direcciones solo llega a este panel -->
     <section class="panel-card mb-4" aria-labelledby="mapa-titulo">
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
             <div>
                 <h2 id="mapa-titulo" class="panel-titulo">Mapa territorial</h2>
-                <p class="panel-ayuda mb-0">Proyectos y socios agrupados por comuna, según los filtros de arriba.</p>
+                <p class="panel-ayuda mb-0">Proyectos y socios agrupados por comuna, según los filtros de arriba. Haz clic en una comuna para ver sus socios, con dirección y contacto.</p>
             </div>
             <div class="btn-group" role="group" aria-label="Qué mostrar en el mapa">
                 <button type="button" class="btn btn-sm btn-ua-toggle active" aria-pressed="true" data-mapa-modo="proyectos">Proyectos</button>
@@ -207,6 +208,13 @@
                             <li><span>{{ punto.comuna }}</span><span class="fw-bold">{{ punto.socios }}</span></li>
                         {% endfor %}
                     </ol>
+                    <div class="mapa-detalle d-none" data-mapa-detalle tabindex="-1" aria-live="polite">
+                        <button type="button" class="btn btn-link mapa-volver" data-mapa-volver>
+                            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver al ranking
+                        </button>
+                        <h3 class="h6 fw-bold" data-mapa-detalle-titulo></h3>
+                        <ul class="list-unstyled mb-0" data-mapa-detalle-lista></ul>
+                    </div>
                 </div>
             </div>
             {{ mapa.puntos|json_script:"mapa-puntos" }}
@@ -326,5 +334,6 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="{% static 'js/panel_coordinador.js' %}?v=2026-10-13"></script>
+<script src="{% static 'js/panel_coordinador.js' %}?v=2026-10-17b"></script>
+<script src="{% static 'js/mapa_territorial.js' %}?v=2026-10-19"></script>
 {% endblock %}

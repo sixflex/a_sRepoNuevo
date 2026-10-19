@@ -14,4 +14,5 @@ urlpatterns = [
     path("rutas/", include("rutas.urls")),
     path("cartas/", include("cartas.urls")),
     path("formularios/", include(("encuestas.urls", "encuestas"), namespace="encuestas")),
-]
+    path("historicos/", include(("historicos.urls", "historicos"), namespace="historicos")),
+]
