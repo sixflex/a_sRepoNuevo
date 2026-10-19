@@ -12,6 +12,7 @@
             Revisa las solicitudes realizadas para las secciones A+S.
         </p>
     </div>
+    {% if solicitudes %}{% include "includes/orden_listado.html" with opciones=opciones_orden %}{% endif %}
 </div>
 
     <div class="card shadow-sm">
@@ -125,4 +126,4 @@
 
 </div>
 
-{% endblock %}
+{% endblock %}

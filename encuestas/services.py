@@ -12,9 +12,12 @@ alguno de esos valores. Una regla vacía (None) siempre se cumple.
 """
 
 import copy
+import re
+import unicodedata
 import uuid
 from collections import Counter
 from datetime import datetime, time
+from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -24,7 +27,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from PIL import Image, UnidentifiedImageError
 
-from core.validators import normalizar_rut
+from core.validators import es_rut_valido, normalizar_rut
 
 from . import constantes as c
 from .models import (
@@ -672,12 +675,15 @@ def existe_respuesta_duplicada(version, rut, valor_programa=None):
 
 @transaction.atomic
 def guardar_respuesta(version, preguntas, valores, otros, visibles, seleccion,
-                      enlace=None, usuario=None, archivos_guardar=None):
+                      enlace=None, usuario=None, archivos_guardar=None,
+                      historica=False, fecha_envio=None, contexto=None):
     """
     Guarda una respuesta completa en una sola transacción.
 
     `valores` es {pregunta_id: valor limpio} solo de preguntas visibles,
     `otros` es {pregunta_id: texto de la alternativa Otros}.
+    Las respuestas importadas (historica=True) traen su fecha de envío y su
+    contexto (sede, campus, carrera) desde la carga histórica.
     """
     from archivos.services import guardar_archivo
 
@@ -687,19 +693,21 @@ def guardar_respuesta(version, preguntas, valores, otros, visibles, seleccion,
     if opcion_programa is not None:
         carrera_id = (configuracion_opcion(opcion_programa).get("carrera_id")) or None
 
+    campos_contexto = {**_contexto_desde_enlace(enlace), **(contexto or {})}
+    if "carrera" not in campos_contexto:
+        campos_contexto["carrera_id"] = carrera_id
     respuesta = RespuestaFormulario.objects.create(
         version=version,
         enlace=enlace,
-        carrera_id=carrera_id,
-        fecha_envio=timezone.now(),
-        origen=c.ORIGEN_ENLACE,
-        es_historica=False,
+        fecha_envio=fecha_envio or timezone.now(),
+        origen=c.ORIGEN_HISTORICO if historica else c.ORIGEN_ENLACE,
+        es_historica=historica,
         respondente_tipo=version.contexto_tipo,
         respondente_nombre=datos.get("nombre"),
         respondente_correo=datos.get("correo"),
         respondente_rut=datos.get("rut") or None,
         estado_registro=c.ESTADO_REGISTRO_COMPLETO,
-        **_contexto_desde_enlace(enlace),
+        **campos_contexto,
     )
 
     for pregunta in preguntas:
@@ -742,6 +750,120 @@ def guardar_respuesta(version, preguntas, valores, otros, visibles, seleccion,
     return respuesta
 
 
+# ---------------------------------------------------------------------------
+# Filas exportadas desde Google o Microsoft Forms (carga histórica, datos demo)
+# ---------------------------------------------------------------------------
+
+def normalizar_encabezado(texto):
+    """
+    Encabezado comparable: sin tildes, mayúsculas, numeración inicial ("12.")
+    ni signos, para reconocer la misma pregunta aunque se exporte distinto.
+    """
+    texto = unicodedata.normalize("NFKD", str(texto or "")).encode("ascii", "ignore").decode()
+    texto = re.sub(r"^\s*\d+\s*[.)-]\s*", "", texto.lower())
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", texto).split())
+
+
+def encabezado_exportacion(pregunta):
+    """Encabezado de la columna, como lo exporta Google Forms (cuadrículas: «enunciado [fila]»)."""
+    conf = configuracion(pregunta)
+    if conf.get("cuadricula") and conf.get("enunciado"):
+        return f"{conf['enunciado']} [{pregunta.texto}]"
+    return pregunta.texto
+
+
+def columnas_por_pregunta(preguntas, encabezados):
+    """{pregunta_id: encabezado del archivo} de las preguntas que tienen columna."""
+    por_normalizado = {}
+    for encabezado in encabezados:
+        por_normalizado.setdefault(normalizar_encabezado(encabezado), encabezado)
+    columnas = {}
+    for pregunta in preguntas:
+        encabezado = por_normalizado.get(normalizar_encabezado(encabezado_exportacion(pregunta)))
+        if encabezado is not None:
+            columnas[pregunta.id] = encabezado
+    return columnas
+
+
+def _fecha_celda(celda):
+    if isinstance(celda, datetime):
+        return celda.date()
+    if hasattr(celda, "year"):
+        return celda
+    for formato in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y"):
+        try:
+            return datetime.strptime(str(celda).strip()[:10], formato).date()
+        except ValueError:
+            continue
+    return None
+
+
+def valores_desde_celdas(preguntas, celdas):
+    """
+    Convierte las celdas de una fila exportada ({pregunta_id: celda}) en lo
+    que recibe guardar_respuesta. Devuelve (valores, otros, seleccion, avisos);
+    cada aviso es (pregunta, código, mensaje) y el valor que lo causa se omite.
+    """
+    valores, otros, seleccion, avisos = {}, {}, {}, []
+    for pregunta in preguntas:
+        celda = celdas.get(pregunta.id)
+        if celda is None or str(celda).strip() == "":
+            continue
+        texto = str(celda).strip()
+        tipo = pregunta.tipo
+
+        if tipo in c.TIPOS_CON_OPCIONES:
+            opciones = list(pregunta.opciones.all())
+            por_texto = {normalizar_encabezado(o.texto): o.valor for o in opciones}
+            otras = next((o for o in opciones if o.es_otras), None)
+            elegidos, sueltos = [], []
+            partes = texto.split(";") if tipo == c.SELECCION_MULTIPLE else [texto]
+            for parte in (p.strip() for p in partes):
+                valor = por_texto.get(normalizar_encabezado(parte))
+                if valor:
+                    elegidos.append(valor)
+                elif parte:
+                    sueltos.append(parte)
+            if sueltos and otras is not None:
+                elegidos.append(otras.valor)
+                otros[pregunta.id] = "; ".join(sueltos)
+            elif sueltos:
+                avisos.append((pregunta, "OPCION_NO_RECONOCIDA", f"«{'; '.join(sueltos)}» no es una opción de la pregunta"))
+            if elegidos:
+                valores[pregunta.id] = elegidos if tipo == c.SELECCION_MULTIPLE else elegidos[0]
+                seleccion[pregunta.id] = set(elegidos)
+        elif tipo in (c.ESCALA, c.NUMERO):
+            try:
+                numero = Decimal(texto.replace(",", "."))
+            except InvalidOperation:
+                avisos.append((pregunta, "NUMERO_INVALIDO", f"«{texto}» no es un número"))
+                continue
+            if tipo == c.ESCALA:
+                conf = configuracion(pregunta)
+                minimo = conf.get("minimo", c.ESCALA_MINIMO_DEFECTO)
+                maximo = conf.get("maximo", c.ESCALA_MAXIMO_DEFECTO)
+                if not minimo <= numero <= maximo:
+                    avisos.append((pregunta, "FUERA_DE_ESCALA", f"{texto} está fuera de la escala {minimo} a {maximo}"))
+                    continue
+            valores[pregunta.id] = numero
+        elif tipo == c.RUT:
+            if not es_rut_valido(texto):
+                avisos.append((pregunta, "RUT_INVALIDO", f"«{texto}» no es un RUT válido"))
+                continue
+            valores[pregunta.id] = normalizar_rut(texto)
+        elif tipo == c.FECHA:
+            fecha = _fecha_celda(celda)
+            if fecha is None:
+                avisos.append((pregunta, "FECHA_INVALIDA", f"«{texto}» no es una fecha"))
+                continue
+            valores[pregunta.id] = fecha
+        elif tipo == c.ARCHIVO:
+            continue
+        else:
+            valores[pregunta.id] = texto
+    return valores, otros, seleccion, avisos
+
+
 def configuracion_opcion(opcion):
     """Datos extra de una opción del selector (ej. la carrera asociada)."""
     config = configuracion(opcion.pregunta).get("opciones") or {}
@@ -769,7 +891,7 @@ def _texto_detalle(detalle):
 
 
 def _detalles(queryset):
-    return queryset.select_related("pregunta").prefetch_related(
+    return queryset.select_related("pregunta__bloque").prefetch_related(
         "opciones_seleccionadas__opcion", "archivos__archivo",
     )
 

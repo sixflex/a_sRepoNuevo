@@ -7,11 +7,14 @@ Planificaciones recibidas | Portal A+S
 {% block content %}
 
 <div class="container-fluid">
-    <div class="mb-4">
-        <h1 class="h3 fw-bold">Planificaciones recibidas</h1>
-        <p class="text-muted">
-            Formularios enviados mediante enlaces individuales de planificación A+S.
-        </p>
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold">Planificaciones recibidas</h1>
+            <p class="text-muted mb-0">
+                Formularios enviados mediante enlaces individuales de planificación A+S.
+            </p>
+        </div>
+        {% if planificaciones %}{% include "includes/orden_listado.html" with opciones=opciones_orden %}{% endif %}
     </div>
 
     <div class="card shadow-sm border-0">
@@ -28,7 +31,7 @@ Planificaciones recibidas | Portal A+S
                                 <th>Destinatario</th>
                                 <th>Filas</th>
                                 <th>Estado</th>
-                                <th>Fecha envío final</th>
+                                <th>Recibida el</th>
                                 <th>Acción</th>
                             </tr>
                         </thead>
@@ -68,9 +71,9 @@ Planificaciones recibidas | Portal A+S
 
                                     <td>
                                         {% if planificacion.estado == "FINAL" %}
-                                            <span class="badge bg-success">Enviada</span>
+                                            <span class="badge bg-success">Recibida</span>
                                         {% else %}
-                                            <span class="badge bg-secondary">Borrador</span>
+                                            <span class="badge bg-secondary" title="La Dirección aún no envía la versión final">En edición</span>
                                         {% endif %}
                                     </td>
 

@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% load static core_extras %}
+
+{% block title %}Postulación #{{ postulacion.id }} | Portal A+S{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
+
+<a href="{% url 'socios:lista_postulaciones' %}" class="enlace-volver">
+    <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Postulaciones
+</a>
+
+<div class="d-flex flex-wrap justify-content-between align-items-start mb-4 gap-3">
+    <div>
+        <h1 class="page-title mb-1">{{ postulacion.socio|default:"Postulación sin socio asociado" }}</h1>
+        <p class="page-subtitle mb-0">
+            {{ postulacion.convocatoria }} · recibida el {{ postulacion.fecha_recepcion|date:"d/m/Y \a \l\a\s H:i" }}
+        </p>
+    </div>
+    <span class="badge-estado badge-estado-lg estado-{{ postulacion.estado }}">{{ postulacion.estado|estado_legible }}</span>
+</div>
+
+<div class="row g-4 align-items-start">
+    <!-- FICHA ENVIADA, POR SECCIÓN -->
+    <div class="col-lg-8 order-2 order-lg-1">
+        {% for seccion in secciones %}
+            <section class="card-ua mb-4" aria-labelledby="seccion-{{ forloop.counter }}">
+                <div class="card-header-ua">
+                    <span id="seccion-{{ forloop.counter }}">{{ seccion.bloque.titulo }}</span>
+                </div>
+                <dl class="ficha-respuestas mb-0">
+                    {% for pregunta, texto in seccion.respuestas %}
+                        <div class="ficha-respuesta">
+                            <dt>{{ pregunta.texto }}</dt>
+                            <dd>{% if texto %}{{ texto }}{% else %}<span class="text-muted">Sin respuesta</span>{% endif %}</dd>
+                        </div>
+                    {% endfor %}
+                </dl>
+            </section>
+        {% empty %}
+            <div class="card-ua">
+                <div class="empty-state">
+                    <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                    <p class="mt-2 mb-0 fw-semibold">Esta postulación no tiene respuestas registradas</p>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- RESUMEN Y DECISIÓN -->
+    <aside class="col-lg-4 order-1 order-lg-2">
+        <div class="panel-revision">
+            {% if postulacion.estado == "RECIBIDA" %}
+                <form method="post" action="{% url 'socios:revisar_postulacion' postulacion.id %}" class="card-ua p-3 p-md-4 mb-4" id="formDecision">
+                    {% csrf_token %}
+                    <h2 class="panel-titulo">Decisión</h2>
+                    <p class="small text-muted">Al guardar se avisa al socio por correo.</p>
+                    <div class="opciones-decision" role="radiogroup" aria-label="Decisión">
+                        <input type="radio" class="btn-check" name="estado" id="decisionAprobar" value="APROBADA" required>
+                        <label class="opcion-decision opcion-aprobar" for="decisionAprobar">
+                            <i class="bi bi-check-circle" aria-hidden="true"></i>Aprobar
+                        </label>
+                        <input type="radio" class="btn-check" name="estado" id="decisionRechazar" value="RECHAZADA">
+                        <label class="opcion-decision opcion-rechazar" for="decisionRechazar">
+                            <i class="bi bi-x-circle" aria-hidden="true"></i>Rechazar
+                        </label>
+                    </div>
+                    <div class="motivo-rechazo" data-motivo hidden>
+                        <label for="motivo" class="form-label-ua mt-3">Motivo de rechazo</label>
+                        <textarea id="motivo" name="motivo_rechazo" class="form-control" rows="3"
+                                  placeholder="Se incluye en el correo al socio"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-ua w-100 mt-3" disabled data-guardar>Guardar decisión</button>
+                </form>
+            {% else %}
+                <div class="card-ua p-3 p-md-4 mb-4">
+                    <h2 class="panel-titulo">Decisión</h2>
+                    <p class="mb-1">
+                        <span class="badge-estado estado-{{ postulacion.estado }}">{{ postulacion.estado|estado_legible }}</span>
+                    </p>
+                    <p class="small text-muted mb-0">
+                        {% if postulacion.revisado_por_usuario %}Por {{ postulacion.revisado_por_usuario.get_full_name|default:postulacion.revisado_por_usuario.username }}{% endif %}
+                        {% if postulacion.fecha_revision %} el {{ postulacion.fecha_revision|date:"d/m/Y H:i" }}{% endif %}
+                    </p>
+                    {% if postulacion.motivo_rechazo %}
+                        <p class="small mt-2 mb-0"><span class="fw-semibold">Motivo:</span> {{ postulacion.motivo_rechazo }}</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if postulacion.socio %}
+                {# Los datos del socio ya están en la ficha; aquí solo el acceso a su historial. #}
+                <a href="{% url 'socios:detalle_historial' postulacion.socio.id %}" class="btn btn-light-ua w-100">
+                    <i class="bi bi-clock-history me-1" aria-hidden="true"></i>Ver ficha e historial del socio
+                </a>
+            {% endif %}
+        </div>
+    </aside>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // El motivo aparece y se vuelve obligatorio solo al rechazar.
+    (function () {
+        const formulario = document.getElementById("formDecision");
+        if (!formulario) {
+            return;
+        }
+        const motivo = formulario.querySelector("[data-motivo]");
+        const area = motivo.querySelector("textarea");
+        const guardar = formulario.querySelector("[data-guardar]");
+        formulario.querySelectorAll('input[name="estado"]').forEach(function (opcion) {
+            opcion.addEventListener("change", function () {
+                const rechaza = opcion.value === "RECHAZADA";
+                motivo.hidden = !rechaza;
+                area.required = rechaza;
+                guardar.disabled = false;
+                guardar.textContent = rechaza ? "Rechazar postulación" : "Aprobar postulación";
+                if (rechaza) {
+                    area.focus();
+                }
+            });
+        });
+    })();
+</script>
+{% endblock %}

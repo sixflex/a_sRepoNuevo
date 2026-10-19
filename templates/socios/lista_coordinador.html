@@ -129,6 +129,9 @@
 
     /* Badges de estado */
     .badge-estado {
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
         font-size: 0.72rem;
         font-weight: 600;
         padding: 5px 10px;
@@ -143,7 +146,23 @@
     .estado-ASIGNADO { background-color: #FEF3C7; color: #92400E; }
     .estado-TRABAJO_TERMINADO { background-color: #F3F4F6; color: #374151; }
 
+    .badge-historial {
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
+        background-color: #F3F4F6;
+        color: #4B5563;
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 5px 10px;
+        border-radius: 999px;
+        cursor: help;
+    }
+
     .badge-provisional {
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
         background-color: #FEF3C7;
         color: #92400E;
         font-size: 0.72rem;
@@ -218,6 +237,7 @@
     </div>
     <div class="p-3 p-md-4">
         <form method="get" action="{% url 'socios:lista_coordinador' %}">
+            {% if orden and orden != "nombre" %}<input type="hidden" name="orden" value="{{ orden }}">{% endif %}
             <div class="row g-3">
                 <!-- Búsqueda textual -->
                 <div class="col-12 col-lg-6">
@@ -325,7 +345,7 @@
                     <select id="vista" name="vista" class="form-select">
                         <option value="">Todos</option>
                         <option value="disponibles" {% if filtros.vista == "disponibles" %}selected{% endif %}>Disponibles para docentes</option>
-                        <option value="historial" {% if filtros.vista == "historial" %}selected{% endif %}>Solo historial</option>
+                        <option value="historial" {% if filtros.vista == "historial" %}selected{% endif %}>No visibles para docentes</option>
                     </select>
                 </div>
 
@@ -347,6 +367,7 @@
 <div class="card-ua">
     <div class="card-header-ua">
         <span><i class="bi bi-people me-2" style="color: var(--ua-red);"></i>Listado de socios</span>
+        {% if socios %}{% include "includes/orden_listado.html" with opciones=opciones_orden %}{% endif %}
     </div>
 
     {% if socios %}
@@ -377,18 +398,22 @@
                                 </span>
                             </td>
                             <td>
-                                {% if socio.es_provisional %}
-                                    <span class="badge-provisional"><i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>Provisional</span>
-                                {% else %}
-                                    <span class="text-muted small">Definitivo</span>
-                                {% endif %}
-                                {% if not socio.activo or socio.estado_revision == "TRABAJO_TERMINADO" %}
-                                    <div class="mt-1"><span class="badge-estado"><i class="bi bi-archive me-1" aria-hidden="true"></i>Solo historial</span></div>
-                                {% endif %}
+                                <div class="d-flex flex-wrap align-items-center gap-1">
+                                    {% if socio.es_provisional %}
+                                        <span class="badge-provisional"><i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>Provisional</span>
+                                    {% else %}
+                                        <span class="text-muted small">Definitivo</span>
+                                    {% endif %}
+                                    {% if not socio.activo or socio.estado_revision == "TRABAJO_TERMINADO" %}
+                                        <span class="badge-historial" title="Ya no se ofrece a los docentes; se conserva por su historial.">
+                                            <i class="bi bi-eye-slash me-1" aria-hidden="true"></i>No visible para docentes
+                                        </span>
+                                    {% endif %}
+                                </div>
                             </td>
                             <td class="text-end text-nowrap">
                                 <a href="{% url 'socios:detalle_historial' socio.id %}" class="btn-accion text-decoration-none" title="Ver ficha e historial">
-                                    <i class="bi bi-eye me-1" aria-hidden="true"></i>Historial
+                                    <i class="bi bi-eye me-1" aria-hidden="true"></i>Ver ficha
                                 </a>
                                 <button type="button" class="btn-accion ms-1" data-bs-toggle="modal"
                                         data-bs-target="#modalEstado{{ socio.id }}" title="Cambiar estado">
@@ -428,14 +453,6 @@
                         <span class="socio-rut">{{ socio.rut|default:"Sin RUT" }}</span>
                     </p>
 
-                    {% if socio.tiene_postulacion_pendiente %}
-                        <div class="alert alert-warning small mb-0" role="alert">
-                            <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
-                            Este socio tiene una postulación pendiente. Apruébela o recházela en
-                            <a href="{% url 'socios:lista_postulaciones' %}">Postulaciones</a>;
-                            esa revisión actualiza su estado.
-                        </div>
-                    {% else %}
                     <label for="estado_revision_{{ socio.id }}" class="form-label-ua">Estado de revisión</label>
                     <select id="estado_revision_{{ socio.id }}" name="estado_revision" class="form-select mb-3 select-estado-socio"
                             data-motivo="motivo_socio_wrap_{{ socio.id }}" data-actual="{{ socio.estado_revision }}">
@@ -457,15 +474,12 @@
                             Mantener como socio provisional
                         </label>
                     </div>
-                    {% endif %}
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light-ua" data-bs-dismiss="modal">Cancelar</button>
-                    {% if not socio.tiene_postulacion_pendiente %}
                     <button type="submit" class="btn btn-ua">
                         <i class="bi bi-check2 me-1" aria-hidden="true"></i>Guardar cambios
                     </button>
-                    {% endif %}
                 </div>
             </form>
         </div>

@@ -88,6 +88,8 @@ PREGUNTA_NUEVA = "Pregunta sin título"
 OPCION_NUEVA = "Opción 1"
 
 ORIGEN_ENLACE = "ENLACE"
+# Respuestas importadas desde exportaciones de Forms (RF-MIG-01).
+ORIGEN_HISTORICO = "HISTORICO"
 ESTADO_REGISTRO_COMPLETO = "COMPLETO"
 
 # Temas del formulario público (como en Google o Microsoft Forms). Cada color

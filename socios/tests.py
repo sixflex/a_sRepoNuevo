@@ -11,6 +11,7 @@ from comunicaciones.models import EnvioCorreo
 from socios.services import historial_estados_socio
 from encuestas.models import FormularioPlantilla, FormularioVersion, RespuestaFormulario
 from socios.models import Convocatoria, PostulacionSocio, SocioComunitario
+from socios import views as socios_views
 from socios.validators import validar_rut_chileno
 
 from .models import (
@@ -64,10 +65,12 @@ class DatosBase(TestCase):
             clasificacion=cls.clasif_fundacion, comuna=cls.comuna_a,
             estado_revision="APROBADO",
         )
+        # Propuesto por un equipo y aprobado solo para el historial de ese
+        # equipo: sigue provisional. Los Recibidos se revisan en Postulaciones.
         cls.norte = crear_socio(
             "Junta Norte", rut="65.987.654-3",
             clasificacion=cls.clasif_junta, comuna=cls.comuna_b,
-            estado_revision="RECIBIDO", es_provisional=True,
+            estado_revision="APROBADO", es_provisional=True,
         )
         cls.rechazado = crear_socio(
             "Club Rechazado", rut="70.111.222-3", estado_revision="RECHAZADO",
@@ -150,12 +153,12 @@ class FiltrosCombinadosTests(DatosBase):
 
     def test_filtros_combinados(self):
         resp = self.client.get(
-            self.url, {"estado": "RECIBIDO", "provisional": "1", "comuna": self.comuna_b.id}
+            self.url, {"estado": "APROBADO", "provisional": "1", "comuna": self.comuna_b.id}
         )
         self.assertEqual(nombres(resp), {"Junta Norte"})
 
     def test_filtros_combinados_sin_coincidencia(self):
-        resp = self.client.get(self.url, {"estado": "APROBADO", "provisional": "1"})
+        resp = self.client.get(self.url, {"estado": "DISPONIBLE", "provisional": "1"})
         self.assertEqual(nombres(resp), set())
 
     def test_vista_disponibles(self):
@@ -195,6 +198,10 @@ class CambioEstadoTests(DatosBase):
 
     def setUp(self):
         self.client.force_login(self.coordinador)
+        # Socio propuesto por un equipo que aún no se revisa.
+        self.norte = crear_socio(
+            "Junta Sur Propuesta", rut="66.111.222-4", estado_revision="RECIBIDO", es_provisional=True,
+        )
 
     def url_cambio(self, socio):
         return reverse("socios:cambiar_estado", args=[socio.id])
@@ -249,9 +256,10 @@ class CambioEstadoTests(DatosBase):
         resp = self.client.get(reverse("socios:lista_coordinador"))
         socios = {socio.nombre_organizacion: socio for socio in resp.context["socios"]}
 
+        self.assertNotIn("Junta Sur Propuesta", socios)
         self.assertEqual(
-            [valor for valor, _ in socios["Junta Norte"].estados_siguientes],
-            ["RECIBIDO", "APROBADO", "RECHAZADO"],
+            [valor for valor, _ in socios["Club Rechazado"].estados_siguientes],
+            ["APROBADO", "RECHAZADO"],
         )
         self.assertIn("ASIGNADO", dict(socios["Centro Disponible"].estados_siguientes))
 
@@ -562,6 +570,67 @@ class SincronizacionEstadosTests(TestCase):
         self.assertEqual(socio.estado_revision, "RECIBIDO")
         self.assertContains(response, f"postulación pendiente (folio #{postulacion.id})")
         self.assertFalse(historial_estados_socio(socio).exists())
+
+    def test_catalogo_no_muestra_postulantes_sin_aceptar(self):
+        pendiente = crear_socio("Junta Pendiente", rut="11111111-1", estado_revision="RECIBIDO")
+        self.crear_postulacion(pendiente)
+        rechazado = crear_socio("Club Postulante", rut="22222222-2", estado_revision="RECHAZADO")
+        self.crear_postulacion(rechazado, estado="RECHAZADA")
+        aprobado = crear_socio("Centro Aprobado", rut="33333333-3", estado_revision="APROBADO")
+        self.crear_postulacion(aprobado, estado="APROBADA")
+        provisional = crear_socio("Grupo del Equipo", estado_revision="RECIBIDO", es_provisional=True)
+
+        response = self.client.get(reverse("socios:lista_coordinador"))
+
+        listados = {socio.nombre_organizacion for socio in response.context["socios"]}
+        self.assertIn(aprobado.nombre_organizacion, listados)
+        self.assertNotIn(provisional.nombre_organizacion, listados)
+        self.assertNotIn(pendiente.nombre_organizacion, listados)
+        self.assertNotIn(rechazado.nombre_organizacion, listados)
+
+        # El propuesto por un equipo se revisa en su pestaña de Postulaciones.
+        propuestos = self.client.get(reverse("socios:lista_postulaciones"), {"origen": "equipos"})
+        self.assertEqual([s.nombre_organizacion for s in propuestos.context["propuestos"]], ["Grupo del Equipo"])
+
+    def test_revisar_socio_propuesto_corrige_datos_y_decide(self):
+        socio = crear_socio("grupo vecinal", estado_revision="RECIBIDO", es_provisional=True)
+        url = reverse("socios:revisar_socio_propuesto", args=[socio.id])
+        self.assertEqual(self.client.get(url).status_code, 200)
+
+        # Guardar sin decidir solo corrige los datos.
+        self.client.post(url, {"nombre_organizacion": "Grupo Vecinal Sur", "rut": "",
+                               "contacto_nombre": "Ana Soto", "contacto_correo": "ana@grupo.cl"})
+        socio.refresh_from_db()
+        self.assertEqual(socio.nombre_organizacion, "Grupo Vecinal Sur")
+        self.assertEqual(socio.estado_revision, "RECIBIDO")
+        self.assertEqual(socio.contactos.get().correo, "ana@grupo.cl")
+        self.assertTrue(AuditoriaCambio.objects.filter(entidad="SocioComunitario", accion="EDICION_SOCIO").exists())
+
+        self.client.post(url, {"nombre_organizacion": "Grupo Vecinal Sur", "contacto_nombre": "Ana Soto",
+                               "decision": "habilitar"})
+        socio.refresh_from_db()
+        self.assertEqual(socio.estado_revision, "APROBADO")
+        self.assertFalse(socio.es_provisional)
+        self.assertEqual(socio.contactos.count(), 1)
+
+    def test_socio_propuesto_solo_en_historial_del_equipo(self):
+        socio = crear_socio("Club Barrio", estado_revision="RECIBIDO", es_provisional=True)
+        self.client.post(reverse("socios:revisar_socio_propuesto", args=[socio.id]),
+                         {"nombre_organizacion": "Club Barrio", "decision": "solo_equipo"})
+        socio.refresh_from_db()
+        self.assertEqual(socio.estado_revision, "APROBADO")
+        self.assertTrue(socio.es_provisional)
+        self.assertNotIn(socio, list(socios_views.socios_disponibles()))
+
+    def test_filtro_de_comuna_solo_trae_comunas_con_socios(self):
+        con_socio = Comuna.objects.create(nombre="Lo Prado", region="Metropolitana", activo=True)
+        sin_socio = Comuna.objects.create(nombre="Lo Espejo", region="Metropolitana", activo=True)
+        crear_socio("Junta Lo Prado", rut="44444444-4", estado_revision="APROBADO", comuna=con_socio)
+
+        response = self.client.get(reverse("socios:lista_coordinador"))
+
+        self.assertIn(con_socio, response.context["comunas"])
+        self.assertNotIn(sin_socio, response.context["comunas"])
 
     def test_rechazo_desde_catalogo_exige_motivo_y_envia_correo(self):
         socio = crear_socio("Grupo Provisional", estado_revision="RECIBIDO", es_provisional=True)

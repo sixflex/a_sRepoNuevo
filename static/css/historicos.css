@@ -1,0 +1,127 @@
+/* Importar históricos (RF-MIG-01). Usa las clases base de socios.css. */
+
+.zona-carga {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 150px;
+    padding: 20px;
+    border: 2px dashed var(--ua-border-strong, #D1D5DB);
+    border-radius: 10px;
+    background: var(--ua-bg-page, #F9FAFB);
+    color: var(--ua-text-secondary);
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}
+.zona-carga:hover,
+.zona-carga:focus-within {
+    border-color: var(--ua-red);
+    background: var(--ua-red-soft);
+}
+.zona-carga.arrastrando {
+    border-color: var(--ua-red);
+    background: var(--ua-red-soft);
+    transform: scale(1.01);
+}
+.zona-carga.con-archivo {
+    border-style: solid;
+    border-color: var(--ua-success, #15803D);
+    background: var(--ua-success-soft, #F0FDF4);
+}
+.zona-carga-icono {
+    font-size: 2rem;
+    color: var(--ua-red);
+}
+.zona-carga.con-archivo .zona-carga-icono {
+    color: var(--ua-success, #15803D);
+}
+.zona-carga-ayuda {
+    font-size: 0.8rem;
+    color: var(--ua-text-muted);
+}
+
+/* Estados de la carga y de cada fila */
+.carga-PREVIA, .fila-OBSERVADA { background-color: var(--ua-warning-soft); color: var(--ua-warning); }
+.carga-CONFIRMADA { background-color: var(--ua-success-soft); color: var(--ua-success); }
+.carga-CANCELADA, .fila-OMITIDA { background-color: var(--ua-bg-subtle); color: var(--ua-text-secondary); }
+
+/* Totales de la vista previa */
+.resumen-carga {
+    display: flex;
+    flex-direction: column;
+    padding: 16px 20px;
+    border-left: 4px solid var(--ua-border-strong, #D1D5DB);
+}
+.resumen-aceptada { border-left-color: var(--ua-success, #15803D); }
+.resumen-observada { border-left-color: var(--ua-warning, #B45309); }
+.resumen-omitida { border-left-color: var(--ua-text-muted); }
+.resumen-numero {
+    font-family: 'Montserrat', 'Inter', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--ua-text-dark);
+    font-variant-numeric: tabular-nums;
+}
+.resumen-etiqueta {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ua-text-secondary);
+}
+.resumen-ayuda {
+    display: block;
+    font-weight: 400;
+    font-size: 0.75rem;
+    color: var(--ua-text-muted);
+}
+
+.confirmar-carga {
+    border-color: var(--ua-red);
+    animation: aparece 0.25s ease-out;
+}
+
+.lista-mapeo li,
+.lista-muestra li {
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--ua-border);
+    font-size: 0.88rem;
+    overflow-wrap: anywhere;
+}
+.lista-mapeo li:last-child,
+.lista-muestra li:last-child {
+    border-bottom: none;
+}
+.mapeo-origen {
+    display: block;
+    color: var(--ua-text-dark);
+}
+.mapeo-destino {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--ua-text-muted);
+}
+.chip-columna {
+    padding: 2px 8px;
+    border: 1px solid var(--ua-border);
+    border-radius: 999px;
+    font-size: 0.75rem;
+    color: var(--ua-text-secondary);
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+.causas-fila li {
+    font-size: 0.85rem;
+}
+.causas-fila li + li {
+    margin-top: 2px;
+}
+
+@keyframes aparece {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .zona-carga, .confirmar-carga { transition: none; animation: none; }
+}

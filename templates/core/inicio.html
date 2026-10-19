@@ -9,6 +9,8 @@
 {% block layout_completo %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="{% static 'css/mapa_territorial.css' %}?v=2026-10-19">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
 
 <style>
@@ -380,42 +382,81 @@
 <section id="proyectos" class="container pb-5">
     <div class="mb-3">
         <h3 class="fw-bold mb-1" style="font-size: 1.4rem;">Nuestro Impacto Territorial</h3>
-        <p class="text-muted small mb-0">Visualiza los proyectos activos de Vinculación con el Medio y A+S en las distintas comunas</p>
+        <p class="text-muted small mb-0">Socios comunitarios y proyectos A+S agrupados por comuna. Solo se muestran totales: el mapa no expone direcciones ni datos personales.</p>
     </div>
 
-    <div class="mockup-card overflow-hidden mb-3 position-relative" style="height: 380px; background: #e6edf2;">
-        <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1600&auto=format&fit=crop" 
-             alt="Mapa Territorial Santiago" 
-             style="width: 100%; height: 100%; object-fit: cover; opacity: 0.55; filter: contrast(1.15);">
-        
-        <div style="position: absolute; top: 40%; left: 45%; width: 140px; height: 140px; background: radial-gradient(circle, rgba(200,35,44,0.65) 0%, rgba(245,158,11,0.4) 50%, rgba(255,255,255,0) 75%); border-radius: 50%;"></div>
-        <div style="position: absolute; top: 32%; left: 55%; width: 180px; height: 180px; background: radial-gradient(circle, rgba(245,158,11,0.7) 0%, rgba(239,68,68,0.4) 45%, rgba(255,255,255,0) 75%); border-radius: 50%;"></div>
-        <div style="position: absolute; top: 50%; left: 48%; width: 90px; height: 90px; background: radial-gradient(circle, rgba(200,35,44,0.8) 0%, rgba(255,255,255,0) 70%); border-radius: 50%;"></div>
-
-        <div class="position-absolute bottom-0 start-0 m-3 px-3 py-2 bg-white rounded-2 shadow-sm border small fw-semibold text-secondary">
-            <i class="bi bi-geo-alt-fill text-danger me-1"></i> Sede Santiago · Providencia / El Llano Subercaseaux
+    {# Filtros públicos (RF-PUB-01): sede, año, carrera y comuna #}
+    <form method="get" action="{% url 'core:inicio' %}#proyectos" class="row g-2 align-items-end mb-3" aria-label="Filtros del mapa">
+        <div class="col-6 col-md-3">
+            <label for="filtro-sede" class="form-label small fw-semibold mb-1">Sede</label>
+            <select id="filtro-sede" name="sede" class="form-select form-select-sm">
+                <option value="">Todas</option>
+                {% for sede in opciones.sedes %}<option value="{{ sede.id }}" {% if filtros.sede == sede.id %}selected{% endif %}>{{ sede.nombre }}</option>{% endfor %}
+            </select>
         </div>
+        <div class="col-6 col-md-2">
+            <label for="filtro-anio" class="form-label small fw-semibold mb-1">Año</label>
+            <select id="filtro-anio" name="anio" class="form-select form-select-sm">
+                <option value="">Todos</option>
+                {% for anio in opciones.anios %}<option value="{{ anio }}" {% if filtros.anio == anio %}selected{% endif %}>{{ anio }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-6 col-md-3">
+            <label for="filtro-carrera" class="form-label small fw-semibold mb-1">Carrera</label>
+            <select id="filtro-carrera" name="carrera" class="form-select form-select-sm">
+                <option value="">Todas</option>
+                {% for carrera in opciones.carreras %}<option value="{{ carrera.id }}" {% if filtros.carrera == carrera.id %}selected{% endif %}>{{ carrera.nombre }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-6 col-md-2">
+            <label for="filtro-comuna" class="form-label small fw-semibold mb-1">Comuna</label>
+            <select id="filtro-comuna" name="comuna" class="form-select form-select-sm">
+                <option value="">Todas</option>
+                {% for comuna in opciones.comunas %}<option value="{{ comuna.id }}" {% if filtros.comuna == comuna.id %}selected{% endif %}>{{ comuna.nombre }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-12 col-md-2 d-flex gap-2">
+            <button type="submit" class="btn btn-sm btn-danger flex-grow-1" style="background: var(--ua-red); border-color: var(--ua-red);">Filtrar</button>
+            {% if filtros.sede or filtros.anio or filtros.carrera or filtros.comuna %}
+                <a href="{% url 'core:inicio' %}#proyectos" class="btn btn-sm btn-outline-secondary">Limpiar</a>
+            {% endif %}
+        </div>
+    </form>
+
+    <div class="mockup-card overflow-hidden mb-3 p-2">
+        {% if mapa.puntos %}
+            <div class="d-flex justify-content-end mb-2">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Qué mostrar en el mapa">
+                    <button type="button" class="btn btn-outline-secondary active" aria-pressed="true" data-mapa-modo="proyectos">Proyectos</button>
+                    <button type="button" class="btn btn-outline-secondary" aria-pressed="false" data-mapa-modo="socios">Socios comunitarios</button>
+                </div>
+            </div>
+            <div id="mapaTerritorial" class="mapa-territorial" role="region" aria-label="Mapa de comunas con socios y proyectos A+S"></div>
+            {{ mapa.puntos|json_script:"mapa-puntos" }}
+        {% else %}
+            <p class="text-muted text-center my-5">Aún no hay datos territoriales para estos filtros.</p>
+        {% endif %}
     </div>
 
     <div class="row g-3">
         <div class="col-12 col-md-4">
             <div class="mockup-card p-3 text-center">
                 <div class="metric-bubble"><i class="bi bi-mortarboard-fill"></i></div>
-                <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">1,250+</div>
+                <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">{{ estudiantes }}</div>
                 <div class="text-muted small">Estudiantes Participantes</div>
             </div>
         </div>
         <div class="col-12 col-md-4">
             <div class="mockup-card p-3 text-center">
                 <div class="metric-bubble"><i class="bi bi-geo-alt-fill"></i></div>
-                <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">85</div>
+                <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">{{ mapa.puntos|length }}</div>
                 <div class="text-muted small">Comunas Alcanzadas</div>
             </div>
         </div>
         <div class="col-12 col-md-4">
             <div class="mockup-card p-3 text-center">
                 <div class="metric-bubble"><i class="bi bi-layers-fill"></i></div>
-                <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">320</div>
+                <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">{{ mapa.total_proyectos }}</div>
                 <div class="text-muted small">Proyectos Ejecutados</div>
             </div>
         </div>
@@ -640,4 +681,6 @@
         </div>
     </div>
 </footer>
-{% endblock layout_completo %}
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'js/mapa_territorial.js' %}?v=2026-10-19"></script>
+{% endblock layout_completo %}
