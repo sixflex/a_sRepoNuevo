@@ -22,6 +22,7 @@ from encuestas import services as encuestas_services
 from encuestas.models import EnlaceFormulario
 from rutas.services import url_recurso
 from django.test import TestCase
+from auditoria.models import AuditoriaCambio
 
 from .models import RutaActividad, RutaPlantilla, RutaVersion
 from .services import crear_nueva_version_ruta
@@ -1017,117 +1018,102 @@ class VersionadoRutaTestCase(TestCase):
             self.version_original.actividades.count(),
             23,
         )
+class AuditoriaYPruebasAvanzadasRutaTestCase(SeguimientoRutaTestCase):
+    """
+    CDE-528 / CDE-529 / CDE-530: Cobertura de auditoría, porcentaje,
+    cierre, evidencias y control de acceso a secciones ajenas.
+    """
 
-from django.contrib.auth.models import Group
+    def test_auditoria_al_completar_desmarcar_actividad(self):
+        self.client.force_login(self.usuario_docente)
 
-class RutasYPruebasFuncionalesTestCase(TestCase):
-    def setUp(self):
-        self.sede = Sede.objects.create(nombre="Sede Central", activo=True)
-        self.campus = Campus.objects.create(nombre="Campus Providencia", sede=self.sede, activo=True)
-        self.periodo = PeriodoAcademico.objects.create(
-            anio=2026,
-            nombre="2026-2",
-            fecha_inicio="2026-08-01",
-            fecha_fin="2026-12-31",
+        # 1. Completar actividad
+        self.client.post(
+            reverse("rutas:completar_actividad", args=[self.actividad_obligatoria.id])
         )
-        self.asignatura = Asignatura.objects.create(
-            nombre="Ingeniería de Software", 
-            activo=True
+        auditoria_marcar = AuditoriaCambio.objects.filter(
+            entidad="SeccionActividad",
+            entidad_id=self.actividad_obligatoria.id,
+            accion="MARCAR_ACTIVIDAD",
+        ).first()
+
+        self.assertIsNotNone(auditoria_marcar)
+        self.assertEqual(auditoria_marcar.valores_nuevos_json.get("estado"), "COMPLETADA")
+
+        # 2. Desmarcar actividad
+        self.client.post(
+            reverse("rutas:completar_actividad", args=[self.actividad_obligatoria.id])
         )
-        self.plantilla = RutaPlantilla.objects.create(
-            nombre="Ruta del Docente A+S", descripcion="Plantilla de prueba", activo=True
+        auditoria_desmarcar = AuditoriaCambio.objects.filter(
+            entidad="SeccionActividad",
+            entidad_id=self.actividad_obligatoria.id,
+            accion="DESMARCAR_ACTIVIDAD",
+        ).first()
+
+        self.assertIsNotNone(auditoria_desmarcar)
+        self.assertEqual(auditoria_desmarcar.valores_nuevos_json.get("estado"), "PENDIENTE")
+
+    @patch("archivos.services.obtener_storage_privado", return_value=InMemoryStorage())
+    def test_auditoria_al_subir_y_eliminar_evidencia(self, _storage):
+        self.client.force_login(self.usuario_docente)
+
+        # 1. Subir evidencia
+        self.client.post(
+            reverse("rutas:subir_evidencia", args=[self.actividad_obligatoria.id]),
+            {"archivo": SimpleUploadedFile("informe.pdf", b"%PDF-1.4", content_type="application/pdf")},
         )
+        evidencia = self.actividad_obligatoria.evidencias.first()
+        self.assertIsNotNone(evidencia)
 
-        self.version = RutaVersion.objects.create(
-            plantilla=self.plantilla, numero_version=1, estado="BORRADOR"
+        auditoria_subir = AuditoriaCambio.objects.filter(
+            entidad="Evidencia",
+            entidad_id=evidencia.pk,
+            accion="SUBIR_EVIDENCIA",
+        ).first()
+        self.assertIsNotNone(auditoria_subir)
+
+        # 2. Eliminar evidencia
+        self.client.post(reverse("rutas:eliminar_evidencia", args=[evidencia.id]))
+        auditoria_eliminar = AuditoriaCambio.objects.filter(
+            entidad="Evidencia",
+            entidad_id=evidencia.pk,
+            accion="ELIMINAR_EVIDENCIA",
+        ).first()
+        self.assertIsNotNone(auditoria_eliminar)
+
+    def test_auditoria_al_completar_ruta(self):
+        self.client.force_login(self.usuario_docente)
+
+        # Marcar actividad obligatoria para permitir el cierre
+        self.actividad_obligatoria.completada_por_docente = self.docente
+        self.actividad_obligatoria.estado = "COMPLETADA"
+        self.actividad_obligatoria.save()
+
+        self.client.post(reverse("rutas:completar_ruta", args=[self.ruta.id]))
+
+        auditoria_cierre = AuditoriaCambio.objects.filter(
+            entidad="SeccionRuta",
+            entidad_id=self.ruta.id,
+            accion="COMPLETAR_RUTA",
+        ).first()
+
+        self.assertIsNotNone(auditoria_cierre)
+        self.assertEqual(auditoria_cierre.valores_nuevos_json.get("estado"), "COMPLETADA")
+
+    def test_docente_no_puede_modificar_actividad_seccion_ajena(self):
+        self.client.force_login(self.usuario_otro)
+
+        respuesta = self.client.post(
+            reverse("rutas:completar_actividad", args=[self.actividad_obligatoria.id])
         )
-        
-        self.actividad_obligatoria = RutaActividad.objects.create(
-            ruta_version=self.version,
-            etapa="Etapa 1",
-            nombre="Actividad Obligatoria 1",
-            es_obligatoria=True,
-            orden=1,
+        self.assertEqual(respuesta.status_code, 403)
+
+    @patch("archivos.services.obtener_storage_privado", return_value=InMemoryStorage())
+    def test_docente_no_puede_subir_evidencia_seccion_ajena(self, _storage):
+        self.client.force_login(self.usuario_otro)
+
+        respuesta = self.client.post(
+            reverse("rutas:subir_evidencia", args=[self.actividad_obligatoria.id]),
+            {"archivo": SimpleUploadedFile("hack.pdf", b"%PDF-1.4", content_type="application/pdf")},
         )
-        
-        self.version.estado = "ACTIVA"
-        self.version.save(update_fields=["estado"])
-
-        self.user_d1 = User.objects.create_user(username="docente_uno", password="password")
-        self.user_d2 = User.objects.create_user(username="docente_dos", password="password")
-
-        # 1. Asignamos el grupo "Docente" (en singular)
-        grupo_docente, _ = Group.objects.get_or_create(name="Docente")
-        self.user_d1.groups.add(grupo_docente)
-        self.user_d2.groups.add(grupo_docente)
-
-        self.docente1 = Docente.objects.create(
-            usuario=self.user_d1,
-            rut="11111111-1",
-            nombres="Docente",
-            apellidos="Uno",
-            correo_institucional="docente1@uautonoma.cl",
-            activo=True
-        )
-
-        self.docente2 = Docente.objects.create(
-            usuario=self.user_d2,
-            rut="22222222-2",
-            nombres="Docente",
-            apellidos="Dos",
-            correo_institucional="docente2@uautonoma.cl",
-            activo=True
-        )
-
-        # 2. Inyectamos el atributo "perfil_docente" para satisfacer a verificar_acceso_ruta
-        self.user_d1.perfil_docente = self.docente1
-        self.user_d2.perfil_docente = self.docente2
-
-        self.facultad = Facultad.objects.create(nombre="Ingeniería", activo=True)
-        self.carrera = Carrera.objects.create(facultad=self.facultad, nombre="Ingeniería Civil Informática", activo=True)
-
-        self.seccion1 = Seccion.objects.create(
-            nrc="2001", asignatura=self.asignatura, periodo=self.periodo, campus=self.campus
-        )
-
-        SeccionCarrera.objects.create(seccion=self.seccion1, carrera=self.carrera, declaracion_as=True)
-        self.seccion1.docentes.add(self.docente1)
-
-        self.seccion2 = Seccion.objects.create(
-            nrc="2002", asignatura=self.asignatura, periodo=self.periodo, campus=self.campus
-        )
-
-        SeccionCarrera.objects.create(seccion=self.seccion2, carrera=self.carrera, declaracion_as=True)
-        self.seccion2.docentes.add(self.docente2)
-
-        self.ruta1 = SeccionRuta.objects.create(
-            seccion=self.seccion1, ruta_version=self.version, estado="EN_PROGRESO"
-        )
-        self.sec_actividad1 = SeccionActividad.objects.create(
-            seccion_ruta=self.ruta1,
-            ruta_actividad=self.actividad_obligatoria,
-            estado="PENDIENTE",
-        )
-
-    def test_control_acceso_secciones_ajenas(self):
-        self.client.force_login(self.user_d2)
-        response = self.client.get(reverse("rutas:detalle_ruta_docente", args=[self.ruta1.id]))
-        self.assertEqual(response.status_code, 403)
-
-    def test_acceso_docente_autorizado(self):
-        self.client.force_login(self.user_d1)
-        response = self.client.get(reverse("rutas:detalle_ruta_docente", args=[self.ruta1.id]))
-        self.assertEqual(response.status_code, 200)
-
-    def test_flujo_cierre_ruta_con_actividades_pendientes(self):
-        self.client.force_login(self.user_d1)
-        self.client.post(reverse("rutas:completar_ruta", args=[self.ruta1.id]))
-        
-        self.ruta1.refresh_from_db()
-        self.assertEqual(self.ruta1.estado, "EN_PROGRESO")
-
-    def test_coordinador_puede_ver_seguimiento(self):
-        coord_user = User.objects.create_superuser(username="coordinador", password="password", email="coord@uautonoma.cl")
-        self.client.force_login(coord_user)
-        response = self.client.get(reverse("rutas:seguimiento_coordinacion"))
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(respuesta.status_code, 403)

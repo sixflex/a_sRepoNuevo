@@ -4,6 +4,7 @@
 
 {% block content %}
 <div class="container-fluid py-4">
+    <!-- Encabezado -->
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
         <div>
             <h2 class="mb-1">Seguimiento de Rutas A+S</h2>
@@ -13,60 +14,70 @@
         </div>
     </div>
 
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body bg-light rounded">
-            <form method="get" class="row g-3 align-items-end">
-                <div class="col-md-3">
-                    <label for="sede" class="form-label small fw-semibold text-secondary">Sede</label>
-                    <select name="sede" id="sede" class="form-select form-select-sm">
-                        <option value="">Todas las sedes</option>
-                        {% for s in sedes %}
-                            <option value="{{ s.id }}" {% if filtro_sede == s.id|stringformat:"s" %}selected{% endif %}>{{ s.nombre }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="col-md-3">
-                    <label for="campus" class="form-label small fw-semibold text-secondary">Campus</label>
-                    <select name="campus" id="campus" class="form-select form-select-sm">
-                        <option value="">Todos los campus</option>
-                        {% for c in campus_list %}
-                            <option value="{{ c.id }}" {% if filtro_campus == c.id|stringformat:"s" %}selected{% endif %}>{{ c.nombre }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="col-md-2">
-                    <label for="periodo" class="form-label small fw-semibold text-secondary">Período</label>
-                    <select name="periodo" id="periodo" class="form-select form-select-sm">
-                        <option value="">Todos</option>
-                        {% for p in periodos %}
-                            <option value="{{ p.id }}" {% if filtro_periodo == p.id|stringformat:"s" %}selected{% endif %}>{{ p.nombre }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="col-md-2">
-                    <label for="estado" class="form-label small fw-semibold text-secondary">Estado</label>
-                    <select name="estado" id="estado" class="form-select form-select-sm">
-                        <option value="">Todos</option>
-                        <option value="EN_PROGRESO" {% if filtro_estado == "EN_PROGRESO" %}selected{% endif %}>En Progreso</option>
-                        <option value="COMPLETADA" {% if filtro_estado == "COMPLETADA" %}selected{% endif %}>Completada</option>
-                    </select>
-                </div>
-
-                <div class="col-md-2 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary btn-sm w-100 shadow-sm">Filtrar</button>
-                    <a href="{% url 'rutas:seguimiento_coordinacion' %}" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros">
-                        <i class="bi bi-arrow-counterclockwise"></i>
-                    </a>
-                </div>
-            </form>
+ <!-- Formulario de Filtros Combinables CDE-525 -->
+<form method="get" action="" class="card p-3 mb-4 shadow-sm bg-light">
+    <div class="row g-2 align-items-end">
+        
+        <!-- 1. Filtro Sede -->
+        <div class="col-12 col-md-2">
+            <label for="sede" class="form-label fw-semibold text-secondary small mb-1">Sede</label>
+            <select name="sede" id="sede" class="form-select form-select-sm">
+                <option value="">-- Todas las Sedes --</option>
+                {% for s in sedes %}
+                    <option value="{{ s.id }}" {% if filtros_seleccionados.sede == s.id|stringformat:"s" %}selected{% endif %}>
+                        {{ s.nombre }}
+                    </option>
+                {% endfor %}
+            </select>
         </div>
-    </div>
 
-    <!-- Tabla de Seguimiento -->
-    <div class="card shadow-sm border-0">
+        <!-- 2. Filtro Campus -->
+        <div class="col-12 col-md-2">
+            <label for="campus" class="form-label fw-semibold text-secondary small mb-1">Campus</label>
+            <select name="campus" id="campus" class="form-select form-select-sm">
+                <option value="">-- Todos los Campus --</option>
+                {% for c in campus_list %}
+                    <option value="{{ c.id }}" {% if filtros_seleccionados.campus == c.id|stringformat:"s" %}selected{% endif %}>
+                        {{ c.nombre }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- 3. Filtro Período -->
+        <div class="col-12 col-md-2">
+            <label for="periodo" class="form-label fw-semibold text-secondary small mb-1">Período</label>
+            <select name="periodo" id="periodo" class="form-select form-select-sm">
+                <option value="">-- Todos los Períodos --</option>
+                {% for p in periodos %}
+                    <option value="{{ p.id }}" {% if filtros_seleccionados.periodo == p.id|stringformat:"s" %}selected{% endif %}>
+                        {{ p.codigo|default:p.nombre }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- 4. Filtro Estado -->
+        <div class="col-12 col-md-3">
+            <label for="estado" class="form-label fw-semibold text-secondary small mb-1">Estado</label>
+            <select name="estado" id="estado" class="form-select form-select-sm">
+                <option value="">-- Todos los Estados --</option>
+                <option value="EN_PROGRESO" {% if filtros_seleccionados.estado == "EN_PROGRESO" %}selected{% endif %}>En Progreso</option>
+                <option value="COMPLETADA" {% if filtros_seleccionados.estado == "COMPLETADA" %}selected{% endif %}>Completada</option>
+                <option value="CERRADA" {% if filtros_seleccionados.estado == "CERRADA" %}selected{% endif %}>Cerrada</option>
+            </select>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="col-12 col-md-3 d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm w-100">Filtrar</button>
+            <a href="?" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+        </div>
+
+    </div>
+</form>
+    <!-- TABLA DE RUTAS -->
+    <div class="card shadow-sm">
         <div class="card-body">
             {% if rutas %}
                 <div class="table-responsive">
@@ -106,7 +117,7 @@
                                             <div
                                                 class="progress-bar"
                                                 role="progressbar"
-                                                style="width: {{ ruta.porcentaje_final|default:0|floatformat:0 }}%;"
+                                                data-progress="{{ ruta.porcentaje_final|default:0|floatformat:0 }}"
                                             ></div>
                                         </div>
                                     </td>
@@ -136,10 +147,15 @@
                 </div>
             {% else %}
                 <div class="text-center text-muted py-4">
-                    No existen Rutas A+S asignadas con los filtros seleccionados.
+                    No existen Rutas A+S asignadas o que coincidan con los filtros seleccionados.
                 </div>
             {% endif %}
         </div>
     </div>
 </div>
+<script>
+    document.querySelectorAll(".progress-bar[data-progress]").forEach((bar) => {
+        bar.style.width = `${bar.dataset.progress}%`;
+    });
+</script>
 {% endblock %}
