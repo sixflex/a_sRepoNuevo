@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from academico.models import Seccion
+from core.ordenamiento import OPCIONES_ORDEN, orden_pedido, ordenar_por_fecha
 from usuarios.permissions import es_coordinador, es_docente
 
 from .forms import SolicitudCartaForm
@@ -232,14 +233,17 @@ def listar_solicitudes_coordinacion(request):
             "equipo",
             "socio",
         )
-        .order_by("-fecha_solicitud")
     )
+    orden = orden_pedido(request)
+    solicitudes = ordenar_por_fecha(solicitudes, "fecha_solicitud", orden)
 
     return render(
         request,
         "cartas/listar_solicitudes_coordinacion.html",
         {
             "solicitudes": solicitudes,
+            "orden": orden,
+            "opciones_orden": OPCIONES_ORDEN,
         },
     )
 

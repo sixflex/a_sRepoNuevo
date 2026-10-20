@@ -1,0 +1,429 @@
+/* Planilla pública de planificación A+S para la Dirección de Carrera.
+   Se parece a la planilla Excel que envía la Coordinación: una fila por
+   sección, con sus docentes debajo. */
+
+.plan-pagina {
+    background: var(--ua-bg-page);
+}
+.plan-contenedor {
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 28px 24px 0;
+}
+
+/* Encabezado */
+.plan-encabezado {
+    padding: 24px 28px;
+    margin-bottom: 20px;
+    background: var(--ua-bg-card);
+    border: 1px solid var(--ua-border);
+    border-top: 4px solid var(--ua-red);
+    border-radius: var(--ua-radius);
+    box-shadow: var(--ua-shadow);
+}
+.plan-antetitulo {
+    margin: 0 0 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ua-text-muted);
+}
+.plan-titulo {
+    margin: 0;
+    font-family: 'Montserrat', 'Inter', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--ua-text-dark);
+}
+.plan-estado {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.plan-estado-edicion { background: var(--ua-info-soft); color: var(--ua-info); }
+.plan-estado-final { background: var(--ua-success-soft); color: var(--ua-success); }
+.plan-estado-inactivo { background: var(--ua-bg-subtle); color: var(--ua-text-secondary); }
+
+.plan-datos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px 24px;
+    margin: 20px 0 0;
+    padding-top: 18px;
+    border-top: 1px solid var(--ua-border);
+}
+.plan-datos dt {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ua-text-muted);
+}
+.plan-datos dd {
+    margin: 2px 0 0;
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: var(--ua-text-dark);
+    overflow-wrap: anywhere;
+}
+.plan-dato-secundario {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--ua-text-muted);
+}
+.plan-totales {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+}
+.plan-totales span {
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--ua-bg-subtle);
+    font-size: 0.82rem;
+    color: var(--ua-text-secondary);
+}
+.plan-totales .plan-total-ok { background: var(--ua-success-soft); color: var(--ua-success); }
+.plan-totales .plan-total-obs { background: var(--ua-warning-soft); color: var(--ua-warning); }
+
+/* Avisos e instrucciones */
+.plan-aviso {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    border-radius: var(--ua-radius);
+    font-size: 0.9rem;
+}
+.plan-aviso-advertencia { background: var(--ua-warning-soft); color: var(--ua-warning); }
+.plan-aviso-info { background: var(--ua-success-soft); color: var(--ua-success); }
+
+.plan-instrucciones {
+    margin-bottom: 20px;
+    padding: 14px 20px;
+    background: var(--ua-bg-card);
+    border: 1px solid var(--ua-border);
+    border-radius: var(--ua-radius);
+    font-size: 0.88rem;
+    color: var(--ua-text-secondary);
+}
+.plan-instrucciones summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: var(--ua-text-dark);
+    cursor: pointer;
+}
+.plan-instrucciones summary i { color: var(--ua-red); }
+.plan-instrucciones ol { margin: 10px 0 6px; padding-left: 1.2rem; }
+.plan-instrucciones li + li { margin-top: 2px; }
+.plan-instrucciones p { margin: 0; font-size: 0.82rem; color: var(--ua-text-muted); }
+
+/* Planilla */
+.plan-planilla {
+    margin-bottom: 28px;
+    background: var(--ua-bg-card);
+    border: 1px solid var(--ua-border);
+    border-radius: var(--ua-radius);
+    box-shadow: var(--ua-shadow);
+    overflow: hidden;
+}
+.plan-planilla-cabecera {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--ua-border);
+}
+.plan-planilla-cabecera h2 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ua-text-dark);
+}
+.plan-ayuda {
+    font-size: 0.82rem;
+    color: var(--ua-text-muted);
+}
+.plan-tabla-scroll {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+    overflow-x: auto;
+}
+
+.tabla-planificacion {
+    width: 100%;
+    min-width: 1380px;
+    border-collapse: collapse;
+    counter-reset: fila;
+}
+.tabla-planificacion th {
+    padding: 10px 8px;
+    background: var(--ua-bg-subtle);
+    border-bottom: 1px solid var(--ua-border-strong);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--ua-text-secondary);
+    white-space: nowrap;
+}
+.tabla-planificacion td {
+    padding: 8px;
+    vertical-align: middle;
+}
+.fila-planificacion {
+    counter-increment: fila;
+    border-bottom: 1px solid var(--ua-border-strong);
+    transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+.fila-planificacion:nth-of-type(even) {
+    background: #FCFCFD;
+}
+.fila-planificacion:focus-within {
+    background: #FFF9F9;
+}
+.fila-planificacion.saliendo { opacity: 0; }
+.fila-nueva { animation: plan-aparece 0.25s ease-out; }
+
+.col-num { width: 40px; text-align: center; }
+.fila-asignatura .col-num::before {
+    content: counter(fila);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--ua-text-muted);
+}
+.col-facultad { width: 160px; }
+.col-carrera { width: 200px; }
+.col-as { width: 52px; text-align: center !important; }
+.col-nrc { width: 86px; }
+.col-seccion { width: 76px; }
+.col-asignatura { width: 200px; }
+.col-nivel { width: 96px; }
+.col-jornada { width: 130px; }
+.col-horario { width: 160px; }
+.col-estudiantes { width: 96px; }
+.col-socio { width: 170px; }
+.col-acciones { width: 48px; text-align: center; }
+
+.tabla-planificacion .form-control,
+.tabla-planificacion .form-select {
+    width: 100%;
+    min-width: 0;
+    font-size: 0.82rem;
+    border-color: var(--ua-border-strong);
+    border-radius: var(--ua-radius-sm);
+}
+.tabla-planificacion .form-select {
+    padding-right: 1.6rem;
+    background-position: right 0.4rem center;
+    text-overflow: ellipsis;
+}
+.tabla-planificacion .form-control:focus,
+.tabla-planificacion .form-select:focus,
+.tabla-planificacion .form-check-input:focus {
+    border-color: var(--ua-red);
+    box-shadow: 0 0 0 3px rgba(var(--ua-red-rgb), 0.15);
+}
+.tabla-planificacion .form-check-input {
+    width: 1.15rem;
+    height: 1.15rem;
+    margin: 0;
+}
+.tabla-planificacion .form-check-input:checked {
+    background-color: var(--ua-red);
+    border-color: var(--ua-red);
+}
+/* Solo lectura (versión final o enlace inactivo): se lee como planilla */
+.plan-tabla-scroll:disabled .form-control,
+.plan-tabla-scroll:disabled .form-select {
+    padding-left: 0;
+    padding-right: 0;
+    background-color: transparent;
+    background-image: none;
+    border-color: transparent;
+    color: var(--ua-text-dark);
+    opacity: 1;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* Quitar asignatura */
+.plan-quitar-fila {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    border: 1px solid transparent;
+    border-radius: var(--ua-radius-sm);
+    background: transparent;
+    color: var(--ua-text-muted);
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+.plan-quitar-fila:hover { background: var(--ua-red-soft); color: var(--ua-red); }
+.plan-quitar-fila input { position: absolute; opacity: 0; pointer-events: none; }
+.plan-quitar-fila:has(input:focus-visible) { outline: 2px solid var(--ua-red); }
+/* Fila guardada marcada para quitar: se ve tachada hasta guardar */
+.fila-planificacion:has(.plan-quitar-fila input:checked) { opacity: 0.45; }
+.fila-planificacion:has(.plan-quitar-fila input:checked) .fila-asignatura td:not(.col-acciones) { text-decoration: line-through; }
+.plan-quitar-fila:has(input:checked) { background: var(--ua-red); color: #FFF; }
+
+/* Docentes de la fila */
+.fila-docentes td { padding-top: 0; padding-bottom: 12px; }
+.docentes-titulo {
+    margin-bottom: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--ua-text-muted);
+}
+.docentes-encabezado,
+.docente-subcard {
+    display: grid;
+    grid-template-columns: 130px minmax(180px, 1.6fr) minmax(140px, 1fr) 130px minmax(180px, 1.4fr) 140px 32px;
+    gap: 6px;
+    align-items: center;
+}
+.docentes-encabezado {
+    padding: 0 8px 2px;
+    font-size: 0.72rem;
+    color: var(--ua-text-muted);
+}
+.docente-subcard {
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    border-left: 3px solid var(--ua-border-strong);
+    border-radius: 0 var(--ua-radius-sm) var(--ua-radius-sm) 0;
+    background: var(--ua-bg-subtle);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    animation: plan-aparece 0.2s ease-out;
+}
+.docente-subcard:focus-within { border-left-color: var(--ua-red); }
+.docente-subcard.saliendo { opacity: 0; transform: scale(0.98); }
+.docente-quitar { text-align: center; }
+.docente-quitar input { position: absolute; opacity: 0; pointer-events: none; }
+.docente-quitar label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--ua-radius-sm);
+    color: var(--ua-text-muted);
+    cursor: pointer;
+}
+.docente-quitar label:hover { background: var(--ua-red-soft); color: var(--ua-red); }
+.docente-quitar:has(input:focus-visible) label { outline: 2px solid var(--ua-red); }
+
+.plan-agregar-docente {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+    padding: 4px 8px;
+    border: none;
+    border-radius: var(--ua-radius-sm);
+    background: transparent;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ua-red);
+}
+.plan-agregar-docente:hover { background: var(--ua-red-soft); }
+
+.plan-agregar-fila {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-top: 1px dashed var(--ua-border-strong);
+    background: transparent;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--ua-red);
+    transition: background-color 0.15s ease;
+}
+.plan-agregar-fila:hover { background: var(--ua-red-soft); }
+
+/* Errores */
+.plan-errores {
+    margin: 4px 0 0;
+    padding: 8px 12px 8px 28px;
+    border-radius: var(--ua-radius-sm);
+    background: var(--ua-red-soft);
+    font-size: 0.82rem;
+    color: var(--ua-red-hover);
+}
+.docente-errores { grid-column: 1 / -1; }
+.fila-errores td { padding-top: 0; }
+
+/* Barra de acciones fija abajo */
+.plan-acciones {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 -24px;
+    padding: 12px 24px;
+    background: rgba(255, 255, 255, 0.96);
+    border-top: 1px solid var(--ua-border);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
+}
+.plan-boton {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 18px;
+    border-radius: var(--ua-radius-sm);
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.plan-boton-secundario {
+    border: 1px solid var(--ua-border-strong);
+    background: var(--ua-bg-card);
+    color: var(--ua-text-dark);
+}
+.plan-boton-secundario:hover { background: var(--ua-bg-subtle); }
+.plan-boton-primario {
+    border: 1px solid var(--ua-red);
+    background: var(--ua-red);
+    color: #FFF;
+}
+.plan-boton-primario:hover { background: var(--ua-red-hover); border-color: var(--ua-red-hover); }
+
+@keyframes plan-aparece {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: none; }
+}
+@media (max-width: 575.98px) {
+    .plan-contenedor { padding: 16px 16px 0; }
+    .plan-encabezado { padding: 18px; }
+    .plan-acciones { margin: 0 -16px; padding: 10px 16px; }
+    .plan-boton { padding: 8px 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .fila-nueva, .docente-subcard { animation: none; }
+    .fila-planificacion, .docente-subcard { transition: none; }
+}

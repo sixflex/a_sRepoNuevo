@@ -80,7 +80,7 @@
                             <li class="nav-item">
                                 <a class="nav-link {% if m == 'rutas' %}active{% endif %}"
                                    {% if m == 'rutas' %}aria-current="page"{% endif %}
-                                   href="{% url 'rutas:seguimiento_rutas_coordinacion' %}">Rutas A+S</a>
+                                   href="{% url 'rutas:seguimiento_coordinacion' %}">Rutas A+S</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {% if m == 'cartas' %}active{% endif %}"
@@ -129,6 +129,12 @@
                     </a>
                 </li>
 
+                <li class="nav-item">
+                    <a class="nav-link {% if m == 'historicos' %}active{% endif %}" {% if m == 'historicos' %}aria-current="page"{% endif %} href="{% url 'historicos:cargas' %}">
+                        <i class="bi bi-cloud-arrow-up me-2" aria-hidden="true"></i>Importar históricos
+                    </a>
+                </li>
+
                 {# Módulos aún sin vista: se muestran deshabilitados en vez de un enlace "#" que no hace nada #}
                 <li class="nav-item">
                     <a class="nav-link disabled" aria-disabled="true" tabindex="-1">
@@ -148,6 +154,11 @@
                 <li class="nav-item">
                     <a class="nav-link {% if m == 'secciones' %}active{% endif %}" {% if m == 'secciones' %}aria-current="page"{% endif %} href="{% url 'core:docente' %}">
                         <i class="bi bi-journal-bookmark me-2" aria-hidden="true"></i>Mis secciones
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if m == 'socios' %}active{% endif %}" {% if m == 'socios' %}aria-current="page"{% endif %} href="{% url 'socios:catalogo_docente' %}">
+                        <i class="bi bi-people me-2" aria-hidden="true"></i>Socios comunitarios
                     </a>
                 </li>
             {% endif %}

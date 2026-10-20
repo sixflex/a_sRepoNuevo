@@ -21,6 +21,7 @@ MENU_POR_APP = {
     "rutas": "rutas",
     "cartas": "cartas",
     "encuestas": "encuestas",
+    "historicos": "historicos",
 }
 
 
@@ -35,7 +36,7 @@ def _menu_activo(match):
         return MENU_POR_APP[namespace]
 
     if namespace == "socios":
-        if nombre in ("lista_postulaciones", "revisar_postulacion"):
+        if nombre in ("lista_postulaciones", "detalle_postulacion", "revisar_postulacion", "revisar_socio_propuesto"):
             return "postulaciones"
         return "socios"
 

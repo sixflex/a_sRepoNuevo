@@ -5,6 +5,9 @@ from rutas.models import (RutaActividad,RutaPlantilla,RutaVersion,SeccionActivid
 from rutas.services import asignar_ruta_as_si_corresponde
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse
 from academico.models import Docente, SeccionDocente
@@ -24,6 +27,12 @@ from auditoria.models import AuditoriaCambio
 from .models import RutaActividad, RutaPlantilla, RutaVersion
 from .services import crear_nueva_version_ruta
 from django.core.exceptions import ValidationError
+
+from django.utils import timezone
+from decimal import Decimal
+
+from academico.models import Asignatura, Campus, PeriodoAcademico, Seccion, Sede, Docente
+from rutas.models import RutaVersion, RutaActividad, SeccionRuta, SeccionActividad, RutaPlantilla
 
 class RutaDocenteTestCase(TestCase):
     def setUp(self):
@@ -345,7 +354,7 @@ class SeguimientoRutaTestCase(TestCase):
         self.client.force_login(self.usuario_coordinador)
 
         respuesta = self.client.get(
-            reverse("rutas:seguimiento_rutas_coordinacion")
+            reverse("rutas:seguimiento_coordinacion")
         )
 
         self.assertEqual(respuesta.status_code, 200)

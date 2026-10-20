@@ -393,18 +393,7 @@
     color: var(--ua-text-dark);
 }
 
-/* Mapa territorial */
-.mapa-territorial {
-    height: 380px;
-    border-radius: var(--ua-radius);
-    border: 1px solid var(--ua-border);
-}
-.mapa-top li {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--ua-border);
-}
+/* Botones de alternancia (mapa y evolución) */
 .btn-ua-toggle {
     min-height: 36px;
     border: 1px solid var(--ua-border-strong);
@@ -450,15 +439,4 @@
 .evolucion-anio {
     font-size: 0.85rem;
     color: var(--ua-text-muted);
-}
-.leaflet-tooltip.mapa-etiqueta {
-    padding: 0;
-    border: none;
-    background: transparent;
-    box-shadow: none;
-    color: #fff;
-    font-weight: 700;
-}
-.leaflet-tooltip.mapa-etiqueta::before {
-    display: none;
 }

@@ -4,7 +4,7 @@
 {% block title %}{{ socio.nombre_organizacion }} | Portal A+S{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/socios.css' %}">
+<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <div>
@@ -64,8 +64,18 @@
                             <span class="socio-nombre">{{ contacto.nombre }}</span>
                             {% if contacto.es_principal %}<span class="badge-estado estado-APROBADO ms-1">Principal</span>{% endif %}
                             {% if contacto.cargo %}<div class="socio-rut">{{ contacto.cargo }}</div>{% endif %}
-                            {% if contacto.correo %}<div class="small"><i class="bi bi-envelope me-1 text-muted" aria-hidden="true"></i>{{ contacto.correo }}</div>{% endif %}
-                            {% if contacto.telefono %}<div class="small"><i class="bi bi-telephone me-1 text-muted" aria-hidden="true"></i>{{ contacto.telefono }}</div>{% endif %}
+                            {% if contacto.correo %}
+                                <div class="dato-contacto">
+                                    <a href="mailto:{{ contacto.correo }}" title="Escribir un correo"><i class="bi bi-envelope" aria-hidden="true"></i>{{ contacto.correo }}</a>
+                                    <button type="button" class="btn-copiar" data-copiar="{{ contacto.correo }}" aria-label="Copiar correo" title="Copiar correo"><i class="bi bi-copy" aria-hidden="true"></i></button>
+                                </div>
+                            {% endif %}
+                            {% if contacto.telefono %}
+                                <div class="dato-contacto">
+                                    <a href="tel:{{ contacto.telefono|cut:' ' }}" title="Llamar"><i class="bi bi-telephone" aria-hidden="true"></i>{{ contacto.telefono }}</a>
+                                    <button type="button" class="btn-copiar" data-copiar="{{ contacto.telefono }}" aria-label="Copiar teléfono" title="Copiar teléfono"><i class="bi bi-copy" aria-hidden="true"></i></button>
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 {% empty %}
@@ -167,4 +177,8 @@
     {% endif %}
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/copiar.js' %}?v=2026-10-19"></script>
 {% endblock %}

@@ -26,6 +26,7 @@ from . import services as servicios
 from .services import enlaces_abiertos_por_plantilla, url_recurso
 from socios.models import InvitacionCierre
 
+from academico.models import Sede, Campus, PeriodoAcademico
 
 def verificar_acceso_ruta(user, seccion_ruta):
     if es_coordinador(user):
@@ -243,6 +244,20 @@ def completar_actividad(request, actividad_id):
             "observacion",
         ]
     )
+    registrar_auditoria(
+        request=request,
+        entidad="SeccionActividad",
+        entidad_id=actividad.pk,
+        accion="CAMBIAR_ESTADO_ACTIVIDAD",
+        valores_anteriores={
+            "estado": estado_anterior,
+            "fecha_completada": fecha_anterior,
+        },
+        valores_nuevos={
+            "estado": actividad.estado,
+            "fecha_completada": str(actividad.fecha_completada) if actividad.fecha_completada else None,
+        },
+    )
 
     recalcular_avance(
         seccion_ruta
@@ -264,7 +279,6 @@ def completar_actividad(request, actividad_id):
         "rutas:detalle_ruta_docente",
         seccion_ruta_id=seccion_ruta.id,
     )
-
 
 @login_required
 @require_POST
@@ -496,7 +510,6 @@ def subir_evidencia(request, actividad_id):
         seccion_ruta_id=seccion_ruta.id,
     )
 
-
 @login_required
 @require_POST
 def eliminar_evidencia(request, evidencia_id):
@@ -549,6 +562,19 @@ def eliminar_evidencia(request, evidencia_id):
     archivo = evidencia.archivo
     storage_key = archivo.storage_key
     evidencia_id_backup = evidencia.pk
+
+    registrar_auditoria(
+        request=request,
+        entidad="Evidencia",
+        entidad_id=evidencia.pk,
+        accion="ELIMINAR_EVIDENCIA",
+        valores_anteriores={
+            "evidencia_id": evidencia.pk,
+            "archivo_id": archivo.pk,
+            "actividad_id": actividad.pk,
+            "descripcion": evidencia.descripcion,
+        },
+    )
 
     evidencia.delete()
     archivo.delete()
@@ -732,11 +758,7 @@ def detalle_ruta_coordinacion(request, seccion_ruta_id):
 
 @login_required
 def formularios_qr(request):
-    """
-    QR de los formularios abiertos de un proceso, para proyectarlos en clase
-    (por ejemplo las encuestas A+S). La actividad lo enlaza desde recurso_url
-    con ?proceso=..., así el proceso se cambia sin tocar código.
-    """
+
     if not (es_docente(request.user) or es_coordinador(request.user)):
         raise PermissionDenied
 
@@ -779,7 +801,6 @@ def formularios_qr(request):
 
 
 def _actividad_cierre_del_docente(request, actividad_id):
-    """Actividad de cierre editable por el Docente de la sección."""
     actividad = get_object_or_404(
         SeccionActividad.objects.select_related(
             "seccion_ruta",
@@ -947,11 +968,6 @@ def registrar_respuesta_cierre(request, invitacion_id):
 
     return _volver_a_ruta(invitacion.seccion_ruta)
 
-
-# Enlaces únicos del correo (RF-EVI-05). La página pública muestra solo
-# contenido y pie institucional. El GET muestra la invitación y el POST
-# registra la respuesta, así un antivirus que abra el enlace no responde
-# por el Socio.
 RESPUESTAS_ENLACE = {
     "asistire": servicios.ASISTIRA,
     "no-asistire": servicios.NO_ASISTIRA,
@@ -1004,7 +1020,6 @@ def responder_invitacion_cierre(request, token, respuesta):
 
 @login_required
 def descargar_expediente(request, seccion_ruta_id):
-    """Coordinación descarga todas las evidencias de la sección (RF-EVI-03)."""
     if not es_coordinador(request.user):
         raise PermissionDenied
 
@@ -1049,3 +1064,47 @@ def descargar_expediente(request, seccion_ruta_id):
         filename=nombre,
         content_type="application/zip",
     )
+
+def filtrar_seguimiento_rutas(queryset, request):
+
+    campus_id = request.GET.get('campus')
+    sede_id = request.GET.get('sede')
+    periodo_id = request.GET.get('periodo')
+    estado = request.GET.get('estado')
+
+    if campus_id:
+        queryset = queryset.filter(seccion__campus_id=campus_id)
+    if sede_id:
+        queryset = queryset.filter(seccion__campus__sede_id=sede_id)
+    if periodo_id:
+        queryset = queryset.filter(seccion__periodo_id=periodo_id)
+    if estado:
+        queryset = queryset.filter(estado=estado)
+
+    return queryset
+
+@login_required
+@coordinador_required
+def seguimiento_rutas_coordinacion(request):
+    secciones_rutas = SeccionRuta.objects.select_related(
+        'seccion__asignatura',
+        'seccion__periodo',
+        'seccion__campus__sede',
+    ).prefetch_related(
+        'seccion__docentes',
+        'actividades__ruta_actividad'
+    ).order_by('-id')
+
+    secciones_filtradas = filtrar_seguimiento_rutas(secciones_rutas, request)
+
+    context = {
+        'rutas': secciones_filtradas,
+        'sedes': Sede.objects.all(),
+        'campus_list': Campus.objects.all(),
+        'periodos': PeriodoAcademico.objects.all(),
+        'filtro_campus': request.GET.get('campus', ''),
+        'filtro_sede': request.GET.get('sede', ''),
+        'filtro_periodo': request.GET.get('periodo', ''),
+        'filtro_estado': request.GET.get('estado', ''),
+    }
+    return render(request, 'rutas/seguimiento_coordinacion.html', context)

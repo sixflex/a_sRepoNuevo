@@ -1,6 +1,5 @@
-// Panel del coordinador: filtros dependientes, mapa territorial y botones
-// de alternancia (mapa y evolución por año). Sin datos personales: el mapa
-// solo recibe totales por comuna.
+// Panel del coordinador: filtros dependientes y botones de alternancia de la
+// evolución por año. El mapa territorial está en mapa_territorial.js.
 (function () {
     "use strict";
 
@@ -48,72 +47,5 @@
         document.querySelectorAll("[data-evolucion-grafico]").forEach(function (grafico) {
             grafico.classList.toggle("d-none", grafico.dataset.evolucionGrafico !== boton.dataset.evolucion);
         });
-    });
-
-    // Mapa territorial (RF-IND-03): un círculo por comuna, tamaño según el total.
-    const datos = document.getElementById("mapa-puntos");
-    const contenedor = document.getElementById("mapaTerritorial");
-    if (!datos || !contenedor || typeof L === "undefined") {
-        return;
-    }
-
-    const puntos = JSON.parse(datos.textContent);
-    const color = getComputedStyle(document.documentElement).getPropertyValue("--ua-red").trim() || "#C8232C";
-    const mapa = L.map(contenedor, { scrollWheelZoom: false });
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 18,
-        attribution: "&copy; OpenStreetMap",
-    }).addTo(mapa);
-
-    const capa = L.layerGroup().addTo(mapa);
-    let modo = "proyectos";
-
-    function texto(valor) {
-        const span = document.createElement("span");
-        span.textContent = valor;
-        return span.innerHTML;
-    }
-
-    function dibujar() {
-        capa.clearLayers();
-        const maximo = Math.max(1, ...puntos.map(function (p) { return p[modo]; }));
-        puntos.forEach(function (punto) {
-            const valor = punto[modo];
-            if (!valor) {
-                return;
-            }
-            const popup =
-                "<strong>" + texto(punto.comuna) + "</strong><br>" +
-                punto.socios + " socio" + (punto.socios === 1 ? "" : "s") + " · " +
-                punto.proyectos + " proyecto" + (punto.proyectos === 1 ? "" : "s") +
-                (punto.carreras.length ? "<br>Carreras: " + texto(punto.carreras.join(", ")) : "") +
-                (punto.anios.length ? "<br>Años: " + punto.anios.join(", ") : "");
-            L.circleMarker([punto.lat, punto.lon], {
-                radius: 8 + 18 * (valor / maximo),
-                color: color,
-                fillColor: color,
-                fillOpacity: 0.7,
-                weight: 1,
-            })
-                .bindTooltip(String(valor), { permanent: true, direction: "center", className: "mapa-etiqueta" })
-                .bindPopup(popup)
-                .addTo(capa);
-        });
-    }
-
-    const limites = L.latLngBounds(puntos.map(function (p) { return [p.lat, p.lon]; }));
-    mapa.fitBounds(limites.pad(0.3), { maxZoom: 12 });
-    dibujar();
-
-    const titulo = document.querySelector("[data-mapa-titulo]");
-    alternar(document.querySelectorAll("[data-mapa-modo]"), function (boton) {
-        modo = boton.dataset.mapaModo;
-        document.querySelectorAll("[data-mapa-lista]").forEach(function (lista) {
-            lista.classList.toggle("d-none", lista.dataset.mapaLista !== modo);
-        });
-        if (titulo) {
-            titulo.textContent = modo === "socios" ? "Comunas con más socios" : "Comunas con más proyectos";
-        }
-        dibujar();
     });
 })();

@@ -12,8 +12,10 @@
         <div class="enc-total-respuestas">
             <strong>{{ filas|length }}</strong> respuesta{{ filas|length|pluralize }}{% if programa %} en este programa{% endif %}
         </div>
+        <div class="ms-auto d-flex flex-wrap align-items-center gap-3">
         {% if programas %}
-            <form method="get" class="ms-auto d-flex align-items-center gap-2">
+            <form method="get" class="d-flex align-items-center gap-2">
+                {% if orden %}<input type="hidden" name="orden" value="{{ orden }}">{% endif %}
                 <label class="enc-nota text-nowrap" for="filtro-programa">Programa</label>
                 <select class="form-select form-select-sm" id="filtro-programa" name="programa" onchange="this.form.submit()">
                     <option value="">Todos</option>
@@ -24,6 +26,8 @@
                 <noscript><button class="btn btn-light-ua btn-sm" type="submit">Filtrar</button></noscript>
             </form>
         {% endif %}
+        {% include "includes/orden_listado.html" with opciones=opciones_orden %}
+        </div>
     </div>
 
     {% if filas %}

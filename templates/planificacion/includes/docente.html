@@ -1,0 +1,24 @@
+{# Un docente de la fila, en la misma grilla que el encabezado de docentes. #}
+<div class="docente-subcard">
+    {{ docente.id }}
+    <div><label class="visually-hidden" for="{{ docente.rut.id_for_label }}">RUT</label>{{ docente.rut }}</div>
+    <div><label class="visually-hidden" for="{{ docente.nombre.id_for_label }}">Nombre completo</label>{{ docente.nombre }}</div>
+    <div><label class="visually-hidden" for="{{ docente.tipo_contrato.id_for_label }}">Tipo de contrato</label>{{ docente.tipo_contrato }}</div>
+    <div><label class="visually-hidden" for="{{ docente.capacitado_as.id_for_label }}">Capacitado A+S</label>{{ docente.capacitado_as }}</div>
+    <div><label class="visually-hidden" for="{{ docente.correo.id_for_label }}">Correo</label>{{ docente.correo }}</div>
+    <div><label class="visually-hidden" for="{{ docente.telefono.id_for_label }}">Teléfono</label>{{ docente.telefono }}</div>
+    <div class="docente-quitar">
+        {% if editable %}
+            {{ docente.DELETE }}
+            <label for="{{ docente.DELETE.id_for_label }}" title="Quitar docente">
+                <i class="bi bi-x-lg" aria-hidden="true"></i><span class="visually-hidden">Quitar docente</span>
+            </label>
+        {% endif %}
+    </div>
+    {% if docente.errors %}
+        <ul class="plan-errores docente-errores">
+            {% for error in docente.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+            {% for campo in docente %}{% for error in campo.errors %}<li><strong>{{ campo.label }}:</strong> {{ error }}</li>{% endfor %}{% endfor %}
+        </ul>
+    {% endif %}
+</div>

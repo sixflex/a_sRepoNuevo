@@ -1,5 +1,5 @@
 from django.contrib import messages
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Exists, OuterRef, Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -13,9 +13,13 @@ from rutas.services import url_recurso
 from auditoria.services import registrar_auditoria
 
 from django.core.exceptions import ValidationError
+from encuestas import services as encuestas_services
 from encuestas.models import EnlaceFormulario, FormularioVersion, RespuestaFormulario
 from .models import Convocatoria, PostulacionSocio, SocioComunitario, ContactoSocio, Comuna, ClasificacionSocio
+from core.ordenamiento import OPCIONES_ORDEN, ORDEN_NOMBRE, orden_pedido, ordenar_por_fecha
+
 from . import services
+from .forms import DECISION_HABILITAR, SocioPropuestoForm
 from .constantes import ESTADOS_POSTULACION, ESTADOS_SOCIO_SELECCIONABLES, estados_siguientes, etiqueta
 from .services import enviar_notificacion_postulacion
 from .validators import validar_rut_chileno
@@ -49,6 +53,14 @@ def socios_disponibles():
     )
 
 
+def comunas_con_socios(socios):
+    """
+    Comunas donde hay socios del listado, para el filtro: una comuna nueva
+    aparece sola en cuanto se registra un socio en ella.
+    """
+    return Comuna.objects.filter(socios__in=socios).distinct().order_by('nombre')
+
+
 @docente_required
 def catalogo_socios_docente(request):
     """
@@ -74,7 +86,7 @@ def catalogo_socios_docente(request):
 
     context = {
         'socios': socios,
-        'comunas': Comuna.objects.filter(activo=True),
+        'comunas': comunas_con_socios(socios_disponibles()),
         'clasificaciones': ClasificacionSocio.objects.filter(activo=True),
         'q': q,
         'comuna_id': comuna_id,
@@ -88,11 +100,19 @@ def lista_socios_coordinador(request):
     """
     Panel completo de búsqueda, filtros combinados y revisión para el Coordinador.
     """
-    socios = SocioComunitario.objects.all().select_related('clasificacion', 'comuna').annotate(
-        tiene_postulacion_pendiente=Exists(
-            PostulacionSocio.objects.filter(socio=OuterRef('pk'), estado="RECIBIDA")
-        )
+    # Lo que falta revisar (postulaciones y socios propuestos por equipos, en
+    # estado Recibido) y los postulantes rechazados se ven en Postulaciones;
+    # el catálogo muestra los socios ya aceptados.
+    catalogo = SocioComunitario.objects.exclude(estado_revision="RECIBIDO").exclude(
+        Q(estado_revision="RECHAZADO")
+        & Q(Exists(PostulacionSocio.objects.filter(socio=OuterRef('pk'))))
     )
+    socios = catalogo.select_related('clasificacion', 'comuna')
+    orden = orden_pedido(request, permitidos=(ORDEN_NOMBRE, 'recientes', 'antiguos'), por_defecto=ORDEN_NOMBRE)
+    if orden == ORDEN_NOMBRE:
+        socios = socios.order_by('nombre_organizacion', 'pk')
+    else:
+        socios = ordenar_por_fecha(socios, 'fecha_creacion', orden)
 
     # Parámetros de Búsqueda (CDE-62)
     q = request.GET.get('q', '').strip()
@@ -180,16 +200,18 @@ def lista_socios_coordinador(request):
     context = {
         'socios': socios,
         'clasificaciones': ClasificacionSocio.objects.filter(activo=True),
-        'comunas': Comuna.objects.filter(activo=True),
+        'comunas': comunas_con_socios(catalogo),
         'sedes': Sede.objects.filter(activo=True),
         'campus_list': Campus.objects.filter(activo=True),
         'carreras': Carrera.objects.filter(activo=True),
         'periodos': PeriodoAcademico.objects.all(),
         'anios': PeriodoAcademico.objects.values_list('anio', flat=True).distinct().order_by('-anio'),
         'filtros': request.GET,
-        'estados_socio': services.ESTADOS_SOCIO,
+        'estados_socio': [e for e in services.ESTADOS_SOCIO if e[0] != 'RECIBIDO'],
         'total_participaciones': total_participaciones,
         'total_organizaciones_con_participacion': total_organizaciones_con_participacion,
+        'orden': orden,
+        'opciones_orden': [(ORDEN_NOMBRE, 'Nombre (A-Z)'), *OPCIONES_ORDEN],
     }
     return render(request, 'socios/lista_coordinador.html', context)
 
@@ -254,13 +276,111 @@ def detalle_historial_socio(request, socio_id):
 @coordinador_required
 def lista_postulaciones(request):
     """
-    Muestra las postulaciones enviadas desde convocatorias de socios comunitarios.
+    Lo que el coordinador debe revisar, en dos pestañas: las postulaciones que
+    llegan por el formulario de una convocatoria (RF-SC-01/02) y los socios que
+    propone un equipo al inscribirse (RF-SC-04).
     """
-    postulaciones = PostulacionSocio.objects.select_related(
-        'convocatoria', 'respuesta_formulario', 'socio', 'revisado_por_usuario'
-    ).order_by('-fecha_recepcion')
+    origen = 'equipos' if request.GET.get('origen') == 'equipos' else 'convocatoria'
+    orden = orden_pedido(request)
 
-    return render(request, 'socios/lista_postulaciones.html', {'postulaciones': postulaciones})
+    postulaciones = ordenar_por_fecha(PostulacionSocio.objects.select_related(
+        'convocatoria', 'socio__comuna', 'revisado_por_usuario'
+    ), 'fecha_recepcion', orden)
+
+    propuestos = list(ordenar_por_fecha(
+        services.socios_propuestos_por_equipos()
+        .prefetch_related(Prefetch(
+            'participaciones',
+            queryset=ParticipacionSocio.objects.filter(equipo__isnull=False)
+            .select_related('equipo__seccion__asignatura').order_by('fecha_inicio', 'pk'),
+            to_attr='participaciones_equipo',
+        )),
+        'fecha_creacion', orden,
+    ))
+    for socio in propuestos:
+        socio.equipo_origen = (
+            socio.participaciones_equipo[0].equipo if socio.participaciones_equipo else None
+        )
+
+    return render(request, 'socios/lista_postulaciones.html', {
+        'origen': origen,
+        'postulaciones': postulaciones,
+        'pendientes_convocatoria': sum(1 for p in postulaciones if p.estado == 'RECIBIDA'),
+        'propuestos': propuestos,
+        'orden': orden,
+        'opciones_orden': OPCIONES_ORDEN,
+    })
+
+
+@coordinador_required
+def revisar_socio_propuesto(request, socio_id):
+    """
+    El coordinador corrige los datos del socio que propuso un equipo y decide
+    si queda disponible para otros grupos o solo en el historial del equipo
+    (RF-SC-04 CA2, RN-10).
+    """
+    socio = get_object_or_404(
+        SocioComunitario.objects.select_related('clasificacion', 'comuna'), pk=socio_id,
+    )
+    if socio.postulaciones.exists():
+        # Los que postularon por una convocatoria se revisan en su postulación.
+        return redirect('socios:detalle_postulacion', postulacion_id=socio.postulaciones.latest('fecha_recepcion').id)
+
+    contacto = socio.contactos.filter(activo=True).order_by('-es_principal', 'pk').first()
+    pendiente = socio.estado_revision == 'RECIBIDO'
+    form = SocioPropuestoForm(request.POST or None, instance=socio, contacto=contacto)
+
+    if request.method == 'POST' and form.is_valid():
+        try:
+            decision = services.revisar_socio_propuesto(request, socio, form)
+        except ValidationError as error:
+            messages.error(request, error.messages[0])
+        else:
+            if decision:
+                messages.success(
+                    request,
+                    f"{socio.nombre_organizacion} quedó "
+                    f"{'disponible para otros grupos' if decision == DECISION_HABILITAR else 'solo en el historial del equipo'}.",
+                )
+                return redirect(f"{reverse('socios:lista_postulaciones')}?origen=equipos")
+            messages.success(request, "Datos del socio guardados.")
+            return redirect('socios:revisar_socio_propuesto', socio_id=socio.id)
+
+    participaciones = (
+        socio.participaciones.filter(equipo__isnull=False)
+        .select_related('equipo__seccion__asignatura', 'periodo').order_by('fecha_inicio', 'pk')
+    )
+    return render(request, 'socios/revisar_propuesto.html', {
+        'socio': socio,
+        'form': form,
+        'pendiente': pendiente,
+        'participaciones': participaciones,
+    })
+
+
+@coordinador_required
+def detalle_postulacion(request, postulacion_id):
+    """
+    Página de revisión: la ficha que envió el socio, ordenada por sección, y
+    la decisión del Coordinador (RF-SC-02).
+    """
+    postulacion = get_object_or_404(
+        PostulacionSocio.objects.select_related(
+            'convocatoria', 'respuesta_formulario', 'socio', 'revisado_por_usuario',
+        ),
+        pk=postulacion_id,
+    )
+
+    secciones = []
+    for pregunta, texto in encuestas_services.resumen_respuesta(postulacion.respuesta_formulario):
+        if not secciones or secciones[-1]['bloque'].id != pregunta.bloque_id:
+            secciones.append({'bloque': pregunta.bloque, 'respuestas': []})
+        secciones[-1]['respuestas'].append((pregunta, texto))
+
+    return render(request, 'socios/detalle_postulacion.html', {
+        'postulacion': postulacion,
+        'secciones': secciones,
+    })
 
 
 @coordinador_required
