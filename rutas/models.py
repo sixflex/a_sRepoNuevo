@@ -48,7 +48,8 @@ class RutaVersion(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.plantilla} - Versión {self.numero_version}"
+        return f"{self.plantilla} Versión {self.numero_version}"
+
 
 class RutaActividadQuerySet(models.QuerySet):
     def update(self, **kwargs):
@@ -64,6 +65,7 @@ class RutaActividadQuerySet(models.QuerySet):
                 "No se pueden eliminar actividades de una versión publicada."
             )
         return super().delete()
+
     def bulk_create(
         self,
         objs,

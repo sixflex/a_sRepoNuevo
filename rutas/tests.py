@@ -5,6 +5,9 @@ from rutas.models import (RutaActividad,RutaPlantilla,RutaVersion,SeccionActivid
 from rutas.services import asignar_ruta_as_si_corresponde
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse
 from academico.models import Docente, SeccionDocente
@@ -23,6 +26,12 @@ from django.test import TestCase
 from .models import RutaActividad, RutaPlantilla, RutaVersion
 from .services import crear_nueva_version_ruta
 from django.core.exceptions import ValidationError
+
+from django.utils import timezone
+from decimal import Decimal
+
+from academico.models import Asignatura, Campus, PeriodoAcademico, Seccion, Sede, Docente
+from rutas.models import RutaVersion, RutaActividad, SeccionRuta, SeccionActividad, RutaPlantilla
 
 class RutaDocenteTestCase(TestCase):
     def setUp(self):
@@ -344,7 +353,7 @@ class SeguimientoRutaTestCase(TestCase):
         self.client.force_login(self.usuario_coordinador)
 
         respuesta = self.client.get(
-            reverse("rutas:seguimiento_rutas_coordinacion")
+            reverse("rutas:seguimiento_coordinacion")
         )
 
         self.assertEqual(respuesta.status_code, 200)
@@ -1008,3 +1017,117 @@ class VersionadoRutaTestCase(TestCase):
             self.version_original.actividades.count(),
             23,
         )
+
+from django.contrib.auth.models import Group
+
+class RutasYPruebasFuncionalesTestCase(TestCase):
+    def setUp(self):
+        self.sede = Sede.objects.create(nombre="Sede Central", activo=True)
+        self.campus = Campus.objects.create(nombre="Campus Providencia", sede=self.sede, activo=True)
+        self.periodo = PeriodoAcademico.objects.create(
+            anio=2026,
+            nombre="2026-2",
+            fecha_inicio="2026-08-01",
+            fecha_fin="2026-12-31",
+        )
+        self.asignatura = Asignatura.objects.create(
+            nombre="Ingeniería de Software", 
+            activo=True
+        )
+        self.plantilla = RutaPlantilla.objects.create(
+            nombre="Ruta del Docente A+S", descripcion="Plantilla de prueba", activo=True
+        )
+
+        self.version = RutaVersion.objects.create(
+            plantilla=self.plantilla, numero_version=1, estado="BORRADOR"
+        )
+        
+        self.actividad_obligatoria = RutaActividad.objects.create(
+            ruta_version=self.version,
+            etapa="Etapa 1",
+            nombre="Actividad Obligatoria 1",
+            es_obligatoria=True,
+            orden=1,
+        )
+        
+        self.version.estado = "ACTIVA"
+        self.version.save(update_fields=["estado"])
+
+        self.user_d1 = User.objects.create_user(username="docente_uno", password="password")
+        self.user_d2 = User.objects.create_user(username="docente_dos", password="password")
+
+        # 1. Asignamos el grupo "Docente" (en singular)
+        grupo_docente, _ = Group.objects.get_or_create(name="Docente")
+        self.user_d1.groups.add(grupo_docente)
+        self.user_d2.groups.add(grupo_docente)
+
+        self.docente1 = Docente.objects.create(
+            usuario=self.user_d1,
+            rut="11111111-1",
+            nombres="Docente",
+            apellidos="Uno",
+            correo_institucional="docente1@uautonoma.cl",
+            activo=True
+        )
+
+        self.docente2 = Docente.objects.create(
+            usuario=self.user_d2,
+            rut="22222222-2",
+            nombres="Docente",
+            apellidos="Dos",
+            correo_institucional="docente2@uautonoma.cl",
+            activo=True
+        )
+
+        # 2. Inyectamos el atributo "perfil_docente" para satisfacer a verificar_acceso_ruta
+        self.user_d1.perfil_docente = self.docente1
+        self.user_d2.perfil_docente = self.docente2
+
+        self.facultad = Facultad.objects.create(nombre="Ingeniería", activo=True)
+        self.carrera = Carrera.objects.create(facultad=self.facultad, nombre="Ingeniería Civil Informática", activo=True)
+
+        self.seccion1 = Seccion.objects.create(
+            nrc="2001", asignatura=self.asignatura, periodo=self.periodo, campus=self.campus
+        )
+
+        SeccionCarrera.objects.create(seccion=self.seccion1, carrera=self.carrera, declaracion_as=True)
+        self.seccion1.docentes.add(self.docente1)
+
+        self.seccion2 = Seccion.objects.create(
+            nrc="2002", asignatura=self.asignatura, periodo=self.periodo, campus=self.campus
+        )
+
+        SeccionCarrera.objects.create(seccion=self.seccion2, carrera=self.carrera, declaracion_as=True)
+        self.seccion2.docentes.add(self.docente2)
+
+        self.ruta1 = SeccionRuta.objects.create(
+            seccion=self.seccion1, ruta_version=self.version, estado="EN_PROGRESO"
+        )
+        self.sec_actividad1 = SeccionActividad.objects.create(
+            seccion_ruta=self.ruta1,
+            ruta_actividad=self.actividad_obligatoria,
+            estado="PENDIENTE",
+        )
+
+    def test_control_acceso_secciones_ajenas(self):
+        self.client.force_login(self.user_d2)
+        response = self.client.get(reverse("rutas:detalle_ruta_docente", args=[self.ruta1.id]))
+        self.assertEqual(response.status_code, 403)
+
+    def test_acceso_docente_autorizado(self):
+        self.client.force_login(self.user_d1)
+        response = self.client.get(reverse("rutas:detalle_ruta_docente", args=[self.ruta1.id]))
+        self.assertEqual(response.status_code, 200)
+
+    def test_flujo_cierre_ruta_con_actividades_pendientes(self):
+        self.client.force_login(self.user_d1)
+        self.client.post(reverse("rutas:completar_ruta", args=[self.ruta1.id]))
+        
+        self.ruta1.refresh_from_db()
+        self.assertEqual(self.ruta1.estado, "EN_PROGRESO")
+
+    def test_coordinador_puede_ver_seguimiento(self):
+        coord_user = User.objects.create_superuser(username="coordinador", password="password", email="coord@uautonoma.cl")
+        self.client.force_login(coord_user)
+        response = self.client.get(reverse("rutas:seguimiento_coordinacion"))
+        self.assertEqual(response.status_code, 200)
