@@ -19,12 +19,14 @@ from reportlab.platypus import (
 )
 
 from archivos.services import guardar_archivo
+from comunicaciones.services import EmailService
 
-from .models import CartaDocumento
+from .models import CartaDocumento, SolicitudCarta
 
 
 MAX_ALUMNOS_POR_CARTA = 6
 MESES_ANTIGUEDAD_ALERTA = 12
+CODIGO_PLANTILLA_CARTA = "CARTA_PRESENTACION_DOCENTE"
 
 
 def verificar_alerta_antiguedad_socio(socio):
@@ -329,3 +331,64 @@ def generar_cartas_agrupadas(solicitud, usuario):
         "total_cartas": len(cartas_generadas),
         "alerta_antiguedad": alerta_antiguedad,
     }
+
+
+def aprobar_y_enviar_carta(solicitud_id, usuario):
+    """RF-CAR-07: al aprobar se genera la carta final y se envía al Docente."""
+    with transaction.atomic():
+        solicitud = SolicitudCarta.objects.select_for_update().get(pk=solicitud_id)
+
+        if solicitud.estado != "PENDIENTE":
+            raise ValueError("Solo se pueden aprobar solicitudes pendientes.")
+
+        solicitud.estado = "APROBADA"
+        solicitud.fecha_aprobacion = timezone.now()
+        solicitud.motivo_observacion = None
+        solicitud.save(
+            update_fields=[
+                "estado",
+                "fecha_aprobacion",
+                "motivo_observacion",
+            ]
+        )
+
+        cartas = generar_cartas_agrupadas(solicitud, usuario)["cartas"]
+
+    # Si el envío falla la solicitud sigue aprobada y queda pendiente de envío (RF-CAR-08).
+    envios = [enviar_carta_docente(carta) for carta in cartas]
+    return solicitud, envios
+
+
+def ultimo_envio(documento):
+    return documento.envios_correo.order_by("-id").first()
+
+
+def enviar_carta_docente(documento):
+    """
+    Envía la carta al correo institucional del Docente (RN-06).
+    Sirve también para reintentar: reutiliza el mismo PDF y no vuelve a enviar si ya salió.
+    """
+    envio = ultimo_envio(documento)
+
+    if envio and envio.resultado == "OK":
+        return envio
+
+    if envio and envio.plantilla_id:
+        return EmailService.reintentar_envio(envio.id)
+
+    solicitud = documento.solicitud
+    docente = solicitud.docente_derivador
+
+    return EmailService.enviar_correo(
+        codigo_plantilla=CODIGO_PLANTILLA_CARTA,
+        destinatario=docente.correo_institucional,
+        contexto={
+            "docente": f"{docente.nombres} {docente.apellidos}".strip(),
+            "numero_solicitud": solicitud.id,
+            "asignatura": solicitud.seccion.asignatura.nombre,
+            "nrc": solicitud.seccion.nrc,
+            "institucion": solicitud.institucion_receptora,
+            "persona_receptora": solicitud.persona_receptora,
+        },
+        carta_documento=documento,
+    )

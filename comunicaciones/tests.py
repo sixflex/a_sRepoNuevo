@@ -27,7 +27,7 @@ class EmailServiceTestCase(TestCase):
         self.assertIn("Fondo Concursable", envio.cuerpo)
         self.assertEqual(len(mail.outbox), 1)
 
-    @patch("comunicaciones.services.send_mail")
+    @patch("comunicaciones.services.EmailMessage.send")
     def test_envio_fallido_registra_error(self, mock_send_mail):
         mock_send_mail.side_effect = Exception("Fallo de conexión SMTP")
 
@@ -41,7 +41,7 @@ class EmailServiceTestCase(TestCase):
         self.assertIn("Fallo de conexión SMTP", envio.detalle_error)
         self.assertEqual(envio.numero_intento, 1)
 
-    @patch("comunicaciones.services.send_mail")
+    @patch("comunicaciones.services.EmailMessage.send")
     def test_reintento_no_duplica_registro(self, mock_send_mail):
         mock_send_mail.side_effect = Exception("Fallo inicial")
 

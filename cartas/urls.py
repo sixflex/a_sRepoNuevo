@@ -35,9 +35,9 @@ urlpatterns = [
         name="editar_solicitud_docente",
     ),
     path(
-        "coordinacion/<int:solicitud_id>/generar-pdf/",
-        views.generar_carta_pdf,
-        name="generar_carta_pdf",
+        "documento/<int:documento_id>/reintentar-envio/",
+        views.reintentar_envio_carta,
+        name="reintentar_envio_carta",
     ),
     path(
         "documento/<int:documento_id>/descargar/",

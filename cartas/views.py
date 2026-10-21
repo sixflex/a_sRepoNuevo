@@ -9,13 +9,13 @@ from core.ordenamiento import OPCIONES_ORDEN, orden_pedido, ordenar_por_fecha
 from usuarios.permissions import es_coordinador, es_docente
 
 from .models import CartaEstudiante, SolicitudCarta, CartaDocumento
-from .services import generar_cartas_agrupadas
-from django.http import HttpResponse, Http404
+from .services import aprobar_y_enviar_carta, enviar_carta_docente, ultimo_envio
+from archivos.services import abrir_archivo
+from django.http import FileResponse, Http404
 
 from .forms import SolicitudCartaForm
 from .models import CartaEstudiante, SolicitudCarta
 from django.views.decorators.http import require_POST
-from .services import generar_pdf_carta
 
 @login_required
 def solicitar_carta_docente(request, seccion_id):
@@ -273,11 +273,17 @@ def detalle_solicitud_coordinacion(request, solicitud_id):
         id=solicitud_id,
     )
 
+    documentos = [
+        (documento, ultimo_envio(documento))
+        for documento in solicitud.documentos.all()
+    ]
+
     return render(
         request,
         "cartas/detalle_solicitud_coordinacion.html",
         {
             "solicitud": solicitud,
+            "documentos": documentos,
         },
     )
 
@@ -304,22 +310,34 @@ def aprobar_solicitud(request, solicitud_id):
             solicitud_id=solicitud.id,
         )
 
-    solicitud.estado = "APROBADA"
-    solicitud.fecha_aprobacion = timezone.now()
-    solicitud.motivo_observacion = None
+    try:
+        solicitud, envios = aprobar_y_enviar_carta(
+            solicitud.id,
+            request.user,
+        )
+    except ValueError as error:
+        messages.error(
+            request,
+            f"No se pudo aprobar la solicitud: {error}",
+        )
 
-    solicitud.save(
-        update_fields=[
-            "estado",
-            "fecha_aprobacion",
-            "motivo_observacion",
-        ]
-    )
+        return redirect(
+            "cartas:detalle_solicitud_coordinacion",
+            solicitud_id=solicitud.id,
+        )
 
-    messages.success(
-        request,
-        "La solicitud fue aprobada correctamente.",
-    )
+    if all(envio.resultado == "OK" for envio in envios):
+        messages.success(
+            request,
+            "La solicitud fue aprobada y la carta se envió a "
+            f"{solicitud.docente_derivador.correo_institucional}.",
+        )
+    else:
+        messages.warning(
+            request,
+            "La solicitud fue aprobada, pero la carta no se pudo enviar. "
+            "Quedó pendiente de envío y puedes reintentarlo desde aquí.",
+        )
 
     return redirect(
         "cartas:detalle_solicitud_coordinacion",
@@ -388,65 +406,62 @@ def observar_solicitud(request, solicitud_id):
     )
 @login_required
 @require_POST
-def generar_carta_pdf(request, solicitud_id):
+def reintentar_envio_carta(request, documento_id):
     if not es_coordinador(request.user):
         raise PermissionDenied
 
-    solicitud = get_object_or_404(
-        SolicitudCarta.objects.select_related(
-            "seccion",
-            "seccion__asignatura",
-            "docente_derivador",
-        ).prefetch_related(
-            "estudiantes",
-            "documentos",
+    documento = get_object_or_404(
+        CartaDocumento.objects.select_related(
+            "solicitud",
+            "solicitud__seccion__asignatura",
+            "solicitud__docente_derivador",
         ),
-        id=solicitud_id,
+        id=documento_id,
     )
 
-    if solicitud.estado != "APROBADA":
+    envio = enviar_carta_docente(documento)
+
+    if envio.resultado == "OK":
+        messages.success(
+            request,
+            f"La carta se envió a {envio.destinatario}.",
+        )
+    else:
         messages.error(
             request,
-            "Solo se puede generar la carta de una solicitud aprobada.",
+            f"No se pudo enviar la carta: {envio.detalle_error}",
         )
-        return redirect(
-            "cartas:detalle_solicitud_coordinacion",
-            solicitud_id=solicitud.id,
-        )
-
-    try:
-    
-        resultado = generar_cartas_agrupadas(solicitud, request.user)
-    except Exception as error:
-        messages.error(
-            request,
-            f"Error al generar cartas: {str(error)}",
-        )
-        return redirect(
-            "cartas:detalle_solicitud_coordinacion",
-            solicitud_id=solicitud.id,
-        )
-
-    messages.success(
-        request,
-        f"Se generaron exitosamente {resultado['total_cartas']} carta(s) de presentación agrupadas.",
-    )
 
     return redirect(
         "cartas:detalle_solicitud_coordinacion",
-        solicitud_id=solicitud.id,
+        solicitud_id=documento.solicitud_id,
     )
+
 
 @login_required
 def descargar_carta_pdf(request, documento_id):
-    if not es_coordinador(request.user) and not es_docente(request.user):
+    documento = get_object_or_404(
+        CartaDocumento.objects.select_related("archivo", "solicitud"),
+        id=documento_id,
+    )
+
+    docente = getattr(request.user, "perfil_docente", None)
+    es_su_docente = (
+        es_docente(request.user)
+        and docente is not None
+        and docente.id == documento.solicitud.docente_derivador_id
+    )
+
+    if not es_coordinador(request.user) and not es_su_docente:
         raise PermissionDenied
 
-    documento = get_object_or_404(CartaDocumento, id=documento_id)
-    
-    if not documento.archivo_pdf:
-        raise Http404("El archivo PDF no está disponible.")
+    try:
+        contenido = abrir_archivo(documento.archivo)
+    except FileNotFoundError as exc:
+        raise Http404("El archivo PDF no está disponible.") from exc
 
-    response = HttpResponse(documento.archivo_pdf, content_type="application/pdf")
-    response['Content-Disposition'] = f'inline; filename="{documento.folio}.pdf"'
-    return response
+    return FileResponse(
+        contenido,
+        content_type="application/pdf",
+        filename=documento.archivo.nombre_original,
+    )
