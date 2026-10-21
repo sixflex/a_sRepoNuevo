@@ -1,0 +1,6 @@
+<h2>Rechazar Postulación: {{ postulacion.nombre_organizacion }}</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Confirmar Rechazo y Enviar Correo</button>
+</form>
