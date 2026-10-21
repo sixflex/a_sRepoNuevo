@@ -296,7 +296,7 @@ class PermisosTests(DatosBase):
         resp = self.client.get(reverse("socios:lista_coordinador"))
         self.assertNotEqual(resp.status_code, 200)
 
-class PostulacionSocioPublicaTests(TestCase):
+class PostulacionPublicaTests(TestCase):
     def setUp(self):
         User = get_user_model()
         self.coordinador = User.objects.create_user(
@@ -465,6 +465,26 @@ class PostulacionSocioPublicaTests(TestCase):
         envio_rechazo = EnvioCorreo.objects.filter(postulacion=postulacion, resultado="OK").last()
         self.assertIsNotNone(envio_rechazo)
         self.assertIn("Cupos completos para la línea de trabajo", envio_rechazo.cuerpo)
+
+class EnlacesPostulacionFijaTests(TestCase):
+    """Los enlaces de SP5-T12 llevan al flujo de postulación existente."""
+
+    def test_postular_fijo_redirige_al_formulario_publico(self):
+        response = self.client.get(reverse("socios:postular_publico_fijo"))
+        self.assertRedirects(response, reverse("socios:postular_publico"), fetch_redirect_response=False)
+
+    def test_exito_fijo_redirige_al_formulario_publico(self):
+        url = reverse("socios:postulacion_exitosa_fija", args=["12345678-1234-5678-1234-567812345678"])
+        response = self.client.get(url)
+        self.assertRedirects(response, reverse("socios:postular_publico"), fetch_redirect_response=False)
+
+    def test_rechazar_fijo_redirige_a_postulaciones_solo_coordinador(self):
+        url = reverse("socios:rechazar_postulacion_fija", args=[1])
+        self.assertNotEqual(self.client.get(url).get("Location"), reverse("socios:lista_postulaciones"))
+        self.client.force_login(crear_usuario("Coordinador"))
+        response = self.client.get(url)
+        self.assertRedirects(response, reverse("socios:lista_postulaciones"), fetch_redirect_response=False)
+
 
 class SincronizacionEstadosTests(TestCase):
     """RF-SC-02: postulación y socio cambian por un solo servicio, con historial."""

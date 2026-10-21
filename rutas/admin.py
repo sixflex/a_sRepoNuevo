@@ -19,10 +19,10 @@ class RutaActividadInline(admin.TabularInline):
         "etapa",
         "nombre",
         "es_obligatoria",
-        "acepta_evidencias",
         "archivo_recurso",
         "recurso_url",
         "formulario_version",
+        "config_recordatorio_json",
     )
     ordering = ("orden",)
 
@@ -54,7 +54,6 @@ class RutaActividadAdmin(admin.ModelAdmin):
         "etapa",
         "ruta_version",
         "es_obligatoria",
-        "acepta_evidencias",
         "archivo_recurso",
         "recurso_url",
         "formulario_version",
@@ -63,11 +62,9 @@ class RutaActividadAdmin(admin.ModelAdmin):
         "ruta_version",
         "etapa",
         "es_obligatoria",
-        "acepta_evidencias",
     )
     list_editable = (
         "es_obligatoria",
-        "acepta_evidencias",
     )
     search_fields = ("nombre", "etapa", "descripcion")
     ordering = ("ruta_version", "orden")

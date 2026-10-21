@@ -32,40 +32,9 @@
                     </p>
                 </div>
 
-                <div class="d-flex align-items-center flex-wrap gap-3">
-                
-                    <form method="get" action="{% url 'core:docente' %}" class="d-flex align-items-center gap-2 m-0" id="form-filtro-periodo">
-                        <label for="periodo" class="text-muted small fw-semibold text-nowrap mb-0 d-flex align-items-center gap-1">
-                            <i class="bi bi-calendar3"></i>
-                            <span class="d-none d-sm-inline">Período:</span>
-                        </label>
-                        <select id="periodo"
-                                name="periodo"
-                                class="form-select form-select-sm"
-                                style="min-width: 220px;"
-                                onchange="this.form.submit()">
-                            <option value="">Todos los períodos</option>
-                            {% for p in periodos %}
-                                <option value="{{ p.id }}" {% if periodo_id == p.id|stringformat:"s" %}selected{% endif %}>
-                                    {{ p.nombre }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                        <noscript>
-                            <button type="submit" class="btn btn-sm btn-rojo">Filtrar</button>
-                        </noscript>
-                        {% if periodo_id %}
-                            <a href="{% url 'core:docente' %}" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" title="Limpiar filtro" aria-label="Limpiar filtro">
-                                <i class="bi bi-x-lg"></i>
-                                <span class="d-none d-sm-inline">Limpiar</span>
-                            </a>
-                        {% endif %}
-                    </form>
-
-                    <span class="badge px-3 py-2" style="background-color: #f8e5e5; color: #a90000;">
-                        {{ secciones|length }} sección{% if secciones|length != 1 %}es{% endif %}
-                    </span>
-                </div>
+                <span class="badge px-3 py-2" style="background-color: #f8e5e5; color: #a90000;">
+                    {{ secciones|length }} {{ secciones|length|pluralize:"sección,secciones" }}
+                </span>
             </div>
             
 <form method="get" class="row g-3 align-items-end mb-4">
@@ -194,25 +163,22 @@
                     {% endif %}
                 </div>
             {% empty %}
-            
                 <div class="text-center py-5">
                     <div class="mb-3" style="font-size: 40px;">
                         📚
                     </div>
 
                     <h5 class="fw-bold">
-                        {% if periodo_id %}
-                            No tienes secciones asignadas en este período
+                        {% if filtros_activos %}
+                            No se encontraron secciones
                         {% else %}
                             No tienes secciones asignadas
                         {% endif %}
                     </h5>
 
                     <p class="text-muted mb-0">
-                        {% if periodo_seleccionado %}
-                            No se encontraron secciones académicas asignadas para <strong>{{ periodo_seleccionado.nombre }}</strong>.
-                        {% elif periodo_id %}
-                            No se encontraron secciones académicas asignadas para el período seleccionado.
+                        {% if filtros_activos %}
+                            No tienes secciones asignadas para el año o período académico seleccionado.
                         {% else %}
                             Cuando tengas una sección asignada aparecerá en este panel.
                         {% endif %}

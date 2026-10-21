@@ -310,47 +310,63 @@
         <div class="card-body">
             <h5 class="mb-3">Carta de Presentación</h5>
 
-            <form
-                method="post"
-                action="{% url 'cartas:generar_carta_pdf' solicitud.id %}"
-            >
-                {% csrf_token %}
-                <button
-                    type="submit"
-                    class="btn btn-primary"
-                >
-                    Generar PDF
-                </button>
-            </form>
+            {% for documento, envio in documentos %}
+                <div class="{% if not forloop.first %}mt-3{% endif %}">
+                    <div class="d-flex align-items-center flex-wrap gap-3">
+                        <span>
+                            Versión {{ documento.numero_version }}
+                        </span>
 
-            {% if solicitud.documentos.all %}
-                <div class="mt-4">
-                    <strong>Documentos generados</strong>
+                        <a
+                            href="{% url 'cartas:descargar_carta_pdf' documento.id %}"
+                            class="btn btn-sm btn-outline-primary"
+                        >
+                            Descargar PDF
+                        </a>
 
-                    {% for documento in solicitud.documentos.all %}
-                        <div class="d-flex align-items-center gap-3 mt-2">
-                            <span>
-                                Versión {{ documento.numero_version }}
+                        {% if envio.resultado == "OK" %}
+                            <span class="badge bg-success">
+                                Enviada
                             </span>
-
-                            <a
-                                href="{% url 'cartas:descargar_carta_pdf' documento.id %}"
-                                class="btn btn-sm btn-outline-primary"
-                            >
-                                Descargar PDF
-                            </a>
 
                             <span class="text-muted small">
-                                {{ documento.fecha_generacion|date:"d/m/Y H:i" }}
+                                a {{ envio.destinatario }}
+                                el {{ envio.fecha_envio|date:"d/m/Y H:i" }}
                             </span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">
+                                Pendiente de envío
+                            </span>
+
+                            <form
+                                method="post"
+                                action="{% url 'cartas:reintentar_envio_carta' documento.id %}"
+                            >
+                                {% csrf_token %}
+                                <button
+                                    type="submit"
+                                    class="btn btn-sm btn-outline-secondary"
+                                >
+                                    Reintentar envío
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+
+                    {% if envio and envio.resultado != "OK" %}
+                        <div class="small text-danger mt-1">
+                            Intento {{ envio.numero_intento }}
+                            a {{ envio.destinatario }}
+                            el {{ envio.fecha_envio|date:"d/m/Y H:i" }}:
+                            {{ envio.detalle_error }}
                         </div>
-                    {% empty %}
-                        <div class="text-muted mt-2">
-                            Aún no se ha generado ningún PDF.
-                        </div>
-                    {% endfor %}
+                    {% endif %}
                 </div>
-            {% endif %}
+            {% empty %}
+                <div class="text-muted">
+                    Aún no se ha generado ningún PDF.
+                </div>
+            {% endfor %}
         </div>
     </div>
 

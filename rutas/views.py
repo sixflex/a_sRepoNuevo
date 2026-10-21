@@ -174,12 +174,6 @@ def detalle_ruta_docente(request, seccion_ruta_id):
                 .exclude(invitaciones_cierre__seccion_ruta=seccion_ruta)
             )
 
-    actividades_con_evidencia = [
-        act.ruta_actividad.orden
-        for act in actividades
-        if act.ruta_actividad.acepta_evidencias
-    ]
-
     return render(
         request,
         "rutas/detalle_ruta_docente.html",
@@ -187,7 +181,6 @@ def detalle_ruta_docente(request, seccion_ruta_id):
             "seccion_ruta": seccion_ruta,
             "seccion": seccion_ruta.seccion,
             "etapas": etapas,
-            "actividades_con_evidencia": actividades_con_evidencia,
             "puede_completar_ruta": puede_completar_ruta,
             "observacion_sin_cierre": servicios.OBSERVACION_SIN_CIERRE,
         },
@@ -429,9 +422,6 @@ def subir_evidencia(request, actividad_id):
             "rutas:detalle_ruta_docente",
             seccion_ruta_id=seccion_ruta.id,
         )
-
-    if not actividad.ruta_actividad.acepta_evidencias:
-        raise PermissionDenied
 
     if actividad.completada_por_docente_id is not None:
         messages.error(

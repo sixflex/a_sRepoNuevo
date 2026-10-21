@@ -24,13 +24,7 @@ from .constantes import ESTADOS_POSTULACION, ESTADOS_SOCIO_SELECCIONABLES, estad
 from .services import enviar_notificacion_postulacion
 from .validators import validar_rut_chileno
 
-from .models import (
-    ClasificacionSocio,
-    Comuna,
-    ParticipacionSocio,
-    PostulacionSocio,
-    SocioComunitario,
-)
+from .models import (ClasificacionSocio,Comuna,ParticipacionSocio,PostulacionSocio,SocioComunitario,)
 
 ESTADOS_SOCIO = [codigo for codigo, _ in services.ESTADOS_SOCIO]
 
@@ -665,3 +659,16 @@ def postulacion_exitosa(request, postulacion_id):
     return render(request, "socios/postulacion_exitosa.html", {
         "postulacion": postulacion,
     })
+
+# Se mantienen por compatibilidad con los enlaces de SP5-T12; el flujo real es postular_publico.
+def postular_publico_fijo(request):
+    return redirect("socios:postular_publico")
+
+
+def postulacion_exitosa_fija(request, identificador):
+    return redirect("socios:postular_publico")
+
+
+@coordinador_required
+def rechazar_postulacion_fija(request, pk):
+    return redirect("socios:lista_postulaciones")

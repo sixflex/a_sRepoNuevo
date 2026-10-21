@@ -142,7 +142,6 @@ class RutaActividad(models.Model):
     )
 
     es_obligatoria = models.BooleanField(default=True)
-    acepta_evidencias = models.BooleanField(default=False)
     orden = models.IntegerField()
 
     recurso_url = models.CharField(
