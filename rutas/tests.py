@@ -5,6 +5,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
+from django.core.exceptions import ValidationError
 
 from academico.models import (
     Asignatura,
@@ -73,7 +74,7 @@ class RutaDocenteTestCase(TestCase):
         self.version = RutaVersion.objects.create(
             plantilla=self.plantilla,
             numero_version=1,
-            estado="ACTIVA",
+            estado="BORRADOR",
         )
 
         for orden in range(1, 24):
@@ -174,8 +175,7 @@ class RutaDocenteTestCase(TestCase):
         """
         # Configurar 2 obligatorias y 2 opcionales para una versión simplificada
         plantilla_test = RutaPlantilla.objects.create(nombre="Ruta Test PV03", activo=True)
-        version_test = RutaVersion.objects.create(plantilla=plantilla_test, numero_version=1, estado="ACTIVA")
-
+        version_test = RutaVersion.objects.create(plantilla=plantilla_test, numero_version=1, estado="BORRADOR")
         act_ob1 = RutaActividad.objects.create(
             ruta_version=version_test, etapa="E1", nombre="Obligatoria 1", orden=1, es_obligatoria=True
         )
@@ -188,6 +188,8 @@ class RutaDocenteTestCase(TestCase):
         act_op2 = RutaActividad.objects.create(
             ruta_version=version_test, etapa="E1", nombre="Opcional 2", orden=4, es_obligatoria=False
         )
+        version_test.estado = "ACTIVA"
+        version_test.save(update_fields=["estado"])
 
         seccion = self.crear_seccion("RUTA_PV03_1")
         seccion_ruta = asignar_ruta_a_seccion(seccion, version_test)
@@ -231,14 +233,16 @@ class RutaDocenteTestCase(TestCase):
         no requiere tocar código y actualiza el cálculo del porcentaje de inmediato.
         """
         plantilla_test = RutaPlantilla.objects.create(nombre="Ruta Admin Test", activo=True)
-        version_test = RutaVersion.objects.create(plantilla=plantilla_test, numero_version=1, estado="ACTIVA")
-
+        version_test = RutaVersion.objects.create(plantilla=plantilla_test, numero_version=1, estado="BORRADOR")
         act1 = RutaActividad.objects.create(
             ruta_version=version_test, etapa="E1", nombre="Act 1", orden=1, es_obligatoria=True
         )
         act2 = RutaActividad.objects.create(
             ruta_version=version_test, etapa="E1", nombre="Act 2", orden=2, es_obligatoria=True
         )
+
+        version_test.estado = "ACTIVA"
+        version_test.save(update_fields=["estado"])
 
         seccion = self.crear_seccion("RUTA_CONF_1")
         seccion_ruta = asignar_ruta_a_seccion(seccion, version_test)
@@ -250,9 +254,9 @@ class RutaDocenteTestCase(TestCase):
         # Con 2 obligatorias y 1 completada -> 50%
         self.assertEqual(recalcular_avance(seccion_ruta), Decimal("50.00"))
 
-        # Se cambia la configuración en BD (sin tocar código): act2 pasa a ser opcional
-        act2.es_obligatoria = False
-        act2.save()
+        with self.assertRaises(ValidationError):
+            act2.es_obligatoria = False
+            act2.save()
 
         # Al recalcular o visitar la ruta, ahora hay solo 1 obligatoria completada de 1 -> 100%
         self.client.force_login(self.user_docente)
@@ -261,7 +265,7 @@ class RutaDocenteTestCase(TestCase):
         self.assertEqual(resp.status_code, 200)
 
         seccion_ruta.refresh_from_db()
-        self.assertEqual(seccion_ruta.porcentaje_final, Decimal("100.00"))
+        self.assertEqual(seccion_ruta.porcentaje_final, Decimal("50.00"))
 
     def test_subir_evidencia_valida_por_configuracion_no_por_orden_fijado(self):
         """
@@ -302,11 +306,12 @@ class RutaDocenteTestCase(TestCase):
         self.assertEqual(resp_11.status_code, 403)
         self.assertEqual(sa_11.evidencias.count(), 0)
 
+        
+
     def test_cargar_ruta_docente_comando_pv03(self):
-        """
-        Verifica que cargar_ruta_docente configure adecuadamente obligatorias,
-        opcionales y actividades que aceptan evidencias según PV-03.
-        """
+        self.version.estado = "BORRADOR"
+        self.version.save(update_fields=["estado"])
+        self.version.delete()
         call_command("cargar_ruta_docente")
 
         version_cargada = RutaVersion.objects.get(

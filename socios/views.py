@@ -24,13 +24,13 @@ from .constantes import ESTADOS_POSTULACION, ESTADOS_SOCIO_SELECCIONABLES, estad
 from .services import enviar_notificacion_postulacion
 from .validators import validar_rut_chileno
 
-from .models import (
-    ClasificacionSocio,
-    Comuna,
-    ParticipacionSocio,
-    PostulacionSocio,
-    SocioComunitario,
-)
+from .models import (ClasificacionSocio,Comuna,ParticipacionSocio,PostulacionSocio,SocioComunitario,)
+from django import forms
+from django.conf import settings
+from django.core.mail import send_mail
+from comunicaciones.models import EnvioCorreo
+from .forms import PostulacionSocioForm, RechazoPostulacionForm
+from .models import PostulacionSocioPublica
 
 ESTADOS_SOCIO = [codigo for codigo, _ in services.ESTADOS_SOCIO]
 
@@ -665,3 +665,123 @@ def postulacion_exitosa(request, postulacion_id):
     return render(request, "socios/postulacion_exitosa.html", {
         "postulacion": postulacion,
     })
+
+def postular_publico_fijo(request):
+    if request.method == "POST":
+        form = PostulacionSocioForm(request.POST)
+
+        if form.is_valid():
+            postulacion = form.save()
+
+            return redirect(
+                "socios:postulacion_exitosa_fija",
+                identificador=postulacion.identificador,
+            )
+    else:
+        form = PostulacionSocioForm()
+
+    return render(
+        request,
+        "socios/publico/postulacion_fija_form.html",
+        {"form": form},
+    )
+
+
+def postulacion_exitosa_fija(request, identificador):
+    postulacion = get_object_or_404(
+        PostulacionSocioPublica,
+        identificador=identificador,
+    )
+
+    return render(
+        request,
+        "socios/publico/postulacion_fija_exitosa.html",
+        {"postulacion": postulacion},
+    )
+
+@coordinador_required
+def rechazar_postulacion_fija(request, pk):
+    postulacion = get_object_or_404(
+        PostulacionSocioPublica,
+        pk=pk,
+    )
+
+    if postulacion.estado != "PENDIENTE":
+        messages.error(
+            request,
+            "Esta postulación ya fue revisada.",
+        )
+        return redirect("socios:lista_postulaciones")
+
+    if request.method == "POST":
+        form = RechazoPostulacionForm(request.POST, instance=postulacion)
+
+        if form.is_valid():
+            postulacion = form.save(commit=False)
+            postulacion.estado = "RECHAZADA"
+            postulacion.save()
+
+            asunto = "Resultado de su postulación como Socio Comunitario A+S"
+
+            cuerpo = (
+                f"Estimado(a) {postulacion.nombre_contacto}:\n\n"
+                f"Le informamos que su postulación de "
+                f"{postulacion.nombre_organizacion} no ha sido aprobada.\n\n"
+                f"Motivo del rechazo:\n"
+                f"{postulacion.motivo_rechazo}\n\n"
+                f"Atentamente,\n"
+                f"Equipo de Coordinación A+S"
+            )
+
+            remitente = settings.DEFAULT_FROM_EMAIL
+            resultado = "OK"
+            detalle_error = None
+            fecha_envio = None
+
+            try:
+                send_mail(
+                    asunto,
+                    cuerpo,
+                    remitente,
+                    [postulacion.email_contacto],
+                    fail_silently=False,
+                )
+                fecha_envio = timezone.now()
+            except Exception as error:
+                resultado = "ERROR"
+                detalle_error = str(error)
+
+            EnvioCorreo.objects.create(
+                remitente=remitente,
+                destinatario=postulacion.email_contacto,
+                asunto=asunto,
+                cuerpo=cuerpo,
+                fecha_envio=fecha_envio,
+                resultado=resultado,
+                detalle_error=detalle_error,
+                numero_intento=1,
+            )
+
+            if resultado == "OK":
+                messages.success(
+                    request,
+                    "Postulación rechazada y correo enviado correctamente.",
+                )
+            else:
+                messages.warning(
+                    request,
+                    "La postulación fue rechazada, pero el correo no pudo enviarse.",
+                )
+
+            return redirect("socios:lista_postulaciones")
+    else:
+        form = RechazoPostulacionForm(instance=postulacion)
+
+    return render(
+        request,
+        "socios/rechazar_postulacion_fija.html",
+        {
+            "form": form,
+            "postulacion": postulacion,
+        },
+    )

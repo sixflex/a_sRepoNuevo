@@ -308,10 +308,11 @@ class Command(BaseCommand):
                     "recurso_url": recurso_url,
                 },
             )
-            for orden, etapa, nombre, descripcion in actividades
-        ]
 
-        RutaActividad.objects.bulk_create(nuevas_actividades)
+            if creada:
+                creadas += 1
+            else:
+                actualizadas += 1
 
         version.estado = "ACTIVA"
         version.save(update_fields=["estado"])
