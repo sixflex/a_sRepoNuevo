@@ -23,6 +23,7 @@ class RutaActividadInline(admin.TabularInline):
         "archivo_recurso",
         "recurso_url",
         "formulario_version",
+        "config_recordatorio_json",
     )
     ordering = ("orden",)
 

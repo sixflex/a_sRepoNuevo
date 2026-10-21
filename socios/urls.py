@@ -9,6 +9,8 @@ urlpatterns = [
     path("coordinacion/<int:socio_id>/cambiar-estado/", views.cambiar_estado_socio, name="cambiar_estado"),
     path("coordinacion/<int:socio_id>/historial/", views.detalle_historial_socio, name="detalle_historial"),
     path("postulaciones/", views.lista_postulaciones, name="lista_postulaciones"),
+    path("postulaciones/<int:postulacion_id>/", views.detalle_postulacion, name="detalle_postulacion"),
+    path("postulaciones/propuestos/<int:socio_id>/", views.revisar_socio_propuesto, name="revisar_socio_propuesto"),
     path("postulaciones/<int:postulacion_id>/revisar/", views.revisar_postulacion, name="revisar_postulacion"),
     path("ruta/actividad/<int:actividad_id>/asociar-socio/", views.asociar_socio_equipo, name="asociar_socio_equipo"),
 
@@ -16,9 +18,8 @@ urlpatterns = [
     path("postular/<int:convocatoria_id>/", views.postular_publico, name="postular_convocatoria"),
     path("postular/confirmacion/<int:postulacion_id>/", views.postulacion_exitosa, name="postulacion_exitosa"),
     
+
     path("postular-fijo/", views.postular_publico_fijo, name="postular_publico_fijo"),
     path("postular-fijo/exito/<uuid:identificador>/", views.postulacion_exitosa_fija, name="postulacion_exitosa_fija"),
     path("rechazar-fijo/<int:pk>/", views.rechazar_postulacion_fija, name="rechazar_postulacion_fija"),
-    path("postulaciones/<int:postulacion_id>/detalle/",views.detalle_postulacion,name="detalle_postulacion",),
-    path("postulaciones/propuestos/<int:socio_id>/revisar/",views.revisar_socio_propuesto,name="revisar_socio_propuesto",),
 ]

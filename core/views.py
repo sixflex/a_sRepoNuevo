@@ -2,10 +2,11 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+
+from core.ordenamiento import OPCIONES_ORDEN, orden_pedido, ordenar_por_fecha
 from rutas.services import obtener_recordatorios_ruta
 from usuarios.permissions import es_coordinador, es_docente
 from usuarios.decorators import coordinador_required, docente_required
-from core.ordenamiento import OPCIONES_ORDEN, orden_pedido, ordenar_por_fecha
 
 from academico.models import (
     PeriodoAcademico,
@@ -133,112 +134,11 @@ def planificacion_coordinacion(request):
         },
     )
 
-@docente_required
-def inicio_docente(request):
-    from decimal import Decimal
-    from rutas.models import SeccionRuta
-
-    secciones = (
-        Seccion.objects
-        .filter(docentes__usuario=request.user)
-        .distinct()
-    )
-
-    rutas = list(
-        SeccionRuta.objects
-        .filter(seccion__docentes__usuario=request.user)
-        .select_related(
-            "seccion",
-            "seccion__asignatura",
-            "seccion__periodo",
-        )
-        .prefetch_related(
-            "actividades__ruta_actividad",
-        )
-        .distinct()
-        .order_by("-seccion__periodo__anio", "seccion__nrc")
-    )
-
-    total_secciones = secciones.count()
-    rutas_completadas = 0
-    total_pendientes = 0
-    total_obligatorias = 0
-    total_completadas = 0
-
-    recordatorios_por_seccion = obtener_recordatorios_ruta(
-        [ruta.seccion for ruta in rutas]
-    )
-
-    for ruta in rutas:
-        actividades = [
-            actividad
-            for actividad in ruta.actividades.all()
-            if actividad.ruta_actividad.es_obligatoria
-        ]
-
-        cantidad_obligatorias = len(actividades)
-
-        cantidad_completadas = sum(
-            1
-            for actividad in actividades
-            if actividad.completada_por_docente_id is not None
-        )
-
-        pendientes = cantidad_obligatorias - cantidad_completadas
-
-        ruta.pendientes_obligatorias = pendientes
-        ruta.avance_calculado = (
-            round(cantidad_completadas * 100 / cantidad_obligatorias, 2)
-            if cantidad_obligatorias
-            else 0
-        )
-
-        recordatorios = recordatorios_por_seccion.get(ruta.seccion_id, [])
-        ruta.recordatorios = (
-            recordatorios
-            if isinstance(recordatorios, list)
-            else []
-        )
-
-        if ruta.estado == "COMPLETADA":
-            rutas_completadas += 1
-
-        total_pendientes += pendientes
-        total_obligatorias += cantidad_obligatorias
-        total_completadas += cantidad_completadas
-
-    avance_general = (
-        round(total_completadas * 100 / total_obligatorias, 2)
-        if total_obligatorias
-        else 0
-    )
-
-    return render(
-        request,
-        "core/inicio_docente.html",
-        {
-            "total_secciones": total_secciones,
-            "rutas_completadas": rutas_completadas,
-            "total_pendientes": total_pendientes,
-            "avance_general": avance_general,
-            "rutas": rutas,
-        },
-    )
 
 
 @docente_required
 def panel_docente(request):
-    periodos = (
-        PeriodoAcademico.objects
-        .all()
-        .order_by(
-            "-anio",
-            "tipo",
-            "nombre",
-        )
-    )
-
-    secciones = (
+    secciones_docente = (
         Seccion.objects
         .filter(docentes__usuario=request.user)
         .select_related(
@@ -250,38 +150,183 @@ def panel_docente(request):
         .distinct()
     )
 
-    periodo_id = request.GET.get("periodo", "").strip()
-    periodo_seleccionado = None
+    periodos = (
+        PeriodoAcademico.objects
+        .filter(secciones__in=secciones_docente)
+        .distinct()
+        .order_by("-anio", "-id")
+    )
 
-    if periodo_id and periodo_id.isdigit():
-        secciones = secciones.filter(periodo_id=int(periodo_id))
-        periodo_seleccionado = periodos.filter(id=int(periodo_id)).first()
-    else:
-        periodo_id = ""
+    anios = (
+        periodos
+        .order_by("-anio")
+        .values_list("anio", flat=True)
+        .distinct()
+    )
+
+    anio_seleccionado = request.GET.get("anio", "").strip()
+    periodo_seleccionado = request.GET.get("periodo", "").strip()
+
+    secciones = secciones_docente
+
+    if anio_seleccionado:
+        if anio_seleccionado.isdigit():
+            secciones = secciones.filter(
+                periodo__anio=int(anio_seleccionado)
+            )
+        else:
+            secciones = secciones.none()
+
+    if periodo_seleccionado:
+        if periodo_seleccionado.isdigit():
+            secciones = secciones.filter(
+                periodo_id=int(periodo_seleccionado)
+            )
+        else:
+            secciones = secciones.none()
+
+    if anio_seleccionado:
+        periodos = periodos.filter(
+            anio=anio_seleccionado
+        ) if anio_seleccionado.isdigit() else periodos.none()
 
     secciones = secciones.order_by(
         "-periodo__anio",
-        "periodo__tipo",
+        "-periodo_id",
         "asignatura__nombre",
-        "nrc",
     )
 
     secciones = list(secciones)
-    
 
     recordatorios = obtener_recordatorios_ruta(secciones)
     for seccion in secciones:
         seccion.recordatorio_ruta = recordatorios.get(seccion.id)
-
 
     return render(
         request,
         "core/docente.html",
         {
             "secciones": secciones,
+            "anios": anios,
             "periodos": periodos,
-            "periodo_id": periodo_id,
+            "anio_seleccionado": anio_seleccionado,
+            "periodo_id": periodo_seleccionado,
             "periodo_seleccionado": periodo_seleccionado,
+            "filtros_activos": bool(
+                anio_seleccionado or periodo_seleccionado
+            ),
+        },
+    )
+
+
+@docente_required
+def inicio_docente(request):
+    from django.db.models import Prefetch
+
+    from rutas.models import SeccionActividad, SeccionRuta
+    from rutas.services import (
+        con_avance,
+        es_actividad_cierre,
+        recordatorios_cierre,
+    )
+
+    secciones = (
+        Seccion.objects
+        .filter(docentes__usuario=request.user)
+        .distinct()
+    )
+
+    rutas = list(
+        con_avance(
+            SeccionRuta.objects
+            .filter(seccion__in=secciones)
+            .select_related(
+                "seccion",
+                "seccion__asignatura",
+                "seccion__periodo",
+            )
+            .prefetch_related(
+                Prefetch(
+                    "actividades",
+                    queryset=(
+                        SeccionActividad.objects
+                        .filter(completada_por_docente__isnull=True)
+                        .select_related("ruta_actividad")
+                        .order_by("ruta_actividad__orden")
+                    ),
+                    to_attr="actividades_pendientes",
+                ),
+                "invitaciones_cierre__socio",
+            )
+        )
+        .order_by(
+            "-seccion__periodo__anio",
+            "seccion__asignatura__nombre",
+        )
+    )
+
+    total_obligatorias = 0
+    total_completadas = 0
+    total_pendientes = 0
+
+    for ruta in rutas:
+        # Recordatorio visible en el panel, sin correo programado (RF-RUT-04).
+        ruta.recordatorios = []
+
+        if ruta.estado != "COMPLETADA":
+            for actividad in ruta.actividades_pendientes:
+                nombre = actividad.ruta_actividad.nombre
+
+                if (
+                    es_actividad_cierre(actividad.ruta_actividad)
+                    and not ruta.invitaciones_cierre.all()
+                ):
+                    nombre += ": indica si habrá cierre e invita al Socio"
+
+                if not actividad.ruta_actividad.es_obligatoria:
+                    nombre += " (opcional)"
+
+                ruta.recordatorios.append(nombre)
+
+            ruta.recordatorios += recordatorios_cierre(ruta)
+
+        ruta.pendientes_obligatorias = (
+            ruta.total_obligatorias
+            - ruta.completadas_obligatorias
+        )
+
+        ruta.avance_calculado = (
+            round(
+                ruta.completadas_obligatorias
+                * 100
+                / ruta.total_obligatorias
+            )
+            if ruta.total_obligatorias
+            else 0
+        )
+
+        total_obligatorias += ruta.total_obligatorias
+        total_completadas += ruta.completadas_obligatorias
+        total_pendientes += ruta.pendientes_obligatorias
+
+    avance_general = (
+        round(total_completadas * 100 / total_obligatorias)
+        if total_obligatorias
+        else 0
+    )
+
+    return render(
+        request,
+        "core/inicio_docente.html",
+        {
+            "total_secciones": secciones.count(),
+            "rutas_completadas": sum(
+                ruta.estado == "COMPLETADA"
+                for ruta in rutas
+            ),
+            "total_pendientes": total_pendientes,
+            "avance_general": avance_general,
+            "rutas": rutas,
         },
     )
 
