@@ -2,8 +2,37 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Prefetch
+from django.utils.functional import cached_property
 
 from academico.models import Seccion
+
+# Atributo donde se precargan las participaciones abiertas de cada equipo.
+ATRIBUTO_PARTICIPACIONES_VIGENTES = "participaciones_vigentes"
+
+
+def prefetch_socio_vigente(ruta="participaciones_socios"):
+    """
+    Prefetch reutilizable para mostrar el socio vigente de muchos equipos
+    sin una consulta por equipo. ruta permite usarlo desde otra relación,
+    p. ej. prefetch_socio_vigente("equipo__participaciones_socios").
+    """
+    from socios.models import ParticipacionSocio
+
+    return Prefetch(
+        ruta,
+        queryset=(
+            ParticipacionSocio.objects
+            .filter(fecha_fin__isnull=True)
+            .select_related("socio")
+        ),
+        to_attr=ATRIBUTO_PARTICIPACIONES_VIGENTES,
+    )
+
+
+class EquipoQuerySet(models.QuerySet):
+    def con_socio_vigente(self):
+        return self.prefetch_related(prefetch_socio_vigente())
 
 
 class ProyectoAS(models.Model):
@@ -55,13 +84,9 @@ class Equipo(models.Model):
     fecha_registro = models.DateTimeField(auto_now_add=True)
     estado = models.CharField(max_length=20)
 
-    socio_comunitario = models.ForeignKey(
-    "socios.SocioComunitario",
-    on_delete=models.PROTECT,
-    null=True,
-    blank=True,
-    related_name="equipos",
-    )
+    # El socio del equipo vive en socios.ParticipacionSocio (modelo de BD
+    # aprobado: EQUIPO no tiene FK a socio). Ver socio_vigente.
+    objects = EquipoQuerySet.as_manager()
 
     class Meta:
         constraints = [
@@ -73,6 +98,28 @@ class Equipo(models.Model):
 
     def __str__(self):
         return f"{self.seccion} - Grupo {self.numero_grupo}"
+
+    @cached_property
+    def socio_vigente(self):
+        """
+        Socio Comunitario actual del equipo: el de su participación abierta
+        (fecha_fin vacía) en ParticipacionSocio. Usa la lista precargada por
+        con_socio_vigente()/prefetch_socio_vigente() si existe (sin N+1).
+        """
+        if hasattr(self, ATRIBUTO_PARTICIPACIONES_VIGENTES):
+            vigentes = getattr(self, ATRIBUTO_PARTICIPACIONES_VIGENTES)
+            return vigentes[0].socio if vigentes else None
+
+        if self.pk is None:
+            return None
+
+        participacion = (
+            self.participaciones_socios
+            .filter(fecha_fin__isnull=True)
+            .select_related("socio")
+            .first()
+        )
+        return participacion.socio if participacion else None
 
 
 class IntegranteEquipo(models.Model):
@@ -132,50 +179,6 @@ class IntegranteEtiqueta(models.Model):
                 name="unique_etiqueta_por_integrante",
             )
         ]
-
-class HistorialSocioEquipo(models.Model):
-    equipo = models.ForeignKey(
-        Equipo,
-        on_delete=models.CASCADE,
-        related_name="historial_socios",
-    )
-
-    socio_anterior = models.ForeignKey(
-        "socios.SocioComunitario",
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="historial_equipos_como_anterior",
-    )
-
-    socio_nuevo = models.ForeignKey(
-        "socios.SocioComunitario",
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="historial_equipos_como_nuevo",
-    )
-
-    cambiado_por_docente = models.ForeignKey(
-        "academico.Docente",
-        on_delete=models.PROTECT,
-        related_name="cambios_socio_equipos",
-    )
-
-    fecha_cambio = models.DateTimeField(auto_now_add=True)
-
-    motivo = models.CharField(
-        max_length=255,
-        null=True,
-        blank=True,
-    )
-
-    def __str__(self):
-        return (
-            f"Grupo {self.equipo.numero_grupo}: "
-            f"{self.socio_anterior} -> {self.socio_nuevo}"
-        )
-
 
 class EnlaceRegistroEquipo(models.Model):
     seccion = models.ForeignKey(

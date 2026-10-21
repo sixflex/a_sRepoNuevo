@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ nombre_tipo }} · Importar históricos | Portal A+S{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
+<link rel="stylesheet" href="{% static 'css/historicos.css' %}?v=2026-10-19">
+
+<a href="{% url 'historicos:cargas' %}" class="enlace-volver"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Importar históricos</a>
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+    <div>
+        <h1 class="page-title">{{ nombre_tipo }}</h1>
+        <p class="page-subtitle mb-0">
+            {{ carga.archivo.nombre_original }}{% if carga.hoja %} · hoja «{{ carga.hoja }}»{% endif %}
+            · subido el {{ carga.fecha_carga|date:"d/m/Y H:i" }}
+            por {{ carga.responsable_usuario.get_full_name|default:carga.responsable_usuario.username|default:"—" }}
+        </p>
+    </div>
+    <span class="badge-estado carga-{{ carga.estado }} fs-6">{{ nombre_estado }}</span>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3"><div class="card-ua resumen-carga"><span class="resumen-numero">{{ carga.total_filas }}</span><span class="resumen-etiqueta">Filas leídas</span></div></div>
+    <div class="col-6 col-lg-3"><div class="card-ua resumen-carga resumen-aceptada"><span class="resumen-numero">{{ carga.aceptadas }}</span><span class="resumen-etiqueta">Aceptadas</span></div></div>
+    <div class="col-6 col-lg-3"><div class="card-ua resumen-carga resumen-observada"><span class="resumen-numero">{{ carga.observadas }}</span><span class="resumen-etiqueta">Observadas <span class="resumen-ayuda">se importan con aviso</span></span></div></div>
+    <div class="col-6 col-lg-3"><div class="card-ua resumen-carga resumen-omitida"><span class="resumen-numero">{{ carga.omitidas }}</span><span class="resumen-etiqueta">Omitidas <span class="resumen-ayuda">no se importan</span></span></div></div>
+</div>
+
+{% if es_confirmada %}
+    <div class="alert alert-success d-flex align-items-center" role="status">
+        <i class="bi bi-check-circle me-2" aria-hidden="true"></i>
+        <div>
+            {% if es_registro_socios %}
+                Importada: {{ resultado.socios }} socio{{ resultado.socios|pluralize }} con sus participaciones históricas. Ya aparecen en el catálogo, el panel y el mapa.
+            {% else %}
+                Importada: {{ resultado.respuestas }} respuesta{{ resultado.respuestas|pluralize }} histórica{{ resultado.respuestas|pluralize }}. Ya cuentan en los indicadores del panel.
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+
+{% if es_previa %}
+<div class="card-ua p-4 mb-4 confirmar-carga">
+    <form method="post" action="{% url 'historicos:confirmar' carga.id %}" class="row g-3 align-items-end">
+        {% csrf_token %}
+        <div class="col-12 col-md-5">
+            <label for="campus" class="form-label-ua">Campus de estos datos</label>
+            <select id="campus" name="campus" class="form-select" required aria-describedby="campusAyuda">
+                {% for opcion in campus %}
+                    <option value="{{ opcion.id }}" {% if opcion.id == campus_sugerido.id %}selected{% endif %}>{{ opcion.sede.nombre }} · {{ opcion.nombre }}</option>
+                {% endfor %}
+            </select>
+            <div id="campusAyuda" class="form-text">Se usa en las filas que no indican su propia sede.</div>
+        </div>
+        <div class="col-12 col-md-7 d-flex flex-wrap justify-content-md-end gap-2">
+            <button type="submit" form="formCancelar" class="btn btn-light-ua">Cancelar carga</button>
+            <button type="submit" class="btn btn-ua" {% if not importables %}disabled{% endif %}>
+                <i class="bi bi-check2 me-1" aria-hidden="true"></i>Importar {{ importables }} fila{{ importables|pluralize }}
+            </button>
+        </div>
+    </form>
+    <form id="formCancelar" method="post" action="{% url 'historicos:cancelar' carga.id %}" class="d-none">{% csrf_token %}</form>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <div class="col-12 col-xl-4">
+        <div class="card-ua h-100">
+            <div class="card-header-ua"><span>Columnas reconocidas ({{ mapeos|length }})</span></div>
+            <ul class="list-unstyled lista-mapeo mb-0">
+                {% for mapeo in mapeos %}
+                    <li>
+                        <span class="mapeo-origen">{{ mapeo.columna_origen }}</span>
+                        <span class="mapeo-destino"><i class="bi bi-arrow-return-right me-1" aria-hidden="true"></i>{{ mapeo.campo_destino }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+            {% if no_reconocidas %}
+                <div class="p-3 border-top">
+                    <div class="form-label-ua mb-2">No reconocidas ({{ no_reconocidas|length }}), se guardan solo en el archivo</div>
+                    <div class="d-flex flex-wrap gap-1">
+                        {% for columna in no_reconocidas %}<span class="chip-columna">{{ columna }}</span>{% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-12 col-xl-8">
+        <div class="card-ua mb-4">
+            <div class="card-header-ua"><span>Filas observadas u omitidas ({{ con_problemas|length }})</span></div>
+            {% if con_problemas %}
+                <div class="table-responsive">
+                    <table class="table tabla-ua mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Fila</th>
+                                <th scope="col">Resultado</th>
+                                <th scope="col">Causa</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fila in con_problemas %}
+                                <tr>
+                                    <td class="fw-semibold">{{ fila.numero_fila }}</td>
+                                    <td><span class="badge-estado fila-{{ fila.estado }}">{% if fila.estado == "OMITIDA" %}Omitida{% else %}Observada{% endif %}</span></td>
+                                    <td>
+                                        <ul class="list-unstyled mb-0 causas-fila">
+                                            {% for error in fila.errores.all %}
+                                                <li>{% if error.campo %}<strong>{{ error.campo|truncatechars:60 }}:</strong> {% endif %}{{ error.mensaje }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="p-3 mb-0 text-muted">Todas las filas se reconocieron sin observaciones.</p>
+            {% endif %}
+        </div>
+
+        {% if muestra_aceptadas %}
+        <div class="card-ua">
+            <div class="card-header-ua"><span>Ejemplo de filas aceptadas</span></div>
+            <ul class="list-unstyled lista-muestra mb-0">
+                {% for fila in muestra_aceptadas %}
+                    <li>
+                        <span class="fw-semibold me-2">Fila {{ fila.numero_fila }}</span>
+                        <span class="text-muted">{% for columna, valor in fila.datos_raw_json.items %}{% if valor and forloop.counter <= 4 %}{{ valor|truncatechars:40 }}{% if not forloop.last %} · {% endif %}{% endif %}{% endfor %}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

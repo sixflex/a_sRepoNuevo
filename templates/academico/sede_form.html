@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    {% if sede %}Editar Sede{% else %}Nueva Sede{% endif %}
+    {% if sede.pk %}Editar Sede{% else %}Nueva Sede{% endif %} | Portal A+S
 {% endblock %}
 
 {% block content %}
@@ -14,7 +14,7 @@
         <div class="card-header bg-white border-bottom py-3">
 
             <h1 class="h4 mb-1 fw-bold">
-                {% if sede %}
+                {% if sede.pk %}
                     Editar Sede
                 {% else %}
                     Nueva Sede
@@ -92,7 +92,7 @@
                                 id="activo"
                                 name="activo"
                             aria-describedby="activo-ayuda"
-                                {% if not sede or sede.activo %}checked{% endif %}>
+                                {% if sede.activo %}checked{% endif %}>
 
                             <label
                                 class="form-check-label fw-semibold"
@@ -119,7 +119,7 @@
                     <button
                         type="submit"
                         class="btn btn-rojo px-4">
-                        {% if sede %}
+                        {% if sede.pk %}
                             Guardar cambios
                         {% else %}
                             Guardar

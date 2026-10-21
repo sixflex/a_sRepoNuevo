@@ -1,0 +1,17 @@
+{% comment %}
+Selector de orden de un listado. Uso:
+{% include "includes/orden_listado.html" with orden=orden opciones=opciones_orden %}
+Conserva los demás parámetros de la URL (filtros, pestaña).
+{% endcomment %}
+<form method="get" class="orden-listado">
+    {% for clave, valores in request.GET.lists %}
+        {% if clave != "orden" %}{% for valor in valores %}<input type="hidden" name="{{ clave }}" value="{{ valor }}">{% endfor %}{% endif %}
+    {% endfor %}
+    <label for="orden-listado" class="orden-listado-etiqueta"><i class="bi bi-sort-down" aria-hidden="true"></i>Ordenar</label>
+    <select id="orden-listado" name="orden" class="form-select form-select-sm" onchange="this.form.submit()">
+        {% for valor, etiqueta in opciones %}
+            <option value="{{ valor }}"{% if valor == orden %} selected{% endif %}>{{ etiqueta }}</option>
+        {% endfor %}
+    </select>
+    <noscript><button type="submit" class="btn btn-sm btn-light">Aplicar</button></noscript>
+</form>

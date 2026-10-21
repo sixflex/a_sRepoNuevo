@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{# Página pública del enlace único: solo el contenido y el pie institucional, sin la barra superior. #}
+{% block main_navbar %}{% endblock %}
+
+{% block title %}Invitación a la actividad de cierre | Portal A+S{% endblock %}
+
+{% block content_public %}
+<div class="container py-5" style="max-width: 640px;">
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <h1 class="h4 fw-bold mb-3">Actividad de cierre A+S</h1>
+
+            <dl class="row small mb-4">
+                <dt class="col-sm-4">Invitado</dt>
+                <dd class="col-sm-8">{{ invitacion.socio.nombre_organizacion }}</dd>
+
+                <dt class="col-sm-4">Asignatura</dt>
+                <dd class="col-sm-8">{{ seccion.asignatura.nombre }} · Sección {{ seccion.seccion }}</dd>
+
+                {% if carreras %}
+                    <dt class="col-sm-4">Carrera</dt>
+                    <dd class="col-sm-8">{{ carreras }}</dd>
+                {% endif %}
+
+                <dt class="col-sm-4">Campus</dt>
+                <dd class="col-sm-8">{{ seccion.campus }}</dd>
+
+                <dt class="col-sm-4">Período</dt>
+                <dd class="col-sm-8">{{ seccion.periodo }}</dd>
+            </dl>
+
+            {% if registrada %}
+                <div class="alert alert-success mb-0">
+                    {% if asistira %}
+                        Gracias, registramos que <strong>asistirá</strong> a la actividad de cierre.
+                    {% else %}
+                        Gracias, registramos que <strong>no asistirá</strong> a la actividad de cierre.
+                    {% endif %}
+                </div>
+            {% else %}
+                <p class="mb-3">
+                    {% if asistira %}
+                        Confirme que asistirá a la actividad de cierre, donde los estudiantes presentarán sus informes y trabajos finales.
+                    {% else %}
+                        Confirme que no podrá asistir a la actividad de cierre.
+                    {% endif %}
+                </p>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn {% if asistira %}btn-success{% else %}btn-outline-secondary{% endif %}">
+                        {% if asistira %}Asistiré{% else %}No asistiré{% endif %}
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

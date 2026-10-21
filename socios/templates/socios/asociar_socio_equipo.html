@@ -60,8 +60,8 @@
                             {% for equipo in equipos %}
                                 <option value="{{ equipo.id }}">
                                     Grupo {{ equipo.numero_grupo }}
-                                    {% if equipo.socio_comunitario %}
-                                        - Actual: {{ equipo.socio_comunitario.nombre_organizacion }}
+                                    {% if equipo.socio_vigente %}
+                                        - Actual: {{ equipo.socio_vigente.nombre_organizacion }}
                                     {% endif %}
                                 </option>
                             {% endfor %}
@@ -102,6 +102,7 @@
                             name="motivo"
                             class="form-control"
                             rows="3"
+                            maxlength="255"
                         ></textarea>
                     </div>
 
@@ -144,11 +145,11 @@
                         estudiante{{ equipo.integrantes.count|pluralize:"s" }}
                     </div>
 
-                    {% if equipo.socio_comunitario %}
+                    {% if equipo.socio_vigente %}
                         <div class="mt-2">
                             Socio Comunitario:
                             <strong>
-                                {{ equipo.socio_comunitario.nombre_organizacion }}
+                                {{ equipo.socio_vigente.nombre_organizacion }}
                             </strong>
                         </div>
                     {% else %}

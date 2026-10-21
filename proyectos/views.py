@@ -2,7 +2,6 @@ from datetime import datetime, time, timedelta
 import base64
 from io import BytesIO
 from urllib import request
-import re
 import qrcode
 import uuid
 from django.db import transaction, IntegrityError
@@ -15,9 +14,12 @@ from django.contrib.auth.views import redirect_to_login
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from socios.constantes import ESTADOS_SOCIO_SELECCIONABLES
 from socios.models import SocioComunitario
+from socios.services import asociar_socio_a_equipo, historial_socios_equipo
 
 from usuarios.decorators import coordinador_required, docente_required
+from core.validators import es_rut_valido, normalizar_rut
 
 from planificacion.models import PlanificacionEnlace
 from planificacion.email_service import enviar_correo_planificacion
@@ -37,21 +39,12 @@ from .models import (
     IntegranteEquipo,
     Etiqueta,
     IntegranteEtiqueta,
-    HistorialSocioEquipo,
 )
 
 from auditoria.services import registrar_auditoria
 from django.core.exceptions import PermissionDenied
 
 from .models import EnlaceRegistroEquipo
-@coordinador_required
-def coordinador_contexto(request):
-    return render(request, "proyectos/coordinador_contexto.html")
-
-@coordinador_required
-def formulario_prueba(request):
-    return render(request, 'proyectos/formulario_prueba.html')
-
 @coordinador_required
 def gestionar_enlaces_planificacion(request):
     if request.method == "POST":
@@ -458,65 +451,6 @@ def gestionar_registro_equipos(request, seccion_id):
         },
     )
 
-def limpiar_rut(rut):
-    return (
-        rut.replace(".", "")
-        .replace("-", "")
-        .replace(" ", "")
-        .upper()
-    )
-
-
-def formatear_rut(rut):
-    rut_limpio = limpiar_rut(rut)
-
-    if len(rut_limpio) < 2:
-        return rut_limpio
-
-    return f"{rut_limpio[:-1]}-{rut_limpio[-1]}"
-
-
-def validar_rut_chileno(rut):
-    rut = rut.strip().upper()
-
-    
-    
-
-    patron = r"^(?:\d{1,2}\.\d{3}\.\d{3}|\d{7,8})-[0-9K]$"
-
-    if not re.fullmatch(patron, rut):
-        return False
-
-    rut_limpio = limpiar_rut(rut)
-
-    cuerpo = rut_limpio[:-1]
-    dv_ingresado = rut_limpio[-1]
-
-    if not cuerpo.isdigit():
-        return False
-
-    suma = 0
-    multiplicador = 2
-
-    for digito in reversed(cuerpo):
-        suma += int(digito) * multiplicador
-
-        multiplicador += 1
-
-        if multiplicador > 7:
-            multiplicador = 2
-
-    resto = 11 - (suma % 11)
-
-    if resto == 11:
-        dv_calculado = "0"
-    elif resto == 10:
-        dv_calculado = "K"
-    else:
-        dv_calculado = str(resto)
-
-    return dv_ingresado == dv_calculado
-
 def acceso_registro_equipos(request, token):
     enlace = get_object_or_404(
         EnlaceRegistroEquipo.objects.select_related(
@@ -584,7 +518,7 @@ def acceso_registro_equipos(request, token):
         .filter(
             activo=True,
             es_provisional=False,
-            estado_revision__in=["APROBADO", "DISPONIBLE"],
+            estado_revision__in=ESTADOS_SOCIO_SELECCIONABLES,
         )
         .select_related("clasificacion", "comuna")
         .order_by("nombre_organizacion")
@@ -652,10 +586,7 @@ def acceso_registro_equipos(request, token):
                             pk=socio_comunitario_id,
                             activo=True,
                             es_provisional=False,
-                            estado_revision__in=[
-                                "APROBADO",
-                                "DISPONIBLE",
-                            ],
+                            estado_revision__in=ESTADOS_SOCIO_SELECCIONABLES,
                         )
                         .first()
                     )
@@ -769,13 +700,13 @@ def acceso_registro_equipos(request, token):
                 rut_normalizado = ""
 
                 if rut:
-                    if not validar_rut_chileno(rut):
+                    if not es_rut_valido(rut):
                         errores.append(
                             f"Integrante {i}: el RUT ingresado "
                             "no es válido."
                         )
 
-                    rut_normalizado = formatear_rut(rut)
+                    rut_normalizado = normalizar_rut(rut)
 
                     if rut_normalizado in ruts_utilizados:
                         errores.append(
@@ -994,14 +925,15 @@ def acceso_registro_equipos(request, token):
                             )
 
                             
+                            # El socio se asocia con el servicio común,
+                            # en esta misma transacción (RN-09, RF-SC-06).
                             equipo = Equipo.objects.create(
                                 seccion=seccion_bloqueada,
-                                socio_comunitario=socio_seleccionado,
                                 numero_grupo=numero_grupo,
                                 clave_idempotencia=clave_uuid,
                                 informante_nombre=nombre_informante,
                                 informante_correo=correo_informante,
-                                informante_entra_id=None,
+                                informante_entra_id=request.user.entra_oid or None,
                                 estado="Registrado",
                             )
 
@@ -1020,6 +952,16 @@ def acceso_registro_equipos(request, token):
                                     in integrantes_validados
                                 ]
                             )
+
+                            asociar_socio_a_equipo(
+                                equipo=equipo,
+                                socio=socio_seleccionado,
+                                request=request,
+                            )
+
+            except ValidationError as error:
+
+                errores.extend(error.messages)
 
             except IntegrityError:
 
@@ -1110,7 +1052,7 @@ def gestionar_equipos_seccion(request, seccion_id):
     equipos = (
         Equipo.objects
         .filter(seccion=seccion)
-        .select_related("socio_comunitario")
+        .con_socio_vigente()
         .prefetch_related("integrantes")
         .order_by("numero_grupo")
     )
@@ -1138,7 +1080,6 @@ def gestionar_equipo(request, equipo_id):
             "seccion__asignatura",
             "seccion__periodo",
             "seccion__campus",
-            "socio_comunitario",
         ).prefetch_related(
             "integrantes__etiquetas_asignadas__etiqueta",
         ),
@@ -1423,10 +1364,7 @@ def gestionar_equipo(request, equipo_id):
                     pk=socio_nuevo_id,
                     activo=True,
                     es_provisional=False,
-                    estado_revision__in=[
-                        "APROBADO",
-                        "DISPONIBLE",
-                    ],
+                    estado_revision__in=ESTADOS_SOCIO_SELECCIONABLES,
                 )
                 .first()
             )
@@ -1442,8 +1380,25 @@ def gestionar_equipo(request, equipo_id):
                     equipo_id=equipo.id,
                 )
 
-            
-            if equipo.socio_comunitario_id == socio_nuevo.id:
+            # Servicio común (RN-09, RF-EQP-08): cierra la participación
+            # vigente, abre la nueva y deja historial y auditoría.
+            try:
+                _, creada = asociar_socio_a_equipo(
+                    equipo=equipo,
+                    socio=socio_nuevo,
+                    docente=docente,
+                    motivo=motivo,
+                    request=request,
+                )
+            except ValidationError as error:
+                messages.error(request, error.messages[0])
+
+                return redirect(
+                    "proyectos:gestionar_equipo",
+                    equipo_id=equipo.id,
+                )
+
+            if not creada:
                 messages.warning(
                     request,
                     "El equipo ya se encuentra asociado a ese "
@@ -1453,48 +1408,6 @@ def gestionar_equipo(request, equipo_id):
                 return redirect(
                     "proyectos:gestionar_equipo",
                     equipo_id=equipo.id,
-                )
-
-            
-            with transaction.atomic():
-                equipo_bloqueado = (
-                    Equipo.objects
-                    .select_for_update()
-                    .get(pk=equipo.id)
-                )
-
-                socio_anterior = equipo_bloqueado.socio_comunitario
-
-                
-                if (
-                    equipo_bloqueado.socio_comunitario_id
-                    == socio_nuevo.id
-                ):
-                    messages.warning(
-                        request,
-                        "El equipo ya se encuentra asociado a ese "
-                        "Socio Comunitario.",
-                    )
-
-                    return redirect(
-                        "proyectos:gestionar_equipo",
-                        equipo_id=equipo.id,
-                    )
-
-                equipo_bloqueado.socio_comunitario = socio_nuevo
-
-                equipo_bloqueado.save(
-                    update_fields=[
-                        "socio_comunitario",
-                    ]
-                )
-
-                HistorialSocioEquipo.objects.create(
-                    equipo=equipo_bloqueado,
-                    socio_anterior=socio_anterior,
-                    socio_nuevo=socio_nuevo,
-                    cambiado_por_docente=docente,
-                    motivo=motivo,
                 )
 
             messages.success(
@@ -1530,26 +1443,22 @@ def gestionar_equipo(request, equipo_id):
         .filter(
             activo=True,
             es_provisional=False,
-            estado_revision__in=[
-                "APROBADO",
-                "DISPONIBLE",
-            ],
+            estado_revision__in=ESTADOS_SOCIO_SELECCIONABLES,
         )
         .order_by(
             "nombre_organizacion"
         )
     )
 
-    historial_socios = (
-        equipo.historial_socios
-        .select_related(
-            "socio_anterior",
-            "socio_nuevo",
-            "cambiado_por_docente",
-        )
-        .order_by(
-            "-fecha_cambio"
-        )
+    # Cambios de socio hechos por docentes, desde AUDITORIA_CAMBIO
+    # (mismas columnas que el antiguo HistorialSocioEquipo).
+    historial_socios = historial_socios_equipo(equipo)
+
+    # Períodos de asociación del equipo (fuente de verdad: ParticipacionSocio).
+    participaciones_socio = (
+        equipo.participaciones_socios
+        .select_related("socio")
+        .order_by("-fecha_inicio", "-pk")
     )
 
     return render(
@@ -1561,5 +1470,6 @@ def gestionar_equipo(request, equipo_id):
             "etiquetas": etiquetas,
             "socios_disponibles": socios_disponibles,
             "historial_socios": historial_socios,
+            "participaciones_socio": participaciones_socio,
         },
     )

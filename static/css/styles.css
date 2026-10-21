@@ -156,7 +156,11 @@ main {
 }
 
 .sidebar-toggle {
-    width: auto;
+    /* Ocupa todo el ancho del menú (menos el margen del nav-link) para que
+       el chevron quede alineado a la derecha y el texto no se centre. */
+    width: calc(100% - 16px);
+    text-align: left;
+    gap: 0.5rem;
     justify-content: space-between;
     background: transparent;
     border: 0;
@@ -278,3 +282,8 @@ main {
         margin-left: 0;
     }
 }
+
+/* Selector de orden de los listados (includes/orden_listado.html) */
+.orden-listado { display: inline-flex; align-items: center; gap: 8px; margin: 0; }
+.orden-listado-etiqueta { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 0.85rem; font-weight: 600; color: var(--ua-text-secondary); white-space: nowrap; }
+.orden-listado .form-select { width: auto; min-width: 190px; }

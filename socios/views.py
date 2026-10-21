@@ -1,17 +1,26 @@
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from academico.models import Asignatura, Campus, Carrera, PeriodoAcademico, Sede
 from usuarios.decorators import coordinador_required, docente_required
 from django.core.exceptions import PermissionDenied
 from django.views.decorators.http import require_POST
-from proyectos.models import Equipo, HistorialSocioEquipo
+from proyectos.models import Equipo
 from rutas.models import SeccionActividad
+from rutas.services import url_recurso
+from auditoria.services import registrar_auditoria
 
 from django.core.exceptions import ValidationError
+from encuestas import services as encuestas_services
 from encuestas.models import EnlaceFormulario, FormularioVersion, RespuestaFormulario
 from .models import Convocatoria, PostulacionSocio, SocioComunitario, ContactoSocio, Comuna, ClasificacionSocio
+from core.ordenamiento import OPCIONES_ORDEN, ORDEN_NOMBRE, orden_pedido, ordenar_por_fecha
+
+from . import services
+from .forms import DECISION_HABILITAR, SocioPropuestoForm
+from .constantes import ESTADOS_POSTULACION, ESTADOS_SOCIO_SELECCIONABLES, estados_siguientes, etiqueta
 from .services import enviar_notificacion_postulacion
 from .validators import validar_rut_chileno
 
@@ -23,10 +32,13 @@ from .models import (
     SocioComunitario,
 )
 
-ESTADOS_SOCIO = ["RECIBIDO", "APROBADO", "RECHAZADO", "DISPONIBLE", "TRABAJO_TERMINADO"]
+ESTADOS_SOCIO = [codigo for codigo, _ in services.ESTADOS_SOCIO]
+
+# Largo máximo del motivo de cambio de socio (igual que gestionar_equipo).
+MAX_LARGO_MOTIVO_CAMBIO_SOCIO = 255
 
 # Estados en los que un socio puede ser elegido por un docente (CDE-60)
-ESTADOS_SELECCIONABLES = ["APROBADO", "DISPONIBLE"]
+ESTADOS_SELECCIONABLES = ESTADOS_SOCIO_SELECCIONABLES
 
 
 def socios_disponibles():
@@ -41,10 +53,18 @@ def socios_disponibles():
     )
 
 
+def comunas_con_socios(socios):
+    """
+    Comunas donde hay socios del listado, para el filtro: una comuna nueva
+    aparece sola en cuanto se registra un socio en ella.
+    """
+    return Comuna.objects.filter(socios__in=socios).distinct().order_by('nombre')
+
+
 @docente_required
 def catalogo_socios_docente(request):
     """
-    Lista únicamente los Socios Comunitarios aprobados o disponibles, activos
+    Lista únicamente los Socios Comunitarios aprobados, disponibles o asignados, activos
     y no provisionales, que un docente puede seleccionar para sus asignaturas.
     Los socios conservados solo en historial no aparecen aquí.
     """
@@ -66,7 +86,7 @@ def catalogo_socios_docente(request):
 
     context = {
         'socios': socios,
-        'comunas': Comuna.objects.filter(activo=True),
+        'comunas': comunas_con_socios(socios_disponibles()),
         'clasificaciones': ClasificacionSocio.objects.filter(activo=True),
         'q': q,
         'comuna_id': comuna_id,
@@ -80,7 +100,19 @@ def lista_socios_coordinador(request):
     """
     Panel completo de búsqueda, filtros combinados y revisión para el Coordinador.
     """
-    socios = SocioComunitario.objects.all().select_related('clasificacion', 'comuna')
+    # Lo que falta revisar (postulaciones y socios propuestos por equipos, en
+    # estado Recibido) y los postulantes rechazados se ven en Postulaciones;
+    # el catálogo muestra los socios ya aceptados.
+    catalogo = SocioComunitario.objects.exclude(estado_revision="RECIBIDO").exclude(
+        Q(estado_revision="RECHAZADO")
+        & Q(Exists(PostulacionSocio.objects.filter(socio=OuterRef('pk'))))
+    )
+    socios = catalogo.select_related('clasificacion', 'comuna')
+    orden = orden_pedido(request, permitidos=(ORDEN_NOMBRE, 'recientes', 'antiguos'), por_defecto=ORDEN_NOMBRE)
+    if orden == ORDEN_NOMBRE:
+        socios = socios.order_by('nombre_organizacion', 'pk')
+    else:
+        socios = ordenar_por_fecha(socios, 'fecha_creacion', orden)
 
     # Parámetros de Búsqueda (CDE-62)
     q = request.GET.get('q', '').strip()
@@ -141,16 +173,45 @@ def lista_socios_coordinador(request):
     if anio:
         socios = socios.filter(participaciones__periodo__anio=anio).distinct()
 
+    # Cada socio trae los estados a los que el coordinador puede moverlo.
+    socios = list(socios)
+    for socio in socios:
+        socio.estados_siguientes = estados_siguientes(socio.estado_revision)
+
+    # RF-IND-02: organizaciones únicas frente a participaciones registradas,
+    # sobre los socios del resultado y el mismo contexto académico filtrado.
+    participaciones_resultado = ParticipacionSocio.objects.filter(
+        socio__in=[socio.pk for socio in socios]
+    )
+    for campo, valor in (
+        ('sede_id', sede_id),
+        ('campus_id', campus_id),
+        ('carrera_id', carrera_id),
+        ('periodo_id', periodo_id),
+        ('periodo__anio', anio),
+    ):
+        if valor:
+            participaciones_resultado = participaciones_resultado.filter(**{campo: valor})
+    total_participaciones = participaciones_resultado.count()
+    total_organizaciones_con_participacion = (
+        participaciones_resultado.values('socio_id').distinct().count()
+    )
+
     context = {
         'socios': socios,
         'clasificaciones': ClasificacionSocio.objects.filter(activo=True),
-        'comunas': Comuna.objects.filter(activo=True),
+        'comunas': comunas_con_socios(catalogo),
         'sedes': Sede.objects.filter(activo=True),
         'campus_list': Campus.objects.filter(activo=True),
         'carreras': Carrera.objects.filter(activo=True),
         'periodos': PeriodoAcademico.objects.all(),
         'anios': PeriodoAcademico.objects.values_list('anio', flat=True).distinct().order_by('-anio'),
         'filtros': request.GET,
+        'estados_socio': [e for e in services.ESTADOS_SOCIO if e[0] != 'RECIBIDO'],
+        'total_participaciones': total_participaciones,
+        'total_organizaciones_con_participacion': total_organizaciones_con_participacion,
+        'orden': orden,
+        'opciones_orden': [(ORDEN_NOMBRE, 'Nombre (A-Z)'), *OPCIONES_ORDEN],
     }
     return render(request, 'socios/lista_coordinador.html', context)
 
@@ -164,28 +225,25 @@ def cambiar_estado_socio(request, socio_id):
     socio = get_object_or_404(SocioComunitario, pk=socio_id)
 
     if request.method == "POST":
-        nuevo_estado = request.POST.get("estado_revision")
-        es_provisional = request.POST.get("es_provisional") == "1"
-
-        if nuevo_estado in ESTADOS_SOCIO:
-            hubo_cambio = (
-                socio.estado_revision != nuevo_estado
-                or socio.es_provisional != es_provisional
+        try:
+            historial = services.cambiar_estado_socio(
+                request,
+                socio,
+                request.POST.get("estado_revision"),
+                es_provisional=request.POST.get("es_provisional") == "1",
+                motivo=request.POST.get("motivo", ""),
             )
-
-            if hubo_cambio:
-                socio.estado_revision = nuevo_estado
-                socio.es_provisional = es_provisional
-                socio.save(update_fields=["estado_revision", "es_provisional"])
-
+        except ValidationError as error:
+            messages.error(request, error.messages[0])
+        else:
+            if historial:
                 messages.success(
                     request,
-                    f"El estado de {socio.nombre_organizacion} fue actualizado a '{nuevo_estado}' exitosamente."
+                    f"El estado de {socio.nombre_organizacion} fue actualizado a "
+                    f"«{etiqueta(services.ESTADOS_SOCIO, socio.estado_revision)}».",
                 )
             else:
                 messages.info(request, "No hubo cambios que guardar.")
-        else:
-            messages.error(request, "El estado seleccionado no es válido.")
 
     return redirect('socios:lista_coordinador')
 
@@ -204,12 +262,13 @@ def detalle_historial_socio(request, socio_id):
 
     participaciones = ParticipacionSocio.objects.filter(socio=socio).select_related(
         'equipo', 'proyecto', 'sede', 'campus', 'periodo', 'carrera', 'asignatura', 'seccion'
-    ).order_by('-periodo__anio', '-fecha_inicio')
+    ).order_by('-periodo__anio', '-fecha_inicio', '-pk')
 
     context = {
         'socio': socio,
         'contactos': contactos,
         'participaciones': participaciones,
+        'historial_estados': services.historial_estados_socio(socio),
     }
     return render(request, 'socios/detalle_historial.html', context)
 
@@ -217,20 +276,118 @@ def detalle_historial_socio(request, socio_id):
 @coordinador_required
 def lista_postulaciones(request):
     """
-    Muestra las postulaciones enviadas desde convocatorias de socios comunitarios.
+    Lo que el coordinador debe revisar, en dos pestañas: las postulaciones que
+    llegan por el formulario de una convocatoria (RF-SC-01/02) y los socios que
+    propone un equipo al inscribirse (RF-SC-04).
     """
-    postulaciones = PostulacionSocio.objects.select_related(
-        'convocatoria', 'respuesta_formulario', 'socio', 'revisado_por_usuario'
-    ).order_by('-fecha_recepcion')
+    origen = 'equipos' if request.GET.get('origen') == 'equipos' else 'convocatoria'
+    orden = orden_pedido(request)
 
-    return render(request, 'socios/lista_postulaciones.html', {'postulaciones': postulaciones})
+    postulaciones = ordenar_por_fecha(PostulacionSocio.objects.select_related(
+        'convocatoria', 'socio__comuna', 'revisado_por_usuario'
+    ), 'fecha_recepcion', orden)
+
+    propuestos = list(ordenar_por_fecha(
+        services.socios_propuestos_por_equipos()
+        .prefetch_related(Prefetch(
+            'participaciones',
+            queryset=ParticipacionSocio.objects.filter(equipo__isnull=False)
+            .select_related('equipo__seccion__asignatura').order_by('fecha_inicio', 'pk'),
+            to_attr='participaciones_equipo',
+        )),
+        'fecha_creacion', orden,
+    ))
+    for socio in propuestos:
+        socio.equipo_origen = (
+            socio.participaciones_equipo[0].equipo if socio.participaciones_equipo else None
+        )
+
+    return render(request, 'socios/lista_postulaciones.html', {
+        'origen': origen,
+        'postulaciones': postulaciones,
+        'pendientes_convocatoria': sum(1 for p in postulaciones if p.estado == 'RECIBIDA'),
+        'propuestos': propuestos,
+        'orden': orden,
+        'opciones_orden': OPCIONES_ORDEN,
+    })
+
+
+@coordinador_required
+def revisar_socio_propuesto(request, socio_id):
+    """
+    El coordinador corrige los datos del socio que propuso un equipo y decide
+    si queda disponible para otros grupos o solo en el historial del equipo
+    (RF-SC-04 CA2, RN-10).
+    """
+    socio = get_object_or_404(
+        SocioComunitario.objects.select_related('clasificacion', 'comuna'), pk=socio_id,
+    )
+    if socio.postulaciones.exists():
+        # Los que postularon por una convocatoria se revisan en su postulación.
+        return redirect('socios:detalle_postulacion', postulacion_id=socio.postulaciones.latest('fecha_recepcion').id)
+
+    contacto = socio.contactos.filter(activo=True).order_by('-es_principal', 'pk').first()
+    pendiente = socio.estado_revision == 'RECIBIDO'
+    form = SocioPropuestoForm(request.POST or None, instance=socio, contacto=contacto)
+
+    if request.method == 'POST' and form.is_valid():
+        try:
+            decision = services.revisar_socio_propuesto(request, socio, form)
+        except ValidationError as error:
+            messages.error(request, error.messages[0])
+        else:
+            if decision:
+                messages.success(
+                    request,
+                    f"{socio.nombre_organizacion} quedó "
+                    f"{'disponible para otros grupos' if decision == DECISION_HABILITAR else 'solo en el historial del equipo'}.",
+                )
+                return redirect(f"{reverse('socios:lista_postulaciones')}?origen=equipos")
+            messages.success(request, "Datos del socio guardados.")
+            return redirect('socios:revisar_socio_propuesto', socio_id=socio.id)
+
+    participaciones = (
+        socio.participaciones.filter(equipo__isnull=False)
+        .select_related('equipo__seccion__asignatura', 'periodo').order_by('fecha_inicio', 'pk')
+    )
+    return render(request, 'socios/revisar_propuesto.html', {
+        'socio': socio,
+        'form': form,
+        'pendiente': pendiente,
+        'participaciones': participaciones,
+    })
+
+
+@coordinador_required
+def detalle_postulacion(request, postulacion_id):
+    """
+    Página de revisión: la ficha que envió el socio, ordenada por sección, y
+    la decisión del Coordinador (RF-SC-02).
+    """
+    postulacion = get_object_or_404(
+        PostulacionSocio.objects.select_related(
+            'convocatoria', 'respuesta_formulario', 'socio', 'revisado_por_usuario',
+        ),
+        pk=postulacion_id,
+    )
+
+    secciones = []
+    for pregunta, texto in encuestas_services.resumen_respuesta(postulacion.respuesta_formulario):
+        if not secciones or secciones[-1]['bloque'].id != pregunta.bloque_id:
+            secciones.append({'bloque': pregunta.bloque, 'respuestas': []})
+        secciones[-1]['respuestas'].append((pregunta, texto))
+
+    return render(request, 'socios/detalle_postulacion.html', {
+        'postulacion': postulacion,
+        'secciones': secciones,
+    })
 
 
 @coordinador_required
 def revisar_postulacion(request, postulacion_id):
     """
-    Transición de estado para postulaciones externas con motivo de rechazo,
-    notificación por correo y registro en auditoría (CDE-54, CDE-55, CDE-56).
+    Transición de estado para postulaciones externas con motivo de rechazo obligatorio,
+    notificación por correo y registro en auditoría (SP5-T12 / CDE-531).
     """
     postulacion = get_object_or_404(PostulacionSocio, pk=postulacion_id)
 
@@ -238,34 +395,23 @@ def revisar_postulacion(request, postulacion_id):
         nuevo_estado = request.POST.get("estado")
         motivo = request.POST.get("motivo_rechazo", "").strip()
 
-        if nuevo_estado in ["APROBADA", "RECHAZADA"]:
-            if nuevo_estado == "RECHAZADA" and not motivo:
-                messages.error(request, "Debes indicar un motivo de rechazo.")
-                return redirect('socios:lista_postulaciones')
-
-            postulacion.estado = nuevo_estado
-            postulacion.motivo_rechazo = motivo if nuevo_estado == "RECHAZADA" else None
-            postulacion.revisado_por_usuario = request.user
-            postulacion.fecha_revision = timezone.now()
-            postulacion.save()
-
-            if nuevo_estado == "APROBADA" and postulacion.socio:
-                postulacion.socio.estado_revision = "APROBADO"
-                postulacion.socio.es_provisional = False
-                postulacion.socio.save(update_fields=["estado_revision", "es_provisional"])
-
-            enviar_notificacion_postulacion(
+        try:
+            services.revisar_postulacion(
+                request,
                 postulacion,
-                tipo_evento=nuevo_estado,
+                nuevo_estado,
                 motivo=motivo,
             )
-
-            messages.success(request, f"Postulación #{postulacion.id} actualizada a {nuevo_estado} y notificada.")
+        except ValidationError as error:
+            messages.error(request, error.messages[0])
         else:
-            messages.error(request, "La decisión seleccionada no es válida.")
+            messages.success(
+                request,
+                f"Postulación #{postulacion.id} actualizada a "
+                f"{etiqueta(ESTADOS_POSTULACION, postulacion.estado).lower()} y notificada.",
+            )
 
-    return redirect('socios:lista_postulaciones')
-
+    return redirect("socios:lista_postulaciones")
 @docente_required
 def asociar_socio_equipo(request, actividad_id):
     actividad = get_object_or_404(
@@ -287,13 +433,16 @@ def asociar_socio_equipo(request, actividad_id):
     if not seccion.docentes.filter(id=docente.id).exists():
         raise PermissionDenied
 
-    if actividad.ruta_actividad.orden != 13:
+    # Solo la actividad de la Ruta configurada con esta acción (recurso_url).
+    if url_recurso(actividad) != reverse(
+        "socios:asociar_socio_equipo", args=[actividad.id]
+    ):
         raise PermissionDenied
 
     equipos = (
         Equipo.objects
         .filter(seccion=seccion)
-        .select_related("socio_comunitario")
+        .con_socio_vigente()
         .prefetch_related("integrantes")
         .order_by("numero_grupo")
     )
@@ -317,6 +466,13 @@ def asociar_socio_equipo(request, actividad_id):
                 request,
                 "Debes seleccionar un equipo y un Socio Comunitario.",
             )
+        elif len(motivo) > MAX_LARGO_MOTIVO_CAMBIO_SOCIO:
+            # Mismo límite que gestionar_equipo (el motivo queda en la auditoría).
+            messages.error(
+                request,
+                "El motivo del cambio no puede superar "
+                f"los {MAX_LARGO_MOTIVO_CAMBIO_SOCIO} caracteres.",
+            )
         else:
             equipo = get_object_or_404(
                 Equipo,
@@ -329,9 +485,24 @@ def asociar_socio_equipo(request, actividad_id):
                 id=socio_id,
             )
 
-            socio_anterior = equipo.socio_comunitario
+            # Servicio común (RN-09, RF-EQP-08); el motivo es opcional aquí.
+            try:
+                _, creada = services.asociar_socio_a_equipo(
+                    equipo=equipo,
+                    socio=socio,
+                    docente=docente,
+                    motivo=motivo,
+                    request=request,
+                )
+            except ValidationError as error:
+                messages.error(request, error.messages[0])
 
-            if equipo.socio_comunitario_id == socio.id:
+                return redirect(
+                    "socios:asociar_socio_equipo",
+                    actividad_id=actividad.id,
+                )
+
+            if not creada:
                 messages.info(
                     request,
                     "El equipo ya tiene asociado este Socio Comunitario.",
@@ -341,19 +512,6 @@ def asociar_socio_equipo(request, actividad_id):
                     "socios:asociar_socio_equipo",
                     actividad_id=actividad.id,
                 )
-
-            equipo.socio_comunitario = socio
-            equipo.save(
-                update_fields=["socio_comunitario"]
-            )
-
-            HistorialSocioEquipo.objects.create(
-                equipo=equipo,
-                socio_anterior=socio_anterior,
-                socio_nuevo=socio,
-                cambiado_por_docente=docente,
-                motivo=motivo or None,
-            )
 
             messages.success(
                 request,

@@ -1,0 +1,11 @@
+{# Insignia del estado de una sección. Uso: {% include "academico/partials/_seccion_estado.html" %} con "seccion" en contexto. #}
+{% load core_extras %}
+{% if seccion.estado == "Activa" %}
+    <span class="badge bg-success">Activa</span>
+{% elif seccion.estado == "Planificada" %}
+    <span class="badge bg-warning text-dark">Planificada</span>
+{% elif seccion.estado == "Finalizada" %}
+    <span class="badge bg-secondary">Finalizada</span>
+{% else %}
+    <span class="badge bg-light text-dark border">{{ seccion.estado|estado_legible }}</span>
+{% endif %}

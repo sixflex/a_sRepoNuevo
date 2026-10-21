@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from academico.models import Seccion
+from core.ordenamiento import OPCIONES_ORDEN, orden_pedido, ordenar_por_fecha
 from usuarios.permissions import es_coordinador, es_docente
 
 from .forms import SolicitudCartaForm
@@ -73,7 +74,7 @@ def solicitar_carta_docente(request, seccion_id):
             solicitud.fecha_solicitud = timezone.now()
 
             if equipo is not None:
-                solicitud.socio = equipo.socio_comunitario
+                solicitud.socio = equipo.socio_vigente
 
             solicitud.save()
             if equipo is not None:
@@ -181,7 +182,7 @@ def editar_solicitud_docente(request, solicitud_id):
             solicitud.campus = seccion.campus
             solicitud.sede = seccion.campus.sede
             solicitud.socio = (
-                solicitud.equipo.socio_comunitario
+                solicitud.equipo.socio_vigente
                 if solicitud.equipo
                 else None
             )
@@ -232,14 +233,17 @@ def listar_solicitudes_coordinacion(request):
             "equipo",
             "socio",
         )
-        .order_by("-fecha_solicitud")
     )
+    orden = orden_pedido(request)
+    solicitudes = ordenar_por_fecha(solicitudes, "fecha_solicitud", orden)
 
     return render(
         request,
         "cartas/listar_solicitudes_coordinacion.html",
         {
             "solicitudes": solicitudes,
+            "orden": orden,
+            "opciones_orden": OPCIONES_ORDEN,
         },
     )
 

@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% load static %}
 
+{# Página pública: solo el formulario, sin la barra superior del portal. #}
+{% block main_navbar %}{% endblock %}
+
 {% block title %}Convocatoria Cerrada | Portal A+S{% endblock %}
 
 {% block content_public %}

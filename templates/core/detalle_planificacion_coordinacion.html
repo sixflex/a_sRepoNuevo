@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load core_extras %}
 
 {% block title %}
 Detalle de Planificación | Portal A+S
@@ -42,7 +43,7 @@ Detalle de Planificación | Portal A+S
 
                 <div class="col-md-4 mb-3">
                     <strong>Período</strong>
-                    <div>{{ planificacion.enlace.periodo.nombre }}</div>
+                    <div>{{ planificacion.enlace.periodo }}</div>
                 </div>
 
                 <div class="col-md-4 mb-3">
@@ -165,7 +166,7 @@ Detalle de Planificación | Portal A+S
                                     </td>
 
                                     <td>
-                                        {{ fila.estado_validacion|default:"PENDIENTE" }}
+                                        {{ fila.estado_validacion|estado_legible|default:"Pendiente" }}
 
                                         {% for error in fila.errores.all %}
                                             <div class="text-danger small mt-1">

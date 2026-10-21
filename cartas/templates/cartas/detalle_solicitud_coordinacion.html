@@ -1,4 +1,7 @@
 {% extends "base.html" %}
+{% load core_extras %}
+
+{% block title %}Solicitud de carta #{{ solicitud.id }} | Portal A+S{% endblock %}
 
 {% block content %}
 
@@ -42,25 +45,25 @@
                         {% if solicitud.estado == "PENDIENTE" %}
 
                             <span class="badge bg-warning text-dark">
-                                PENDIENTE
+                                Pendiente
                             </span>
 
                         {% elif solicitud.estado == "APROBADA" %}
 
                             <span class="badge bg-success">
-                                APROBADA
+                                Aprobada
                             </span>
 
                         {% elif solicitud.estado == "OBSERVADA" %}
 
                             <span class="badge bg-danger">
-                                OBSERVADA
+                                Observada
                             </span>
 
                         {% else %}
 
                             <span class="badge bg-secondary">
-                                {{ solicitud.estado }}
+                                {{ solicitud.estado|estado_legible }}
                             </span>
 
                         {% endif %}

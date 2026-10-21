@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% load static core_extras %}
+
+{% block title %}{{ socio.nombre_organizacion }} | Portal A+S{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
+
+<a href="{% url 'socios:lista_postulaciones' %}?origen=equipos" class="enlace-volver">
+    <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Propuestos por equipos
+</a>
+
+<div class="d-flex flex-wrap justify-content-between align-items-start mb-4 gap-3">
+    <div>
+        <h1 class="page-title mb-1">{{ socio.nombre_organizacion }}</h1>
+        <p class="page-subtitle mb-0">Propuesto por un equipo el {{ socio.fecha_creacion|date:"d/m/Y \a \l\a\s H:i" }}</p>
+    </div>
+    {% if pendiente %}
+        <span class="badge-estado badge-estado-lg estado-RECIBIDO">Por revisar</span>
+    {% else %}
+        <span class="badge-estado badge-estado-lg estado-{{ socio.estado_revision }}">{{ socio.estado_revision|estado_legible }}</span>
+    {% endif %}
+</div>
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+
+    <div class="row g-4 align-items-start">
+        <div class="col-lg-8">
+            <section class="card-ua mb-4" aria-labelledby="titulo-datos">
+                <div class="card-header-ua"><span id="titulo-datos">Datos del socio</span></div>
+                <div class="p-3 p-md-4">
+                    <p class="small text-muted">El equipo solo registró lo básico. Completa o corrige los datos antes de decidir.</p>
+                    <div class="row g-3">
+                        {% for campo in form %}
+                            {% if not campo.name|slice:":9" == "contacto_" and campo.name != "decision" %}
+                                <div class="{% if campo.name == 'nombre_organizacion' or campo.name == 'direccion_exacta' %}col-12{% else %}col-md-6{% endif %}">
+                                    <label for="{{ campo.id_for_label }}" class="form-label-ua">{{ campo.label }}</label>
+                                    {{ campo }}
+                                    {% if campo.help_text %}<div class="form-text">{{ campo.help_text }}</div>{% endif %}
+                                    {% for error in campo.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+
+            <section class="card-ua mb-4" aria-labelledby="titulo-contacto">
+                <div class="card-header-ua"><span id="titulo-contacto">Contacto principal</span></div>
+                <div class="p-3 p-md-4">
+                    <div class="row g-3">
+                        {% for campo in form %}
+                            {% if campo.name|slice:":9" == "contacto_" %}
+                                <div class="col-md-6">
+                                    <label for="{{ campo.id_for_label }}" class="form-label-ua">{{ campo.label }}</label>
+                                    {{ campo }}
+                                    {% for error in campo.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <aside class="col-lg-4">
+            <div class="panel-revision">
+                <div class="card-ua p-3 p-md-4 mb-4">
+                    <h2 class="panel-titulo">{% if pendiente %}Decisión{% else %}Revisión{% endif %}</h2>
+                    {% if pendiente %}
+                        <p class="small text-muted">El equipo puede seguir trabajando con el socio en ambos casos.</p>
+                        <div class="opciones-decision opciones-decision-columna" role="radiogroup" aria-label="Decisión">
+                            {% for opcion in form.decision %}
+                                <input type="radio" class="btn-check" name="{{ opcion.data.name }}" id="{{ opcion.id_for_label }}" value="{{ opcion.data.value }}"{% if opcion.data.selected %} checked{% endif %}>
+                                <label class="opcion-decision {% if forloop.first %}opcion-aprobar{% else %}opcion-neutra{% endif %}" for="{{ opcion.id_for_label }}">
+                                    <i class="bi {% if forloop.first %}bi-people{% else %}bi-archive{% endif %}" aria-hidden="true"></i>{{ opcion.choice_label }}
+                                </label>
+                            {% endfor %}
+                        </div>
+                        <p class="small text-muted mt-2 mb-0">Si aún no decides, puedes guardar solo los datos.</p>
+                    {% else %}
+                        <p class="small mb-0">
+                            {% if socio.es_provisional %}Queda solo en el historial del equipo.{% else %}Disponible para otros grupos.{% endif %}
+                        </p>
+                    {% endif %}
+                    <button type="submit" class="btn btn-ua w-100 mt-3" data-guardar>Guardar</button>
+                </div>
+
+                <div class="card-ua p-3 p-md-4 mb-3">
+                    <h2 class="panel-titulo">Propuesto por</h2>
+                    {% for participacion in participaciones %}
+                        <div class="{% if not forloop.first %}mt-3 pt-3 border-top{% endif %}">
+                            <span class="socio-nombre">Grupo {{ participacion.equipo.numero_grupo }} · NRC {{ participacion.equipo.seccion.nrc }}</span>
+                            <div class="socio-rut">{{ participacion.equipo.seccion.asignatura.nombre }}{% if participacion.periodo %} · {{ participacion.periodo }}{% endif %}</div>
+                            <div class="small mt-1">Informante: {{ participacion.equipo.informante_nombre }}</div>
+                            {% if participacion.equipo.informante_correo %}
+                                <div class="dato-contacto">
+                                    <a href="mailto:{{ participacion.equipo.informante_correo }}"><i class="bi bi-envelope" aria-hidden="true"></i>{{ participacion.equipo.informante_correo }}</a>
+                                    <button type="button" class="btn-copiar" data-copiar="{{ participacion.equipo.informante_correo }}" aria-label="Copiar correo" title="Copiar correo"><i class="bi bi-copy" aria-hidden="true"></i></button>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% empty %}
+                        <p class="small text-muted mb-0">No hay un equipo asociado a este socio.</p>
+                    {% endfor %}
+                </div>
+
+                <a href="{% url 'socios:detalle_historial' socio.id %}" class="btn btn-light-ua w-100">
+                    <i class="bi bi-clock-history me-1" aria-hidden="true"></i>Ver ficha e historial del socio
+                </a>
+            </div>
+        </aside>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/copiar.js' %}?v=2026-10-19"></script>
+<script>
+    // El botón dice qué se va a guardar según la decisión elegida.
+    (function () {
+        const guardar = document.querySelector("[data-guardar]");
+        document.querySelectorAll('input[name="decision"]').forEach(function (opcion) {
+            opcion.addEventListener("change", function () {
+                guardar.textContent = "Guardar y decidir";
+            });
+        });
+    })();
+</script>
+{% endblock %}

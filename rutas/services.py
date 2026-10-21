@@ -1,4 +1,7 @@
+import shutil
+import zipfile
 from decimal import Decimal
+from pathlib import Path
 
 from django.db import transaction
 from django.db.models import Prefetch
@@ -57,6 +60,16 @@ def asignar_ruta_as_si_corresponde(seccion):
 
     if not es_as:
         return None
+
+    ruta_existente = SeccionRuta.objects.filter(
+        seccion=seccion
+    ).first()
+
+    if ruta_existente is not None:
+        return asignar_ruta_a_seccion(
+            seccion,
+            ruta_existente.ruta_version,
+        )
 
     ruta_version = obtener_version_ruta_vigente()
 

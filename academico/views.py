@@ -1,8 +1,15 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.core.validators import validate_email
-from django.core.exceptions import ValidationError
-from django.db import transaction
+from collections import Counter
 
+from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
+from django.db import transaction
+from django.db.models import ProtectedError
+from django.shortcuts import render, redirect, get_object_or_404
+
+from core.validators import validar_rut_chileno
+from . import constantes
+from .services import codigo_unico, nombre_repetido, normalizar_codigo
 from usuarios.decorators import coordinador_required
 
 from .models import (
@@ -19,6 +26,111 @@ from .models import (
     SeccionCarrera,
     SeccionDocente,
 )
+
+
+# =========================================================
+# UTILIDADES COMUNES
+# =========================================================
+#
+# Criterio para los 9 CRUD:
+# - Crear y editar comparten una sola función por entidad (_guardar_*).
+# - Los datos enviados se copian al objeto ANTES de validar. Si hay un
+#   error, el formulario se vuelve a mostrar con lo que escribió el
+#   usuario (RNF-USA-02) y el objeto no se guarda.
+# - Eliminar nunca da error 500: si hay datos asociados se avisa.
+
+# Nombres en español de los registros que pueden impedir un borrado.
+NOMBRES_RELACIONADOS = {
+    "academico.Campus": ("campus", "campus"),
+    "academico.Carrera": ("carrera", "carreras"),
+    "academico.Seccion": ("sección", "secciones"),
+    "planificacion.PlanificacionEnlace": (
+        "enlace de planificación",
+        "enlaces de planificación",
+    ),
+    "cartas.SolicitudCarta": ("solicitud de carta", "solicitudes de carta"),
+    "proyectos.Equipo": ("equipo", "equipos"),
+    "proyectos.EnlaceRegistroEquipo": (
+        "enlace de registro de equipos",
+        "enlaces de registro de equipos",
+    ),
+    "proyectos.IntegranteEtiqueta": ("etiqueta asignada", "etiquetas asignadas"),
+}
+
+
+def _texto_relacionados(protegidos):
+    conteo = Counter(objeto._meta.label for objeto in protegidos)
+    partes = []
+
+    for etiqueta, cantidad in conteo.items():
+        singular, plural = NOMBRES_RELACIONADOS.get(
+            etiqueta,
+            ("registro asociado", "registros asociados"),
+        )
+        partes.append(f"{cantidad} {singular if cantidad == 1 else plural}")
+
+    if len(partes) > 1:
+        return ", ".join(partes[:-1]) + " y " + partes[-1]
+
+    return partes[0]
+
+
+def _eliminar(request, objeto, url_lista):
+    """
+    Elimina el objeto y vuelve al listado. Si otros registros lo usan
+    (on_delete=PROTECT) muestra un mensaje claro en vez de un error 500.
+    """
+    nombre = str(objeto)
+
+    try:
+        objeto.delete()
+
+    except ProtectedError as error:
+        mensaje = (
+            f"No se puede eliminar «{nombre}»: tiene registros asociados "
+            f"({_texto_relacionados(error.protected_objects)})."
+        )
+
+        if hasattr(objeto, "activo"):
+            mensaje += " Desactive el registro en su lugar."
+        else:
+            mensaje += " Elimine o reasigne primero esos registros."
+
+        messages.error(request, mensaje)
+
+    else:
+        messages.success(request, f"«{nombre}» fue eliminado.")
+
+    return redirect(url_lista)
+
+
+def _contexto_codigo(modelo, objeto):
+    """
+    Datos para que el JS del formulario sugiera el código mientras se
+    escribe el nombre (solo al crear; al editar se respeta el guardado).
+    """
+    if objeto.pk:
+        return {}
+
+    return {
+        "codigos_usados": [
+            codigo.upper()
+            for codigo in modelo.objects
+            .exclude(codigo__isnull=True)
+            .values_list("codigo", flat=True)
+        ],
+        "palabras_sin_inicial": sorted(constantes.PALABRAS_SIN_INICIAL),
+        "largo_codigo": constantes.LARGO_CODIGO_SUGERIDO,
+    }
+
+
+def _ids_seleccionados(valores):
+    """Convierte los id de un <select multiple> a enteros para la plantilla."""
+    return [
+        int(valor)
+        for valor in valores
+        if valor.isdigit()
+    ]
 
 
 # =========================================================
@@ -45,66 +157,27 @@ def sede_list(request):
     )
 
 
-@coordinador_required
-def sede_create(request):
+def _guardar_sede(request, sede):
     error = None
 
     if request.method == "POST":
-        nombre = request.POST.get("nombre", "").strip()
-        ciudad = request.POST.get("ciudad", "").strip()
-        activo = request.POST.get("activo") == "on"
+        sede.nombre = request.POST.get("nombre", "").strip()
+        sede.ciudad = request.POST.get("ciudad", "").strip() or None
+        sede.activo = request.POST.get("activo") == "on"
 
-        if not nombre:
-            error = "El nombre de la sede es obligatorio."
-
-        elif Sede.objects.filter(nombre__iexact=nombre).exists():
-            error = "Ya existe una sede con ese nombre."
-
-        else:
-            Sede.objects.create(
-                nombre=nombre,
-                ciudad=ciudad or None,
-                activo=activo,
-            )
-
-            return redirect("sede_list")
-
-    return render(
-        request,
-        "academico/sede_form.html",
-        {
-            "error": error,
-        },
-    )
-
-
-@coordinador_required
-def sede_update(request, pk):
-    sede = get_object_or_404(Sede, pk=pk)
-    error = None
-
-    if request.method == "POST":
-        nombre = request.POST.get("nombre", "").strip()
-        ciudad = request.POST.get("ciudad", "").strip()
-        activo = request.POST.get("activo") == "on"
-
-        if not nombre:
+        if not sede.nombre:
             error = "El nombre de la sede es obligatorio."
 
         elif (
             Sede.objects
-            .filter(nombre__iexact=nombre)
+            .filter(nombre__iexact=sede.nombre)
             .exclude(pk=sede.pk)
             .exists()
         ):
-            error = "Ya existe otra sede con ese nombre."
+            error = "Ya existe una sede con ese nombre."
 
         else:
-            sede.nombre = nombre
-            sede.ciudad = ciudad or None
-            sede.activo = activo
             sede.save()
-
             return redirect("sede_list")
 
     return render(
@@ -118,12 +191,21 @@ def sede_update(request, pk):
 
 
 @coordinador_required
+def sede_create(request):
+    return _guardar_sede(request, Sede(activo=True))
+
+
+@coordinador_required
+def sede_update(request, pk):
+    return _guardar_sede(request, get_object_or_404(Sede, pk=pk))
+
+
+@coordinador_required
 def sede_delete(request, pk):
     sede = get_object_or_404(Sede, pk=pk)
 
     if request.method == "POST":
-        sede.delete()
-        return redirect("sede_list")
+        return _eliminar(request, sede, "sede_list")
 
     return render(
         request,
@@ -153,102 +235,46 @@ def campus_list(request):
     )
 
 
-@coordinador_required
-def campus_create(request):
-    sedes = Sede.objects.filter(activo=True).order_by("nombre")
-    error = None
+def _guardar_campus(request, campus):
+    es_nuevo = campus.pk is None
 
-    if request.method == "POST":
-        nombre = request.POST.get("nombre", "").strip()
-        direccion = request.POST.get("direccion", "").strip()
-        sede_id = request.POST.get("sede")
-        activo = request.POST.get("activo") == "on"
-
-        if not nombre:
-            error = "El nombre del campus es obligatorio."
-
-        elif not sede_id:
-            error = "Debes seleccionar una sede."
-
-        else:
-            sede = get_object_or_404(
-                Sede,
-                pk=sede_id,
-                activo=True,
-            )
-
-            if Campus.objects.filter(
-                sede=sede,
-                nombre__iexact=nombre,
-            ).exists():
-                error = "Ya existe un campus con ese nombre en esta sede."
-
-            else:
-                Campus.objects.create(
-                    sede=sede,
-                    nombre=nombre,
-                    direccion=direccion or None,
-                    activo=activo,
-                )
-
-                return redirect("campus_list")
-
-    return render(
-        request,
-        "academico/campus_form.html",
-        {
-            "sedes": sedes,
-            "error": error,
-        },
-    )
-
-
-@coordinador_required
-def campus_update(request, pk):
-    campus = get_object_or_404(Campus, pk=pk)
-
-    # En edición mostramos todas las sedes para no perder
-    # la relación si la sede actual está inactiva.
+    # Al crear solo se ofrecen sedes activas. En edición mostramos todas
+    # para no perder la relación si la sede actual está inactiva.
     sedes = Sede.objects.all().order_by("nombre")
+    if es_nuevo:
+        sedes = sedes.filter(activo=True)
 
     error = None
 
     if request.method == "POST":
-        nombre = request.POST.get("nombre", "").strip()
-        direccion = request.POST.get("direccion", "").strip()
+        campus.nombre = request.POST.get("nombre", "").strip()
+        campus.direccion = request.POST.get("direccion", "").strip() or None
+        campus.activo = request.POST.get("activo") == "on"
         sede_id = request.POST.get("sede")
-        activo = request.POST.get("activo") == "on"
 
-        if not nombre:
+        if sede_id:
+            campus.sede = get_object_or_404(sedes, pk=sede_id)
+
+        if not campus.nombre:
             error = "El nombre del campus es obligatorio."
 
         elif not sede_id:
             error = "Debes seleccionar una sede."
 
-        else:
-            sede = get_object_or_404(Sede, pk=sede_id)
-
-            repetido = (
-                Campus.objects
-                .filter(
-                    sede=sede,
-                    nombre__iexact=nombre,
-                )
-                .exclude(pk=campus.pk)
-                .exists()
+        elif (
+            Campus.objects
+            .filter(
+                sede=campus.sede,
+                nombre__iexact=campus.nombre,
             )
+            .exclude(pk=campus.pk)
+            .exists()
+        ):
+            error = "Ya existe un campus con ese nombre en esta sede."
 
-            if repetido:
-                error = "Ya existe otro campus con ese nombre en esta sede."
-
-            else:
-                campus.sede = sede
-                campus.nombre = nombre
-                campus.direccion = direccion or None
-                campus.activo = activo
-                campus.save()
-
-                return redirect("campus_list")
+        else:
+            campus.save()
+            return redirect("campus_list")
 
     return render(
         request,
@@ -262,6 +288,16 @@ def campus_update(request, pk):
 
 
 @coordinador_required
+def campus_create(request):
+    return _guardar_campus(request, Campus(activo=True))
+
+
+@coordinador_required
+def campus_update(request, pk):
+    return _guardar_campus(request, get_object_or_404(Campus, pk=pk))
+
+
+@coordinador_required
 def campus_delete(request, pk):
     campus = get_object_or_404(
         Campus.objects.select_related("sede"),
@@ -269,8 +305,7 @@ def campus_delete(request, pk):
     )
 
     if request.method == "POST":
-        campus.delete()
-        return redirect("campus_list")
+        return _eliminar(request, campus, "campus_list")
 
     return render(
         request,
@@ -295,69 +330,34 @@ def facultad_list(request):
     )
 
 
-@coordinador_required
-def facultad_create(request):
+def _guardar_facultad(request, facultad):
     error = None
 
     if request.method == "POST":
-        codigo = request.POST.get("codigo", "").strip()
-        nombre = request.POST.get("nombre", "").strip()
-        activo = request.POST.get("activo") == "on"
+        facultad.codigo = normalizar_codigo(request.POST.get("codigo")) or None
+        facultad.nombre = request.POST.get("nombre", "").strip()
+        facultad.activo = request.POST.get("activo") == "on"
 
-        if not nombre:
+        if not facultad.nombre:
             error = "El nombre de la facultad es obligatorio."
 
-        elif codigo and Facultad.objects.filter(
-            codigo__iexact=codigo
-        ).exists():
-            error = "Ya existe una facultad con ese código."
-
-        else:
-            Facultad.objects.create(
-                codigo=codigo or None,
-                nombre=nombre,
-                activo=activo,
-            )
-
-            return redirect("facultad_list")
-
-    return render(
-        request,
-        "academico/facultad_form.html",
-        {
-            "error": error,
-        },
-    )
-
-
-@coordinador_required
-def facultad_update(request, pk):
-    facultad = get_object_or_404(Facultad, pk=pk)
-    error = None
-
-    if request.method == "POST":
-        codigo = request.POST.get("codigo", "").strip()
-        nombre = request.POST.get("nombre", "").strip()
-        activo = request.POST.get("activo") == "on"
-
-        if not nombre:
-            error = "El nombre de la facultad es obligatorio."
+        elif nombre_repetido(Facultad.objects, facultad.nombre, facultad.pk):
+            error = "Ya existe una facultad con ese nombre."
 
         elif (
-            codigo
+            facultad.codigo
             and Facultad.objects
-            .filter(codigo__iexact=codigo)
+            .filter(codigo__iexact=facultad.codigo)
             .exclude(pk=facultad.pk)
             .exists()
         ):
-            error = "Ya existe otra facultad con ese código."
+            error = "Ya existe una facultad con ese código."
 
         else:
-            facultad.codigo = codigo or None
-            facultad.nombre = nombre
-            facultad.activo = activo
-            facultad.save()
+            if not facultad.codigo:
+                facultad.codigo = codigo_unico(Facultad, facultad.nombre, facultad.pk)
 
+            facultad.save()
             return redirect("facultad_list")
 
     return render(
@@ -366,8 +366,19 @@ def facultad_update(request, pk):
         {
             "facultad": facultad,
             "error": error,
+            **_contexto_codigo(Facultad, facultad),
         },
     )
+
+
+@coordinador_required
+def facultad_create(request):
+    return _guardar_facultad(request, Facultad(activo=True))
+
+
+@coordinador_required
+def facultad_update(request, pk):
+    return _guardar_facultad(request, get_object_or_404(Facultad, pk=pk))
 
 
 @coordinador_required
@@ -375,8 +386,7 @@ def facultad_delete(request, pk):
     facultad = get_object_or_404(Facultad, pk=pk)
 
     if request.method == "POST":
-        facultad.delete()
-        return redirect("facultad_list")
+        return _eliminar(request, facultad, "facultad_list")
 
     return render(
         request,
@@ -406,97 +416,53 @@ def carrera_list(request):
     )
 
 
-@coordinador_required
-def carrera_create(request):
-    facultades = Facultad.objects.filter(activo=True).order_by("nombre")
-    error = None
-
-    if request.method == "POST":
-        codigo = request.POST.get("codigo", "").strip()
-        nombre = request.POST.get("nombre", "").strip()
-        facultad_id = request.POST.get("facultad")
-        activo = request.POST.get("activo") == "on"
-
-        if not nombre:
-            error = "El nombre de la carrera es obligatorio."
-
-        elif not facultad_id:
-            error = "Debes seleccionar una facultad."
-
-        elif codigo and Carrera.objects.filter(
-            codigo__iexact=codigo
-        ).exists():
-            error = "Ya existe una carrera con ese código."
-
-        else:
-            facultad = get_object_or_404(
-                Facultad,
-                pk=facultad_id,
-                activo=True,
-            )
-
-            Carrera.objects.create(
-                codigo=codigo or None,
-                nombre=nombre,
-                facultad=facultad,
-                activo=activo,
-            )
-
-            return redirect("carrera_list")
-
-    return render(
-        request,
-        "academico/carrera_form.html",
-        {
-            "facultades": facultades,
-            "error": error,
-        },
-    )
-
-
-@coordinador_required
-def carrera_update(request, pk):
-    carrera = get_object_or_404(Carrera, pk=pk)
+def _guardar_carrera(request, carrera):
+    es_nuevo = carrera.pk is None
 
     # En edición mostramos todas para conservar correctamente
     # una relación existente aunque la facultad esté inactiva.
     facultades = Facultad.objects.all().order_by("nombre")
+    if es_nuevo:
+        facultades = facultades.filter(activo=True)
 
     error = None
 
     if request.method == "POST":
-        codigo = request.POST.get("codigo", "").strip()
-        nombre = request.POST.get("nombre", "").strip()
+        carrera.codigo = normalizar_codigo(request.POST.get("codigo")) or None
+        carrera.nombre = request.POST.get("nombre", "").strip()
+        carrera.activo = request.POST.get("activo") == "on"
         facultad_id = request.POST.get("facultad")
-        activo = request.POST.get("activo") == "on"
 
-        if not nombre:
+        if facultad_id:
+            carrera.facultad = get_object_or_404(facultades, pk=facultad_id)
+
+        if not carrera.nombre:
             error = "El nombre de la carrera es obligatorio."
 
         elif not facultad_id:
             error = "Debes seleccionar una facultad."
 
+        elif nombre_repetido(
+            Carrera.objects.filter(facultad=carrera.facultad),
+            carrera.nombre,
+            carrera.pk,
+        ):
+            error = "Ya existe una carrera con ese nombre en esta facultad."
+
         elif (
-            codigo
+            carrera.codigo
             and Carrera.objects
-            .filter(codigo__iexact=codigo)
+            .filter(codigo__iexact=carrera.codigo)
             .exclude(pk=carrera.pk)
             .exists()
         ):
-            error = "Ya existe otra carrera con ese código."
+            error = "Ya existe una carrera con ese código."
 
         else:
-            facultad = get_object_or_404(
-                Facultad,
-                pk=facultad_id,
-            )
+            if not carrera.codigo:
+                carrera.codigo = codigo_unico(Carrera, carrera.nombre, carrera.pk)
 
-            carrera.codigo = codigo or None
-            carrera.nombre = nombre
-            carrera.facultad = facultad
-            carrera.activo = activo
             carrera.save()
-
             return redirect("carrera_list")
 
     return render(
@@ -506,8 +472,19 @@ def carrera_update(request, pk):
             "carrera": carrera,
             "facultades": facultades,
             "error": error,
+            **_contexto_codigo(Carrera, carrera),
         },
     )
+
+
+@coordinador_required
+def carrera_create(request):
+    return _guardar_carrera(request, Carrera(activo=True))
+
+
+@coordinador_required
+def carrera_update(request, pk):
+    return _guardar_carrera(request, get_object_or_404(Carrera, pk=pk))
 
 
 @coordinador_required
@@ -518,8 +495,7 @@ def carrera_delete(request, pk):
     )
 
     if request.method == "POST":
-        carrera.delete()
-        return redirect("carrera_list")
+        return _eliminar(request, carrera, "carrera_list")
 
     return render(
         request,
@@ -551,71 +527,84 @@ def unidad_academica_list(request):
     )
 
 
-@coordinador_required
-def unidad_academica_create(request):
-    facultades = Facultad.objects.filter(activo=True).order_by("nombre")
-    carreras = Carrera.objects.filter(activo=True).order_by("nombre")
+def _guardar_unidad_academica(request, unidad):
+    es_nuevo = unidad.pk is None
+
+    facultades = Facultad.objects.all().order_by("nombre")
+    carreras = Carrera.objects.all().order_by("nombre")
+    if es_nuevo:
+        facultades = facultades.filter(activo=True)
+        carreras = carreras.filter(activo=True)
+
     error = None
 
     if request.method == "POST":
         facultad_id = request.POST.get("facultad")
         carrera_id = request.POST.get("carrera")
-        tipo = request.POST.get("tipo", "").strip()
-        nombre = request.POST.get("nombre", "").strip()
-        correo_oficial = request.POST.get("correo_oficial", "").strip()
-        activo = request.POST.get("activo") == "on"
 
-        if not tipo:
-            error = "El tipo de unidad académica es obligatorio."
+        tipo_guardado = unidad.tipo
+        unidad.tipo = request.POST.get("tipo", "").strip()
+        unidad.nombre = request.POST.get("nombre", "").strip()
+        unidad.correo_oficial = request.POST.get("correo_oficial", "").strip() or None
+        unidad.activo = request.POST.get("activo") == "on"
+        unidad.facultad = (
+            get_object_or_404(facultades, pk=facultad_id)
+            if facultad_id else None
+        )
+        unidad.carrera = (
+            get_object_or_404(carreras, pk=carrera_id)
+            if carrera_id else None
+        )
 
-        elif not nombre:
+        # Si solo se eligió la carrera, la facultad se deduce de ella.
+        if unidad.carrera and not unidad.facultad:
+            unidad.facultad = unidad.carrera.facultad
+
+        if not constantes.opcion_valida(unidad.tipo, constantes.TIPOS_UNIDAD_ACADEMICA, tipo_guardado):
+            error = "Debes seleccionar el tipo de unidad académica."
+
+        elif not unidad.nombre:
             error = "El nombre de la unidad académica es obligatorio."
 
+        elif nombre_repetido(UnidadAcademica.objects, unidad.nombre, unidad.pk):
+            error = "Ya existe una unidad académica con ese nombre."
+
+        elif not unidad.facultad:
+            error = "Debes seleccionar la facultad de la unidad académica."
+
+        elif unidad.carrera and unidad.carrera.facultad_id != unidad.facultad.pk:
+            error = "La carrera seleccionada no pertenece a la facultad elegida."
+
+        elif unidad.tipo == "Dirección de Carrera" and not unidad.carrera:
+            error = "Una Dirección de Carrera debe tener una carrera asociada."
+
         else:
-            facultad = None
-            carrera = None
-
-            if facultad_id:
-                facultad = get_object_or_404(
-                    Facultad,
-                    pk=facultad_id,
-                    activo=True,
-                )
-
-            if carrera_id:
-                carrera = get_object_or_404(
-                    Carrera,
-                    pk=carrera_id,
-                    activo=True,
-                )
-
-            if correo_oficial:
+            if unidad.correo_oficial:
                 try:
-                    validate_email(correo_oficial)
+                    validate_email(unidad.correo_oficial)
                 except ValidationError:
                     error = "Ingresa un correo electrónico válido."
 
             if not error:
-                UnidadAcademica.objects.create(
-                    facultad=facultad,
-                    carrera=carrera,
-                    tipo=tipo,
-                    nombre=nombre,
-                    correo_oficial=correo_oficial or None,
-                    activo=activo,
-                )
-
+                unidad.save()
                 return redirect("unidad_academica_list")
 
     return render(
         request,
         "academico/unidad_academica_form.html",
         {
+            "unidad": unidad,
+            "tipos": constantes.opciones_con_actual(constantes.TIPOS_UNIDAD_ACADEMICA, unidad.tipo),
             "facultades": facultades,
             "carreras": carreras,
             "error": error,
         },
     )
+
+
+@coordinador_required
+def unidad_academica_create(request):
+    return _guardar_unidad_academica(request, UnidadAcademica(activo=True))
 
 
 @coordinador_required
@@ -628,69 +617,7 @@ def unidad_academica_update(request, pk):
         pk=pk,
     )
 
-  
-    facultades = Facultad.objects.all().order_by("nombre")
-    carreras = Carrera.objects.all().order_by("nombre")
-
-    error = None
-
-    if request.method == "POST":
-        facultad_id = request.POST.get("facultad")
-        carrera_id = request.POST.get("carrera")
-        tipo = request.POST.get("tipo", "").strip()
-        nombre = request.POST.get("nombre", "").strip()
-        correo_oficial = request.POST.get("correo_oficial", "").strip()
-        activo = request.POST.get("activo") == "on"
-
-        if not tipo:
-            error = "El tipo de unidad académica es obligatorio."
-
-        elif not nombre:
-            error = "El nombre de la unidad académica es obligatorio."
-
-        else:
-            facultad = None
-            carrera = None
-
-            if facultad_id:
-                facultad = get_object_or_404(
-                    Facultad,
-                    pk=facultad_id,
-                )
-
-            if carrera_id:
-                carrera = get_object_or_404(
-                    Carrera,
-                    pk=carrera_id,
-                )
-
-            if correo_oficial:
-                try:
-                    validate_email(correo_oficial)
-                except ValidationError:
-                    error = "Ingresa un correo electrónico válido."
-
-            if not error:
-                unidad.facultad = facultad
-                unidad.carrera = carrera
-                unidad.tipo = tipo
-                unidad.nombre = nombre
-                unidad.correo_oficial = correo_oficial or None
-                unidad.activo = activo
-                unidad.save()
-
-                return redirect("unidad_academica_list")
-
-    return render(
-        request,
-        "academico/unidad_academica_form.html",
-        {
-            "unidad": unidad,
-            "facultades": facultades,
-            "carreras": carreras,
-            "error": error,
-        },
-    )
+    return _guardar_unidad_academica(request, unidad)
 
 
 @coordinador_required
@@ -704,8 +631,7 @@ def unidad_academica_delete(request, pk):
     )
 
     if request.method == "POST":
-        unidad.delete()
-        return redirect("unidad_academica_list")
+        return _eliminar(request, unidad, "unidad_academica_list")
 
     return render(
         request,
@@ -736,154 +662,75 @@ def asignatura_list(request):
     )
 
 
-@coordinador_required
-def asignatura_create(request):
-    carreras = Carrera.objects.filter(activo=True).order_by("nombre")
-    error = None
-    carreras_seleccionadas = []
-
-    if request.method == "POST":
-        codigo = request.POST.get("codigo", "").strip()
-        nombre = request.POST.get("nombre", "").strip()
-        activo = request.POST.get("activo") == "on"
-
-        # Relación N:M
-        carrera_ids = request.POST.getlist("carreras")
-
-        # Conservamos la selección si ocurre un error
-        carreras_seleccionadas = [
-            int(carrera_id)
-            for carrera_id in carrera_ids
-            if carrera_id.isdigit()
-        ]
-
-        if not nombre:
-            error = "El nombre de la asignatura es obligatorio."
-
-        elif not carrera_ids:
-            error = "Debes seleccionar al menos una carrera."
-
-        elif codigo and Asignatura.objects.filter(
-            codigo__iexact=codigo
-        ).exists():
-            error = "Ya existe una asignatura con ese código."
-
-        else:
-            carreras_objetos = Carrera.objects.filter(
-                pk__in=carrera_ids,
-                activo=True,
-            )
-
-            if carreras_objetos.count() != len(set(carrera_ids)):
-                error = "Una de las carreras seleccionadas no existe o está inactiva."
-
-            else:
-                with transaction.atomic():
-
-                    asignatura = Asignatura.objects.create(
-                        codigo=codigo or None,
-                        nombre=nombre,
-                        activo=activo,
-                    )
-
-                    AsignaturaCarrera.objects.bulk_create([
-                        AsignaturaCarrera(
-                            asignatura=asignatura,
-                            carrera=carrera,
-                        )
-                        for carrera in carreras_objetos
-                    ])
-
-                return redirect("asignatura_list")
-
-    return render(
-        request,
-        "academico/asignatura_form.html",
-        {
-            "carreras": carreras,
-            "carreras_seleccionadas": carreras_seleccionadas,
-            "error": error,
-        },
-    )
-
-
-@coordinador_required
-def asignatura_update(request, pk):
-    asignatura = get_object_or_404(
-        Asignatura.objects.prefetch_related("carreras"),
-        pk=pk,
-    )
+def _guardar_asignatura(request, asignatura):
+    es_nuevo = asignatura.pk is None
 
     # En edición mostramos todas para conservar
     # correctamente asociaciones existentes.
     carreras = Carrera.objects.all().order_by("nombre")
+    if es_nuevo:
+        carreras = carreras.filter(activo=True)
+
     error = None
 
-    # Selección actual de la asignatura
-    carreras_seleccionadas = list(
-        asignatura.carreras.values_list("id", flat=True)
+    carreras_seleccionadas = (
+        [] if es_nuevo
+        else list(asignatura.carreras.values_list("id", flat=True))
     )
 
     if request.method == "POST":
-        codigo = request.POST.get("codigo", "").strip()
-        nombre = request.POST.get("nombre", "").strip()
-        activo = request.POST.get("activo") == "on"
+        asignatura.codigo = normalizar_codigo(request.POST.get("codigo")) or None
+        asignatura.nombre = request.POST.get("nombre", "").strip()
+        asignatura.activo = request.POST.get("activo") == "on"
 
+        # Relación N:M. Conservamos la selección si ocurre un error.
         carrera_ids = request.POST.getlist("carreras")
+        carreras_seleccionadas = _ids_seleccionados(carrera_ids)
 
-        # Si hay error, mantenemos lo seleccionado por el usuario
-        carreras_seleccionadas = [
-            int(carrera_id)
-            for carrera_id in carrera_ids
-            if carrera_id.isdigit()
-        ]
+        carreras_objetos = carreras.filter(pk__in=carreras_seleccionadas)
 
-        if not nombre:
+        if not asignatura.nombre:
             error = "El nombre de la asignatura es obligatorio."
 
         elif not carrera_ids:
             error = "Debes seleccionar al menos una carrera."
 
+        elif nombre_repetido(Asignatura.objects, asignatura.nombre, asignatura.pk):
+            error = (
+                "Ya existe una asignatura con ese nombre. "
+                "Agrega la carrera a esa asignatura en vez de crear otra."
+            )
+
         elif (
-            codigo
+            asignatura.codigo
             and Asignatura.objects
-            .filter(codigo__iexact=codigo)
+            .filter(codigo__iexact=asignatura.codigo)
             .exclude(pk=asignatura.pk)
             .exists()
         ):
-            error = "Ya existe otra asignatura con ese código."
+            error = "Ya existe una asignatura con ese código."
+
+        elif carreras_objetos.count() != len(set(carrera_ids)):
+            error = "Una de las carreras seleccionadas no existe o está inactiva."
 
         else:
-            carreras_objetos = Carrera.objects.filter(
-                pk__in=carrera_ids
-            )
+            with transaction.atomic():
+                asignatura.save()
 
-            if carreras_objetos.count() != len(set(carrera_ids)):
-                error = "Una de las carreras seleccionadas no existe."
+                # Reemplazamos las asociaciones anteriores por las nuevas.
+                AsignaturaCarrera.objects.filter(
+                    asignatura=asignatura
+                ).delete()
 
-            else:
-                with transaction.atomic():
+                AsignaturaCarrera.objects.bulk_create([
+                    AsignaturaCarrera(
+                        asignatura=asignatura,
+                        carrera=carrera,
+                    )
+                    for carrera in carreras_objetos
+                ])
 
-                    asignatura.codigo = codigo or None
-                    asignatura.nombre = nombre
-                    asignatura.activo = activo
-                    asignatura.save()
-
-                    # Eliminamos las asociaciones anteriores
-                    AsignaturaCarrera.objects.filter(
-                        asignatura=asignatura
-                    ).delete()
-
-                    # Creamos las nuevas asociaciones
-                    AsignaturaCarrera.objects.bulk_create([
-                        AsignaturaCarrera(
-                            asignatura=asignatura,
-                            carrera=carrera,
-                        )
-                        for carrera in carreras_objetos
-                    ])
-
-                return redirect("asignatura_list")
+            return redirect("asignatura_list")
 
     return render(
         request,
@@ -898,6 +745,21 @@ def asignatura_update(request, pk):
 
 
 @coordinador_required
+def asignatura_create(request):
+    return _guardar_asignatura(request, Asignatura(activo=True))
+
+
+@coordinador_required
+def asignatura_update(request, pk):
+    asignatura = get_object_or_404(
+        Asignatura.objects.prefetch_related("carreras"),
+        pk=pk,
+    )
+
+    return _guardar_asignatura(request, asignatura)
+
+
+@coordinador_required
 def asignatura_delete(request, pk):
     asignatura = get_object_or_404(
         Asignatura.objects.prefetch_related("carreras"),
@@ -905,8 +767,7 @@ def asignatura_delete(request, pk):
     )
 
     if request.method == "POST":
-        asignatura.delete()
-        return redirect("asignatura_list")
+        return _eliminar(request, asignatura, "asignatura_list")
 
     return render(
         request,
@@ -938,137 +799,65 @@ def docente_list(request):
     )
 
 
-@coordinador_required
-def docente_create(request):
+def _guardar_docente(request, docente):
     error = None
 
     if request.method == "POST":
-        rut = request.POST.get("rut", "").strip()
-        nombres = request.POST.get("nombres", "").strip()
-        apellidos = request.POST.get("apellidos", "").strip()
-        correo = request.POST.get(
+        docente.rut = request.POST.get("rut", "").strip()
+        docente.nombres = request.POST.get("nombres", "").strip()
+        docente.apellidos = request.POST.get("apellidos", "").strip()
+        docente.correo_institucional = request.POST.get(
             "correo_institucional",
             ""
         ).strip()
-        telefono = request.POST.get("telefono", "").strip()
-        activo = request.POST.get("activo") == "on"
+        docente.telefono = request.POST.get("telefono", "").strip() or None
+        docente.activo = request.POST.get("activo") == "on"
 
         # VALIDACIONES
-        if not rut:
-            error = "El RUT del docente es obligatorio."
+        # El RUT se guarda sin puntos y con guion, igual que en el resto
+        # del portal, para que la planificación encuentre al docente.
+        try:
+            docente.rut = validar_rut_chileno(docente.rut)
+            error_rut = None
+        except ValidationError as error_validacion:
+            error_rut = error_validacion.message
 
-        elif not nombres:
+        if error_rut:
+            error = error_rut
+
+        elif not docente.nombres:
             error = "Los nombres del docente son obligatorios."
 
-        elif not apellidos:
+        elif not docente.apellidos:
             error = "Los apellidos del docente son obligatorios."
 
-        elif not correo:
+        elif not docente.correo_institucional:
             error = "El correo institucional es obligatorio."
 
-        elif Docente.objects.filter(
-            rut__iexact=rut
-        ).exists():
+        elif (
+            Docente.objects
+            .filter(rut__iexact=docente.rut)
+            .exclude(pk=docente.pk)
+            .exists()
+        ):
             error = "Ya existe un docente con ese RUT."
 
-        elif Docente.objects.filter(
-            correo_institucional__iexact=correo
-        ).exists():
+        elif (
+            Docente.objects
+            .filter(correo_institucional__iexact=docente.correo_institucional)
+            .exclude(pk=docente.pk)
+            .exists()
+        ):
             error = "Ya existe un docente con ese correo institucional."
 
         else:
             try:
-                validate_email(correo)
-
-                Docente.objects.create(
-                    rut=rut,
-                    nombres=nombres,
-                    apellidos=apellidos,
-                    correo_institucional=correo,
-                    telefono=telefono or None,
-                    activo=activo,
-                )
-
-                return redirect("docente_list")
-
+                validate_email(docente.correo_institucional)
             except ValidationError:
                 error = "Ingresa un correo electrónico válido."
-
-    return render(
-        request,
-        "academico/docente_form.html",
-        {
-            "error": error,
-        },
-    )
-
-
-@coordinador_required
-def docente_update(request, pk):
-    docente = get_object_or_404(
-        Docente,
-        pk=pk,
-    )
-
-    error = None
-
-    if request.method == "POST":
-        rut = request.POST.get("rut", "").strip()
-        nombres = request.POST.get("nombres", "").strip()
-        apellidos = request.POST.get("apellidos", "").strip()
-        correo = request.POST.get(
-            "correo_institucional",
-            ""
-        ).strip()
-        telefono = request.POST.get("telefono", "").strip()
-        activo = request.POST.get("activo") == "on"
-
-        # VALIDACIONES
-        if not rut:
-            error = "El RUT del docente es obligatorio."
-
-        elif not nombres:
-            error = "Los nombres del docente son obligatorios."
-
-        elif not apellidos:
-            error = "Los apellidos del docente son obligatorios."
-
-        elif not correo:
-            error = "El correo institucional es obligatorio."
-
-        elif (
-            Docente.objects
-            .filter(rut__iexact=rut)
-            .exclude(pk=docente.pk)
-            .exists()
-        ):
-            error = "Ya existe otro docente con ese RUT."
-
-        elif (
-            Docente.objects
-            .filter(correo_institucional__iexact=correo)
-            .exclude(pk=docente.pk)
-            .exists()
-        ):
-            error = "Ya existe otro docente con ese correo institucional."
-
-        else:
-            try:
-                validate_email(correo)
-
-                docente.rut = rut
-                docente.nombres = nombres
-                docente.apellidos = apellidos
-                docente.correo_institucional = correo
-                docente.telefono = telefono or None
-                docente.activo = activo
-
+            else:
                 docente.save()
-
                 return redirect("docente_list")
-
-            except ValidationError:
-                error = "Ingresa un correo electrónico válido."
 
     return render(
         request,
@@ -1081,6 +870,16 @@ def docente_update(request, pk):
 
 
 @coordinador_required
+def docente_create(request):
+    return _guardar_docente(request, Docente(activo=True))
+
+
+@coordinador_required
+def docente_update(request, pk):
+    return _guardar_docente(request, get_object_or_404(Docente, pk=pk))
+
+
+@coordinador_required
 def docente_delete(request, pk):
     docente = get_object_or_404(
         Docente,
@@ -1088,9 +887,7 @@ def docente_delete(request, pk):
     )
 
     if request.method == "POST":
-        docente.delete()
-
-        return redirect("docente_list")
+        return _eliminar(request, docente, "docente_list")
 
     return render(
         request,
@@ -1121,28 +918,27 @@ def periodo_list(request):
     )
 
 
-@coordinador_required
-def periodo_create(request):
+def _guardar_periodo(request, periodo):
     error = None
-
-    tipos_validos = [
-        "Primer semestre",
-        "Segundo semestre",
-    ]
-
-    estados_validos = [
-        "Planificado",
-        "Activo",
-        "Finalizado",
-    ]
 
     if request.method == "POST":
         anio = request.POST.get("anio", "").strip()
-        tipo = request.POST.get("tipo", "").strip()
-        nombre = request.POST.get("nombre", "").strip()
         fecha_inicio = request.POST.get("fecha_inicio", "").strip()
         fecha_fin = request.POST.get("fecha_fin", "").strip()
-        estado = request.POST.get("estado", "").strip()
+
+        periodo.anio = anio
+        tipo_guardado, estado_guardado = periodo.tipo, periodo.estado
+        periodo.tipo = request.POST.get("tipo", "").strip()
+        periodo.nombre = request.POST.get("nombre", "").strip()
+        parte = request.POST.get("parte", "").strip()
+        periodo.fecha_inicio = fecha_inicio or None
+        periodo.fecha_fin = fecha_fin or None
+        periodo.estado = request.POST.get("estado", "").strip()
+
+        # Sin JS el nombre puede llegar vacío: se arma con la parte del año
+        # (semestre, trimestre...) y el año.
+        if not periodo.nombre:
+            periodo.nombre = constantes.nombre_periodo(periodo.tipo, parte, anio)
 
         if not anio:
             error = "El año es obligatorio."
@@ -1156,103 +952,13 @@ def periodo_create(request):
         elif int(anio) < 2000 or int(anio) > 2100:
             error = "El año debe estar entre 2000 y 2100."
 
-        elif tipo not in tipos_validos:
+        elif not constantes.opcion_valida(periodo.tipo, constantes.TIPOS_PERIODO, tipo_guardado):
             error = "Debes seleccionar un tipo de período válido."
 
-        elif not nombre:
+        elif not periodo.nombre:
             error = "El nombre del período es obligatorio."
 
-        elif estado not in estados_validos:
-            error = "Debes seleccionar un estado válido."
-
-        elif (
-            fecha_inicio
-            and fecha_fin
-            and fecha_fin < fecha_inicio
-        ):
-            error = (
-                "La fecha de término no puede ser "
-                "anterior a la fecha de inicio."
-            )
-
-        elif PeriodoAcademico.objects.filter(
-            anio=int(anio),
-            tipo=tipo,
-            nombre__iexact=nombre,
-        ).exists():
-            error = (
-                "Ya existe un período académico con "
-                "ese año, tipo y nombre."
-            )
-
-        else:
-            PeriodoAcademico.objects.create(
-                anio=int(anio),
-                tipo=tipo,
-                nombre=nombre,
-                fecha_inicio=fecha_inicio or None,
-                fecha_fin=fecha_fin or None,
-                estado=estado,
-            )
-
-            return redirect("periodo_list")
-
-    return render(
-        request,
-        "academico/periodo_form.html",
-        {
-            "error": error,
-        },
-    )
-
-
-@coordinador_required
-def periodo_update(request, pk):
-    periodo = get_object_or_404(
-        PeriodoAcademico,
-        pk=pk,
-    )
-
-    error = None
-
-    tipos_validos = [
-        "Primer semestre",
-        "Segundo semestre",
-    ]
-
-    estados_validos = [
-        "Planificado",
-        "Activo",
-        "Finalizado",
-    ]
-
-    if request.method == "POST":
-        anio = request.POST.get("anio", "").strip()
-        tipo = request.POST.get("tipo", "").strip()
-        nombre = request.POST.get("nombre", "").strip()
-        fecha_inicio = request.POST.get("fecha_inicio", "").strip()
-        fecha_fin = request.POST.get("fecha_fin", "").strip()
-        estado = request.POST.get("estado", "").strip()
-
-        if not anio:
-            error = "El año es obligatorio."
-
-        elif not anio.isdigit():
-            error = "El año debe ser un número válido."
-
-        elif len(anio) != 4:
-            error = "El año debe contener 4 dígitos."
-
-        elif int(anio) < 2000 or int(anio) > 2100:
-            error = "El año debe estar entre 2000 y 2100."
-
-        elif tipo not in tipos_validos:
-            error = "Debes seleccionar un tipo de período válido."
-
-        elif not nombre:
-            error = "El nombre del período es obligatorio."
-
-        elif estado not in estados_validos:
+        elif not constantes.opcion_valida(periodo.estado, constantes.ESTADOS_PERIODO, estado_guardado):
             error = "Debes seleccionar un estado válido."
 
         elif (
@@ -1269,27 +975,20 @@ def periodo_update(request, pk):
             PeriodoAcademico.objects
             .filter(
                 anio=int(anio),
-                tipo=tipo,
-                nombre__iexact=nombre,
+                tipo=periodo.tipo,
+                nombre__iexact=periodo.nombre,
             )
             .exclude(pk=periodo.pk)
             .exists()
         ):
             error = (
-                "Ya existe otro período académico con "
+                "Ya existe un período académico con "
                 "ese año, tipo y nombre."
             )
 
         else:
             periodo.anio = int(anio)
-            periodo.tipo = tipo
-            periodo.nombre = nombre
-            periodo.fecha_inicio = fecha_inicio or None
-            periodo.fecha_fin = fecha_fin or None
-            periodo.estado = estado
-
             periodo.save()
-
             return redirect("periodo_list")
 
     return render(
@@ -1297,9 +996,22 @@ def periodo_update(request, pk):
         "academico/periodo_form.html",
         {
             "periodo": periodo,
+            "tipos": constantes.opciones_con_actual(constantes.TIPOS_PERIODO, periodo.tipo),
+            "estados": constantes.opciones_con_actual(constantes.ESTADOS_PERIODO, periodo.estado),
+            "partes_periodo": constantes.PARTES_PERIODO,
             "error": error,
         },
     )
+
+
+@coordinador_required
+def periodo_create(request):
+    return _guardar_periodo(request, PeriodoAcademico())
+
+
+@coordinador_required
+def periodo_update(request, pk):
+    return _guardar_periodo(request, get_object_or_404(PeriodoAcademico, pk=pk))
 
 
 @coordinador_required
@@ -1310,9 +1022,7 @@ def periodo_delete(request, pk):
     )
 
     if request.method == "POST":
-        periodo.delete()
-
-        return redirect("periodo_list")
+        return _eliminar(request, periodo, "periodo_list")
 
     return render(
         request,
@@ -1323,8 +1033,23 @@ def periodo_delete(request, pk):
     )
 
 # =========================================================
-# CRUD SECCIONES / NRC
+# SECCIONES / NRC
 # =========================================================
+#
+# Un solo listado con filtros (período, carrera, asignatura, docente,
+# NRC, sede y campus; RNF-ALC-01) y las acciones de editar y eliminar.
+# El detalle de la sección es core:detalle_seccion, común a Coordinador
+# y Docente.
+
+FILTROS_SECCION = [
+    "periodo",
+    "sede",
+    "campus",
+    "carrera",
+    "asignatura",
+    "docente",
+]
+
 
 @coordinador_required
 def seccion_list(request):
@@ -1340,93 +1065,167 @@ def seccion_list(request):
             "carreras",
             "docentes",
         )
+    )
+
+    # -------------------------
+    # FILTROS
+    # -------------------------
+
+    filtros = {
+        nombre: request.GET.get(nombre, "").strip()
+        for nombre in FILTROS_SECCION + ["nrc"]
+    }
+
+    campos_filtro = {
+        "periodo": "periodo_id",
+        "sede": "campus__sede_id",
+        "campus": "campus_id",
+        "carrera": "carreras__id",
+        "asignatura": "asignatura_id",
+        "docente": "docentes__id",
+    }
+
+    for nombre, campo in campos_filtro.items():
+        valor = filtros[nombre]
+
+        if valor.isdigit():
+            secciones = secciones.filter(**{campo: int(valor)})
+        elif valor:
+            secciones = secciones.none()
+
+    if filtros["nrc"]:
+        secciones = secciones.filter(
+            nrc__icontains=filtros["nrc"]
+        )
+
+    # Las relaciones N:M pueden generar filas repetidas.
+    secciones = (
+        secciones
+        .distinct()
         .order_by(
             "-periodo__anio",
+            "periodo__nombre",
             "asignatura__nombre",
             "nrc",
         )
     )
 
+    # -------------------------
+    # OPCIONES DE LOS FILTROS
+    # -------------------------
+
+    context = {
+        "secciones": secciones,
+        "periodos": PeriodoAcademico.objects.order_by("-anio", "nombre"),
+        "sedes": Sede.objects.order_by("nombre"),
+        "campus_list": (
+            Campus.objects
+            .select_related("sede")
+            .order_by("sede__nombre", "nombre")
+        ),
+        "carreras": Carrera.objects.order_by("nombre"),
+        "asignaturas": Asignatura.objects.order_by("nombre"),
+        "docentes": Docente.objects.order_by("apellidos", "nombres"),
+        "filtros": filtros,
+        "filtros_activos": any(filtros.values()),
+    }
+
     return render(
         request,
         "academico/seccion_list.html",
-        {
-            "secciones": secciones,
-        },
+        context,
     )
 
 
-@coordinador_required
-def seccion_create(request):
-    asignaturas = (
-        Asignatura.objects
-        .filter(activo=True)
-        .order_by("nombre")
-    )
+def _sincronizar_relacion(modelo, seccion, campo, seleccionados):
+    """
+    Deja en la sección solo los registros seleccionados sin recrear los que
+    se mantienen: así no se pierden los datos que cargó la planificación
+    (nivel, declaración A+S, estudiantes, tipo de contrato, capacitado A+S).
+    """
+    actuales = modelo.objects.filter(seccion=seccion)
+    ids_seleccionados = {objeto.pk for objeto in seleccionados}
+    ids_actuales = set(actuales.values_list(f"{campo}_id", flat=True))
 
-    docentes = (
-        Docente.objects
-        .filter(activo=True)
-        .order_by("apellidos", "nombres")
-    )
+    actuales.exclude(**{f"{campo}_id__in": ids_seleccionados}).delete()
 
-    periodos = (
-        PeriodoAcademico.objects
-        .all()
-        .order_by("-anio", "tipo", "nombre")
-    )
+    modelo.objects.bulk_create([
+        modelo(seccion=seccion, **{campo: objeto})
+        for objeto in seleccionados
+        if objeto.pk not in ids_actuales
+    ])
 
+
+def _guardar_seccion(request, seccion):
+    es_nuevo = seccion.pk is None
+
+    # Al crear solo se ofrecen registros activos. En edición mostramos
+    # todos para no perder relaciones antiguas si alguno quedó inactivo.
+    asignaturas = Asignatura.objects.all().order_by("nombre")
+    docentes = Docente.objects.all().order_by("apellidos", "nombres")
     campus_list = (
         Campus.objects
-        .filter(activo=True)
         .select_related("sede")
         .order_by("sede__nombre", "nombre")
     )
+    carreras = Carrera.objects.all().order_by("nombre")
 
-    carreras = (
-        Carrera.objects
-        .filter(activo=True)
-        .order_by("nombre")
-    )
+    if es_nuevo:
+        asignaturas = asignaturas.filter(activo=True)
+        docentes = docentes.filter(activo=True)
+        campus_list = campus_list.filter(activo=True)
+        carreras = carreras.filter(activo=True)
+
+    periodos = PeriodoAcademico.objects.all().order_by("-anio", "nombre")
 
     error = None
 
-    carreras_seleccionadas = []
-    docentes_seleccionados = []
+    if es_nuevo:
+        carreras_seleccionadas = []
+        docentes_seleccionados = []
+    else:
+        carreras_seleccionadas = list(
+            seccion.carreras.values_list("id", flat=True)
+        )
+        docentes_seleccionados = list(
+            seccion.docentes.values_list("id", flat=True)
+        )
 
     if request.method == "POST":
 
-        nrc = request.POST.get("nrc", "").strip()
-        numero_seccion = request.POST.get("seccion", "").strip()
+        seccion.nrc = normalizar_codigo(request.POST.get("nrc"))
+        seccion.seccion = request.POST.get("seccion", "").strip()
+        jornada_guardada = seccion.jornada
+        seccion.jornada = request.POST.get("jornada", "").strip() or None
+        seccion.horario = request.POST.get("horario", "").strip() or None
+        estado_guardado = seccion.estado
+        seccion.estado = request.POST.get("estado", "").strip()
 
         asignatura_id = request.POST.get("asignatura")
         periodo_id = request.POST.get("periodo")
         campus_id = request.POST.get("campus")
 
-        jornada = request.POST.get("jornada", "").strip()
-        horario = request.POST.get("horario", "").strip()
-        estado = request.POST.get("estado", "").strip()
+        if asignatura_id:
+            seccion.asignatura = get_object_or_404(asignaturas, pk=asignatura_id)
+        if periodo_id:
+            seccion.periodo = get_object_or_404(periodos, pk=periodo_id)
+        if campus_id:
+            seccion.campus = get_object_or_404(campus_list, pk=campus_id)
 
         docente_ids = request.POST.getlist("docentes")
         carrera_ids = request.POST.getlist("carreras")
 
         # Mantiene las selecciones si ocurre un error.
-        docentes_seleccionados = [
-            int(docente_id)
-            for docente_id in docente_ids
-            if docente_id.isdigit()
-        ]
+        docentes_seleccionados = _ids_seleccionados(docente_ids)
+        carreras_seleccionadas = _ids_seleccionados(carrera_ids)
 
-        carreras_seleccionadas = [
-            int(carrera_id)
-            for carrera_id in carrera_ids
-            if carrera_id.isdigit()
-        ]
+        docentes_objetos = docentes.filter(pk__in=docentes_seleccionados)
+        carreras_objetos = carreras.filter(pk__in=carreras_seleccionadas)
 
-        if not nrc:
+        if not seccion.nrc:
             error = "El NRC es obligatorio."
 
-        elif not numero_seccion:
+        elif not seccion.seccion:
             error = "El número o código de sección es obligatorio."
 
         elif not periodo_id:
@@ -1444,15 +1243,21 @@ def seccion_create(request):
         elif not docente_ids:
             error = "Debes seleccionar al menos un docente."
 
-        elif not estado:
-            error = "El estado de la sección es obligatorio."
+        elif not constantes.opcion_valida(seccion.estado, constantes.ESTADOS_SECCION, estado_guardado):
+            error = "Debes seleccionar el estado de la sección."
+
+        elif seccion.jornada and not constantes.opcion_valida(
+            seccion.jornada, constantes.JORNADAS, jornada_guardada
+        ):
+            error = "Debes seleccionar una jornada de la lista."
 
         elif (
             Seccion.objects
             .filter(
                 periodo_id=periodo_id,
-                nrc=nrc,
+                nrc__iexact=seccion.nrc,
             )
+            .exclude(pk=seccion.pk)
             .exists()
         ):
             error = (
@@ -1460,94 +1265,35 @@ def seccion_create(request):
                 "en el período seleccionado."
             )
 
+        elif docentes_objetos.count() != len(set(docente_ids)):
+            error = (
+                "Uno de los docentes seleccionados "
+                "no existe o está inactivo."
+            )
+
+        elif carreras_objetos.count() != len(set(carrera_ids)):
+            error = (
+                "Una de las carreras seleccionadas "
+                "no existe o está inactiva."
+            )
+
         else:
 
-            asignatura = get_object_or_404(
-                Asignatura,
-                pk=asignatura_id,
-                activo=True,
-            )
+            with transaction.atomic():
 
-            periodo = get_object_or_404(
-                PeriodoAcademico,
-                pk=periodo_id,
-            )
+                seccion.save()
+                _sincronizar_relacion(SeccionDocente, seccion, "docente", docentes_objetos)
+                _sincronizar_relacion(SeccionCarrera, seccion, "carrera", carreras_objetos)
 
-            campus_obj = get_object_or_404(
-                Campus,
-                pk=campus_id,
-                activo=True,
-            )
-
-            docentes_objetos = Docente.objects.filter(
-                pk__in=docente_ids,
-                activo=True,
-            )
-
-            carreras_objetos = Carrera.objects.filter(
-                pk__in=carrera_ids,
-                activo=True,
-            )
-
-            if (
-                docentes_objetos.count()
-                != len(set(docente_ids))
-            ):
-                error = (
-                    "Uno de los docentes seleccionados "
-                    "no existe o está inactivo."
-                )
-
-            elif (
-                carreras_objetos.count()
-                != len(set(carrera_ids))
-            ):
-                error = (
-                    "Una de las carreras seleccionadas "
-                    "no existe o está inactiva."
-                )
-
-            else:
-
-                with transaction.atomic():
-
-                    seccion = Seccion.objects.create(
-                        periodo=periodo,
-                        campus=campus_obj,
-                        asignatura=asignatura,
-                        nrc=nrc,
-                        seccion=numero_seccion,
-                        jornada=jornada or None,
-                        horario=horario or None,
-                        estado=estado,
-                    )
-
-                    SeccionDocente.objects.bulk_create(
-                        [
-                            SeccionDocente(
-                                seccion=seccion,
-                                docente=docente,
-                            )
-                            for docente in docentes_objetos
-                        ]
-                    )
-
-                    SeccionCarrera.objects.bulk_create(
-                        [
-                            SeccionCarrera(
-                                seccion=seccion,
-                                carrera=carrera,
-                            )
-                            for carrera in carreras_objetos
-                        ]
-                    )
-
-                return redirect("seccion_list")
+            return redirect("seccion_list")
 
     return render(
         request,
         "academico/seccion_form.html",
         {
+            "seccion": seccion,
+            "estados": constantes.opciones_con_actual(constantes.ESTADOS_SECCION, seccion.estado),
+            "jornadas": constantes.opciones_con_actual(constantes.JORNADAS, seccion.jornada),
             "asignaturas": asignaturas,
             "docentes": docentes,
             "periodos": periodos,
@@ -1558,6 +1304,11 @@ def seccion_create(request):
             "error": error,
         },
     )
+
+
+@coordinador_required
+def seccion_create(request):
+    return _guardar_seccion(request, Seccion())
 
 
 @coordinador_required
@@ -1570,223 +1321,7 @@ def seccion_update(request, pk):
         pk=pk,
     )
 
-    # En edición mostramos todos para no perder
-    # relaciones antiguas si algún registro quedó inactivo.
-    asignaturas = Asignatura.objects.all().order_by("nombre")
-
-    docentes = (
-        Docente.objects
-        .all()
-        .order_by("apellidos", "nombres")
-    )
-
-    periodos = (
-        PeriodoAcademico.objects
-        .all()
-        .order_by("-anio", "tipo", "nombre")
-    )
-
-    campus_list = (
-        Campus.objects
-        .select_related("sede")
-        .all()
-        .order_by("sede__nombre", "nombre")
-    )
-
-    carreras = (
-        Carrera.objects
-        .all()
-        .order_by("nombre")
-    )
-
-    error = None
-
-    carreras_seleccionadas = list(
-        seccion.carreras.values_list(
-            "id",
-            flat=True,
-        )
-    )
-
-    docentes_seleccionados = list(
-        seccion.docentes.values_list(
-            "id",
-            flat=True,
-        )
-    )
-
-    if request.method == "POST":
-
-        nrc = request.POST.get("nrc", "").strip()
-        numero_seccion = request.POST.get("seccion", "").strip()
-
-        asignatura_id = request.POST.get("asignatura")
-        periodo_id = request.POST.get("periodo")
-        campus_id = request.POST.get("campus")
-
-        jornada = request.POST.get("jornada", "").strip()
-        horario = request.POST.get("horario", "").strip()
-        estado = request.POST.get("estado", "").strip()
-
-        docente_ids = request.POST.getlist("docentes")
-        carrera_ids = request.POST.getlist("carreras")
-
-        # Mantener selección en caso de error.
-        docentes_seleccionados = [
-            int(docente_id)
-            for docente_id in docente_ids
-            if docente_id.isdigit()
-        ]
-
-        carreras_seleccionadas = [
-            int(carrera_id)
-            for carrera_id in carrera_ids
-            if carrera_id.isdigit()
-        ]
-
-        if not nrc:
-            error = "El NRC es obligatorio."
-
-        elif not numero_seccion:
-            error = "El número o código de sección es obligatorio."
-
-        elif not periodo_id:
-            error = "Debes seleccionar un período académico."
-
-        elif not campus_id:
-            error = "Debes seleccionar un campus."
-
-        elif not asignatura_id:
-            error = "Debes seleccionar una asignatura."
-
-        elif not carrera_ids:
-            error = "Debes seleccionar al menos una carrera."
-
-        elif not docente_ids:
-            error = "Debes seleccionar al menos un docente."
-
-        elif not estado:
-            error = "El estado de la sección es obligatorio."
-
-        elif (
-            Seccion.objects
-            .filter(
-                periodo_id=periodo_id,
-                nrc=nrc,
-            )
-            .exclude(pk=seccion.pk)
-            .exists()
-        ):
-            error = (
-                "Ya existe otra sección con este NRC "
-                "en el período seleccionado."
-            )
-
-        else:
-
-            asignatura = get_object_or_404(
-                Asignatura,
-                pk=asignatura_id,
-            )
-
-            periodo = get_object_or_404(
-                PeriodoAcademico,
-                pk=periodo_id,
-            )
-
-            campus_obj = get_object_or_404(
-                Campus,
-                pk=campus_id,
-            )
-
-            docentes_objetos = Docente.objects.filter(
-                pk__in=docente_ids
-            )
-
-            carreras_objetos = Carrera.objects.filter(
-                pk__in=carrera_ids
-            )
-
-            if (
-                docentes_objetos.count()
-                != len(set(docente_ids))
-            ):
-                error = (
-                    "Uno de los docentes seleccionados "
-                    "no existe."
-                )
-
-            elif (
-                carreras_objetos.count()
-                != len(set(carrera_ids))
-            ):
-                error = (
-                    "Una de las carreras seleccionadas "
-                    "no existe."
-                )
-
-            else:
-
-                with transaction.atomic():
-
-                    seccion.nrc = nrc
-                    seccion.seccion = numero_seccion
-                    seccion.asignatura = asignatura
-                    seccion.periodo = periodo
-                    seccion.campus = campus_obj
-                    seccion.jornada = jornada or None
-                    seccion.horario = horario or None
-                    seccion.estado = estado
-
-                    seccion.save()
-
-                    # DOCENTES
-                    SeccionDocente.objects.filter(
-                        seccion=seccion
-                    ).delete()
-
-                    SeccionDocente.objects.bulk_create(
-                        [
-                            SeccionDocente(
-                                seccion=seccion,
-                                docente=docente,
-                            )
-                            for docente in docentes_objetos
-                        ]
-                    )
-
-                    # CARRERAS
-                    SeccionCarrera.objects.filter(
-                        seccion=seccion
-                    ).delete()
-
-                    SeccionCarrera.objects.bulk_create(
-                        [
-                            SeccionCarrera(
-                                seccion=seccion,
-                                carrera=carrera,
-                            )
-                            for carrera in carreras_objetos
-                        ]
-                    )
-
-                return redirect("seccion_list")
-
-    return render(
-        request,
-        "academico/seccion_form.html",
-        {
-            "seccion": seccion,
-            "asignaturas": asignaturas,
-            "docentes": docentes,
-            "periodos": periodos,
-            "campus_list": campus_list,
-            "carreras": carreras,
-            "carreras_seleccionadas": carreras_seleccionadas,
-            "docentes_seleccionados": docentes_seleccionados,
-            "error": error,
-        },
-    )
+    return _guardar_seccion(request, seccion)
 
 
 @coordinador_required
@@ -1807,166 +1342,11 @@ def seccion_delete(request, pk):
     )
 
     if request.method == "POST":
-        seccion.delete()
-
-        return redirect("seccion_list")
+        return _eliminar(request, seccion, "seccion_list")
 
     return render(
         request,
         "academico/seccion_confirm_delete.html",
-        {
-            "seccion": seccion,
-        },
-    )
-
-
-# =========================================================
-# CONSULTA DE PLANIFICACIÓN ACADÉMICA
-# =========================================================
-
-@coordinador_required
-def planificacion_list(request):
-    secciones = (
-        Seccion.objects
-        .select_related(
-            "asignatura",
-            "periodo",
-            "campus",
-            "campus__sede",
-        )
-        .prefetch_related(
-            "carreras",
-            "carreras__facultad",
-            "docentes",
-        )
-    )
-
-    # -------------------------
-    # FILTROS
-    # -------------------------
-
-    periodo_id = request.GET.get("periodo")
-    carrera_id = request.GET.get("carrera")
-    asignatura_id = request.GET.get("asignatura")
-    docente_id = request.GET.get("docente")
-    nrc = request.GET.get("nrc", "").strip()
-
-    if periodo_id:
-        secciones = secciones.filter(
-            periodo_id=periodo_id
-        )
-
-    if carrera_id:
-        secciones = secciones.filter(
-            carreras__id=carrera_id
-        )
-
-    if asignatura_id:
-        secciones = secciones.filter(
-            asignatura_id=asignatura_id
-        )
-
-    if docente_id:
-        secciones = secciones.filter(
-            docentes__id=docente_id
-        )
-
-    if nrc:
-        secciones = secciones.filter(
-            nrc__icontains=nrc
-        )
-
-    # Las relaciones N:M pueden generar filas repetidas.
-    secciones = (
-        secciones
-        .distinct()
-        .order_by(
-            "-periodo__anio",
-            "periodo__tipo",
-            "asignatura__nombre",
-            "nrc",
-        )
-    )
-
-    # -------------------------
-    # OPCIONES DE LOS FILTROS
-    # -------------------------
-
-    periodos = (
-        PeriodoAcademico.objects
-        .all()
-        .order_by(
-            "-anio",
-            "tipo",
-            "nombre",
-        )
-    )
-
-    carreras = (
-        Carrera.objects
-        .all()
-        .order_by("nombre")
-    )
-
-    asignaturas = (
-        Asignatura.objects
-        .all()
-        .order_by("nombre")
-    )
-
-    docentes = (
-        Docente.objects
-        .all()
-        .order_by(
-            "apellidos",
-            "nombres",
-        )
-    )
-
-    context = {
-        "secciones": secciones,
-        "periodos": periodos,
-        "carreras": carreras,
-        "asignaturas": asignaturas,
-        "docentes": docentes,
-
-        "filtros": {
-            "periodo": periodo_id or "",
-            "carrera": carrera_id or "",
-            "asignatura": asignatura_id or "",
-            "docente": docente_id or "",
-            "nrc": nrc,
-        },
-    }
-
-    return render(
-        request,
-        "academico/planificacion_list.html",
-        context,
-    )
-
-
-@coordinador_required
-def planificacion_detail(request, pk):
-    seccion = get_object_or_404(
-        Seccion.objects
-        .select_related(
-            "asignatura",
-            "periodo",
-            "campus",
-            "campus__sede",
-        )
-        .prefetch_related(
-            "seccion_carreras__carrera",
-            "seccion_carreras__carrera__facultad",
-            "seccion_docentes__docente",
-        ),
-        pk=pk,
-    )
-
-    return render(
-        request,
-        "academico/planificacion_detail.html",
         {
             "seccion": seccion,
         },

@@ -1,7 +1,66 @@
 from django import forms
 from django.forms import BaseModelFormSet, formset_factory, modelformset_factory
 
+from academico.constantes import JORNADAS, NIVELES, TIPOS_CONTRATO
+from academico.models import Carrera, Facultad
+
 from .models import FilaPlanificacion
+
+
+class SelectConValorGuardado(forms.Select):
+    """
+    Lista de opciones para un campo que se guarda como texto (RNF-USA-03).
+    Si la fila trae un valor que no está en la lista (borrador antiguo o
+    escrito a mano), se agrega como opción para no perderlo: lo que se envía
+    sigue siendo el mismo texto que resuelve planificacion/services.py.
+    """
+
+    def _valores(self):
+        for valor, etiqueta in self.choices:
+            if isinstance(etiqueta, (list, tuple)):
+                yield from (str(opcion) for opcion, _ in etiqueta)
+            else:
+                yield str(valor)
+
+    def get_context(self, name, value, attrs):
+        if value not in (None, "") and str(value) not in set(self._valores()):
+            self.choices = [*self.choices, (value, value)]
+
+        return super().get_context(name, value, attrs)
+
+
+def _lista(opciones, vacia="Seleccione"):
+    return SelectConValorGuardado(
+        attrs={"class": "form-select form-select-sm"},
+        choices=[("", vacia), *opciones],
+    )
+
+
+def opciones_planificacion():
+    """
+    Facultades y carreras activas, por nombre: la consolidación busca la
+    carrera por nombre (planificacion/services.py, _resolver_carrera).
+    """
+    carreras = {}
+
+    for carrera in (
+        Carrera.objects.filter(activo=True)
+        .select_related("facultad")
+        .order_by("facultad__nombre", "nombre")
+    ):
+        carreras.setdefault(carrera.facultad.nombre, []).append(
+            (carrera.nombre, carrera.nombre)
+        )
+
+    return {
+        "facultades": [
+            (nombre, nombre)
+            for nombre in Facultad.objects.filter(activo=True)
+            .order_by("nombre")
+            .values_list("nombre", flat=True)
+        ],
+        "carreras": list(carreras.items()),
+    }
 
 
 class FilaPlanificacionForm(forms.ModelForm):
@@ -21,12 +80,8 @@ class FilaPlanificacionForm(forms.ModelForm):
             "posible_socio_texto",
         ]
         widgets = {
-            "facultad_texto": forms.TextInput(
-                attrs={"class": "form-control form-control-sm"}
-            ),
-            "carrera_texto": forms.TextInput(
-                attrs={"class": "form-control form-control-sm"}
-            ),
+            "facultad_texto": _lista([]),
+            "carrera_texto": _lista([]),
             "declaracion_as": forms.CheckboxInput(
                 attrs={"class": "form-check-input"}
             ),
@@ -39,12 +94,8 @@ class FilaPlanificacionForm(forms.ModelForm):
             "asignatura_texto": forms.TextInput(
                 attrs={"class": "form-control form-control-sm"}
             ),
-            "nivel": forms.TextInput(
-                attrs={"class": "form-control form-control-sm"}
-            ),
-            "jornada": forms.TextInput(
-                attrs={"class": "form-control form-control-sm"}
-            ),
+            "nivel": _lista(NIVELES, "—"),
+            "jornada": _lista(JORNADAS, "—"),
             "horario": forms.TextInput(
                 attrs={"class": "form-control form-control-sm"}
             ),
@@ -62,11 +113,21 @@ class FilaPlanificacionForm(forms.ModelForm):
             ),
         }
 
+    def __init__(self, *args, opciones=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        opciones = opciones or opciones_planificacion()
+        self.fields["facultad_texto"].widget.choices = [("", "Seleccione"), *opciones["facultades"]]
+        self.fields["carrera_texto"].widget.choices = [("", "Seleccione"), *opciones["carreras"]]
+
     def clean_nrc(self):
         return (self.cleaned_data.get("nrc") or "").strip()
 
 
 class BaseFilaPlanificacionFormSet(BaseModelFormSet):
+    def __init__(self, *args, **kwargs):
+        # Las opciones se consultan una vez para todas las filas.
+        kwargs.setdefault("form_kwargs", {"opciones": opciones_planificacion()})
+        super().__init__(*args, **kwargs)
     def clean(self):
         super().clean()
 
@@ -133,7 +194,7 @@ class DocenteFilaForm(forms.Form):
         max_length=12,
         required=False,
         widget=forms.TextInput(
-            attrs={"class": "form-control form-control-sm"}
+            attrs={"class": "form-control form-control-sm", "placeholder": "12345678-5"}
         ),
     )
     nombre = forms.CharField(
@@ -146,9 +207,7 @@ class DocenteFilaForm(forms.Form):
     tipo_contrato = forms.CharField(
         max_length=80,
         required=False,
-        widget=forms.TextInput(
-            attrs={"class": "form-control form-control-sm"}
-        ),
+        widget=_lista(TIPOS_CONTRATO, "No informado"),
     )
     capacitado_as = forms.NullBooleanField(
         required=False,
@@ -164,7 +223,7 @@ class DocenteFilaForm(forms.Form):
     correo = forms.EmailField(
         required=False,
         widget=forms.EmailInput(
-            attrs={"class": "form-control form-control-sm"}
+            attrs={"class": "form-control form-control-sm", "placeholder": "correo@dominio.cl"}
         ),
     )
     telefono = forms.CharField(

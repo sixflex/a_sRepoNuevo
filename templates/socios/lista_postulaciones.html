@@ -1,27 +1,35 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static core_extras %}
 
-{% block title %}Postulaciones | Portal A+S{% endblock %}
+{% block title %}Postulaciones de socios | Portal A+S{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/socios.css' %}">
+<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
 
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
-    <div>
-        <h1 class="page-title">Postulaciones de Socios</h1>
-        <p class="page-subtitle mb-0">Revisa las postulaciones recibidas desde las convocatorias.</p>
-    </div>
-    <span class="badge rounded-pill text-bg-light border px-3 py-2" style="color: var(--ua-text-dark);">
-        <i class="bi bi-inbox me-1" style="color: var(--ua-red);"></i>
-        {{ postulaciones|length }} postulación{{ postulaciones|length|pluralize:"es" }}
-    </span>
+<div class="mb-3">
+    <h1 class="page-title">Postulaciones de Socios</h1>
+    <p class="page-subtitle mb-0">Revisa a los socios que llegan por una convocatoria y a los que proponen los equipos.</p>
 </div>
 
-{% include "includes/messages.html" %}
+<nav class="tabs-revision mb-3" aria-label="Origen de los socios">
+    <a href="?origen=convocatoria&amp;orden={{ orden }}" class="tab-revision{% if origen == 'convocatoria' %} activa{% endif %}"{% if origen == 'convocatoria' %} aria-current="page"{% endif %}>
+        <i class="bi bi-ui-checks" aria-hidden="true"></i>Formulario de convocatoria
+        {% if pendientes_convocatoria %}<span class="tab-contador" title="Por revisar">{{ pendientes_convocatoria }}</span>{% endif %}
+    </a>
+    <a href="?origen=equipos&amp;orden={{ orden }}" class="tab-revision{% if origen == 'equipos' %} activa{% endif %}"{% if origen == 'equipos' %} aria-current="page"{% endif %}>
+        <i class="bi bi-people" aria-hidden="true"></i>Propuestos por equipos
+        {% if propuestos %}<span class="tab-contador" title="Por revisar">{{ propuestos|length }}</span>{% endif %}
+    </a>
+</nav>
 
+{% if origen == "convocatoria" %}
 <div class="card-ua">
     <div class="card-header-ua">
-        <span><i class="bi bi-inbox me-2" style="color: var(--ua-red);"></i>Listado de postulaciones</span>
+        <span><i class="bi bi-inbox me-2" style="color: var(--ua-red);"></i>Postulaciones recibidas</span>
+        <div class="d-flex align-items-center gap-3">
+            <span class="socio-rut">{{ postulaciones|length }} {{ postulaciones|length|pluralize:"postulación,postulaciones" }}</span>
+            {% if postulaciones %}{% include "includes/orden_listado.html" with opciones=opciones_orden %}{% endif %}
+        </div>
     </div>
 
     {% if postulaciones %}
@@ -41,10 +49,13 @@
                     {% for post in postulaciones %}
                         <tr>
                             <td class="fw-semibold">{{ post.convocatoria|default:"—" }}</td>
-                            <td>{{ post.socio|default:"Sin socio asociado" }}</td>
+                            <td>
+                                {{ post.socio|default:"Sin socio asociado" }}
+                                {% if post.socio.comuna %}<div class="socio-rut">{{ post.socio.comuna }}</div>{% endif %}
+                            </td>
                             <td>{{ post.fecha_recepcion|date:"d/m/Y H:i" }}</td>
                             <td>
-                                <span class="badge-estado estado-{{ post.estado }}">{{ post.estado|title }}</span>
+                                <span class="badge-estado estado-{{ post.estado }}">{{ post.estado|estado_legible }}</span>
                                 {% if post.estado == "RECHAZADA" and post.motivo_rechazo %}
                                     <div class="socio-rut mt-1">Motivo: {{ post.motivo_rechazo }}</div>
                                 {% endif %}
@@ -58,10 +69,13 @@
                                 {% endif %}
                             </td>
                             <td class="text-end text-nowrap">
-                                <button type="button" class="btn-accion" data-bs-toggle="modal"
-                                        data-bs-target="#modalRevisar{{ post.id }}">
-                                    <i class="bi bi-clipboard-check me-1" aria-hidden="true"></i>Revisar
-                                </button>
+                                <a href="{% url 'socios:detalle_postulacion' post.id %}" class="btn-accion text-decoration-none">
+                                    {% if post.estado == "RECIBIDA" %}
+                                        <i class="bi bi-clipboard-check me-1" aria-hidden="true"></i>Revisar
+                                    {% else %}
+                                        <i class="bi bi-file-text me-1" aria-hidden="true"></i>Ver ficha
+                                    {% endif %}
+                                </a>
                             </td>
                         </tr>
                     {% endfor %}
@@ -76,56 +90,59 @@
     {% endif %}
 </div>
 
-<!-- MODALES DE REVISIÓN -->
-{% for post in postulaciones %}
-<div class="modal fade" id="modalRevisar{{ post.id }}" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: 10px; border: 1px solid var(--ua-border);">
-            <form method="post" action="{% url 'socios:revisar_postulacion' post.id %}">
-                {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title modal-title-ua">
-                        <i class="bi bi-clipboard-check me-2" style="color: var(--ua-red);"></i>Revisar postulación
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                </div>
-                <div class="modal-body">
-                    <p class="mb-3 socio-nombre">{{ post.convocatoria|default:"Postulación" }}</p>
-
-                    <label for="estado_{{ post.id }}" class="form-label-ua">Decisión</label>
-                    <select id="estado_{{ post.id }}" name="estado" class="form-select mb-3 select-decision"
-                            data-motivo="motivo_wrap_{{ post.id }}" required>
-                        <option value="">Selecciona...</option>
-                        <option value="APROBADA">Aprobar</option>
-                        <option value="RECHAZADA">Rechazar</option>
-                    </select>
-
-                    <div id="motivo_wrap_{{ post.id }}" class="d-none">
-                        <label for="motivo_{{ post.id }}" class="form-label-ua">Motivo de rechazo</label>
-                        <textarea id="motivo_{{ post.id }}" name="motivo_rechazo" class="form-control" rows="3"
-                                  placeholder="Explica brevemente el motivo"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light-ua" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-ua"><i class="bi bi-check2 me-1" aria-hidden="true"></i>Guardar</button>
-                </div>
-            </form>
-        </div>
+{% else %}
+<div class="card-ua">
+    <div class="card-header-ua">
+        <span><i class="bi bi-people me-2" style="color: var(--ua-red);"></i>Socios propuestos por equipos</span>
+        {% if propuestos %}{% include "includes/orden_listado.html" with opciones=opciones_orden %}{% endif %}
     </div>
+    <p class="small text-muted px-4 pt-3 mb-0">
+        Los equipos ya trabajan con estos socios. Revisa sus datos y decide si quedan disponibles para otros grupos o solo en el historial del equipo.
+    </p>
+    {% if propuestos %}
+        <div class="table-responsive">
+            <table class="table tabla-ua mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Socio</th>
+                        <th scope="col">Propuesto por</th>
+                        <th scope="col">Fecha</th>
+                        <th scope="col" class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for socio in propuestos %}
+                        <tr>
+                            <td>
+                                <span class="socio-nombre">{{ socio.nombre_organizacion }}</span>
+                                <div class="socio-rut">{{ socio.comuna|default:"Sin comuna" }}</div>
+                            </td>
+                            <td>
+                                {% if socio.equipo_origen %}
+                                    Grupo {{ socio.equipo_origen.numero_grupo }} · NRC {{ socio.equipo_origen.seccion.nrc }}
+                                    <div class="socio-rut">{{ socio.equipo_origen.seccion.asignatura.nombre }} · {{ socio.equipo_origen.informante_nombre }}</div>
+                                {% else %}
+                                    <span class="text-muted small">Sin equipo asociado</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ socio.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                            <td class="text-end text-nowrap">
+                                <a href="{% url 'socios:revisar_socio_propuesto' socio.id %}" class="btn-accion text-decoration-none">
+                                    <i class="bi bi-clipboard-check me-1" aria-hidden="true"></i>Revisar
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="bi bi-check2-circle" aria-hidden="true"></i>
+            <p class="mt-2 mb-0 fw-semibold">No hay socios propuestos por revisar</p>
+        </div>
+    {% endif %}
 </div>
-{% endfor %}
+{% endif %}
 
-<script>
-    // Muestra el motivo solo al rechazar y lo vuelve obligatorio
-    document.querySelectorAll('.select-decision').forEach(function (sel) {
-        sel.addEventListener('change', function () {
-            var wrap = document.getElementById(sel.dataset.motivo);
-            var area = wrap.querySelector('textarea');
-            var rechaza = sel.value === 'RECHAZADA';
-            wrap.classList.toggle('d-none', !rechaza);
-            area.required = rechaza;
-        });
-    });
-</script>
-{% endblock %}
+{% endblock %}

@@ -12,6 +12,7 @@ from django.views.decorators.http import require_POST
 
 from academico.models import Carrera
 from archivos.services import abrir_archivo
+from core.ordenamiento import OPCIONES_ORDEN, orden_pedido, ordenar_por_fecha
 from core.qr import qr_base64
 from usuarios.decorators import coordinador_required
 
@@ -676,8 +677,9 @@ def respuestas(request, version_id):
     lista = (
         services.respuestas_filtradas(version, programa)
         .select_related("carrera", "seccion")
-        .order_by("-fecha_envio")
     )
+    orden = orden_pedido(request)
+    lista = ordenar_por_fecha(lista, "fecha_envio", orden)
     filas = [{"respuesta": r, "detalle": services.resumen_respuesta(r)} for r in lista]
     return render(request, "encuestas/respuestas.html", {
         **_contexto_version(version, "respuestas"),
@@ -685,6 +687,8 @@ def respuestas(request, version_id):
         "resumen": services.estadisticas(version, programa),
         "programas": programas,
         "programa": programa,
+        "orden": orden,
+        "opciones_orden": OPCIONES_ORDEN,
     })
 
 

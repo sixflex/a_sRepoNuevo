@@ -1,0 +1,93 @@
+/* Mapa territorial (panel del coordinador y portal público) */
+.mapa-territorial {
+    height: 380px;
+    border-radius: var(--ua-radius, 10px);
+    border: 1px solid var(--ua-border);
+}
+.mapa-top li {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--ua-border);
+}
+.leaflet-tooltip.mapa-etiqueta {
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    color: #fff;
+    font-weight: 700;
+}
+.leaflet-tooltip.mapa-etiqueta::before {
+    display: none;
+}
+
+/* Socios de la comuna elegida (solo panel del coordinador) */
+.mapa-detalle {
+    max-height: 380px;
+    overflow-y: auto;
+    outline: none;
+    animation: mapa-aparece 0.2s ease-out;
+}
+.mapa-volver {
+    padding: 0;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ua-red);
+    text-decoration: none;
+}
+.mapa-volver:hover {
+    text-decoration: underline;
+}
+.mapa-socio {
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--ua-border);
+}
+.mapa-socio-nombre {
+    display: block;
+    font-weight: 600;
+    color: var(--ua-text-dark, #111827);
+    text-decoration: none;
+}
+.mapa-socio-nombre:hover {
+    color: var(--ua-red);
+}
+.mapa-socio-dato {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.2rem;
+    font-size: 0.8rem;
+    color: var(--ua-text-muted);
+    overflow-wrap: anywhere;
+}
+.mapa-socio-dato i {
+    flex-shrink: 0;
+    color: var(--ua-text-secondary);
+}
+.mapa-socio-dato a {
+    color: inherit;
+}
+.mapa-socio-dato a:hover {
+    color: var(--ua-red);
+}
+.mapa-socio-historial {
+    display: inline-block;
+    margin-top: 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--ua-red);
+    text-decoration: none;
+}
+.mapa-socio-historial:hover {
+    text-decoration: underline;
+}
+
+@keyframes mapa-aparece {
+    from { opacity: 0; transform: translateX(8px); }
+    to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .mapa-detalle { animation: none; }
+}

@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% load static %}
 
+{# Página pública: solo el formulario, sin la barra superior del portal. #}
+{% block main_navbar %}{% endblock %}
+
 {% block title %}Formulario cerrado | Portal A+S{% endblock %}
 
 {% block extra_css %}{% include "encuestas/includes/css.html" %}{% endblock %}

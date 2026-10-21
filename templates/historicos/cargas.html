@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Importar históricos | Portal A+S{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
+<link rel="stylesheet" href="{% static 'css/historicos.css' %}?v=2026-10-19">
+
+<div class="mb-4">
+    <h1 class="page-title">Importar históricos</h1>
+    <p class="page-subtitle mb-0">
+        Sube la exportación en Excel de un formulario antiguo (Google o Microsoft Forms). Antes de importar verás
+        qué columnas se reconocieron y qué pasará con cada fila.
+    </p>
+</div>
+
+<div class="card-ua p-4 mb-4">
+    <form method="post" enctype="multipart/form-data" id="formCarga" novalidate>
+        {% csrf_token %}
+        <div class="row g-3">
+            <div class="col-12 col-lg-5">
+                <label for="tipo" class="form-label-ua">¿Qué formulario contiene el archivo?</label>
+                <select id="tipo" name="tipo" class="form-select" required aria-describedby="tipoAyuda">
+                    <option value="">Selecciona...</option>
+                    {% for codigo, nombre in tipos %}
+                        <option value="{{ codigo }}" {% if codigo == tipo_elegido %}selected{% endif %}>{{ nombre }}</option>
+                    {% endfor %}
+                </select>
+                <div id="tipoAyuda" class="form-text">
+                    El Registro de Socios crea socios y participaciones para el mapa. Las encuestas y fichas se guardan
+                    como respuestas históricas de ese formulario.
+                </div>
+            </div>
+            <div class="col-12 col-lg-7">
+                <span class="form-label-ua d-block">Archivo</span>
+                <label for="archivo" class="zona-carga" data-zona-carga>
+                    <input type="file" id="archivo" name="archivo" accept=".xlsx" class="visually-hidden" required>
+                    <i class="bi bi-cloud-arrow-up zona-carga-icono" aria-hidden="true"></i>
+                    <span class="zona-carga-texto" data-zona-texto>
+                        <strong>Arrastra aquí el Excel</strong> o haz clic para elegirlo
+                    </span>
+                    <span class="zona-carga-ayuda">Formato .xlsx, tal como lo descarga Forms («Descargar respuestas» o «Abrir en Excel»).</span>
+                </label>
+            </div>
+        </div>
+        <div class="d-flex justify-content-end mt-3">
+            <button type="submit" class="btn btn-ua" data-boton-analizar>
+                <span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true" data-cargando></span>
+                <i class="bi bi-search me-1" aria-hidden="true"></i>Revisar archivo
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="card-ua">
+    <div class="card-header-ua">
+        <span><i class="bi bi-clock-history me-2" style="color: var(--ua-red);" aria-hidden="true"></i>Cargas anteriores</span>
+        {% if cargas %}{% include "includes/orden_listado.html" with opciones=opciones_orden %}{% endif %}
+    </div>
+    {% if cargas %}
+        <div class="table-responsive">
+            <table class="table tabla-ua mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Formulario</th>
+                        <th scope="col">Archivo</th>
+                        <th scope="col">Fecha</th>
+                        <th scope="col">Responsable</th>
+                        <th scope="col">Filas</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col" class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for carga in cargas %}
+                        <tr>
+                            <td class="fw-semibold">{{ carga.nombre_tipo }}</td>
+                            <td>
+                                <div class="text-truncate" style="max-width: 220px;" title="{{ carga.archivo.nombre_original }}">{{ carga.archivo.nombre_original }}</div>
+                                {% if carga.hoja %}<div class="socio-rut">Hoja: {{ carga.hoja }}</div>{% endif %}
+                            </td>
+                            <td class="text-nowrap">{{ carga.fecha_carga|date:"d/m/Y H:i" }}</td>
+                            <td>{{ carga.responsable_usuario.get_full_name|default:carga.responsable_usuario.username|default:"—" }}</td>
+                            <td class="text-nowrap">
+                                <span title="Aceptadas">{{ carga.aceptadas }}</span> ·
+                                <span class="text-warning-emphasis" title="Observadas">{{ carga.observadas }}</span> ·
+                                <span class="text-muted" title="Omitidas">{{ carga.omitidas }}</span>
+                            </td>
+                            <td><span class="badge-estado carga-{{ carga.estado }}">{{ carga.nombre_estado }}</span></td>
+                            <td class="text-end text-nowrap">
+                                <a href="{% url 'historicos:detalle' carga.id %}" class="btn-accion text-decoration-none">
+                                    {% if carga.estado == "PREVIA" %}
+                                        <i class="bi bi-eye me-1" aria-hidden="true"></i>Revisar y confirmar
+                                    {% else %}
+                                        <i class="bi bi-file-text me-1" aria-hidden="true"></i>Ver detalle
+                                    {% endif %}
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+            <p class="mt-2 mb-0 fw-semibold">Aún no se ha importado ningún archivo</p>
+        </div>
+    {% endif %}
+</div>
+
+<script src="{% static 'js/importar_historicos.js' %}?v=2026-10-17"></script>
+{% endblock %}

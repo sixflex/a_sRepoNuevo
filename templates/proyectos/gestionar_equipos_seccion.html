@@ -11,7 +11,7 @@
             <p class="text-muted mb-0">
                 {{ seccion.asignatura.nombre }}
                 · NRC {{ seccion.nrc }}
-                · {{ seccion.periodo.nombre }}
+                · {{ seccion.periodo }}
             </p>
         </div>
 
@@ -21,13 +21,6 @@
         </a>
     </div>
 
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">
-                {{ message }}
-            </div>
-        {% endfor %}
-    {% endif %}
 
     {% if equipos %}
 
@@ -60,10 +53,10 @@
                             <p class="mb-3">
                                 <strong>Socio Comunitario:</strong>
 
-                                {% if equipo.socio_comunitario %}
-                                    {{ equipo.socio_comunitario.nombre_organizacion }}
+                                {% if equipo.socio_vigente %}
+                                    {{ equipo.socio_vigente.nombre_organizacion }}
 
-                                    {% if equipo.socio_comunitario.es_provisional %}
+                                    {% if equipo.socio_vigente.es_provisional %}
                                         <span class="badge bg-warning text-dark ms-1">
                                             Provisional
                                         </span>

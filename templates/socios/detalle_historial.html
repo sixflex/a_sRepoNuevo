@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static core_extras %}
 
 {% block title %}{{ socio.nombre_organizacion }} | Portal A+S{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/socios.css' %}">
+<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <div>
@@ -23,7 +23,7 @@
             <div class="card-header-ua">
                 <span><i class="bi bi-building me-2" style="color: var(--ua-red);"></i>Datos del socio</span>
                 <span>
-                    <span class="badge-estado estado-{{ socio.estado_revision }}">{{ socio.estado_revision|cut:"_"|title }}</span>
+                    <span class="badge-estado estado-{{ socio.estado_revision }}">{{ socio.estado_revision|estado_legible }}</span>
                     {% if socio.es_provisional %}<span class="badge-provisional ms-1">Provisional</span>{% endif %}
                 </span>
             </div>
@@ -64,8 +64,18 @@
                             <span class="socio-nombre">{{ contacto.nombre }}</span>
                             {% if contacto.es_principal %}<span class="badge-estado estado-APROBADO ms-1">Principal</span>{% endif %}
                             {% if contacto.cargo %}<div class="socio-rut">{{ contacto.cargo }}</div>{% endif %}
-                            {% if contacto.correo %}<div class="small"><i class="bi bi-envelope me-1 text-muted" aria-hidden="true"></i>{{ contacto.correo }}</div>{% endif %}
-                            {% if contacto.telefono %}<div class="small"><i class="bi bi-telephone me-1 text-muted" aria-hidden="true"></i>{{ contacto.telefono }}</div>{% endif %}
+                            {% if contacto.correo %}
+                                <div class="dato-contacto">
+                                    <a href="mailto:{{ contacto.correo }}" title="Escribir un correo"><i class="bi bi-envelope" aria-hidden="true"></i>{{ contacto.correo }}</a>
+                                    <button type="button" class="btn-copiar" data-copiar="{{ contacto.correo }}" aria-label="Copiar correo" title="Copiar correo"><i class="bi bi-copy" aria-hidden="true"></i></button>
+                                </div>
+                            {% endif %}
+                            {% if contacto.telefono %}
+                                <div class="dato-contacto">
+                                    <a href="tel:{{ contacto.telefono|cut:' ' }}" title="Llamar"><i class="bi bi-telephone" aria-hidden="true"></i>{{ contacto.telefono }}</a>
+                                    <button type="button" class="btn-copiar" data-copiar="{{ contacto.telefono }}" aria-label="Copiar teléfono" title="Copiar teléfono"><i class="bi bi-copy" aria-hidden="true"></i></button>
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 {% empty %}
@@ -74,6 +84,46 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- CAMBIOS DE ESTADO (RF-SC-02 CA2) -->
+<div class="card-ua mb-4">
+    <div class="card-header-ua">
+        <span><i class="bi bi-arrow-left-right me-2" style="color: var(--ua-red);"></i>Cambios de estado</span>
+    </div>
+    {% if historial_estados %}
+        <div class="table-responsive">
+            <table class="table tabla-ua mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Fecha</th>
+                        <th scope="col">Cambio</th>
+                        <th scope="col">Responsable</th>
+                        <th scope="col">Motivo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cambio in historial_estados %}
+                        <tr>
+                            <td class="text-nowrap">{{ cambio.fecha|date:"d/m/Y H:i" }}</td>
+                            {% with antes=cambio.valores_anteriores_json despues=cambio.valores_nuevos_json %}
+                            <td>
+                                {{ antes.estado_revision|estado_legible|default:"—" }} → {{ despues.estado_revision|estado_legible }}
+                                {% if antes.es_provisional != despues.es_provisional %}
+                                    <div class="socio-rut">{% if despues.es_provisional %}Pasa a provisional{% else %}Pasa a definitivo{% endif %}</div>
+                                {% endif %}
+                            </td>
+                            <td>{{ cambio.usuario.get_full_name|default:cambio.usuario.username|default:"—" }}</td>
+                            <td>{{ despues.motivo_rechazo|default:"—" }}</td>
+                            {% endwith %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-muted small p-3 mb-0">Sin cambios de estado registrados.</p>
+    {% endif %}
 </div>
 
 <!-- HISTORIAL -->
@@ -102,7 +152,7 @@
                     {% for p in participaciones %}
                         <tr>
                             <td class="fw-semibold">{{ p.periodo|default:"—" }}</td>
-                            <td>{{ p.fecha_inicio|date:"d/m/Y"|default:"—" }}{% if p.fecha_fin %}<br><span class="socio-rut">al {{ p.fecha_fin|date:"d/m/Y" }}</span>{% endif %}</td>
+                            <td>{{ p.fecha_inicio|date:"d/m/Y"|default:"—" }}{% if p.fecha_fin %}<br><span class="socio-rut">al {{ p.fecha_fin|date:"d/m/Y" }}</span>{% elif p.equipo %}<br><span class="badge text-bg-success">Vigente</span>{% endif %}{% if p.origen == "HISTORICO" %}<br><span class="socio-rut">{{ p.get_origen_display }}</span>{% endif %}</td>
                             <td>{{ p.sede|default:"—" }}<br><span class="socio-rut">{{ p.campus|default:"" }}</span></td>
                             <td>{{ p.carrera|default:"—" }}</td>
                             <td>{{ p.asignatura|default:"—" }}<br><span class="socio-rut">{{ p.seccion|default:"" }}</span></td>
@@ -127,4 +177,8 @@
     {% endif %}
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/copiar.js' %}?v=2026-10-19"></script>
 {% endblock %}

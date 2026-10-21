@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.db import models
-
+from django.core.exceptions import ValidationError
 
 class RutaPlantilla(models.Model):
     nombre = models.CharField(max_length=180)
@@ -48,8 +48,67 @@ class RutaVersion(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.plantilla} - Versión {self.numero_version}"
+        return f"{self.plantilla} Versión {self.numero_version}"
 
+
+class RutaActividadQuerySet(models.QuerySet):
+    def update(self, **kwargs):
+        if self.exclude(ruta_version__estado="BORRADOR").exists():
+            raise ValidationError(
+                "No se pueden modificar actividades de una versión publicada."
+            )
+        return super().update(**kwargs)
+
+    def delete(self):
+        if self.exclude(ruta_version__estado="BORRADOR").exists():
+            raise ValidationError(
+                "No se pueden eliminar actividades de una versión publicada."
+            )
+        return super().delete()
+
+    def bulk_create(
+        self,
+        objs,
+        batch_size=None,
+        ignore_conflicts=False,
+        update_conflicts=False,
+        update_fields=None,
+        unique_fields=None,
+    ):
+        objetos = list(objs)
+        versiones = {
+            objeto.ruta_version_id
+            for objeto in objetos
+            if objeto.ruta_version_id is not None
+        }
+
+        if RutaVersion.objects.filter(
+            pk__in=versiones
+        ).exclude(estado="BORRADOR").exists():
+            raise ValidationError(
+                "No se pueden agregar actividades a una versión publicada."
+            )
+
+        return super().bulk_create(
+            objetos,
+            batch_size=batch_size,
+            ignore_conflicts=ignore_conflicts,
+            update_conflicts=update_conflicts,
+            update_fields=update_fields,
+            unique_fields=unique_fields,
+        )
+
+    def bulk_update(self, objs, fields, batch_size=None):
+        ids = [obj.pk for obj in objs if obj.pk is not None]
+
+        if RutaActividad.objects.filter(
+            pk__in=ids
+        ).exclude(ruta_version__estado="BORRADOR").exists():
+            raise ValidationError(
+                "No se pueden modificar actividades de una versión publicada."
+            )
+
+        return super().bulk_update(objs, fields, batch_size=batch_size)
 
 class RutaActividad(models.Model):
     ruta_version = models.ForeignKey(
@@ -96,6 +155,54 @@ class RutaActividad(models.Model):
         null=True,
         blank=True,
     )
+    objects = RutaActividadQuerySet.as_manager()
+
+    def save(self, *args, **kwargs):
+        if self.pk is None:
+            if self.ruta_version.estado != "BORRADOR":
+                raise ValidationError(
+                    "No se pueden agregar actividades a una versión publicada."
+                )
+        else:
+            actividad_original = RutaActividad.objects.select_related(
+                "ruta_version"
+            ).get(pk=self.pk)
+
+            campos = [
+                "ruta_version_id",
+                "formulario_version_id",
+                "archivo_recurso_id",
+                "etapa",
+                "nombre",
+                "descripcion",
+                "es_obligatoria",
+                "orden",
+                "recurso_url",
+                "config_recordatorio_json",
+            ]
+
+            hubo_cambios = any(
+                getattr(self, campo) != getattr(actividad_original, campo)
+                for campo in campos
+            )
+
+            if hubo_cambios and (
+                actividad_original.ruta_version.estado != "BORRADOR"
+                or self.ruta_version.estado != "BORRADOR"
+            ):
+                raise ValidationError(
+                    "No se pueden modificar actividades de una versión publicada."
+                )
+
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.ruta_version.estado != "BORRADOR":
+            raise ValidationError(
+                "No se pueden eliminar actividades de una versión publicada."
+            )
+
+        super().delete(*args, **kwargs)
 
     def __str__(self):
         return f"{self.orden} - {self.nombre}"

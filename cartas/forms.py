@@ -40,7 +40,7 @@ class SolicitudCartaForm(forms.ModelForm):
         if seccion is not None:
             self.fields["equipo"].queryset = (
                 seccion.equipos
-                .select_related("socio_comunitario")
+                .con_socio_vigente()
                 .order_by("numero_grupo")
             )
 

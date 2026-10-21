@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Eliminar Periodo{% endblock %}
+{% block title %}Eliminar Periodo | Portal A+S{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-2">
@@ -27,7 +27,7 @@
 
                 <p class="mb-3">
                     Estás a punto de eliminar el periodo
-                    <strong>{{ periodo.nombre }}</strong>.
+                    <strong>{{ periodo }}</strong>.
                 </p>
 
                 <div class="row g-2 mb-2">
@@ -65,7 +65,7 @@
                 <hr>
 
                 <p class="mb-0">
-                    Esta acción no se puede deshacer y puede afectar las secciones académicas asociadas a este periodo.
+                    Esta acción no se puede deshacer. Si el período tiene secciones o enlaces de planificación asociados no se podrá eliminar.
                 </p>
             </div>
 

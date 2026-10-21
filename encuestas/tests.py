@@ -120,6 +120,15 @@ class FormularioBaseTestCase(TestCase):
 class VisibilidadTests(FormularioBaseTestCase):
     """CDE-102 y CDE-103: secciones, preguntas y opciones según el programa."""
 
+    def test_formulario_publico_sin_barra_del_portal(self):
+        self.client.logout()
+
+        response = self.client.get(self.url_responder)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "navbar-sistema")
+        self.assertNotContains(response, "Iniciar sesión")
+
     def test_seccion_de_otro_programa_no_se_muestra(self):
         bloques, preguntas = services.cargar_estructura(self.version)
         visibles_b = services.calcular_visibilidad(bloques, preguntas, {self.selector.id: {"B"}})
@@ -776,6 +785,93 @@ class FormulariosDelClienteTests(TestCase):
         with self.assertRaises(ValueError):
             crear_formulario(definicion)
         self.assertFalse(FormularioPlantilla.objects.filter(codigo="MAL").exists())
+
+    def test_evaluaciones_traen_cuadriculas_de_valoracion(self):
+        call_command("cargar_formularios", "EVALUACION_AS_DOCENTES", "--sin-publicar", stdout=StringIO())
+        version = FormularioPlantilla.objects.get(codigo="EVALUACION_AS_DOCENTES").versiones.get()
+
+        generales = version.preguntas.filter(configuracion_json__cuadricula="p18").order_by("orden")
+        self.assertEqual(generales.count(), 6)
+        self.assertTrue(all(p.tipo == c.ESCALA for p in generales))
+        self.assertTrue(all(p.configuracion_json["valoracion_general"] for p in generales))
+        self.assertTrue(generales[0].texto.startswith("A) "))
+        # La fila D es la del perfil de egreso (se puede excluir del panel).
+        self.assertTrue(generales[3].configuracion_json.get("perfil_egreso"))
+        self.assertEqual(
+            version.preguntas.filter(configuracion_json__dimension="reflexion").count(), 3,
+        )
+
+    def test_actualizar_crea_version_nueva_en_el_mismo_enlace(self):
+        from django.utils import timezone
+
+        from .definiciones import evaluaciones
+        from .semillas import crear_formulario
+
+        solo_identificacion = {**evaluaciones.DOCENTES, "secciones": evaluaciones.DOCENTES["secciones"][:1]}
+        anterior = crear_formulario(solo_identificacion)
+        enlace = services.publicar(anterior)
+        RespuestaFormulario.objects.create(
+            version=anterior, fecha_envio=timezone.now(), origen="ENLACE",
+            es_historica=False, estado_registro="CONFIRMADA",
+        )
+
+        call_command("cargar_formularios", "EVALUACION_AS_DOCENTES", "--actualizar", stdout=StringIO())
+
+        plantilla = FormularioPlantilla.objects.get(codigo="EVALUACION_AS_DOCENTES")
+        nueva = plantilla.versiones.get(numero_version=2)
+        anterior.refresh_from_db()
+        enlace.refresh_from_db()
+        self.assertEqual(nueva.estado, c.PUBLICADA)
+        self.assertEqual(anterior.estado, c.CERRADA)
+        # RN-17: la versión anterior conserva sus preguntas y respuestas.
+        self.assertEqual(anterior.respuestas.count(), 1)
+        self.assertEqual(anterior.preguntas.count(), 5)
+        # El enlace ya repartido (y la Ruta docente) siguen funcionando.
+        self.assertEqual(enlace.version, nueva)
+
+        call_command("cargar_formularios", "EVALUACION_AS_DOCENTES", "--actualizar", stdout=StringIO())
+        self.assertEqual(plantilla.versiones.count(), 2)
+
+    def test_cuadricula_se_muestra_como_tabla_y_guarda_cada_fila(self):
+        from .semillas import crear_formulario, cuadricula, seccion
+
+        version = crear_formulario({
+            "codigo": "GRILLA", "titulo": "Grilla", "proceso": "X",
+            "secciones": [seccion("Valoración", cuadricula(1, "Evalúa de 1 a 5.", ["Primera", "Segunda"]))],
+        })
+        enlace = services.publicar(version)
+        filas = list(version.preguntas.order_by("orden"))
+        url = reverse("encuestas:responder", args=[enlace.token])
+
+        response = self.client.get(url)
+        self.assertContains(response, "enc-cuadricula-tabla")
+        self.assertContains(response, "Evalúa de 1 a 5.")
+        self.assertContains(response, "A) Primera")
+        self.assertContains(response, "Muy de Acuerdo")
+
+        self.client.post(url, {
+            services.nombre_campo(filas[0]): "4",
+            services.nombre_campo(filas[1]): "5",
+            "clave_envio": "grilla-1",
+        })
+        respuesta = RespuestaFormulario.objects.get(version=version)
+        valores = dict(respuesta.respuestas_preguntas.values_list("pregunta_id", "valor_escala"))
+        self.assertEqual(valores, {filas[0].id: 4, filas[1].id: 5})
+
+    def test_formulario_por_secciones_un_solo_envio(self):
+        # Cada sección es una página (Atrás / Siguiente) y todo se envía junto al final.
+        call_command("cargar_formularios", "EVALUACION_AS_SOCIOS", stdout=StringIO())
+        version = FormularioPlantilla.objects.get(codigo="EVALUACION_AS_SOCIOS").versiones.get()
+        enlace = version.enlaces.get(activo=True)
+
+        response = self.client.get(reverse("encuestas:responder", args=[enlace.token]))
+
+        self.assertContains(response, "data-siguiente", count=1)
+        self.assertContains(response, "data-anterior", count=1)
+        self.assertContains(response, "data-enviar", count=1)
+        self.assertContains(response, "data-seccion=", count=version.bloques.count())
+        self.assertContains(response, "<form", count=1)
+        self.assertContains(response, "js/formulario_dinamico.js?v=")
 
 
 def imagen_png(nombre="fondo.png"):

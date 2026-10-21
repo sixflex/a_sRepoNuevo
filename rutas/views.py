@@ -1,19 +1,32 @@
+import tempfile
 from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from archivos.services import guardar_archivo, obtener_storage_privado
 from archivos.validators import validar_cantidad_archivos
+from auditoria.services import registrar_auditoria
+from academico.models import Campus, PeriodoAcademico, Sede
+from auditoria.services import registrar_auditoria
 from usuarios.permissions import es_coordinador, es_docente
-
+from . import services as servicios
 from .models import Evidencia, ExpedienteSeccion, SeccionActividad, SeccionRuta
+from django.urls import reverse
+from core.qr import qr_base64
+from encuestas.models import FormularioPlantilla
 
+from . import services as servicios
+from .services import enlaces_abiertos_por_plantilla, url_recurso
+from socios.models import InvitacionCierre
+
+from academico.models import Sede, Campus, PeriodoAcademico
 
 def verificar_acceso_ruta(user, seccion_ruta):
     if es_coordinador(user):
@@ -91,6 +104,7 @@ def detalle_ruta_docente(request, seccion_ruta_id):
             seccion_ruta=seccion_ruta,
         )
         .select_related(
+            "seccion_ruta",
             "ruta_actividad",
             "ruta_actividad__archivo_recurso",
             "ruta_actividad__formulario_version",
@@ -128,6 +142,36 @@ def detalle_ruta_docente(request, seccion_ruta_id):
         ).exists()
         and seccion_ruta.estado != "COMPLETADA"
     )
+    enlaces_por_plantilla = enlaces_abiertos_por_plantilla({
+        actividad.ruta_actividad.formulario_version.plantilla_id
+        for actividad in actividades
+        if actividad.ruta_actividad.formulario_version_id
+    })
+
+    for actividad in actividades:
+        actividad.url_recurso = url_recurso(actividad)
+        actividad.enlace_formulario = (
+            enlaces_por_plantilla.get(
+                actividad.ruta_actividad.formulario_version.plantilla_id
+            )
+            if actividad.ruta_actividad.formulario_version_id
+            else None
+        )
+
+        actividad.es_cierre = servicios.es_actividad_cierre(
+            actividad.ruta_actividad
+        )
+
+        if actividad.es_cierre:
+            actividad.invitaciones = list(
+                seccion_ruta.invitaciones_cierre
+                .select_related("socio")
+                .order_by("socio__nombre_organizacion")
+            )
+            actividad.socios_por_invitar = (
+                servicios.socios_de_seccion(seccion_ruta.seccion)
+                .exclude(invitaciones_cierre__seccion_ruta=seccion_ruta)
+            )
 
     actividades_con_evidencia = [
         act.ruta_actividad.orden
@@ -144,6 +188,7 @@ def detalle_ruta_docente(request, seccion_ruta_id):
             "etapas": etapas,
             "actividades_con_evidencia": actividades_con_evidencia,
             "puede_completar_ruta": puede_completar_ruta,
+            "observacion_sin_cierre": servicios.OBSERVACION_SIN_CIERRE,
         },
     )
 
@@ -191,6 +236,8 @@ def completar_actividad(request, actividad_id):
             seccion_ruta_id=seccion_ruta.id,
         )
 
+    estado_anterior = actividad.estado
+
     if actividad.completada_por_docente_id is None:
         actividad.completada_por_docente = docente
         actividad.estado = "COMPLETADA"
@@ -205,18 +252,44 @@ def completar_actividad(request, actividad_id):
             "completada_por_docente",
             "estado",
             "fecha_completada",
+            "observacion",
         ]
+    )
+    registrar_auditoria(
+        request=request,
+        entidad="SeccionActividad",
+        entidad_id=actividad.pk,
+        accion="CAMBIAR_ESTADO_ACTIVIDAD",
+        valores_anteriores={
+            "estado": estado_anterior,
+            "fecha_completada": fecha_anterior,
+        },
+        valores_nuevos={
+            "estado": actividad.estado,
+            "fecha_completada": str(actividad.fecha_completada) if actividad.fecha_completada else None,
+        },
     )
 
     recalcular_avance(
         seccion_ruta
     )
 
+    registrar_auditoria(
+        request=request,
+        entidad="SeccionActividad",
+        entidad_id=actividad.pk,
+        accion="MARCAR_ACTIVIDAD" if actividad.estado == "COMPLETADA" else "DESMARCAR_ACTIVIDAD",
+        valores_anteriores={"estado": estado_anterior},
+        valores_nuevos={
+            "estado": actividad.estado,
+            "fecha_completada": str(actividad.fecha_completada) if actividad.fecha_completada else None,
+        },
+    )
+
     return redirect(
         "rutas:detalle_ruta_docente",
         seccion_ruta_id=seccion_ruta.id,
     )
-
 
 @login_required
 @require_POST
@@ -282,6 +355,9 @@ def completar_ruta(request, seccion_ruta_id):
             seccion_ruta_id=seccion_ruta.id,
         )
 
+    # Captura del estado previo a la modificacion
+    estado_anterior = seccion_ruta.estado
+
     seccion_ruta.estado = "COMPLETADA"
     seccion_ruta.cerrada_por_docente = docente
     seccion_ruta.fecha_cierre = timezone.now()
@@ -294,6 +370,19 @@ def completar_ruta(request, seccion_ruta_id):
             "fecha_cierre",
             "porcentaje_final",
         ]
+    )
+
+    registrar_auditoria(
+        request=request,
+        entidad="SeccionRuta",
+        entidad_id=seccion_ruta.pk,
+        accion="COMPLETAR_RUTA",
+        valores_anteriores={"estado": estado_anterior},
+        valores_nuevos={
+            "estado": seccion_ruta.estado,
+            "fecha_cierre": str(seccion_ruta.fecha_cierre),
+            "porcentaje_final": str(seccion_ruta.porcentaje_final),
+        },
     )
 
     messages.success(
@@ -396,11 +485,22 @@ def subir_evidencia(request, actividad_id):
                 autor=request.user,
             )
 
-            Evidencia.objects.create(
+            evidencia = Evidencia.objects.create(
                 expediente=expediente,
                 seccion_actividad=actividad,
                 archivo=archivo,
                 descripcion=descripcion or None,
+            )
+
+            registrar_auditoria(
+                request=request,
+                entidad="Evidencia",
+                entidad_id=evidencia.pk,
+                accion="SUBIR_EVIDENCIA",
+                valores_nuevos={
+                    "actividad_id": actividad.pk,
+                    "archivo": archivo.nombre_original,
+                },
             )
 
     except ValidationError as error:
@@ -423,7 +523,6 @@ def subir_evidencia(request, actividad_id):
         "rutas:detalle_ruta_docente",
         seccion_ruta_id=seccion_ruta.id,
     )
-
 
 @login_required
 @require_POST
@@ -476,6 +575,20 @@ def eliminar_evidencia(request, evidencia_id):
 
     archivo = evidencia.archivo
     storage_key = archivo.storage_key
+    evidencia_id_backup = evidencia.pk
+
+    registrar_auditoria(
+        request=request,
+        entidad="Evidencia",
+        entidad_id=evidencia.pk,
+        accion="ELIMINAR_EVIDENCIA",
+        valores_anteriores={
+            "evidencia_id": evidencia.pk,
+            "archivo_id": archivo.pk,
+            "actividad_id": actividad.pk,
+            "descripcion": evidencia.descripcion,
+        },
+    )
 
     evidencia.delete()
     archivo.delete()
@@ -484,6 +597,14 @@ def eliminar_evidencia(request, evidencia_id):
 
     if storage.exists(storage_key):
         storage.delete(storage_key)
+
+    registrar_auditoria(
+        request=request,
+        entidad="Evidencia",
+        entidad_id=evidencia_id_backup,
+        accion="ELIMINAR_EVIDENCIA",
+        valores_anteriores={"actividad_id": actividad.pk},
+    )
 
     messages.success(
         request,
@@ -494,10 +615,17 @@ def eliminar_evidencia(request, evidencia_id):
         "rutas:detalle_ruta_docente",
         seccion_ruta_id=seccion_ruta.id,
     )
+
+
 @login_required
 def seguimiento_rutas_coordinacion(request):
     if not es_coordinador(request.user):
         raise PermissionDenied
+
+    campus_id = request.GET.get("campus", "").strip()
+    sede_id = request.GET.get("sede", "").strip()
+    periodo_id = request.GET.get("periodo", "").strip()
+    estado_filtro = request.GET.get("estado", "").strip()
 
     rutas = (
         SeccionRuta.objects
@@ -512,6 +640,7 @@ def seguimiento_rutas_coordinacion(request):
         .prefetch_related(
             "seccion__docentes",
             "actividades",
+            "actividades__ruta_actividad",
         )
         .order_by(
             "seccion__asignatura__nombre",
@@ -519,11 +648,44 @@ def seguimiento_rutas_coordinacion(request):
         )
     )
 
+    if campus_id:
+        rutas = rutas.filter(seccion__campus_id=campus_id)
+
+    if sede_id:
+        rutas = rutas.filter(seccion__campus__sede_id=sede_id)
+
+    if periodo_id:
+        rutas = rutas.filter(seccion__periodo_id=periodo_id)
+
+    if estado_filtro:
+        rutas = rutas.filter(estado=estado_filtro)
+
+    for ruta in rutas:
+        acts = list(ruta.actividades.all())
+        total_acts = len(acts)
+        completadas = sum(1 for a in acts if a.completada_por_docente_id is not None)
+        ruta.total_actividades = total_acts
+        ruta.total_completadas = completadas
+        ruta.actividades_pendientes = total_acts - completadas
+
+    sedes_list = Sede.objects.all().order_by("nombre")
+    campus_list = Campus.objects.all().order_by("nombre")
+    periodos_list = PeriodoAcademico.objects.all().order_by("-nombre")
+
     return render(
         request,
         "rutas/seguimiento_coordinacion.html",
         {
             "rutas": rutas,
+            "sedes": sedes_list,
+            "campus_list": campus_list,
+            "periodos": periodos_list,
+            "filtros_seleccionados": {
+                "campus": campus_id,
+                "sede": sede_id,
+                "periodo": periodo_id,
+                "estado": estado_filtro,
+            },
         },
     )
 
@@ -602,5 +764,367 @@ def detalle_ruta_coordinacion(request, seccion_ruta_id):
             "total_actividades": total_actividades,
             "total_completadas": total_completadas,
             "total_pendientes": total_pendientes,
+            "invitaciones_cierre": (
+                seccion_ruta.invitaciones_cierre
+                .select_related("socio")
+                .order_by("socio__nombre_organizacion")
+            ),
+            "sin_cierre": actividades.filter(
+                observacion=servicios.OBSERVACION_SIN_CIERRE,
+            ).exists(),
         },
     )
+
+
+@login_required
+def formularios_qr(request):
+
+    if not (es_docente(request.user) or es_coordinador(request.user)):
+        raise PermissionDenied
+
+    proceso = request.GET.get("proceso", "").strip()
+
+    plantillas = FormularioPlantilla.objects.filter(
+        proceso=proceso,
+        activo=True,
+    ).order_by("titulo")
+
+    enlaces = enlaces_abiertos_por_plantilla(
+        plantillas.values_list("id", flat=True)
+    )
+
+    formularios = []
+
+    for plantilla in plantillas:
+        enlace = enlaces.get(plantilla.id)
+
+        if enlace is None:
+            continue
+
+        url = request.build_absolute_uri(
+            reverse("encuestas:responder", args=[enlace.token])
+        )
+
+        formularios.append({
+            "titulo": plantilla.titulo,
+            "url": url,
+            "qr_base64": qr_base64(url),
+        })
+
+    return render(
+        request,
+        "rutas/formularios_qr.html",
+        {
+            "formularios": formularios,
+        },
+    )
+
+
+def _actividad_cierre_del_docente(request, actividad_id):
+    actividad = get_object_or_404(
+        SeccionActividad.objects.select_related(
+            "seccion_ruta",
+            "seccion_ruta__seccion",
+            "ruta_actividad",
+        ),
+        id=actividad_id,
+    )
+
+    verificar_acceso_ruta(request.user, actividad.seccion_ruta)
+
+    docente = getattr(request.user, "perfil_docente", None)
+
+    if not es_docente(request.user) or docente is None:
+        raise PermissionDenied
+
+    if not servicios.es_actividad_cierre(actividad.ruta_actividad):
+        raise PermissionDenied
+
+    return actividad, docente
+
+
+def _volver_a_ruta(seccion_ruta):
+    return redirect(
+        "rutas:detalle_ruta_docente",
+        seccion_ruta_id=seccion_ruta.id,
+    )
+
+
+def _envio_ok(envio):
+    return envio is not None and envio.resultado == "OK"
+
+
+@login_required
+@require_POST
+def indicar_sin_cierre(request, actividad_id):
+    actividad, docente = _actividad_cierre_del_docente(request, actividad_id)
+    seccion_ruta = actividad.seccion_ruta
+
+    if seccion_ruta.estado == "COMPLETADA":
+        messages.error(request, "La Ruta ya está completada y no puede modificarse.")
+        return _volver_a_ruta(seccion_ruta)
+
+    if seccion_ruta.invitaciones_cierre.exists():
+        messages.error(
+            request,
+            "Ya hay Socios invitados a la actividad de cierre.",
+        )
+        return _volver_a_ruta(seccion_ruta)
+
+    servicios.indicar_sin_cierre(actividad, docente, request)
+    recalcular_avance(seccion_ruta)
+
+    messages.success(request, "Se registró que no habrá actividad de cierre.")
+
+    return _volver_a_ruta(seccion_ruta)
+
+
+@login_required
+@require_POST
+def invitar_socios_cierre(request, actividad_id):
+    actividad, _docente = _actividad_cierre_del_docente(request, actividad_id)
+    seccion_ruta = actividad.seccion_ruta
+
+    if seccion_ruta.estado == "COMPLETADA":
+        messages.error(request, "La Ruta ya está completada y no puede modificarse.")
+        return _volver_a_ruta(seccion_ruta)
+
+    modo = request.POST.get("modo_contacto")
+
+    if modo not in (servicios.MODO_PLATAFORMA, servicios.MODO_EXTERNO):
+        messages.error(request, "Indica cómo contactarás al Socio Comunitario.")
+        return _volver_a_ruta(seccion_ruta)
+
+    socios = servicios.socios_de_seccion(seccion_ruta.seccion).filter(
+        id__in=request.POST.getlist("socios")
+    )
+
+    if not socios:
+        messages.error(request, "Selecciona al menos un Socio Comunitario.")
+        return _volver_a_ruta(seccion_ruta)
+
+    invitaciones = servicios.crear_invitaciones_cierre(
+        seccion_ruta,
+        socios,
+        modo,
+        request,
+    )
+
+    if modo == servicios.MODO_EXTERNO:
+        messages.success(
+            request,
+            "Invitación registrada. Recuerda anotar si el Socio asistirá.",
+        )
+        return _volver_a_ruta(seccion_ruta)
+
+    sin_envio = [
+        invitacion.socio.nombre_organizacion
+        for invitacion in invitaciones
+        if not _envio_ok(servicios.enviar_invitacion_cierre(invitacion, request))
+    ]
+
+    if sin_envio:
+        messages.warning(
+            request,
+            "No se pudo enviar la invitación a: "
+            + ", ".join(sin_envio)
+            + ". Revisa su correo de contacto y reintenta.",
+        )
+    else:
+        messages.success(request, "Invitación enviada por correo.")
+
+    return _volver_a_ruta(seccion_ruta)
+
+
+def _invitacion_del_docente(request, invitacion_id):
+    invitacion = get_object_or_404(
+        InvitacionCierre.objects.select_related(
+            "socio",
+            "seccion_ruta",
+            "seccion_ruta__seccion",
+        ),
+        id=invitacion_id,
+    )
+
+    verificar_acceso_ruta(request.user, invitacion.seccion_ruta)
+
+    if not es_docente(request.user):
+        raise PermissionDenied
+
+    return invitacion
+
+
+@login_required
+@require_POST
+def reenviar_invitacion_cierre(request, invitacion_id):
+    invitacion = _invitacion_del_docente(request, invitacion_id)
+
+    if invitacion.modo_contacto != servicios.MODO_PLATAFORMA:
+        raise PermissionDenied
+
+    if _envio_ok(servicios.enviar_invitacion_cierre(invitacion, request)):
+        messages.success(request, "Invitación enviada por correo.")
+    else:
+        messages.warning(
+            request,
+            "No se pudo enviar la invitación. Revisa el correo de contacto del Socio.",
+        )
+
+    return _volver_a_ruta(invitacion.seccion_ruta)
+
+
+@login_required
+@require_POST
+def registrar_respuesta_cierre(request, invitacion_id):
+    """Contacto externo: el Docente anota el resultado (RF-EVI-05)."""
+    invitacion = _invitacion_del_docente(request, invitacion_id)
+    respuesta = request.POST.get("respuesta")
+
+    if respuesta not in servicios.ETIQUETAS_RESPUESTA:
+        messages.error(request, "Respuesta no válida.")
+    else:
+        servicios.registrar_respuesta_cierre(invitacion, respuesta, request)
+        messages.success(request, "Respuesta del Socio registrada.")
+
+    return _volver_a_ruta(invitacion.seccion_ruta)
+
+RESPUESTAS_ENLACE = {
+    "asistire": servicios.ASISTIRA,
+    "no-asistire": servicios.NO_ASISTIRA,
+}
+
+
+def responder_invitacion_cierre(request, token, respuesta):
+    if respuesta not in RESPUESTAS_ENLACE:
+        raise Http404
+
+    invitacion = get_object_or_404(
+        InvitacionCierre.objects.select_related(
+            "socio",
+            "seccion_ruta__seccion__asignatura",
+            "seccion_ruta__seccion__campus__sede",
+            "seccion_ruta__seccion__periodo",
+        ),
+        token=token,
+    )
+
+    registrada = False
+
+    if request.method == "POST":
+        correo = servicios.correo_contacto_principal(invitacion.socio)
+        servicios.registrar_respuesta_cierre(
+            invitacion,
+            RESPUESTAS_ENLACE[respuesta],
+            request,
+            actor_externo=correo or invitacion.socio.nombre_organizacion,
+        )
+        registrada = True
+
+    seccion = invitacion.seccion_ruta.seccion
+
+    return render(
+        request,
+        "rutas/responder_invitacion_cierre.html",
+        {
+            "invitacion": invitacion,
+            "seccion": seccion,
+            "carreras": ", ".join(
+                seccion.carreras.values_list("nombre", flat=True)
+            ),
+            "asistira": RESPUESTAS_ENLACE[respuesta] == servicios.ASISTIRA,
+            "registrada": registrada,
+            "hide_sidebar": True,
+        },
+    )
+
+
+@login_required
+def descargar_expediente(request, seccion_ruta_id):
+    if not es_coordinador(request.user):
+        raise PermissionDenied
+
+    seccion_ruta = get_object_or_404(
+        SeccionRuta.objects.select_related(
+            "seccion__asignatura",
+            "seccion__periodo",
+            "seccion__campus__sede",
+        ),
+        id=seccion_ruta_id,
+    )
+
+    seccion = seccion_ruta.seccion
+    expediente = ExpedienteSeccion.objects.filter(seccion=seccion).first()
+
+    if expediente is None or not expediente.evidencias.exists():
+        messages.info(request, "Esta sección todavía no tiene evidencias cargadas.")
+        return redirect(
+            "rutas:detalle_ruta_coordinacion",
+            seccion_ruta_id=seccion_ruta.id,
+        )
+
+    nombre = servicios.nombre_zip_expediente(seccion)
+    destino = tempfile.SpooledTemporaryFile(max_size=50 * 1024 * 1024)
+    faltantes = servicios.generar_zip_expediente(expediente, destino)
+    destino.seek(0)
+
+    registrar_auditoria(
+        request=request,
+        entidad="ExpedienteSeccion",
+        entidad_id=expediente.pk,
+        accion="DESCARGAR_EXPEDIENTE",
+        valores_nuevos={
+            "archivo_zip": nombre,
+            "faltantes": faltantes,
+        },
+    )
+
+    return FileResponse(
+        destino,
+        as_attachment=True,
+        filename=nombre,
+        content_type="application/zip",
+    )
+
+def filtrar_seguimiento_rutas(queryset, request):
+
+    campus_id = request.GET.get('campus')
+    sede_id = request.GET.get('sede')
+    periodo_id = request.GET.get('periodo')
+    estado = request.GET.get('estado')
+
+    if campus_id:
+        queryset = queryset.filter(seccion__campus_id=campus_id)
+    if sede_id:
+        queryset = queryset.filter(seccion__campus__sede_id=sede_id)
+    if periodo_id:
+        queryset = queryset.filter(seccion__periodo_id=periodo_id)
+    if estado:
+        queryset = queryset.filter(estado=estado)
+
+    return queryset
+
+@login_required
+@coordinador_required
+def seguimiento_rutas_coordinacion(request):
+    secciones_rutas = SeccionRuta.objects.select_related(
+        'seccion__asignatura',
+        'seccion__periodo',
+        'seccion__campus__sede',
+    ).prefetch_related(
+        'seccion__docentes',
+        'actividades__ruta_actividad'
+    ).order_by('-id')
+
+    secciones_filtradas = filtrar_seguimiento_rutas(secciones_rutas, request)
+
+    context = {
+        'rutas': secciones_filtradas,
+        'sedes': Sede.objects.all(),
+        'campus_list': Campus.objects.all(),
+        'periodos': PeriodoAcademico.objects.all(),
+        'filtro_campus': request.GET.get('campus', ''),
+        'filtro_sede': request.GET.get('sede', ''),
+        'filtro_periodo': request.GET.get('periodo', ''),
+        'filtro_estado': request.GET.get('estado', ''),
+    }
+    return render(request, 'rutas/seguimiento_coordinacion.html', context)

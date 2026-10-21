@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load core_extras %}
 
 {% block title %}Socios Comunitarios | Portal A+S{% endblock %}
 
@@ -128,6 +129,9 @@
 
     /* Badges de estado */
     .badge-estado {
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
         font-size: 0.72rem;
         font-weight: 600;
         padding: 5px 10px;
@@ -139,9 +143,26 @@
     .estado-APROBADO { background-color: #DCFCE7; color: #166534; }
     .estado-RECHAZADO { background-color: #FDEDEE; color: var(--ua-red-hover); }
     .estado-DISPONIBLE { background-color: #EDE9FE; color: #5B21B6; }
+    .estado-ASIGNADO { background-color: #FEF3C7; color: #92400E; }
     .estado-TRABAJO_TERMINADO { background-color: #F3F4F6; color: #374151; }
 
+    .badge-historial {
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
+        background-color: #F3F4F6;
+        color: #4B5563;
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 5px 10px;
+        border-radius: 999px;
+        cursor: help;
+    }
+
     .badge-provisional {
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
         background-color: #FEF3C7;
         color: #92400E;
         font-size: 0.72rem;
@@ -195,10 +216,18 @@
         <h1 class="page-title">Socios Comunitarios</h1>
         <p class="page-subtitle mb-0">Busca, filtra y revisa los socios comunitarios registrados en el portal.</p>
     </div>
+    <div class="d-flex flex-wrap gap-2">
     <span class="badge rounded-pill text-bg-light border px-3 py-2" style="color: var(--ua-text-dark);">
         <i class="bi bi-people me-1" style="color: var(--ua-red);"></i>
         {{ socios|length }} resultado{{ socios|length|pluralize }}
     </span>
+    <span class="badge rounded-pill text-bg-light border px-3 py-2" style="color: var(--ua-text-dark);"
+          title="Una organización que participa varias veces cuenta una vez como organización y una vez por cada participación (RF-IND-02).">
+        <i class="bi bi-diagram-3 me-1" style="color: var(--ua-red);"></i>
+        {{ total_organizaciones_con_participacion }} organizaci{{ total_organizaciones_con_participacion|pluralize:"ón,ones" }} con participación
+        · {{ total_participaciones }} participaci{{ total_participaciones|pluralize:"ón,ones" }}
+    </span>
+    </div>
 </div>
 
 <!-- BÚSQUEDA Y FILTROS -->
@@ -208,6 +237,7 @@
     </div>
     <div class="p-3 p-md-4">
         <form method="get" action="{% url 'socios:lista_coordinador' %}">
+            {% if orden and orden != "nombre" %}<input type="hidden" name="orden" value="{{ orden }}">{% endif %}
             <div class="row g-3">
                 <!-- Búsqueda textual -->
                 <div class="col-12 col-lg-6">
@@ -245,11 +275,9 @@
                     <label for="estado" class="form-label-ua">Estado de revisión</label>
                     <select id="estado" name="estado" class="form-select">
                         <option value="">Todos</option>
-                        <option value="RECIBIDO" {% if filtros.estado == "RECIBIDO" %}selected{% endif %}>Recibido</option>
-                        <option value="APROBADO" {% if filtros.estado == "APROBADO" %}selected{% endif %}>Aprobado</option>
-                        <option value="RECHAZADO" {% if filtros.estado == "RECHAZADO" %}selected{% endif %}>Rechazado</option>
-                        <option value="DISPONIBLE" {% if filtros.estado == "DISPONIBLE" %}selected{% endif %}>Disponible</option>
-                        <option value="TRABAJO_TERMINADO" {% if filtros.estado == "TRABAJO_TERMINADO" %}selected{% endif %}>Trabajo terminado</option>
+                        {% for valor, etiqueta in estados_socio %}
+                            <option value="{{ valor }}" {% if filtros.estado == valor %}selected{% endif %}>{{ etiqueta }}</option>
+                        {% endfor %}
                     </select>
                 </div>
 
@@ -317,7 +345,7 @@
                     <select id="vista" name="vista" class="form-select">
                         <option value="">Todos</option>
                         <option value="disponibles" {% if filtros.vista == "disponibles" %}selected{% endif %}>Disponibles para docentes</option>
-                        <option value="historial" {% if filtros.vista == "historial" %}selected{% endif %}>Solo historial</option>
+                        <option value="historial" {% if filtros.vista == "historial" %}selected{% endif %}>No visibles para docentes</option>
                     </select>
                 </div>
 
@@ -339,6 +367,7 @@
 <div class="card-ua">
     <div class="card-header-ua">
         <span><i class="bi bi-people me-2" style="color: var(--ua-red);"></i>Listado de socios</span>
+        {% if socios %}{% include "includes/orden_listado.html" with opciones=opciones_orden %}{% endif %}
     </div>
 
     {% if socios %}
@@ -365,22 +394,26 @@
                             <td>{{ socio.comuna|default:"—" }}</td>
                             <td>
                                 <span class="badge-estado estado-{{ socio.estado_revision }}">
-                                    {{ socio.estado_revision|cut:"_"|title }}
+                                    {{ socio.estado_revision|estado_legible }}
                                 </span>
                             </td>
                             <td>
-                                {% if socio.es_provisional %}
-                                    <span class="badge-provisional"><i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>Provisional</span>
-                                {% else %}
-                                    <span class="text-muted small">Definitivo</span>
-                                {% endif %}
-                                {% if not socio.activo or socio.estado_revision == "TRABAJO_TERMINADO" %}
-                                    <div class="mt-1"><span class="badge-estado"><i class="bi bi-archive me-1" aria-hidden="true"></i>Solo historial</span></div>
-                                {% endif %}
+                                <div class="d-flex flex-wrap align-items-center gap-1">
+                                    {% if socio.es_provisional %}
+                                        <span class="badge-provisional"><i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>Provisional</span>
+                                    {% else %}
+                                        <span class="text-muted small">Definitivo</span>
+                                    {% endif %}
+                                    {% if not socio.activo or socio.estado_revision == "TRABAJO_TERMINADO" %}
+                                        <span class="badge-historial" title="Ya no se ofrece a los docentes; se conserva por su historial.">
+                                            <i class="bi bi-eye-slash me-1" aria-hidden="true"></i>No visible para docentes
+                                        </span>
+                                    {% endif %}
+                                </div>
                             </td>
                             <td class="text-end text-nowrap">
                                 <a href="{% url 'socios:detalle_historial' socio.id %}" class="btn-accion text-decoration-none" title="Ver ficha e historial">
-                                    <i class="bi bi-eye me-1" aria-hidden="true"></i>Historial
+                                    <i class="bi bi-eye me-1" aria-hidden="true"></i>Ver ficha
                                 </a>
                                 <button type="button" class="btn-accion ms-1" data-bs-toggle="modal"
                                         data-bs-target="#modalEstado{{ socio.id }}" title="Cambiar estado">
@@ -421,13 +454,18 @@
                     </p>
 
                     <label for="estado_revision_{{ socio.id }}" class="form-label-ua">Estado de revisión</label>
-                    <select id="estado_revision_{{ socio.id }}" name="estado_revision" class="form-select mb-3">
-                        <option value="RECIBIDO" {% if socio.estado_revision == "RECIBIDO" %}selected{% endif %}>Recibido</option>
-                        <option value="APROBADO" {% if socio.estado_revision == "APROBADO" %}selected{% endif %}>Aprobado</option>
-                        <option value="RECHAZADO" {% if socio.estado_revision == "RECHAZADO" %}selected{% endif %}>Rechazado</option>
-                        <option value="DISPONIBLE" {% if socio.estado_revision == "DISPONIBLE" %}selected{% endif %}>Disponible</option>
-                        <option value="TRABAJO_TERMINADO" {% if socio.estado_revision == "TRABAJO_TERMINADO" %}selected{% endif %}>Trabajo terminado</option>
+                    <select id="estado_revision_{{ socio.id }}" name="estado_revision" class="form-select mb-3 select-estado-socio"
+                            data-motivo="motivo_socio_wrap_{{ socio.id }}" data-actual="{{ socio.estado_revision }}">
+                        {% for valor, etiqueta in socio.estados_siguientes %}
+                            <option value="{{ valor }}" {% if socio.estado_revision == valor %}selected{% endif %}>{{ etiqueta }}</option>
+                        {% endfor %}
                     </select>
+
+                    <div id="motivo_socio_wrap_{{ socio.id }}" class="d-none mb-3">
+                        <label for="motivo_socio_{{ socio.id }}" class="form-label-ua">Motivo del rechazo</label>
+                        <textarea id="motivo_socio_{{ socio.id }}" name="motivo" class="form-control" rows="3"
+                                  placeholder="Se enviará al contacto principal del socio"></textarea>
+                    </div>
 
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="es_provisional" value="1"
@@ -448,4 +486,16 @@
     </div>
 </div>
 {% endfor %}
+
+<script>
+    // El motivo se pide solo al pasar un socio a Rechazado
+    document.querySelectorAll('.select-estado-socio').forEach(function (sel) {
+        sel.addEventListener('change', function () {
+            var wrap = document.getElementById(sel.dataset.motivo);
+            var rechaza = sel.value === 'RECHAZADO' && sel.dataset.actual !== 'RECHAZADO';
+            wrap.classList.toggle('d-none', !rechaza);
+            wrap.querySelector('textarea').required = rechaza;
+        });
+    });
+</script>
 {% endblock %}

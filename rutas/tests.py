@@ -86,6 +86,9 @@ class RutaDocenteTestCase(TestCase):
                 orden=orden,
             )
 
+        self.version.estado = "ACTIVA"
+        self.version.save(update_fields=["estado"])
+
     def crear_seccion(self, nrc, declaracion_as=True):
         seccion = Seccion.objects.create(
             periodo=self.periodo,

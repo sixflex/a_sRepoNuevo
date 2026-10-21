@@ -2,9 +2,11 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from academico.constantes import SECCION_ACTIVA
 from academico.models import (Asignatura,Carrera,Docente,Seccion,SeccionCarrera,SeccionDocente,)
 from .models import (FilaPlanificacion,PlanificacionError,)
 from rutas.services import asignar_ruta_as_si_corresponde
+from core.validators import normalizar_rut
 
 ESTADO_PENDIENTE = "PENDIENTE"
 ESTADO_ACEPTADA = "ACEPTADA"
@@ -157,8 +159,11 @@ def _resolver_docente(docente_fila):
     docente = None
 
     if rut:
+        # El RUT se compara normalizado (sin puntos, con guion), igual que
+        # se guarda en Gestión académica; se mantiene el texto original
+        # por si quedan docentes antiguos guardados con otro formato.
         docente = Docente.objects.filter(
-            rut__iexact=rut
+            Q(rut__iexact=normalizar_rut(rut)) | Q(rut__iexact=rut)
         ).first()
 
     if docente is None and correo:
@@ -290,7 +295,7 @@ def consolidar_fila(fila):
         seccion=_texto(fila.seccion),
         jornada=_texto(fila.jornada) or None,
         horario=_texto(fila.horario) or None,
-        estado="Activo",
+        estado=SECCION_ACTIVA,
         fecha_consolidacion=timezone.now(),
     )
 

@@ -5,13 +5,28 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 
 from archivos.validators import get_extensiones_permitidas, validar_extension_archivo, validar_tamano_archivo
-from socios.validators import validar_rut_chileno
+from core.validators import validar_rut_chileno
 
 from . import constantes as c
 from . import services
 from .models import BloqueFormulario
 
 MENSAJE_OBLIGATORIA = "Esta pregunta es obligatoria."
+
+
+def marcar_cuadriculas(items):
+    """
+    Las preguntas de escala seguidas con la misma "cuadricula" en su
+    configuración se muestran como una sola tabla (filas A, B, C... y columnas
+    1 a 5), como en Microsoft Forms. Cada fila sigue siendo su propia pregunta.
+    """
+    for indice, item in enumerate(items):
+        grupo = item["config"].get("cuadricula") if item["pregunta"].tipo == c.ESCALA else None
+        anterior = items[indice - 1]["config"].get("cuadricula") if indice else None
+        siguiente = items[indice + 1]["config"].get("cuadricula") if indice + 1 < len(items) else None
+        item["cuadricula"] = bool(grupo)
+        item["cuadricula_inicio"] = bool(grupo) and anterior != grupo
+        item["cuadricula_fin"] = bool(grupo) and siguiente != grupo
 
 
 def _json(regla):
@@ -257,6 +272,7 @@ class RespuestaFormularioForm(forms.Form):
                         for opcion in services.opciones_ordenadas(pregunta)
                     ],
                 })
+            marcar_cuadriculas(items)
             resultado.append({
                 "bloque": bloque,
                 "regla_json": _json(bloque.regla_visibilidad_json),
