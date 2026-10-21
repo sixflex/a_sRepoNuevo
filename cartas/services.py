@@ -1,7 +1,10 @@
 import hashlib
+import logging
 from datetime import timedelta
 from io import BytesIO
+from pathlib import Path
 
+from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import transaction
 from django.utils import timezone
@@ -10,7 +13,9 @@ from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
+from reportlab.lib.utils import ImageReader
 from reportlab.platypus import (
+    Image,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -27,6 +32,54 @@ from .models import CartaDocumento, SolicitudCarta
 MAX_ALUMNOS_POR_CARTA = 6
 MESES_ANTIGUEDAD_ALERTA = 12
 CODIGO_PLANTILLA_CARTA = "CARTA_PRESENTACION_DOCENTE"
+
+logger = logging.getLogger(__name__)
+
+FIRMA_ANCHO_MAX = 5 * cm
+FIRMA_ALTO_MAX = 2.5 * cm
+
+
+def _cargar_firma_prueba():
+    """
+    Devuelve la firma de prueba como flowable de ReportLab, o None.
+
+    La ruta viene de settings.CARTA_FIRMA_PRUEBA_PATH (variable de entorno
+    en el .env). El archivo vive fuera del repositorio y fuera de static/media:
+    solo se lee en el servidor y se incrusta en el PDF, nunca se sirve por URL.
+    """
+    ruta = getattr(settings, "CARTA_FIRMA_PRUEBA_PATH", "") or ""
+    if not ruta:
+        return None
+
+    archivo = Path(ruta).expanduser()
+    if not archivo.is_file():
+        logger.warning(
+            "La firma de prueba configurada no existe: %s. "
+            "La carta se genera sin firma.",
+            archivo,
+        )
+        return None
+
+    try:
+        datos = archivo.read_bytes()
+        ancho, alto = ImageReader(BytesIO(datos)).getSize()
+        escala = min(FIRMA_ANCHO_MAX / ancho, FIRMA_ALTO_MAX / alto)
+        firma = Image(
+            BytesIO(datos),
+            width=ancho * escala,
+            height=alto * escala,
+        )
+    except Exception:
+        logger.warning(
+            "No se pudo leer la firma de prueba (%s). "
+            "La carta se genera sin firma.",
+            archivo,
+            exc_info=True,
+        )
+        return None
+
+    firma.hAlign = "LEFT"
+    return firma
 
 
 def verificar_alerta_antiguedad_socio(socio):
@@ -213,6 +266,8 @@ def generar_pdf_carta(solicitud, usuario, estudiantes=None):
             )
         )
 
+    firma = _cargar_firma_prueba()
+
     contenido.extend(
         [
             Spacer(1, 12),
@@ -224,7 +279,8 @@ def generar_pdf_carta(solicitud, usuario, estudiantes=None):
                 ),
                 cuerpo,
             ),
-            Spacer(1, 30),
+            Spacer(1, 12),
+            firma if firma is not None else Spacer(1, 18),
             Paragraph(
                 "<b>Coordinación Aprendizaje + Servicio</b>",
                 cuerpo,

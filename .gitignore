@@ -24,3 +24,7 @@ Thumbs.db
 
 # Archivos privados subidos por usuarios
 private_uploads/
+
+# Firma de prueba (nunca al repositorio)
+firma_prueba*
+*.firma.png
