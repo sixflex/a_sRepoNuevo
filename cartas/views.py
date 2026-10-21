@@ -8,6 +8,10 @@ from academico.models import Seccion
 from core.ordenamiento import OPCIONES_ORDEN, orden_pedido, ordenar_por_fecha
 from usuarios.permissions import es_coordinador, es_docente
 
+from .models import CartaEstudiante, SolicitudCarta, CartaDocumento
+from .services import generar_cartas_agrupadas
+from django.http import HttpResponse, Http404
+
 from .forms import SolicitudCartaForm
 from .models import CartaEstudiante, SolicitudCarta
 from django.views.decorators.http import require_POST
@@ -405,23 +409,19 @@ def generar_carta_pdf(request, solicitud_id):
             request,
             "Solo se puede generar la carta de una solicitud aprobada.",
         )
-
         return redirect(
             "cartas:detalle_solicitud_coordinacion",
             solicitud_id=solicitud.id,
         )
 
     try:
-        documento = generar_pdf_carta(
-            solicitud,
-            request.user,
-        )
-    except ValueError as error:
+    
+        resultado = generar_cartas_agrupadas(solicitud, request.user)
+    except Exception as error:
         messages.error(
             request,
-            str(error),
+            f"Error al generar cartas: {str(error)}",
         )
-
         return redirect(
             "cartas:detalle_solicitud_coordinacion",
             solicitud_id=solicitud.id,
@@ -429,10 +429,24 @@ def generar_carta_pdf(request, solicitud_id):
 
     messages.success(
         request,
-        f"Carta PDF versión {documento.numero_version} generada correctamente.",
+        f"Se generaron exitosamente {resultado['total_cartas']} carta(s) de presentación agrupadas.",
     )
 
     return redirect(
         "cartas:detalle_solicitud_coordinacion",
         solicitud_id=solicitud.id,
     )
+
+@login_required
+def descargar_carta_pdf(request, documento_id):
+    if not es_coordinador(request.user) and not es_docente(request.user):
+        raise PermissionDenied
+
+    documento = get_object_or_404(CartaDocumento, id=documento_id)
+    
+    if not documento.archivo_pdf:
+        raise Http404("El archivo PDF no está disponible.")
+
+    response = HttpResponse(documento.archivo_pdf, content_type="application/pdf")
+    response['Content-Disposition'] = f'inline; filename="{documento.folio}.pdf"'
+    return response

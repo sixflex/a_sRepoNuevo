@@ -5,11 +5,8 @@
 <div class="container py-4">
 
     <div class="mb-4">
-        <a
-            href="{% url 'rutas:detalle_ruta_docente' seccion.ruta_asignada.id %}"
-            class="btn btn-outline-secondary btn-sm"
-        >
-            Volver a la Ruta
+        <a href="{% url 'core:detalle_seccion' seccion.id %}" class="btn btn-outline-secondary">
+            ← Volver a la sección
         </a>
     </div>
 

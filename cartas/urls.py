@@ -1,10 +1,7 @@
 from django.urls import path
-
 from . import views
 
-
 app_name = "cartas"
-
 
 urlpatterns = [
     path(
@@ -33,13 +30,18 @@ urlpatterns = [
         name="observar_solicitud",
     ),
     path(
-    "docente/solicitud/<int:solicitud_id>/editar/",
-    views.editar_solicitud_docente,
-    name="editar_solicitud_docente",
+        "docente/solicitud/<int:solicitud_id>/editar/",
+        views.editar_solicitud_docente,
+        name="editar_solicitud_docente",
     ),
     path(
-    "coordinacion/<int:solicitud_id>/generar-pdf/",
-    views.generar_carta_pdf,
-    name="generar_carta_pdf",
+        "coordinacion/<int:solicitud_id>/generar-pdf/",
+        views.generar_carta_pdf,
+        name="generar_carta_pdf",
+    ),
+    path(
+        "documento/<int:documento_id>/descargar/",
+        views.descargar_carta_pdf,
+        name="descargar_carta_pdf",
     ),
 ]
