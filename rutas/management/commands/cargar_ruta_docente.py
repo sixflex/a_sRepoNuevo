@@ -133,9 +133,8 @@ class Command(BaseCommand):
 
         recursos.setdefault(1, {})["recurso_url"] = "https://canvas.uautonoma.cl"
 
-        # PV-03: actividades opcionales y actividades que aceptan evidencias.
+        # PV-03: actividades opcionales. Todas aceptan evidencias (RF-EVI-02).
         opcionales = {10, 18}
-        con_evidencias = {11, 16, 20, 22}
 
         nuevas_actividades = [
             RutaActividad(
@@ -145,7 +144,6 @@ class Command(BaseCommand):
                 nombre=nombre,
                 descripcion=descripcion,
                 es_obligatoria=orden not in opcionales,
-                acepta_evidencias=orden in con_evidencias,
                 **recursos.get(orden, {}),
             )
             for orden, etapa, nombre, descripcion in actividades

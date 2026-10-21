@@ -88,11 +88,6 @@
                                                     Opcional · no afecta el avance
                                                 </span>
                                             {% endif %}
-                                            {% if actividad.ruta_actividad.acepta_evidencias %}
-                                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle small">
-                                                    <i class="bi bi-paperclip me-1"></i>Acepta evidencia
-                                                </span>
-                                            {% endif %}
                                         </div>
 
                                         {% if actividad.ruta_actividad.descripcion %}
@@ -197,7 +192,7 @@
                                         {% endif %}
 
                                         {% if seccion_ruta.estado != "COMPLETADA" %}
-                                            {% if not actividad.completada_por_docente and actividad.ruta_actividad.acepta_evidencias %}
+                                            {% if not actividad.completada_por_docente %}
                                                 <button
                                                     type="button"
                                                     class="btn btn-outline-primary btn-sm mt-3"

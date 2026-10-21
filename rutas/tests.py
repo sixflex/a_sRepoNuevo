@@ -111,7 +111,6 @@ class RutaDocenteTestCase(TestCase):
                 etapa="Etapa de prueba",
                 nombre=f"Actividad {orden}",
                 es_obligatoria=True,
-                acepta_evidencias=orden in [11, 16, 20, 21],
                 orden=orden,
             )
 
@@ -203,7 +202,7 @@ class RutaDocenteTestCase(TestCase):
         """
         # Configurar 2 obligatorias y 2 opcionales para una versión simplificada
         plantilla_test = RutaPlantilla.objects.create(nombre="Ruta Test PV03", activo=True)
-        version_test = RutaVersion.objects.create(plantilla=plantilla_test, numero_version=1, estado="ACTIVA")
+        version_test = RutaVersion.objects.create(plantilla=plantilla_test, numero_version=1, estado="BORRADOR")
 
         act_ob1 = RutaActividad.objects.create(
             ruta_version=version_test, etapa="E1", nombre="Obligatoria 1", orden=1, es_obligatoria=True
@@ -217,6 +216,10 @@ class RutaDocenteTestCase(TestCase):
         act_op2 = RutaActividad.objects.create(
             ruta_version=version_test, etapa="E1", nombre="Opcional 2", orden=4, es_obligatoria=False
         )
+
+        # Las actividades se arman en borrador y luego se publica la versión.
+        version_test.estado = "ACTIVA"
+        version_test.save(update_fields=["estado"])
 
         seccion = self.crear_seccion("RUTA_PV03_1")
         seccion_ruta = asignar_ruta_a_seccion(seccion, version_test)
@@ -257,10 +260,13 @@ class RutaDocenteTestCase(TestCase):
     def test_cambio_configuracion_sin_tocar_codigo(self):
         """
         Criterio de aceptación: cambiar la configuración en BD (ej. vía admin)
-        no requiere tocar código y actualiza el cálculo del porcentaje de inmediato.
+        no requiere tocar código. Una versión publicada no se modifica: el cambio
+        va en una versión nueva, que recalcula el porcentaje de las secciones que
+        la usan sin alterar el avance de las que siguen en la versión anterior
+        (RF-RUT-03).
         """
         plantilla_test = RutaPlantilla.objects.create(nombre="Ruta Admin Test", activo=True)
-        version_test = RutaVersion.objects.create(plantilla=plantilla_test, numero_version=1, estado="ACTIVA")
+        version_test = RutaVersion.objects.create(plantilla=plantilla_test, numero_version=1, estado="BORRADOR")
 
         act1 = RutaActividad.objects.create(
             ruta_version=version_test, etapa="E1", nombre="Act 1", orden=1, es_obligatoria=True
@@ -268,6 +274,9 @@ class RutaDocenteTestCase(TestCase):
         act2 = RutaActividad.objects.create(
             ruta_version=version_test, etapa="E1", nombre="Act 2", orden=2, es_obligatoria=True
         )
+
+        version_test.estado = "ACTIVA"
+        version_test.save(update_fields=["estado"])
 
         seccion = self.crear_seccion("RUTA_CONF_1")
         seccion_ruta = asignar_ruta_a_seccion(seccion, version_test)
@@ -279,34 +288,50 @@ class RutaDocenteTestCase(TestCase):
         # Con 2 obligatorias y 1 completada -> 50%
         self.assertEqual(recalcular_avance(seccion_ruta), Decimal("50.00"))
 
-        # Se cambia la configuración en BD (sin tocar código): act2 pasa a ser opcional
+        # La versión publicada no se puede modificar
         act2.es_obligatoria = False
-        act2.save()
+        with self.assertRaises(ValidationError):
+            act2.save()
 
-        # Al recalcular o visitar la ruta, ahora hay solo 1 obligatoria completada de 1 -> 100%
+        # Se cambia la configuración en BD (sin tocar código) en una versión nueva:
+        # act2 pasa a ser opcional
+        version_nueva = crear_nueva_version_ruta(version_test)
+        act2_nueva = RutaActividad.objects.get(ruta_version=version_nueva, orden=2)
+        act2_nueva.es_obligatoria = False
+        act2_nueva.save()
+        version_nueva.estado = "ACTIVA"
+        version_nueva.save(update_fields=["estado"])
+
+        seccion_nueva = self.crear_seccion("RUTA_CONF_2")
+        seccion_ruta_nueva = asignar_ruta_a_seccion(seccion_nueva, version_nueva)
+        sa1_nueva = SeccionActividad.objects.get(
+            seccion_ruta=seccion_ruta_nueva, ruta_actividad__orden=1
+        )
+        sa1_nueva.completada_por_docente = self.docente
+        sa1_nueva.save()
+
+        # Al visitar la ruta nueva, hay solo 1 obligatoria completada de 1 -> 100%
         self.client.force_login(self.user_docente)
-        url_detalle = reverse("rutas:detalle_ruta_docente", kwargs={"seccion_ruta_id": seccion_ruta.id})
+        url_detalle = reverse("rutas:detalle_ruta_docente", kwargs={"seccion_ruta_id": seccion_ruta_nueva.id})
         resp = self.client.get(url_detalle)
         self.assertEqual(resp.status_code, 200)
 
-        seccion_ruta.refresh_from_db()
-        self.assertEqual(seccion_ruta.porcentaje_final, Decimal("100.00"))
+        seccion_ruta_nueva.refresh_from_db()
+        self.assertEqual(seccion_ruta_nueva.porcentaje_final, Decimal("100.00"))
 
-    def test_subir_evidencia_valida_por_configuracion_no_por_orden_fijado(self):
+        # La sección que ya usaba la versión anterior conserva su avance
+        self.assertEqual(recalcular_avance(seccion_ruta), Decimal("50.00"))
+
+    def test_subir_evidencia_no_depende_de_ordenes_fijados(self):
         """
-        Verifica que se eliminaron los órdenes fijados en código (11, 16, 20, 21):
-        - Una actividad que NO tiene orden 11, 16, 20 o 21 (ej. orden 5) pero tiene acepta_evidencias=True
-          permite subir evidencias.
-        - Una actividad que TIENE orden 11 pero se le desmarca acepta_evidencias=False
-          rechaza la subida con PermissionDenied (403).
+        Verifica que no hay órdenes fijados en código (11, 16, 20, 21): según
+        RF-EVI-02, el Docente puede subir evidencias en cualquier actividad de
+        la Ruta, sea la orden 5 o la 11.
         """
         seccion = self.crear_seccion("RUTA_EVI_1")
         seccion_ruta = asignar_ruta_as_si_corresponde(seccion)
 
-        # Actividad con orden arbitrario (orden 5) marcada con acepta_evidencias=True
         act_5 = RutaActividad.objects.get(ruta_version=self.version, orden=5)
-        act_5.acepta_evidencias = True
-        act_5.save()
 
         sa_5 = SeccionActividad.objects.get(seccion_ruta=seccion_ruta, ruta_actividad=act_5)
 
@@ -318,38 +343,35 @@ class RutaDocenteTestCase(TestCase):
         self.assertEqual(resp_5.status_code, 302)
         self.assertEqual(sa_5.evidencias.count(), 1)
 
-        # Actividad con orden 11 a la que se le desmarca acepta_evidencias=False
         act_11 = RutaActividad.objects.get(ruta_version=self.version, orden=11)
-        act_11.acepta_evidencias = False
-        act_11.save()
 
         sa_11 = SeccionActividad.objects.get(seccion_ruta=seccion_ruta, ruta_actividad=act_11)
         url_subir_11 = reverse("rutas:subir_evidencia", kwargs={"actividad_id": sa_11.id})
 
         archivo_prueba_11 = SimpleUploadedFile("acuerdo.pdf", b"%PDF-1.4 prueba", content_type="application/pdf")
         resp_11 = self.client.post(url_subir_11, {"archivo": archivo_prueba_11})
-        self.assertEqual(resp_11.status_code, 403)
-        self.assertEqual(sa_11.evidencias.count(), 0)
+        self.assertEqual(resp_11.status_code, 302)
+        self.assertEqual(sa_11.evidencias.count(), 1)
 
     def test_cargar_ruta_docente_comando_pv03(self):
         """
-        Verifica que cargar_ruta_docente configure adecuadamente obligatorias,
-        opcionales y actividades que aceptan evidencias según PV-03.
+        Verifica que cargar_ruta_docente configure adecuadamente obligatorias
+        y opcionales según PV-03.
         """
+        # setUp ya publicó una ruta con el mismo nombre; se renombra para que
+        # el comando cargue la suya desde cero.
+        self.plantilla.nombre = "Ruta de prueba setUp"
+        self.plantilla.save(update_fields=["nombre"])
+
         call_command("cargar_ruta_docente")
 
         version_cargada = RutaVersion.objects.get(
             plantilla__nombre="Ruta del Docente A+S",
             numero_version=1,
         )
+        self.assertEqual(version_cargada.estado, "ACTIVA")
         actividades = RutaActividad.objects.filter(ruta_version=version_cargada)
         self.assertEqual(actividades.count(), 23)
-
-        # Actividades con evidencia configuradas: 11, 16, 20, 22
-        ordenes_evidencia = list(
-            actividades.filter(acepta_evidencias=True).values_list("orden", flat=True).order_by("orden")
-        )
-        self.assertEqual(ordenes_evidencia, [11, 16, 20, 22])
 
         # Actividades opcionales: 10 y 18
         ordenes_opcionales = list(
@@ -360,7 +382,12 @@ class RutaDocenteTestCase(TestCase):
         # Recurso Canvas en actividad 1
         act_1 = actividades.get(orden=1)
         self.assertEqual(act_1.recurso_url, "https://canvas.uautonoma.cl")
-        self.assertFalse(SeccionRuta.objects.filter(seccion=seccion).exists())
+
+        # Volver a correr el comando no modifica la versión publicada
+        call_command("cargar_ruta_docente")
+        self.assertEqual(
+            RutaActividad.objects.filter(ruta_version=version_cargada).count(), 23
+        )
 
     def test_seccion_conserva_version_original(self):
         seccion_antigua = self.crear_seccion("RUTA006")

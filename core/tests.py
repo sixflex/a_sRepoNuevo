@@ -714,7 +714,9 @@ class PanelDocenteFiltroPeriodoTestCase(TestCase):
         self.assertIn(self.sec_d1_p2, secciones)
         self.assertNotIn(self.sec_d2_p1, secciones)
         self.assertEqual(response.context["periodo_id"], "")
-        self.assertIsNone(response.context["periodo_seleccionado"])
+        self.assertEqual(response.context["periodo_seleccionado"], "")
+        self.assertEqual(response.context["anio_seleccionado"], "")
+        self.assertFalse(response.context["filtros_activos"])
 
     def test_filtro_por_periodo_muestra_solo_secciones_del_periodo_seleccionado(self):
         self.client.force_login(self.user_docente1)
@@ -729,13 +731,17 @@ class PanelDocenteFiltroPeriodoTestCase(TestCase):
         self.assertNotIn(self.sec_d1_p2, secciones)
         self.assertNotIn(self.sec_d2_p1, secciones)
         self.assertEqual(response.context["periodo_id"], str(self.periodo_2026_1.id))
-        self.assertEqual(response.context["periodo_seleccionado"], self.periodo_2026_1)
+        self.assertEqual(response.context["periodo_seleccionado"], str(self.periodo_2026_1.id))
+        self.assertTrue(response.context["filtros_activos"])
 
-        # Verificar que el HTML contiene el option marcado como selected
-        self.assertContains(
-            response,
-            f'value="{self.periodo_2026_1.id}" selected',
+        # Año y período se filtran por separado (RNF-DAT-01): año + período
+        # combinados siguen mostrando solo las secciones del período elegido.
+        response_combinado = self.client.get(
+            self.url, {"anio": 2026, "periodo": self.periodo_2026_1.id}
         )
+        secciones_combinado = response_combinado.context["secciones"]
+        self.assertEqual(len(secciones_combinado), 1)
+        self.assertIn(self.sec_d1_p1, secciones_combinado)
 
         # Filtrar por período 2026-2
         response_p2 = self.client.get(self.url, {"periodo": self.periodo_2026_2.id})
@@ -771,17 +777,24 @@ class PanelDocenteFiltroPeriodoTestCase(TestCase):
 
         secciones = response.context["secciones"]
         self.assertEqual(len(secciones), 0)
-        self.assertContains(response, "No tienes secciones asignadas en este período")
-        self.assertContains(response, self.periodo_2025_2.nombre)
+        self.assertContains(
+            response,
+            "No tienes secciones asignadas para el año o período académico seleccionado.",
+        )
         self.assertContains(response, "Ver todos los períodos")
 
     def test_periodo_invalido_se_maneja_correctamente(self):
         self.client.force_login(self.user_docente1)
 
-        # Parámetro no numérico
+        # Parámetro no numérico: no se cae y no muestra secciones de otro período
         response = self.client.get(self.url, {"periodo": "invalido"})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.context["secciones"]), 2)
+        self.assertEqual(len(response.context["secciones"]), 0)
+
+        # Año no numérico: mismo tratamiento
+        response_anio = self.client.get(self.url, {"anio": "invalido"})
+        self.assertEqual(response_anio.status_code, 200)
+        self.assertEqual(len(response_anio.context["secciones"]), 0)
 
         # Parámetro numérico que no existe
         response_inexistente = self.client.get(self.url, {"periodo": "999999"})
