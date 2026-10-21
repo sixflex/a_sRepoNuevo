@@ -2,7 +2,7 @@ from django import forms
 
 from core.validators import validar_rut_chileno
 
-from .models import ClasificacionSocio, Comuna, PostulacionSocioPublica, SocioComunitario
+from .models import ClasificacionSocio, Comuna, SocioComunitario
 
 # RF-SC-04 CA2: después de revisar los datos, el coordinador decide si el
 # socio propuesto por un equipo queda disponible para otros grupos (sale del
@@ -93,18 +93,3 @@ class SocioPropuestoForm(forms.ModelForm):
         if any(contacto) and not datos.get("contacto_nombre"):
             self.add_error("contacto_nombre", "Indica el nombre del contacto.")
         return datos
-
-
-class PostulacionSocioForm(forms.ModelForm):
-    class Meta:
-        model = PostulacionSocioPublica
-        fields = ['nombre_organizacion', 'nombre_contacto', 'email_contacto', 'descripcion_proyecto']
-
-class RechazoPostulacionForm(forms.ModelForm):
-    class Meta:
-        model = PostulacionSocioPublica
-        fields = ['motivo_rechazo']
-        
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['motivo_rechazo'].required = True
