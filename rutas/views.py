@@ -16,6 +16,7 @@ from auditoria.services import registrar_auditoria
 from academico.models import Campus, PeriodoAcademico, Sede
 from auditoria.services import registrar_auditoria
 from usuarios.permissions import es_coordinador, es_docente
+from usuarios.decorators import coordinador_required
 from . import services as servicios
 from .models import Evidencia, ExpedienteSeccion, SeccionActividad, SeccionRuta
 from django.urls import reverse
@@ -262,7 +263,7 @@ def completar_actividad(request, actividad_id):
         accion="CAMBIAR_ESTADO_ACTIVIDAD",
         valores_anteriores={
             "estado": estado_anterior,
-            "fecha_completada": fecha_anterior,
+            "fecha_completada": actividad.fecha_completada.isoformat() if actividad.fecha_completada else None,
         },
         valores_nuevos={
             "estado": actividad.estado,

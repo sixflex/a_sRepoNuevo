@@ -404,6 +404,8 @@ def revisar_postulacion(request, postulacion_id):
             )
         except ValidationError as error:
             messages.error(request, error.messages[0])
+            
+            return redirect("socios:detalle_postulacion", postulacion_id=postulacion.id)
         else:
             messages.success(
                 request,
@@ -411,7 +413,8 @@ def revisar_postulacion(request, postulacion_id):
                 f"{etiqueta(ESTADOS_POSTULACION, postulacion.estado).lower()} y notificada.",
             )
 
-    return redirect("socios:lista_postulaciones")
+  
+    return redirect("socios:detalle_postulacion", postulacion_id=postulacion.id)
 @docente_required
 def asociar_socio_equipo(request, actividad_id):
     actividad = get_object_or_404(
@@ -433,7 +436,7 @@ def asociar_socio_equipo(request, actividad_id):
     if not seccion.docentes.filter(id=docente.id).exists():
         raise PermissionDenied
 
-    # Solo la actividad de la Ruta configurada con esta acción (recurso_url).
+  
     if url_recurso(actividad) != reverse(
         "socios:asociar_socio_equipo", args=[actividad.id]
     ):
@@ -485,7 +488,7 @@ def asociar_socio_equipo(request, actividad_id):
                 id=socio_id,
             )
 
-            # Servicio común (RN-09, RF-EQP-08); el motivo es opcional aquí.
+        
             try:
                 _, creada = services.asociar_socio_a_equipo(
                     equipo=equipo,

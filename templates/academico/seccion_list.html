@@ -117,6 +117,11 @@
                                    class="btn btn-sm btn-outline-primary me-1">
                                     Ver
                                 </a>
+                                <!-- Botón agregado para solicitar carta de presentación -->
+                                <a href="{% url 'cartas:solicitar_carta_docente' seccion.id %}"
+                                   class="btn btn-sm btn-success me-1" title="Solicitar Carta de Presentación">
+                                    Carta
+                                </a>
                                 <a href="{% url 'seccion_update' seccion.id %}"
                                    class="btn btn-sm btn-outline-secondary me-1">
                                     Editar

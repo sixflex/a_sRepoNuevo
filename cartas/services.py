@@ -1,4 +1,5 @@
 import hashlib
+from datetime import timedelta
 from io import BytesIO
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -22,17 +23,52 @@ from archivos.services import guardar_archivo
 from .models import CartaDocumento
 
 
-def generar_pdf_carta(solicitud, usuario):
+MAX_ALUMNOS_POR_CARTA = 6
+MESES_ANTIGUEDAD_ALERTA = 12
+
+
+def verificar_alerta_antiguedad_socio(socio):
+
+    if not socio:
+        return False
+
+    hace_un_ano = timezone.now().date() - timedelta(days=365)
+    ultima_participacion = socio.participaciones.order_by("-fecha_inicio").first()
+
+    if not ultima_participacion or not ultima_participacion.fecha_inicio:
+        return True
+
+    return ultima_participacion.fecha_inicio < hace_un_ano
+
+
+def _agregar_marca_de_agua(canvas, doc):
+    """Marca de agua institucional discreta para el PDF."""
+    canvas.saveState()
+    canvas.setFont("Helvetica-Bold", 50)
+    canvas.setFillColor(colors.HexColor("#F1F5F9"))
+    canvas.translate(A4[0] / 2.0, A4[1] / 2.0)
+    canvas.rotate(45)
+    canvas.drawCentredString(0, 0, "APRENDIZAJE + SERVICIO")
+    canvas.restoreState()
+
+
+def generar_pdf_carta(solicitud, usuario, estudiantes=None):
     if solicitud.estado != "APROBADA":
         raise ValueError("La solicitud debe estar aprobada.")
 
-    estudiantes = list(
-        solicitud.estudiantes.order_by("orden")
-    )
+    if estudiantes is None:
+        estudiantes = list(
+            solicitud.estudiantes.order_by("orden")
+        )
 
     if not estudiantes:
         raise ValueError(
             "La solicitud no tiene estudiantes asociados."
+        )
+
+    if len(estudiantes) > MAX_ALUMNOS_POR_CARTA:
+        raise ValueError(
+            f"Una carta de presentación no puede contener más de {MAX_ALUMNOS_POR_CARTA} estudiantes."
         )
 
     buffer = BytesIO()
@@ -65,12 +101,20 @@ def generar_pdf_carta(solicitud, usuario):
         spaceAfter=12,
     )
 
+    pie_estilo = ParagraphStyle(
+        "PieEstilo",
+        parent=estilos["Normal"],
+        fontSize=8,
+        leading=11,
+        textColor=colors.HexColor("#64748B"),
+    )
+
     fecha = solicitud.fecha_aprobacion or timezone.now()
 
     docente = solicitud.docente_derivador
     nombre_docente = (
         f"{docente.nombres} {docente.apellidos}"
-    ).strip()
+    ).strip() if docente else ""
 
     contenido = [
         Paragraph(
@@ -187,10 +231,26 @@ def generar_pdf_carta(solicitud, usuario):
                 "Universidad Autónoma de Chile",
                 cuerpo,
             ),
+            Spacer(1, 20),
         ]
     )
 
-    documento.build(contenido)
+  
+    codigo_verificacion = f"CDE-{solicitud.id}-{fecha.strftime('%Y%m%d')}"
+    contenido.append(
+        Paragraph(
+            f"<b>Documento Validado Digitalmente</b><br/>"
+            f"<b>Código de Verificación:</b> {codigo_verificacion}<br/>"
+            f"<b>Emitido por:</b> {usuario.get_full_name() or usuario.username}",
+            pie_estilo,
+        )
+    )
+
+    documento.build(
+        contenido,
+        onFirstPage=_agregar_marca_de_agua,
+        onLaterPages=_agregar_marca_de_agua,
+    )
 
     pdf_bytes = buffer.getvalue()
     buffer.close()
@@ -240,3 +300,32 @@ def generar_pdf_carta(solicitud, usuario):
         )
 
     return carta_documento
+
+
+def generar_cartas_agrupadas(solicitud, usuario):
+  
+    if solicitud.estado != "APROBADA":
+        raise ValueError("La solicitud debe estar aprobada.")
+
+    todos_estudiantes = list(solicitud.estudiantes.order_by("orden"))
+    if not todos_estudiantes:
+        raise ValueError("La solicitud no tiene estudiantes asociados.")
+
+    socio = getattr(solicitud, "socio", None)
+    alerta_antiguedad = verificar_alerta_antiguedad_socio(socio)
+
+    lotes = [
+        todos_estudiantes[i : i + MAX_ALUMNOS_POR_CARTA]
+        for i in range(0, len(todos_estudiantes), MAX_ALUMNOS_POR_CARTA)
+    ]
+
+    cartas_generadas = []
+    for lote in lotes:
+        carta_doc = generar_pdf_carta(solicitud, usuario, estudiantes=lote)
+        cartas_generadas.append(carta_doc)
+
+    return {
+        "cartas": cartas_generadas,
+        "total_cartas": len(cartas_generadas),
+        "alerta_antiguedad": alerta_antiguedad,
+    }
