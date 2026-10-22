@@ -81,6 +81,12 @@
                                                 Observada
                                             </span>
 
+                                        {% elif solicitud.estado == "BORRADOR" %}
+
+                                            <span class="badge bg-secondary">
+                                                Borrador
+                                            </span>
+
                                         {% else %}
 
                                             <span class="badge bg-secondary">
@@ -126,4 +132,4 @@
 
 </div>
 
-{% endblock %}
+{% endblock %}

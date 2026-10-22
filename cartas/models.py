@@ -1,5 +1,13 @@
+import uuid
+
 from django.conf import settings
 from django.db import models
+
+
+ESTADO_PENDIENTE = "PENDIENTE"
+ESTADO_BORRADOR = "BORRADOR"
+ESTADO_OBSERVADA = "OBSERVADA"
+ESTADO_APROBADA = "APROBADA"
 
 
 class SolicitudCarta(models.Model):
@@ -183,3 +191,37 @@ class CartaDocumento(models.Model):
             f"Carta solicitud {self.solicitud_id} "
             f"- Versión {self.numero_version}"
         )
+
+
+class EnlaceSolicitudCarta(models.Model):
+    """SP6-T08: enlace público para que el estudiante informante solicite la carta."""
+
+    seccion = models.ForeignKey(
+        "academico.Seccion",
+        on_delete=models.PROTECT,
+        related_name="enlaces_solicitud_carta",
+    )
+
+    creado_por_docente = models.ForeignKey(
+        "academico.Docente",
+        on_delete=models.PROTECT,
+        related_name="enlaces_solicitud_carta_creados",
+    )
+
+    token = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+    )
+
+    fecha_inicio = models.DateTimeField()
+
+    fecha_expiracion = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    activo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"Enlace solicitud carta - {self.seccion}"
