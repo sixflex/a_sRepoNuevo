@@ -200,6 +200,11 @@ PRIVATE_STORAGE_ALLOWED_EXTENSIONS = os.getenv(
 
 PRIVATE_STORAGE_RETENTION_YEARS = int(os.getenv("PRIVATE_STORAGE_RETENTION_YEARS", "5"))
 
+# SP6-T05: firma de prueba para el PDF de la carta de presentación.
+# Ruta a una imagen FUERA del repositorio (se define en el .env). No debe estar
+# en static/ ni en media/: solo se lee en el servidor y se incrusta en el PDF.
+CARTA_FIRMA_PRUEBA_PATH = os.getenv("CARTA_FIRMA_PRUEBA_PATH", "")
+
 # Configuración de Correo
 EMAIL_BACKEND = os.getenv(
     "EMAIL_BACKEND",
