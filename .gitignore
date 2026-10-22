@@ -24,3 +24,8 @@ Thumbs.db
 
 # Archivos privados subidos por usuarios
 private_uploads/
+
+db.sqlite3
+__pycache__/
+*.pyc
+a_sRepoNuevo-develop/
