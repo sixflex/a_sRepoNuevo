@@ -24,6 +24,7 @@ from reportlab.platypus import (
 )
 
 from archivos.services import guardar_archivo
+from auditoria.services import registrar_auditoria
 from comunicaciones.services import EmailService
 
 from .models import CartaDocumento, SolicitudCarta
@@ -108,8 +109,10 @@ def _agregar_marca_de_agua(canvas, doc):
 
 
 def generar_pdf_carta(solicitud, usuario, estudiantes=None):
-    if solicitud.estado != "APROBADA":
-        raise ValueError("La solicitud debe estar aprobada.")
+    if solicitud.estado not in {"BORRADOR", "APROBADA"}:
+        raise ValueError(
+            "La solicitud debe estar en borrador o aprobada."
+        )
 
     if estudiantes is None:
         estudiantes = list(
@@ -352,7 +355,7 @@ def generar_pdf_carta(solicitud, usuario, estudiantes=None):
             archivo=archivo,
             generado_por_usuario=usuario,
             numero_version=numero_version,
-            tipo="PDF",
+            tipo="BORRADOR" if solicitud.estado == "BORRADOR" else "PDF",
             fecha_generacion=timezone.now(),
             hash_documento=hash_documento,
         )
@@ -362,8 +365,10 @@ def generar_pdf_carta(solicitud, usuario, estudiantes=None):
 
 def generar_cartas_agrupadas(solicitud, usuario):
   
-    if solicitud.estado != "APROBADA":
-        raise ValueError("La solicitud debe estar aprobada.")
+    if solicitud.estado not in {"BORRADOR", "APROBADA"}:
+        raise ValueError(
+            "La solicitud debe estar en borrador o aprobada."
+        )
 
     todos_estudiantes = list(solicitud.estudiantes.order_by("orden"))
     if not todos_estudiantes:
@@ -389,13 +394,119 @@ def generar_cartas_agrupadas(solicitud, usuario):
     }
 
 
+CAMPO_EDITABLES_COORDINACION = (
+    "institucion_receptora",
+    "persona_receptora",
+    "cargo_receptor",
+    "consideraciones",
+)
+
+
+def generar_borrador_carta(solicitud_id, usuario, request=None):
+    """SP6-T04 (RF-CAR-04): genera la vista previa marcada como borrador.
+
+    No modifica campus, sede, fecha_solicitud ni el identificador de la
+    solicitud: solo cambia el estado a BORRADOR y registra la auditoría.
+    """
+    with transaction.atomic():
+        solicitud = SolicitudCarta.objects.select_for_update().get(pk=solicitud_id)
+
+        if solicitud.estado not in {"PENDIENTE", "BORRADOR"}:
+            raise ValueError(
+                "Solo se puede generar la vista previa de una solicitud "
+                "pendiente o en borrador."
+            )
+
+        estado_anterior = solicitud.estado
+
+        if solicitud.estado != "BORRADOR":
+            solicitud.estado = "BORRADOR"
+            solicitud.save(update_fields=["estado"])
+
+        documento = generar_pdf_carta(solicitud, usuario)
+
+    registrar_auditoria(
+        request=request,
+        entidad="SolicitudCarta",
+        entidad_id=solicitud.id,
+        accion="BORRADOR_GENERADO",
+        valores_anteriores={"estado": estado_anterior},
+        valores_nuevos={
+            "estado": solicitud.estado,
+            "documento_id": documento.id,
+            "numero_version": documento.numero_version,
+        },
+    )
+
+    return solicitud, documento
+
+
+def corregir_solicitud_coordinacion(
+    solicitud_id,
+    datos,
+    usuario,
+    request=None,
+):
+    """SP6-T04 (RF-CAR-04): Coordinación corrige datos y regenera el borrador.
+
+    Solo se actualizan los campos editables. El identificador, campus, sede y
+    fecha_solicitud quedan intactos (no se incluyen en ``update_fields``).
+    """
+    with transaction.atomic():
+        solicitud = SolicitudCarta.objects.select_for_update().get(pk=solicitud_id)
+
+        if solicitud.estado not in {"PENDIENTE", "BORRADOR"}:
+            raise ValueError(
+                "Solo se pueden corregir solicitudes pendientes o en borrador."
+            )
+
+        valores_anteriores = {
+            campo: getattr(solicitud, campo)
+            for campo in CAMPO_EDITABLES_COORDINACION
+        }
+        valores_nuevos = {}
+
+        for campo in CAMPO_EDITABLES_COORDINACION:
+            if campo not in datos:
+                continue
+
+            valor = datos[campo]
+            valores_nuevos[campo] = valor
+            setattr(solicitud, campo, valor)
+
+        solicitud.estado = "BORRADOR"
+        solicitud.save(
+            update_fields=[*CAMPO_EDITABLES_COORDINACION, "estado"]
+        )
+
+        documento = generar_pdf_carta(solicitud, usuario)
+
+    registrar_auditoria(
+        request=request,
+        entidad="SolicitudCarta",
+        entidad_id=solicitud.id,
+        accion="CORRECCION_BORRADOR",
+        valores_anteriores=valores_anteriores,
+        valores_nuevos={
+            **valores_nuevos,
+            "estado": solicitud.estado,
+            "documento_id": documento.id,
+            "numero_version": documento.numero_version,
+        },
+    )
+
+    return solicitud, documento
+
+
 def aprobar_y_enviar_carta(solicitud_id, usuario):
     """RF-CAR-07: al aprobar se genera la carta final y se envía al Docente."""
     with transaction.atomic():
         solicitud = SolicitudCarta.objects.select_for_update().get(pk=solicitud_id)
 
-        if solicitud.estado != "PENDIENTE":
-            raise ValueError("Solo se pueden aprobar solicitudes pendientes.")
+        if solicitud.estado not in {"PENDIENTE", "BORRADOR"}:
+            raise ValueError(
+                "Solo se pueden aprobar solicitudes pendientes o en borrador."
+            )
 
         solicitud.estado = "APROBADA"
         solicitud.fecha_aprobacion = timezone.now()

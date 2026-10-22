@@ -30,6 +30,21 @@ urlpatterns = [
         name="observar_solicitud",
     ),
     path(
+        "coordinacion/<int:solicitud_id>/vista-previa/",
+        views.vista_previa_carta_coordinacion,
+        name="vista_previa_carta_coordinacion",
+    ),
+    path(
+        "coordinacion/<int:solicitud_id>/corregir/",
+        views.corregir_carta_coordinacion,
+        name="corregir_carta_coordinacion",
+    ),
+    path(
+        "estudiante/<uuid:token>/solicitar/",
+        views.solicitar_carta_estudiante,
+        name="solicitar_carta_estudiante",
+    ),
+    path(
         "docente/solicitud/<int:solicitud_id>/editar/",
         views.editar_solicitud_docente,
         name="editar_solicitud_docente",

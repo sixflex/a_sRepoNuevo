@@ -60,6 +60,12 @@
                                 Observada
                             </span>
 
+                        {% elif solicitud.estado == "BORRADOR" %}
+
+                            <span class="badge bg-secondary">
+                                Borrador
+                            </span>
+
                         {% else %}
 
                             <span class="badge bg-secondary">
@@ -219,6 +225,13 @@
                 </h5>
 
                 <div class="d-flex gap-2 flex-wrap mb-4">
+
+                    <a
+                        href="{% url 'cartas:vista_previa_carta_coordinacion' solicitud.id %}"
+                        class="btn btn-outline-secondary"
+                    >
+                        Vista previa (borrador)
+                    </a>
 
                     <form
                         method="post"

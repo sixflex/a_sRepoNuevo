@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Vista previa carta #{{ solicitud.id }} | Portal A+S{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+
+    <div class="mb-4">
+        <a
+            href="{% url 'cartas:detalle_solicitud_coordinacion' solicitud.id %}"
+            class="btn btn-outline-secondary btn-sm"
+        >
+            ← Volver a la solicitud
+        </a>
+    </div>
+
+    <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-3">
+        <div>
+            <h2 class="mb-1">Vista previa de la carta</h2>
+
+            <p class="text-muted mb-0">
+                Solicitud #{{ solicitud.id }} · {{ solicitud.seccion.asignatura.nombre }}
+            </p>
+        </div>
+
+        {% if es_borrador %}
+            <span class="badge bg-secondary fs-6">BORRADOR</span>
+        {% endif %}
+    </div>
+
+    {% if es_borrador %}
+        <div class="alert alert-warning">
+            <strong>Documento en borrador.</strong>
+            Esta carta aún no ha sido aprobada ni enviada. Las correcciones
+            quedan auditadas y regeneran este borrador.
+        </div>
+    {% endif %}
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+
+            <h5 class="mb-3">Carta generada</h5>
+
+            {% if documento %}
+                <div class="d-flex align-items-center flex-wrap gap-3">
+                    <span>Versión {{ documento.numero_version }}</span>
+
+                    <span class="badge bg-secondary">{{ documento.tipo }}</span>
+
+                    <a
+                        href="{% url 'cartas:descargar_carta_pdf' documento.id %}"
+                        class="btn btn-sm btn-outline-primary"
+                    >
+                        Descargar PDF
+                    </a>
+                </div>
+            {% else %}
+                <div class="text-muted">
+                    Aún no se ha generado el PDF del borrador.
+                </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+
+            <h5 class="mb-3">Datos fijos (no modificables)</h5>
+
+            <div class="row g-3">
+
+                <div class="col-md-6">
+                    <strong>Identificador</strong>
+                    <div>#{{ solicitud.id }}</div>
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Campus / Sede</strong>
+                    <div>
+                        {{ solicitud.campus.nombre }} · {{ solicitud.sede.nombre }}
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Fecha de solicitud</strong>
+                    <div>{{ solicitud.fecha_solicitud|date:"d/m/Y H:i" }}</div>
+                </div>
+
+                <div class="col-md-6">
+                    <strong>Docente</strong>
+                    <div>{{ solicitud.docente_derivador }}</div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+
+            <h5 class="mb-3">Corregir datos de la carta</h5>
+
+            <form method="post" action="{% url 'cartas:corregir_carta_coordinacion' solicitud.id %}">
+
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <div class="mb-3">
+                    <label class="form-label">{{ form.institucion_receptora.label }}</label>
+                    {{ form.institucion_receptora }}
+                    {% for error in form.institucion_receptora.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{{ form.persona_receptora.label }}</label>
+                    {{ form.persona_receptora }}
+                    {% for error in form.persona_receptora.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{{ form.cargo_receptor.label }}</label>
+                    {{ form.cargo_receptor }}
+                    {% for error in form.cargo_receptor.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{{ form.consideraciones.label }}</label>
+                    {{ form.consideraciones }}
+                    {% for error in form.consideraciones.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    Guardar correcciones y regenerar
+                </button>
+
+            </form>
+
+        </div>
+    </div>
+
+    {% if solicitud.estado == "BORRADOR" %}
+        <form
+            method="post"
+            action="{% url 'cartas:aprobar_solicitud' solicitud.id %}"
+        >
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success">
+                Aprobar y enviar carta
+            </button>
+        </form>
+    {% endif %}
+
+</div>
+
+{% endblock %}

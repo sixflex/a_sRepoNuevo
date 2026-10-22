@@ -4,17 +4,30 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from academico.models import Seccion
+from academico.models import Docente, Seccion
 from core.ordenamiento import OPCIONES_ORDEN, orden_pedido, ordenar_por_fecha
 from usuarios.permissions import es_coordinador, es_docente
 
-from .models import CartaEstudiante, SolicitudCarta, CartaDocumento
-from .services import aprobar_y_enviar_carta, enviar_carta_docente, ultimo_envio
+from .models import (
+    CartaEstudiante,
+    EnlaceSolicitudCarta,
+    SolicitudCarta,
+    CartaDocumento,
+)
+from .services import (
+    aprobar_y_enviar_carta,
+    corregir_solicitud_coordinacion,
+    enviar_carta_docente,
+    generar_borrador_carta,
+    ultimo_envio,
+)
 from archivos.services import abrir_archivo
 from django.http import FileResponse, Http404
 
 from .forms import SolicitudCartaForm
 from .models import CartaEstudiante, SolicitudCarta
+from django.urls import reverse
+from django.contrib.auth.views import redirect_to_login
 from django.views.decorators.http import require_POST
 
 @login_required
@@ -299,10 +312,10 @@ def aprobar_solicitud(request, solicitud_id):
         id=solicitud_id,
     )
 
-    if solicitud.estado != "PENDIENTE":
+    if solicitud.estado not in {"PENDIENTE", "BORRADOR"}:
         messages.error(
             request,
-            "Solo se pueden aprobar solicitudes pendientes.",
+            "Solo se pueden aprobar solicitudes pendientes o en borrador.",
         )
 
         return redirect(
@@ -405,6 +418,136 @@ def observar_solicitud(request, solicitud_id):
         solicitud_id=solicitud.id,
     )
 @login_required
+def vista_previa_carta_coordinacion(request, solicitud_id):
+    """SP6-T04 (RF-CAR-04): vista previa de la carta, marcada como borrador."""
+    if not es_coordinador(request.user):
+        raise PermissionDenied
+
+    solicitud = get_object_or_404(
+        SolicitudCarta.objects.select_related(
+            "seccion",
+            "seccion__asignatura",
+            "seccion__campus",
+            "seccion__campus__sede",
+            "campus",
+            "sede",
+            "docente_derivador",
+            "equipo",
+            "socio",
+        ).prefetch_related("estudiantes"),
+        id=solicitud_id,
+    )
+
+    try:
+        solicitud, documento = generar_borrador_carta(
+            solicitud.id,
+            request.user,
+            request=request,
+        )
+    except ValueError as error:
+        messages.error(
+            request,
+            f"No se pudo generar la vista previa: {error}",
+        )
+
+        return redirect(
+            "cartas:detalle_solicitud_coordinacion",
+            solicitud_id=solicitud.id,
+        )
+
+    form = SolicitudCartaForm(
+        instance=solicitud,
+        seccion=solicitud.seccion,
+    )
+
+    return render(
+        request,
+        "cartas/vista_previa_carta.html",
+        {
+            "solicitud": solicitud,
+            "documento": documento,
+            "form": form,
+            "es_borrador": solicitud.estado == "BORRADOR",
+        },
+    )
+
+
+@login_required
+@require_POST
+def corregir_carta_coordinacion(request, solicitud_id):
+    """SP6-T04 (RF-CAR-04): Coordinación corrige datos y regenera el borrador."""
+    if not es_coordinador(request.user):
+        raise PermissionDenied
+
+    solicitud = get_object_or_404(
+        SolicitudCarta,
+        id=solicitud_id,
+    )
+
+    if solicitud.estado not in {"PENDIENTE", "BORRADOR"}:
+        messages.error(
+            request,
+            "Solo se pueden corregir solicitudes pendientes o en borrador.",
+        )
+
+        return redirect(
+            "cartas:detalle_solicitud_coordinacion",
+            solicitud_id=solicitud.id,
+        )
+
+    form = SolicitudCartaForm(
+        request.POST,
+        instance=solicitud,
+        seccion=solicitud.seccion,
+    )
+
+    if not form.is_valid():
+        messages.error(
+            request,
+            "Revisa los datos ingresados antes de regenerar la carta.",
+        )
+
+        return render(
+            request,
+            "cartas/vista_previa_carta.html",
+            {
+                "solicitud": solicitud,
+                "documento": None,
+                "form": form,
+                "es_borrador": solicitud.estado == "BORRADOR",
+            },
+        )
+
+    datos = {
+        campo: form.cleaned_data.get(campo)
+        for campo in (
+            "institucion_receptora",
+            "persona_receptora",
+            "cargo_receptor",
+            "consideraciones",
+        )
+    }
+
+    solicitud, documento = corregir_solicitud_coordinacion(
+        solicitud.id,
+        datos,
+        request.user,
+        request=request,
+    )
+
+    messages.success(
+        request,
+        "Las correcciones fueron registradas y la carta se regeneró "
+        "como borrador.",
+    )
+
+    return redirect(
+        "cartas:vista_previa_carta_coordinacion",
+        solicitud_id=solicitud.id,
+    )
+
+
+@login_required
 @require_POST
 def reintentar_envio_carta(request, documento_id):
     if not es_coordinador(request.user):
@@ -464,4 +607,143 @@ def descargar_carta_pdf(request, documento_id):
         contenido,
         content_type="application/pdf",
         filename=documento.archivo.nombre_original,
+    )
+
+
+def solicitar_carta_estudiante(request, token):
+    """SP6-T08: el estudiante informante pide la carta desde un enlace.
+
+    Depende del login simulado (SP5-T02): si no está autenticado se le
+    redirige al login institucional. La solicitud queda asociada a la
+    sección del enlace y al Docente que lo generó, en estado Pendiente.
+    """
+    enlace = get_object_or_404(
+        EnlaceSolicitudCarta.objects.select_related(
+            "seccion",
+            "seccion__asignatura",
+            "seccion__periodo",
+            "seccion__campus",
+            "seccion__campus__sede",
+            "creado_por_docente",
+        ),
+        token=token,
+    )
+
+    ahora = timezone.now()
+
+    if not enlace.activo:
+        return render(
+            request,
+            "cartas/solicitud_carta_no_disponible.html",
+            {
+                "motivo": "El enlace para solicitar la carta se encuentra cerrado.",
+            },
+            status=403,
+        )
+
+    if enlace.fecha_expiracion and enlace.fecha_expiracion <= ahora:
+        return render(
+            request,
+            "cartas/solicitud_carta_no_disponible.html",
+            {
+                "motivo": "El enlace para solicitar la carta ha expirado.",
+            },
+            status=403,
+        )
+
+    if not request.user.is_authenticated:
+        return redirect_to_login(
+            request.get_full_path(),
+            login_url=reverse("usuarios:login"),
+        )
+
+    es_estudiante = request.user.groups.filter(
+        name="Estudiante"
+    ).exists()
+
+    if not es_estudiante:
+        return render(
+            request,
+            "cartas/solicitud_carta_no_disponible.html",
+            {
+                "motivo": (
+                    "Este formulario solo puede ser utilizado "
+                    "por estudiantes autenticados."
+                ),
+            },
+            status=403,
+        )
+
+    seccion = enlace.seccion
+
+    if request.method == "POST":
+        form = SolicitudCartaForm(
+            request.POST,
+            seccion=seccion,
+        )
+
+        if form.is_valid():
+            solicitud = form.save(commit=False)
+
+            equipo = solicitud.equipo
+
+            if equipo is not None and equipo.seccion_id != seccion.id:
+                raise PermissionDenied
+
+            solicitud.seccion = seccion
+            solicitud.campus = seccion.campus
+            solicitud.sede = seccion.campus.sede
+            solicitud.solicitante_usuario = request.user
+            solicitud.docente_derivador = enlace.creado_por_docente
+            solicitud.solicitante_tipo = "ESTUDIANTE"
+            solicitud.solicitante_nombre = (
+                f"{request.user.first_name} {request.user.last_name}"
+            ).strip() or request.user.username
+            solicitud.solicitante_correo = (
+                request.user.correo_institucional
+                or request.user.email
+                or request.user.username
+            )
+            solicitud.solicitante_entra_id = request.user.entra_oid or None
+            solicitud.estado = "PENDIENTE"
+            solicitud.fecha_solicitud = timezone.now()
+
+            if equipo is not None:
+                solicitud.socio = equipo.socio_vigente
+
+            solicitud.save()
+
+            messages.success(
+                request,
+                "Tu solicitud de Carta de Presentación fue enviada "
+                "correctamente.",
+            )
+
+            return redirect(
+                "cartas:solicitar_carta_estudiante",
+                token=enlace.token,
+            )
+    else:
+        form = SolicitudCartaForm(
+            seccion=seccion,
+        )
+
+    solicitudes = (
+        SolicitudCarta.objects
+        .filter(
+            seccion=seccion,
+            solicitante_usuario=request.user,
+        )
+        .order_by("-fecha_solicitud")
+    )
+
+    return render(
+        request,
+        "cartas/solicitar_carta_estudiante.html",
+        {
+            "form": form,
+            "enlace": enlace,
+            "seccion": seccion,
+            "solicitudes": solicitudes,
+        },
     )

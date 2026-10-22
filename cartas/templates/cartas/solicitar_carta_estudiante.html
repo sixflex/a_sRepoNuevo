@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Solicitar Carta de Presentación | Portal A+S{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+
+    <div class="mb-4">
+        <h2>Solicitar Carta de Presentación</h2>
+
+        <p class="text-muted mb-1">
+            {{ seccion.asignatura.nombre }}
+        </p>
+
+        <p class="text-muted">
+            NRC {{ seccion.nrc }} · Sección {{ seccion.seccion }}
+        </p>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+
+            <h5 class="card-title mb-4">
+                Datos de la solicitud
+            </h5>
+
+            <form method="post">
+
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <div class="mb-3">
+                    <label class="form-label">{{ form.equipo.label }}</label>
+                    {{ form.equipo }}
+                    {% for error in form.equipo.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{{ form.institucion_receptora.label }}</label>
+                    {{ form.institucion_receptora }}
+                    {% for error in form.institucion_receptora.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{{ form.persona_receptora.label }}</label>
+                    {{ form.persona_receptora }}
+                    {% for error in form.persona_receptora.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{{ form.cargo_receptor.label }}</label>
+                    {{ form.cargo_receptor }}
+                    {% for error in form.cargo_receptor.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{{ form.consideraciones.label }}</label>
+                    {{ form.consideraciones }}
+                    {% for error in form.consideraciones.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    Enviar solicitud
+                </button>
+
+            </form>
+
+        </div>
+    </div>
+
+    {% if solicitudes %}
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+
+                <h5 class="card-title mb-3">
+                    Mis solicitudes de esta sección
+                </h5>
+
+                <div class="table-responsive">
+
+                    <table class="table align-middle">
+
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Institución</th>
+                                <th>Persona receptora</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for solicitud in solicitudes %}
+
+                                <tr>
+                                    <td>
+                                        {{ solicitud.fecha_solicitud|date:"d/m/Y H:i" }}
+                                    </td>
+
+                                    <td>
+                                        {{ solicitud.institucion_receptora }}
+                                    </td>
+
+                                    <td>
+                                        {{ solicitud.persona_receptora }}
+                                    </td>
+
+                                    <td>
+                                        {% if solicitud.estado == "PENDIENTE" %}
+                                            <span class="badge bg-warning text-dark">
+                                                PENDIENTE
+                                            </span>
+                                        {% elif solicitud.estado == "BORRADOR" %}
+                                            <span class="badge bg-secondary">
+                                                BORRADOR
+                                            </span>
+                                        {% elif solicitud.estado == "OBSERVADA" %}
+                                            <span class="badge bg-danger">
+                                                OBSERVADA
+                                            </span>
+                                        {% elif solicitud.estado == "APROBADA" %}
+                                            <span class="badge bg-success">
+                                                APROBADA
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                {{ solicitud.estado }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}
