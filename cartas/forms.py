@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import ValidationError
 
 from .models import SolicitudCarta
 
@@ -53,3 +54,15 @@ class SolicitudCartaForm(forms.ModelForm):
         self.fields["persona_receptora"].label = "Persona receptora"
         self.fields["cargo_receptor"].label = "Cargo de la persona receptora"
         self.fields["consideraciones"].label = "Consideraciones"
+
+    def clean_equipo(self):
+        equipo = self.cleaned_data.get("equipo")
+        
+        if equipo:
+            cantidad = equipo.integrantes.count() 
+            if cantidad > 6:
+                raise ValidationError(
+                    f"El equipo seleccionado tiene {cantidad} estudiantes. Las cartas están limitadas a un máximo de 6 estudiantes por equipo."
+                )
+                
+        return equipo
