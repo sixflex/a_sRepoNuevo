@@ -1,9 +1,10 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.mail import send_mail
+from django.core.mail import EmailMessage
 from django.core.validators import validate_email
 from django.template import Context, Template
 from django.utils import timezone
+from archivos.services import abrir_archivo
 from comunicaciones.models import EnvioCorreo, PlantillaCorreo
 
 
@@ -95,15 +96,19 @@ class EmailService:
 
     @staticmethod
     def _ejecutar_envio(envio: EnvioCorreo) -> EnvioCorreo:
-        """Método privado que ejecuta send_mail y actualiza el resultado."""
+        """Método privado que envía el correo (con el PDF de la carta si corresponde) y actualiza el resultado."""
         try:
-            send_mail(
+            correo = EmailMessage(
                 subject=envio.asunto,
-                message=envio.cuerpo,
+                body=envio.cuerpo,
                 from_email=envio.remitente,
-                recipient_list=[envio.destinatario],
-                fail_silently=False,
+                to=[envio.destinatario],
             )
+            if envio.carta_documento_id:
+                archivo = envio.carta_documento.archivo
+                with abrir_archivo(archivo) as contenido:
+                    correo.attach(archivo.nombre_original, contenido.read(), archivo.mime_type)
+            correo.send(fail_silently=False)
             envio.resultado = "OK"
             envio.fecha_envio = timezone.now()
             envio.detalle_error = None

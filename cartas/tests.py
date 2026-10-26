@@ -154,9 +154,9 @@ class EnvioCartaDocenteTestCase(TestCase):
         correo = mail.outbox[0]
         self.assertEqual(correo.to, ["docente@test.cl"])
         self.assertIn("compruebe que los datos", correo.body)
-        # nombre, contenido, tipo = correo.attachments[0]
-        # self.assertEqual(tipo, "application/pdf")
-        # self.assertTrue(contenido.startswith(b"%PDF"))
+        nombre, contenido, tipo = correo.attachments[0]
+        self.assertEqual(tipo, "application/pdf")
+        self.assertTrue(contenido.startswith(b"%PDF"))
 
     @patch("django.core.mail.EmailMessage.send")
     def test_envio_fallido_deja_la_carta_aprobada_y_pendiente(self, mock_send):
