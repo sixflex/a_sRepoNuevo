@@ -5,6 +5,7 @@
 
 {% block content %}
 
+
 <div class="container py-4">
 
     <div class="mb-4">
@@ -29,68 +30,69 @@
         </p>
 
     </div>
+    {% if solicitud.estado == "APROBADA" %}
+    <div class="d-flex justify-content-end align-items-center gap-2 mb-2 text-success">
+        <span class="bg-success rounded" style="width: 45px; height: 3px;"></span>
+        <span class="fw-semibold small">Aprobada</span>
+    </div>
+
+    {% elif solicitud.estado == "OBSERVADA" %}
+        <div class="d-flex justify-content-end align-items-center gap-2 mb-2 text-warning">
+            <span class="bg-warning rounded" style="width: 45px; height: 3px;"></span>
+            <span class="fw-semibold small">Observada</span>
+        </div>
+
+    {% elif solicitud.estado == "PENDIENTE" %}
+        <div class="d-flex justify-content-end align-items-center gap-2 mb-2 text-warning">
+            <span class="bg-warning rounded" style="width: 45px; height: 3px;"></span>
+            <span class="fw-semibold small">Pendiente</span>
+        </div>
+
+    {% else %}
+        <div class="d-flex justify-content-end align-items-center gap-2 mb-2 text-secondary">
+            <span class="bg-secondary rounded" style="width: 45px; height: 3px;"></span>
+            <span class="fw-semibold small">{{ solicitud.estado|estado_legible }}</span>
+        </div>
+    {% endif %}
+    {% if solicitud.estado == "OBSERVADA" and solicitud.motivo_observacion %}
+
+        <div class="card border-warning mb-3">
+
+            <div class="card-body py-3">
+
+                <strong class="d-block mb-2">
+                    Motivo de observación
+                </strong>
+
+                <div>
+                    {{ solicitud.motivo_observacion }}
+                </div>
+
+            </div>
+
+        </div>
+
+    {% endif %}
 
     <div class="card shadow-sm mb-4">
 
-        <div class="card-body">
+    <div class="card-body">
 
-            <div class="row g-4">
+        <div class="row g-4">
 
-                <div class="col-md-6">
+            <div class="col-md-6">
 
-                    <strong>Estado</strong>
+                <strong>Fecha de solicitud</strong>
 
-                    <div class="mt-1">
-
-                        {% if solicitud.estado == "PENDIENTE" %}
-
-                            <span class="badge bg-warning text-dark">
-                                Pendiente
-                            </span>
-
-                        {% elif solicitud.estado == "APROBADA" %}
-
-                            <span class="badge bg-success">
-                                Aprobada
-                            </span>
-
-                        {% elif solicitud.estado == "OBSERVADA" %}
-
-                            <span class="badge bg-danger">
-                                Observada
-                            </span>
-
-                        {% elif solicitud.estado == "BORRADOR" %}
-
-                            <span class="badge bg-secondary">
-                                Borrador
-                            </span>
-
-                        {% else %}
-
-                            <span class="badge bg-secondary">
-                                {{ solicitud.estado|estado_legible }}
-                            </span>
-
-                        {% endif %}
-
-                    </div>
-
+                <div>
+                    {{ solicitud.fecha_solicitud|date:"d/m/Y H:i" }}
                 </div>
 
-                <div class="col-md-6">
+            </div>
 
-                    <strong>Fecha de solicitud</strong>
+            <div class="col-md-6">
 
-                    <div>
-                        {{ solicitud.fecha_solicitud|date:"d/m/Y H:i" }}
-                    </div>
-
-                </div>
-
-                <div class="col-md-6">
-
-                    <strong>Solicitante</strong>
+                <strong>Solicitante</strong>
 
                     <div>
                         {{ solicitud.solicitante_nombre }}
@@ -214,7 +216,7 @@
 
     </div>
 
-    {% if solicitud.estado == "PENDIENTE" %}
+    {% if solicitud.estado == "PENDIENTE" or solicitud.estado == "BORRADOR" %}
 
         <div class="card shadow-sm mb-4">
 
@@ -246,10 +248,11 @@
                         >
                             Aprobar solicitud
                         </button>
-
                     </form>
 
                 </div>
+
+                {% if solicitud.estado == "PENDIENTE" %}
 
                 <form
                     method="post"
@@ -285,21 +288,8 @@
                     </button>
 
                 </form>
+                {% endif %}
 
-            </div>
-
-        </div>
-
-    {% endif %}
-
-    {% if solicitud.estado == "OBSERVADA" %}
-
-        <div class="alert alert-danger">
-
-            <strong>Motivo de observación:</strong>
-
-            <div class="mt-1">
-                {{ solicitud.motivo_observacion }}
             </div>
 
         </div>
@@ -307,17 +297,6 @@
     {% endif %}
 
     {% if solicitud.estado == "APROBADA" %}
-
-    <div class="alert alert-success">
-        <strong>Solicitud aprobada</strong>
-
-        {% if solicitud.fecha_aprobacion %}
-            <div class="mt-1">
-                Aprobada el
-                {{ solicitud.fecha_aprobacion|date:"d/m/Y H:i" }}
-            </div>
-        {% endif %}
-    </div>
 
     <div class="card shadow-sm mt-3">
         <div class="card-body">
@@ -386,5 +365,16 @@
 {% endif %}
 
 </div>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const mensaje = document.getElementById("mensaje-aprobacion");
+
+        if (mensaje) {
+            setTimeout(function () {
+                mensaje.remove();
+            }, 60000);
+        }
+    });
+</script>
 
 {% endblock %}

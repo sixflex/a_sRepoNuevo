@@ -12,7 +12,15 @@
             Revisa las solicitudes realizadas para las secciones A+S.
         </p>
     </div>
-    {% if solicitudes %}{% include "includes/orden_listado.html" with opciones=opciones_orden %}{% endif %}
+    {% if prioridad_pendientes %}
+    <div class="d-flex align-items-center gap-2">
+        <span class="text-muted small">
+            Más antiguas primero
+        </span>
+    </div>
+    {% elif solicitudes %}
+        {% include "includes/orden_listado.html" with opciones=opciones_orden %}
+    {% endif %}
 </div>
 
     <div class="card shadow-sm">
