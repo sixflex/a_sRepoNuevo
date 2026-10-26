@@ -251,8 +251,19 @@ def listar_solicitudes_coordinacion(request):
             "socio",
         )
     )
-    orden = orden_pedido(request)
-    solicitudes = ordenar_por_fecha(solicitudes, "fecha_solicitud", orden)
+    prioridad_pendientes = request.GET.get("prioridad") == "pendientes"
+
+    if prioridad_pendientes:
+        solicitudes = solicitudes.order_by(
+            "fecha_solicitud", "id"
+        ).filter(estado="PENDIENTE")
+    else:
+        orden = orden_pedido(request)
+        solicitudes = ordenar_por_fecha(
+            solicitudes, "fecha_solicitud", orden
+        )
+    if prioridad_pendientes:
+        orden = "asc"
 
     return render(
         request,
@@ -261,6 +272,7 @@ def listar_solicitudes_coordinacion(request):
             "solicitudes": solicitudes,
             "orden": orden,
             "opciones_orden": OPCIONES_ORDEN,
+            "prioridad_pendientes": prioridad_pendientes,
         },
     )
 

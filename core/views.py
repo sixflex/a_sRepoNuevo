@@ -8,10 +8,8 @@ from rutas.services import obtener_recordatorios_ruta
 from usuarios.permissions import es_coordinador, es_docente
 from usuarios.decorators import coordinador_required, docente_required
 
-from academico.models import (
-    PeriodoAcademico,
-    Seccion,
-)
+from academico.models import (PeriodoAcademico,Seccion,)
+from django.utils import timezone
 
 def inicio(request):
     if request.user.is_authenticated:
@@ -54,14 +52,40 @@ def panel_coordinacion(request):
         .order_by("-anio", "-id")
         .first()
     )
+    cartas_pendientes = SolicitudCarta.objects.filter(
+        estado="PENDIENTE"
+    ).order_by("fecha_solicitud", "id")
 
-    # Pendientes del coordinador: solo flujos que ya existen en el portal.
+    cantidad_cartas_pendientes = cartas_pendientes.count()
+    carta_mas_antigua = cartas_pendientes.first()
+
+    antiguedad_maxima_dias = 0
+
+    if carta_mas_antigua:
+        antiguedad_maxima_dias = max(
+            0,
+            (timezone.localdate() - timezone.localtime(
+                carta_mas_antigua.fecha_solicitud
+            ).date()).days
+        )
+
+    if antiguedad_maxima_dias >= 7:
+        nivel_alerta_cartas = "alta"
+    elif antiguedad_maxima_dias >= 3:
+        nivel_alerta_cartas = "media"
+    else:
+        nivel_alerta_cartas = "baja"
     pendientes = [
         {
             "label": "Cartas por revisar",
-            "value": SolicitudCarta.objects.filter(estado="PENDIENTE").count(),
+            "value": cantidad_cartas_pendientes,
             "icon": "bi-envelope-paper",
             "url": reverse("cartas:listar_solicitudes_coordinacion"),
+            "antiguedad_dias": antiguedad_maxima_dias,
+            "solicitud_mas_antigua_id": (
+                carta_mas_antigua.id if carta_mas_antigua else None
+            ),
+            "nivel_alerta": nivel_alerta_cartas,
         },
         {
             "label": "Planificaciones con filas observadas",
