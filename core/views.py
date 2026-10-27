@@ -2,14 +2,14 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 
 from core.ordenamiento import OPCIONES_ORDEN, orden_pedido, ordenar_por_fecha
 from rutas.services import obtener_recordatorios_ruta
 from usuarios.permissions import es_coordinador, es_docente
-from usuarios.decorators import coordinador_required, docente_required
+from usuarios.decorators import coordinador_only_required, coordinador_required, docente_required
 
 from academico.models import (PeriodoAcademico,Seccion,)
-from django.utils import timezone
 
 def inicio(request):
     if request.user.is_authenticated:
@@ -123,6 +123,67 @@ def panel_coordinacion(request):
             "evolucion": indicadores.evolucion(filtros),
         },
     )
+
+
+@coordinador_only_required
+def exportar_indicadores(request):
+    from auditoria.services import registrar_auditoria
+    from . import excel, indicadores
+
+    filtros = indicadores.leer_filtros(request.GET)
+    filtros_legibles = indicadores.chips(filtros)
+    metadatos = {
+        "Generado": timezone.localtime().strftime("%d/%m/%Y %H:%M"),
+        "Filtros aplicados": ", ".join(c["etiqueta"] for c in filtros_legibles)
+        or "Todos los períodos, sedes y carreras",
+    }
+    libro, hoja = excel.nuevo_libro("Resumen", metadatos)
+    hoja.append(["Indicador", "Valor", "Detalle"])
+    for tarjeta in indicadores.tarjetas(filtros):
+        hoja.append([tarjeta["etiqueta"], tarjeta["valor"], tarjeta["detalle"] or ""])
+
+    avance = libro.create_sheet("Avance por carrera")
+    excel.agregar_metadatos(avance, metadatos)
+    avance.append(["Carrera", "Porcentaje", "Nivel", "Docente", "Sección", "Pendientes"])
+    for carrera in indicadores.avance_por_carrera(filtros):
+        for docente in carrera["docentes"]:
+            avance.append([
+                carrera["carrera"], carrera["porcentaje"], carrera["nivel"]["texto"],
+                docente["docente"], docente["seccion"], docente["pendientes"],
+            ])
+
+    satisfaccion = libro.create_sheet("Satisfacción")
+    excel.agregar_metadatos(satisfaccion, metadatos)
+    satisfaccion.append(["Público", "Porcentaje", "Personas", "Pregunta"])
+    for fila in indicadores.satisfaccion(filtros)["anillos"]:
+        satisfaccion.append([fila["publico"], fila["porcentaje"], fila["personas"], fila["pregunta"]])
+
+    evolucion = libro.create_sheet("Evolución")
+    excel.agregar_metadatos(evolucion, metadatos)
+    evolucion.append(["Indicador", "Año", "Valor"])
+    for serie in indicadores.evolucion(filtros):
+        for barra in serie["barras"]:
+            evolucion.append([serie["etiqueta"], barra["anio"], barra["valor"]])
+
+    mapa = libro.create_sheet("Mapa territorial")
+    excel.agregar_metadatos(mapa, metadatos)
+    mapa.append(["Comuna", "Latitud", "Longitud", "Socios", "Proyectos", "Carreras", "Años", "Teléfono"])
+    for punto in indicadores.mapa(filtros, detalle=True)["puntos"]:
+        detalles = punto.get("detalle") or [{}]
+        for detalle in detalles:
+            fila = mapa.max_row + 1
+            mapa.append([
+                punto["comuna"], punto["lat"], punto["lon"], punto["socios"],
+                punto["proyectos"], ", ".join(punto["carreras"]),
+                ", ".join(str(anio) for anio in punto["anios"]), "",
+            ])
+            excel.celda_texto(mapa.cell(fila, 8), detalle.get("telefono", ""))
+
+    registrar_auditoria(
+        request=request, entidad="Indicadores", entidad_id="panel",
+        accion="EXPORTAR_INDICADORES", valores_nuevos={"filtros": filtros},
+    )
+    return excel.respuesta_excel(libro, "indicadores.xlsx")
 
 
 @coordinador_required

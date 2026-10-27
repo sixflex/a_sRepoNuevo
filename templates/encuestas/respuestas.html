@@ -13,6 +13,9 @@
             <strong>{{ filas|length }}</strong> respuesta{{ filas|length|pluralize }}{% if programa %} en este programa{% endif %}
         </div>
         <div class="ms-auto d-flex flex-wrap align-items-center gap-3">
+        <a class="btn btn-outline-success btn-sm" href="{% url 'encuestas:exportar_respuestas' version.id %}?{{ request.GET.urlencode }}">
+            <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i>Exportar Excel
+        </a>
         {% if programas %}
             <form method="get" class="d-flex align-items-center gap-2">
                 {% if orden %}<input type="hidden" name="orden" value="{{ orden }}">{% endif %}
