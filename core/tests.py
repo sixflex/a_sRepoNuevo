@@ -1,11 +1,13 @@
 from types import SimpleNamespace
 from unittest.mock import patch
+from io import BytesIO
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import NoReverseMatch, reverse
+from openpyxl import load_workbook
 
 from academico.models import Asignatura, Campus, Docente, PeriodoAcademico, Seccion, Sede
 from planificacion.services import _resolver_docente
@@ -941,3 +943,29 @@ class PanelDocentePendientesRutaTestCase(TestCase):
         
         seccion_context = response.context["secciones"][0]
         self.assertFalse(seccion_context.recordatorio_ruta["mostrar_invitacion"])
+
+
+class ExportacionIndicadoresTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.coordinador = User.objects.create_user(username="coord_export", password="Clave1234")
+        self.coordinador.groups.add(Group.objects.create(name="Coordinador"))
+        self.docente = User.objects.create_user(username="doc_export", password="Clave1234")
+        self.docente.groups.add(Group.objects.create(name="Docente"))
+
+    def test_coordinador_descarga_xlsx_con_filtros(self):
+        self.client.force_login(self.coordinador)
+
+        response = self.client.get(reverse("core:exportar_indicadores"), {"f": "1"})
+
+        self.assertEqual(response.status_code, 200)
+        libro = load_workbook(BytesIO(response.content), read_only=True)
+        self.assertIn("Resumen", libro.sheetnames)
+        self.assertEqual(libro["Resumen"]["A1"].value, "Metadato")
+
+    def test_docente_no_puede_descargar_indicadores(self):
+        self.client.force_login(self.docente)
+
+        response = self.client.get(reverse("core:exportar_indicadores"))
+
+        self.assertEqual(response.status_code, 403)
