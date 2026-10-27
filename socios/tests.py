@@ -2,14 +2,16 @@ from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
 from auditoria.models import AuditoriaCambio
 from comunicaciones.models import EnvioCorreo
 from socios.services import historial_estados_socio
-from encuestas.models import FormularioPlantilla, FormularioVersion, RespuestaFormulario
+from encuestas.models import FormularioPlantilla, FormularioVersion, PreguntaFormulario, RespuestaFormulario, RespuestaPregunta
 from socios.models import Convocatoria, PostulacionSocio, SocioComunitario
 from socios import views as socios_views
 from socios.validators import validar_rut_chileno
@@ -18,6 +20,7 @@ from .models import (
     ClasificacionSocio,
     Comuna,
     ContactoSocio,
+    ParticipacionSocio,
     SocioComunitario,
 )
 
@@ -191,6 +194,112 @@ class CatalogoDocenteTests(DatosBase):
     def test_busqueda_en_catalogo(self):
         resp = self.client.get(self.url, {"q": "Disponible"})
         self.assertEqual(nombres(resp), {"Centro Disponible"})
+
+
+class QueHaceCatalogoTests(DatosBase):
+    """SP7 2.3: el catálogo muestra qué hace cada socio, sin contactos ni evaluaciones."""
+
+    def setUp(self):
+        self.client.force_login(self.docente)
+        self.url = reverse("socios:catalogo_docente")
+        plantilla = FormularioPlantilla.objects.create(
+            codigo="POST-QUE-HACE", titulo="Postulación", proceso="POSTULACION", activo=True,
+        )
+        self.version = FormularioVersion.objects.create(
+            plantilla=plantilla, numero_version=1, estado="PUBLICADO", fecha_creacion=timezone.now(),
+        )
+        self.convocatoria = Convocatoria.objects.create(
+            formulario_version=self.version, nombre="Convocatoria 2026",
+            fecha_inicio=timezone.now(), estado="PUBLICADA",
+        )
+        self.producto = PreguntaFormulario.objects.create(
+            version=self.version, texto="Producto o servicio que comercializa",
+            tipo="TEXTO_CORTO", obligatoria=True, orden=1,
+        )
+        self.rubro = PreguntaFormulario.objects.create(
+            version=self.version, texto="Rubro (Alimentación, Comercio, Servicios, etc.)",
+            tipo="TEXTO_CORTO", obligatoria=True, orden=2,
+        )
+
+    def postular(self, socio, producto, rubro, dias_atras=0):
+        fecha = timezone.now() - timedelta(days=dias_atras)
+        respuesta = RespuestaFormulario.objects.create(
+            version=self.version, fecha_envio=fecha, origen="PUBLICO",
+            es_historica=False, respondente_correo="contacto@socio.cl",
+            respondente_rut=socio.rut, estado_registro="COMPLETO",
+        )
+        RespuestaPregunta.objects.create(respuesta=respuesta, pregunta=self.producto, valor_texto=producto)
+        RespuestaPregunta.objects.create(respuesta=respuesta, pregunta=self.rubro, valor_texto=rubro)
+        PostulacionSocio.objects.create(
+            convocatoria=self.convocatoria, respuesta_formulario=respuesta, socio=socio,
+            estado="APROBADA", fecha_recepcion=fecha,
+        )
+
+    def que_hace(self, resp):
+        return {s.nombre_organizacion: s.que_hace for s in resp.context["socios"]}
+
+    def test_usa_producto_y_rubro_de_la_ultima_postulacion(self):
+        self.postular(self.esperanza, "Talleres antiguos", "Educación", dias_atras=30)
+        self.postular(self.esperanza, "Huerto comunitario", "Alimentación")
+
+        resp = self.client.get(self.url)
+
+        self.assertEqual(self.que_hace(resp)["Fundación Esperanza"], "Huerto comunitario · Alimentación")
+        self.assertContains(resp, "Huerto comunitario · Alimentación")
+
+    def test_sin_postulacion_usa_el_ultimo_servicio_realizado(self):
+        ParticipacionSocio.objects.create(
+            socio=self.disponible, servicio_realizado="Plan de marketing",
+            fecha_inicio=timezone.now().date() - timedelta(days=400), origen="HISTORICO",
+            evaluacion=2, comentario="Evaluación interna",
+        )
+        ParticipacionSocio.objects.create(
+            socio=self.disponible, servicio_realizado="Página web",
+            fecha_inicio=timezone.now().date(), origen="HISTORICO",
+        )
+
+        resp = self.client.get(self.url)
+
+        self.assertEqual(self.que_hace(resp)["Centro Disponible"], "Página web")
+        self.assertNotContains(resp, "Evaluación interna")
+
+    def test_sin_datos_muestra_sin_descripcion_y_no_expone_contactos(self):
+        resp = self.client.get(self.url)
+
+        self.assertEqual(self.que_hace(resp)["Club Asignado"], "")
+        self.assertContains(resp, "Sin descripción registrada")
+        self.assertNotContains(resp, "María Contreras")
+
+    def test_cantidad_de_consultas_no_crece_con_los_socios(self):
+        self.postular(self.esperanza, "Huerto", "Alimentación")
+        self.client.get(self.url)
+        with CaptureQueriesContext(connection) as antes:
+            self.client.get(self.url)
+
+        for i in range(5):
+            socio = crear_socio(f"Socio extra {i}", rut=f"80.000.00{i}-1")
+            self.postular(socio, f"Producto {i}", "Servicios")
+            ParticipacionSocio.objects.create(socio=socio, servicio_realizado="x", origen="HISTORICO")
+        with CaptureQueriesContext(connection) as despues:
+            self.client.get(self.url)
+
+        self.assertEqual(len(despues), len(antes))
+
+    def test_buscar_tambien_por_lo_que_hace(self):
+        self.postular(self.esperanza, "Huerto comunitario", "Alimentación")
+        ParticipacionSocio.objects.create(
+            socio=self.disponible, servicio_realizado="Taller de salud mental", origen="HISTORICO",
+        )
+
+        self.assertEqual(nombres(self.client.get(self.url, {"q": "alimentación"})), {"Fundación Esperanza"})
+        self.assertEqual(nombres(self.client.get(self.url, {"q": "salud"})), {"Centro Disponible"})
+        self.assertEqual(nombres(self.client.get(self.url, {"q": "Club Asig"})), {"Club Asignado"})
+
+    def test_filtro_de_estado(self):
+        respuesta = self.client.get(self.url, {"estado": "ASIGNADO"})
+
+        self.assertEqual(nombres(respuesta), {"Club Asignado"})
+        self.assertContains(respuesta, '<option value="ASIGNADO" selected>')
 
 
 class CambioEstadoTests(DatosBase):
@@ -1458,3 +1567,64 @@ class ConcurrenciaAsociacionPostgresTests(TransactionTestCase):
         self.assertEqual(errores, [])
         self.assertEqual(abiertas(equipo).count(), 1)
         self.assertEqual(ParticipacionSocio.objects.filter(equipo=equipo).count(), len(socios))
+
+
+
+class SugeridosPorDireccionTests(TestCase):
+    """Pestaña «Sugeridos por Dirección»: posibles socios de la planificación enviada (RF-ACA-03, RF-SC-01)."""
+
+    def setUp(self):
+        from academico.models import Campus, PeriodoAcademico, Sede, UnidadAcademica
+        from planificacion.models import FilaPlanificacion, Planificacion, PlanificacionEnlace
+
+        self.client.force_login(crear_usuario("Coordinador"))
+        sede = Sede.objects.create(nombre="Sede Sugeridos", ciudad="Santiago", activo=True)
+        campus = Campus.objects.create(sede=sede, nombre="Campus Sugeridos", activo=True)
+        periodo = PeriodoAcademico.objects.create(nombre="2026-20", anio=2026)
+        unidad = UnidadAcademica.objects.create(nombre="Escuela de Negocios", tipo="ESCUELA", activo=True)
+
+        def planificacion(estado, texto, nrc):
+            enlace = PlanificacionEnlace.objects.create(
+                unidad_academica=unidad, campus=campus, periodo=periodo,
+                destinatario_nombre="Dirección", destinatario_correo="direccion@test.cl",
+                fecha_emision=timezone.now(), activo=True,
+            )
+            plan = Planificacion.objects.create(
+                enlace=enlace, estado=estado, filas_recibidas=1, filas_aceptadas=0, filas_observadas=0,
+                fecha_envio_final=timezone.now() if estado == "FINAL" else None,
+            )
+            FilaPlanificacion.objects.create(
+                planificacion=plan, numero_fila=1, nrc=nrc, asignatura_texto="Marketing",
+                posible_socio_texto=texto, estado_validacion="ACEPTADA",
+            )
+
+        planificacion("FINAL", "Almacén Doña Rosa | rosa@almacen.cl | Alimentación\nFundación Esperanza", "SUG-1")
+        planificacion("BORRADOR", "Borrador Escondido | b@b.cl | Otro", "SUG-2")
+        self.esperanza = crear_socio("Fundación Esperanza")
+        self.url = reverse("socios:lista_postulaciones") + "?origen=direccion"
+
+    def test_lista_los_sugeridos_de_planificaciones_enviadas(self):
+        respuesta = self.client.get(self.url)
+
+        nombres_sugeridos = [s["nombre"] for s in respuesta.context["sugeridos"]]
+        self.assertEqual(sorted(nombres_sugeridos), ["Almacén Doña Rosa", "Fundación Esperanza"])
+        self.assertContains(respuesta, "Sugeridos por Dirección")
+        self.assertContains(respuesta, "NRC SUG-1")
+        self.assertNotContains(respuesta, "Borrador Escondido")
+
+    def test_marca_los_que_ya_son_socios_e_invita_a_los_demas(self):
+        respuesta = self.client.get(self.url)
+
+        por_nombre = {s["nombre"]: s for s in respuesta.context["sugeridos"]}
+        self.assertEqual(por_nombre["Fundación Esperanza"]["socio_id"], self.esperanza.id)
+        self.assertIsNone(por_nombre["Almacén Doña Rosa"]["socio_id"])
+        self.assertEqual(respuesta.context["sugeridos_sin_registrar"], 1)
+        self.assertContains(respuesta, "Ya registrado")
+        self.assertContains(respuesta, "mailto:rosa@almacen.cl?subject=")
+        self.assertContains(respuesta, reverse("socios:postular_publico"))
+
+    def test_las_otras_pestanas_siguen_iguales(self):
+        respuesta = self.client.get(reverse("socios:lista_postulaciones"))
+
+        self.assertEqual(respuesta.context["origen"], "convocatoria")
+        self.assertNotContains(respuesta, "Socios sugeridos por Dirección de Carrera")

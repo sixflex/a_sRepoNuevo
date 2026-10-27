@@ -1,5 +1,6 @@
 // Planilla pública de la Dirección de Carrera: agregar y quitar asignaturas
-// (filas del formset "filas") y docentes (formset "docentes-N" de cada fila).
+// (filas del formset "filas"), docentes (formset "docentes-N" de cada fila)
+// y posibles socios opcionales (formset "socios-N" de cada fila).
 (function () {
     "use strict";
 
@@ -8,9 +9,9 @@
         return;
     }
 
-    // Quitar un docente: se marca su DELETE, se limpian sus datos y se oculta.
+    // Quitar un docente o socio: se marca su DELETE, se limpian sus datos y se oculta.
     function vincularQuitarDocente(raiz) {
-        raiz.querySelectorAll('.docente-subcard input[type="checkbox"][name$="-DELETE"]').forEach(function (check) {
+        raiz.querySelectorAll('.docente-subcard input[type="checkbox"][name$="-DELETE"], .socio-subcard input[type="checkbox"][name$="-DELETE"]').forEach(function (check) {
             if (check.dataset.vinculado) {
                 return;
             }
@@ -19,7 +20,7 @@
                 if (!check.checked) {
                     return;
                 }
-                const tarjeta = check.closest(".docente-subcard");
+                const tarjeta = check.closest(".docente-subcard, .socio-subcard");
                 tarjeta.querySelectorAll('input[type="text"], input[type="email"]').forEach(function (input) { input.value = ""; });
                 tarjeta.querySelectorAll("select").forEach(function (select) { select.selectedIndex = 0; });
                 tarjeta.classList.add("saliendo");
@@ -29,14 +30,14 @@
     }
 
     function vincularAgregarDocente(raiz) {
-        raiz.querySelectorAll(".agregar-docente").forEach(function (boton) {
+        raiz.querySelectorAll(".agregar-docente, .agregar-socio").forEach(function (boton) {
             if (boton.dataset.vinculado) {
                 return;
             }
             boton.dataset.vinculado = "true";
             boton.addEventListener("click", function () {
                 const prefijo = boton.dataset.prefix;
-                const contenedor = document.querySelector('.docentes-container[data-prefix="' + prefijo + '"]');
+                const contenedor = document.querySelector('.docentes-container[data-prefix="' + prefijo + '"], .socios-container[data-prefix="' + prefijo + '"]');
                 const total = document.getElementById("id_" + prefijo + "-TOTAL_FORMS");
                 const plantilla = document.getElementById("template-" + prefijo);
                 if (!contenedor || !total || !plantilla) {
@@ -45,8 +46,12 @@
                 const indice = parseInt(total.value, 10);
                 contenedor.insertAdjacentHTML(
                     "beforeend",
-                    plantilla.innerHTML.replaceAll("__doc_prefix__", indice).replaceAll("__prefix__", indice)
+                    plantilla.innerHTML.replaceAll("__doc_prefix__", indice).replaceAll("__soc_prefix__", indice).replaceAll("__prefix__", indice)
                 );
+                const encabezado = contenedor.previousElementSibling;
+                if (encabezado && encabezado.classList.contains("socios-encabezado")) {
+                    encabezado.hidden = false;
+                }
                 total.value = indice + 1;
                 vincularQuitarDocente(contenedor);
                 const nueva = contenedor.lastElementChild.querySelector("input:not([type=hidden])");

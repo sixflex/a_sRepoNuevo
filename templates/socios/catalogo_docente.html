@@ -4,6 +4,7 @@
 {% block title %}Catálogo de Socios | Portal A+S{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'css/select_buscable.css' %}?v=2026-10-27b">
 <link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
 
 <div class="mb-4">
@@ -16,15 +17,24 @@
     <div class="p-3 p-md-4">
         <form method="get" action="{% url 'socios:catalogo_docente' %}">
             <div class="row g-3">
-                <div class="col-12 col-lg-5">
+                <div class="col-12 col-lg-4">
                     <label for="q" class="form-label-ua">Buscar</label>
                     <div class="input-group">
                         <span class="input-group-text bg-white"><i class="bi bi-search text-muted" aria-hidden="true"></i></span>
                         <input type="text" id="q" name="q" class="form-control"
-                               placeholder="Nombre de organización o RUT" value="{{ q }}">
+                               placeholder="Nombre, RUT o qué hace" title="Busca por nombre, RUT, rubro, producto o servicio realizado" value="{{ q }}">
                     </div>
                 </div>
-                <div class="col-6 col-lg-3">
+                <div class="col-6 col-lg-2">
+                    <label for="estado" class="form-label-ua">Estado</label>
+                    <select id="estado" name="estado" class="form-select">
+                        <option value="">Todos</option>
+                        {% for e in estados %}
+                            <option value="{{ e }}" {% if estado == e %}selected{% endif %}>{{ e|estado_legible }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-lg-2">
                     <label for="clasificacion" class="form-label-ua">Clasificación</label>
                     <select id="clasificacion" name="clasificacion" class="form-select">
                         <option value="">Todas</option>
@@ -35,14 +45,14 @@
                 </div>
                 <div class="col-6 col-lg-2">
                     <label for="comuna" class="form-label-ua">Comuna</label>
-                    <select id="comuna" name="comuna" class="form-select">
+                    <select id="comuna" name="comuna" class="form-select" data-buscable>
                         <option value="">Todas</option>
                         {% for c in comunas %}
                             <option value="{{ c.id }}" {% if comuna_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-12 col-lg-2 d-flex align-items-end gap-2">
+                <div class="col-6 col-lg-2 d-flex align-items-end gap-2">
                     <button type="submit" class="btn btn-ua flex-grow-1"><i class="bi bi-search me-1" aria-hidden="true"></i>Buscar</button>
                     <a href="{% url 'socios:catalogo_docente' %}" class="btn btn-light-ua" title="Limpiar" aria-label="Limpiar"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i></a>
                 </div>
@@ -71,6 +81,21 @@
                             <div><i class="bi bi-building me-1" aria-hidden="true"></i>{{ socio.centro_servicio }}</div>
                         {% endif %}
                     </div>
+                    <div class="socio-que-hace mt-2 small">
+                        <span class="fw-semibold">Qué hace:</span>
+                        {% if socio.que_hace %}
+                            {% if socio.que_hace|length > 120 %}
+                                <details>
+                                    <summary>{{ socio.que_hace|truncatechars:120 }} <span class="text-primary">Ver más</span></summary>
+                                    {{ socio.que_hace }}
+                                </details>
+                            {% else %}
+                                {{ socio.que_hace }}
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">Sin descripción registrada</span>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         {% endfor %}
@@ -84,4 +109,8 @@
         </div>
     </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/select_buscable.js' %}?v=2026-10-27"></script>
 {% endblock %}

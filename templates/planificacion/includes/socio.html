@@ -1,0 +1,20 @@
+{# Un posible socio comunitario de la fila (opcional), en la grilla del encabezado de socios. #}
+<div class="socio-subcard">
+    <div><label class="visually-hidden" for="{{ socio.nombre.id_for_label }}">Nombre de la organización</label>{{ socio.nombre }}</div>
+    <div><label class="visually-hidden" for="{{ socio.correo.id_for_label }}">Correo</label>{{ socio.correo }}</div>
+    <div><label class="visually-hidden" for="{{ socio.rubro.id_for_label }}">Negocio o rubro</label>{{ socio.rubro }}</div>
+    <div class="docente-quitar">
+        {% if editable %}
+            {{ socio.DELETE }}
+            <label for="{{ socio.DELETE.id_for_label }}" title="Quitar socio">
+                <i class="bi bi-x-lg" aria-hidden="true"></i><span class="visually-hidden">Quitar socio</span>
+            </label>
+        {% endif %}
+    </div>
+    {% if socio.errors %}
+        <ul class="plan-errores docente-errores">
+            {% for error in socio.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+            {% for campo in socio %}{% for error in campo.errors %}<li><strong>{{ campo.label }}:</strong> {{ error }}</li>{% endfor %}{% endfor %}
+        </ul>
+    {% endif %}
+</div>

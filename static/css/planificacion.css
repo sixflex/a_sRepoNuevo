@@ -214,9 +214,8 @@
 .col-asignatura { width: 200px; }
 .col-nivel { width: 96px; }
 .col-jornada { width: 130px; }
-.col-horario { width: 160px; }
+.col-horario { width: 300px; }
 .col-estudiantes { width: 96px; }
-.col-socio { width: 170px; }
 .col-acciones { width: 48px; text-align: center; }
 
 .tabla-planificacion .form-control,
@@ -347,6 +346,61 @@
 }
 .plan-agregar-docente:hover { background: var(--ua-red-soft); }
 
+/* Horario: días de la semana y hora de inicio (subtarea 2.1) */
+/* Días y hora en una sola línea: cada día es un botón que se marca y desmarca. */
+.horario-campo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.horario-dias { display: flex; flex-wrap: nowrap; gap: 2px; margin: 0; padding: 0; border: 0; }
+.horario-dias label {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 31px;
+    border: 1px solid var(--ua-border-strong);
+    border-radius: var(--ua-radius-sm);
+    background: var(--ua-bg-card);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ua-text-muted);
+    cursor: pointer;
+    user-select: none;
+}
+.horario-dias input { position: absolute; opacity: 0; pointer-events: none; }
+.horario-dias label:has(input:checked) { border-color: var(--ua-red); background: var(--ua-red); color: #FFF; }
+.horario-dias label:has(input:focus-visible) { outline: 2px solid var(--ua-red); outline-offset: 1px; }
+.horario-campo input[type="time"] { width: 92px; flex: none; }
+.horario-anterior { flex-basis: 100%; font-size: 0.72rem; color: var(--ua-text-muted); }
+
+/* Posibles socios de la fila: opcionales, bajo los docentes (subtarea 2.2) */
+.socios-titulo { margin-top: 10px; }
+.socios-opcional { font-weight: 400; text-transform: none; }
+.socios-encabezado,
+.socio-subcard {
+    display: grid;
+    grid-template-columns: minmax(180px, 1.6fr) minmax(180px, 1.4fr) minmax(160px, 1fr) 32px;
+    gap: 6px;
+    align-items: center;
+    max-width: 760px;
+}
+.socios-encabezado {
+    padding: 0 8px 2px;
+    font-size: 0.72rem;
+    color: var(--ua-text-muted);
+}
+.socio-subcard {
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    border-left: 3px solid var(--ua-border-strong);
+    border-radius: 0 var(--ua-radius-sm) var(--ua-radius-sm) 0;
+    background: var(--ua-bg-subtle);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    animation: plan-aparece 0.2s ease-out;
+}
+.socio-subcard:focus-within { border-left-color: var(--ua-red); }
+.socio-subcard.saliendo { opacity: 0; transform: scale(0.98); }
+.socios-por-definir { margin: 0; font-size: 0.82rem; color: var(--ua-text-muted); }
+
 .plan-agregar-fila {
     display: flex;
     align-items: center;
@@ -424,6 +478,6 @@
     .plan-boton { padding: 8px 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
-    .fila-nueva, .docente-subcard { animation: none; }
-    .fila-planificacion, .docente-subcard { transition: none; }
+    .fila-nueva, .docente-subcard, .socio-subcard { animation: none; }
+    .fila-planificacion, .docente-subcard, .socio-subcard { transition: none; }
 }

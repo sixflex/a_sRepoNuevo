@@ -4,7 +4,7 @@
 {% block title %}Planificación A+S | Universidad Autónoma de Chile{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/planificacion.css' %}?v=2026-10-19">
+<link rel="stylesheet" href="{% static 'css/planificacion.css' %}?v=2026-10-27d">
 {% endblock %}
 
 {% block layout_completo %}
@@ -74,7 +74,7 @@
                     <ol>
                         <li>Complete una fila por cada sección que implementará A+S, incluso si se repite la misma asignatura.</li>
                         <li>Agregue en cada fila el o los docentes. Escriba el RUT sin puntos y con guion, ej. 12345678-5.</li>
-                        <li>En «Posible socio comunitario» indique la organización si ya está definida; si no, déjelo «Por definir».</li>
+                        <li>En «Horario» marque los días y la hora de inicio. Si ya tienen un posible socio comunitario, use «Agregar socio (opcional)»; si no, déjelo sin agregar y quedará «Por definir».</li>
                         <li>Puede usar «Guardar borrador» las veces que necesite. Al terminar, use «Enviar versión final»: después ya no podrá editar.</li>
                     </ol>
                     <p>Tiempo estimado: 5 a 10 minutos. Si falta una carrera u otro dato en las listas, infórmelo a la Coordinación A+S por correo.</p>
@@ -111,12 +111,11 @@
                                         <th scope="col" class="col-jornada">Jornada</th>
                                         <th scope="col" class="col-horario">Horario</th>
                                         <th scope="col" class="col-estudiantes">Estudiantes</th>
-                                        <th scope="col" class="col-socio">Posible socio comunitario</th>
                                         {% if editable %}<th scope="col" class="col-acciones"><span class="visually-hidden">Quitar</span></th>{% endif %}
                                     </tr>
                                 </thead>
 
-                                {% for form, docentes_formset in filas_con_docentes %}
+                                {% for form, docentes_formset, socios_formset in filas_con_docentes %}
                                     <tbody class="fila-planificacion" data-fila-idx="{{ forloop.counter0 }}">
                                         <tr class="fila-asignatura">
                                             <td class="col-num" aria-hidden="true"></td>
@@ -130,7 +129,6 @@
                                             <td class="col-jornada">{{ form.jornada }}</td>
                                             <td class="col-horario">{{ form.horario }}</td>
                                             <td class="col-estudiantes">{{ form.estudiantes_planificados }}</td>
-                                            <td class="col-socio">{{ form.posible_socio_texto }}</td>
                                             {% if editable %}
                                                 <td class="col-acciones">
                                                     {% if form.instance.pk %}
@@ -148,7 +146,7 @@
                                         </tr>
                                         <tr class="fila-docentes">
                                             <td class="col-num"></td>
-                                            <td colspan="{% if editable %}12{% else %}11{% endif %}">
+                                            <td colspan="{% if editable %}11{% else %}10{% endif %}">
                                                 {{ docentes_formset.management_form }}
                                                 <div class="docentes-titulo">Docente(s) responsable(s)</div>
                                                 {% if docentes_formset.non_form_errors %}
@@ -170,12 +168,36 @@
                                                         {% include "planificacion/includes/docente.html" with docente=docentes_formset.empty_form %}
                                                     </template>
                                                 {% endif %}
+
+                                                {{ socios_formset.management_form }}
+                                                <div class="docentes-titulo socios-titulo">Posible(s) socio(s) comunitario(s) <span class="socios-opcional">opcional</span></div>
+                                                {% if socios_formset.non_form_errors %}
+                                                    <ul class="plan-errores">{% for error in socios_formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+                                                {% endif %}
+                                                <div class="socios-encabezado"{% if not socios_formset.forms %} hidden{% endif %} aria-hidden="true">
+                                                    <span>Organización</span><span>Correo</span><span>Negocio o rubro</span><span></span>
+                                                </div>
+                                                <div class="socios-container" data-prefix="{{ socios_formset.prefix }}">
+                                                    {% for socio in socios_formset %}
+                                                        {% include "planificacion/includes/socio.html" %}
+                                                    {% empty %}
+                                                        {% if not editable %}<p class="socios-por-definir">Por definir</p>{% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                                {% if editable %}
+                                                    <button type="button" class="plan-agregar-docente agregar-socio" data-prefix="{{ socios_formset.prefix }}">
+                                                        <i class="bi bi-shop" aria-hidden="true"></i>Agregar socio
+                                                    </button>
+                                                    <template id="template-{{ socios_formset.prefix }}">
+                                                        {% include "planificacion/includes/socio.html" with socio=socios_formset.empty_form %}
+                                                    </template>
+                                                {% endif %}
                                             </td>
                                         </tr>
                                         {% if form.errors %}
                                             <tr class="fila-errores">
                                                 <td class="col-num"></td>
-                                                <td colspan="{% if editable %}12{% else %}11{% endif %}">
+                                                <td colspan="{% if editable %}11{% else %}10{% endif %}">
                                                     <ul class="plan-errores">
                                                         {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
                                                         {% for campo in form.visible_fields %}{% for error in campo.errors %}<li><strong>{{ campo.label }}:</strong> {{ error }}</li>{% endfor %}{% endfor %}
@@ -210,7 +232,6 @@
                                     <td class="col-jornada">{{ formset.empty_form.jornada }}</td>
                                     <td class="col-horario">{{ formset.empty_form.horario }}</td>
                                     <td class="col-estudiantes">{{ formset.empty_form.estudiantes_planificados }}</td>
-                                    <td class="col-socio">{{ formset.empty_form.posible_socio_texto }}</td>
                                     <td class="col-acciones">
                                         <span class="d-none">{{ formset.empty_form.DELETE }}</span>
                                         <button type="button" class="plan-quitar-fila btn-quitar-fila" title="Quitar asignatura">
@@ -220,7 +241,7 @@
                                 </tr>
                                 <tr class="fila-docentes">
                                     <td class="col-num"></td>
-                                    <td colspan="12">
+                                    <td colspan="11">
                                         <input type="hidden" name="docentes-__prefix__-TOTAL_FORMS" value="1" id="id_docentes-__prefix__-TOTAL_FORMS">
                                         <input type="hidden" name="docentes-__prefix__-INITIAL_FORMS" value="0" id="id_docentes-__prefix__-INITIAL_FORMS">
                                         <input type="hidden" name="docentes-__prefix__-MIN_NUM_FORMS" value="0" id="id_docentes-__prefix__-MIN_NUM_FORMS">
@@ -262,6 +283,30 @@
                                                 </div>
                                             </div>
                                         </template>
+
+                                        <input type="hidden" name="socios-__prefix__-TOTAL_FORMS" value="0" id="id_socios-__prefix__-TOTAL_FORMS">
+                                        <input type="hidden" name="socios-__prefix__-INITIAL_FORMS" value="0" id="id_socios-__prefix__-INITIAL_FORMS">
+                                        <input type="hidden" name="socios-__prefix__-MIN_NUM_FORMS" value="0" id="id_socios-__prefix__-MIN_NUM_FORMS">
+                                        <input type="hidden" name="socios-__prefix__-MAX_NUM_FORMS" value="1000" id="id_socios-__prefix__-MAX_NUM_FORMS">
+                                        <div class="docentes-titulo socios-titulo">Posible(s) socio(s) comunitario(s) <span class="socios-opcional">opcional</span></div>
+                                        <div class="socios-encabezado" hidden aria-hidden="true">
+                                            <span>Organización</span><span>Correo</span><span>Negocio o rubro</span><span></span>
+                                        </div>
+                                        <div class="socios-container" data-prefix="socios-__prefix__"></div>
+                                        <button type="button" class="plan-agregar-docente agregar-socio" data-prefix="socios-__prefix__">
+                                            <i class="bi bi-shop" aria-hidden="true"></i>Agregar socio (opcional)
+                                        </button>
+                                        <template id="template-socios-__prefix__">
+                                            <div class="socio-subcard">
+                                                <div><label class="visually-hidden" for="id_socios-__prefix__-__soc_prefix__-nombre">Nombre de la organización</label><input type="text" name="socios-__prefix__-__soc_prefix__-nombre" maxlength="120" class="form-control form-control-sm" placeholder="Organización" id="id_socios-__prefix__-__soc_prefix__-nombre"></div>
+                                                <div><label class="visually-hidden" for="id_socios-__prefix__-__soc_prefix__-correo">Correo</label><input type="email" name="socios-__prefix__-__soc_prefix__-correo" class="form-control form-control-sm" placeholder="correo@dominio.cl" id="id_socios-__prefix__-__soc_prefix__-correo"></div>
+                                                <div><label class="visually-hidden" for="id_socios-__prefix__-__soc_prefix__-rubro">Negocio o rubro</label><input type="text" name="socios-__prefix__-__soc_prefix__-rubro" maxlength="80" class="form-control form-control-sm" placeholder="Negocio o rubro" id="id_socios-__prefix__-__soc_prefix__-rubro"></div>
+                                                <div class="docente-quitar">
+                                                    <input type="checkbox" name="socios-__prefix__-__soc_prefix__-DELETE" id="id_socios-__prefix__-__soc_prefix__-DELETE">
+                                                    <label for="id_socios-__prefix__-__soc_prefix__-DELETE" title="Quitar socio"><i class="bi bi-x-lg" aria-hidden="true"></i><span class="visually-hidden">Quitar socio</span></label>
+                                                </div>
+                                            </div>
+                                        </template>
                                     </td>
                                 </tr>
                             </tbody>
@@ -295,6 +340,6 @@
 </div>
 
 {% if editable %}
-<script src="{% static 'js/planificacion_tabular.js' %}?v=2026-10-19"></script>
+<script src="{% static 'js/planificacion_tabular.js' %}?v=2026-10-27"></script>
 {% endif %}
 {% endblock layout_completo %}

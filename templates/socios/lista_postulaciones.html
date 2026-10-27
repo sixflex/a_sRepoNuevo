@@ -8,7 +8,7 @@
 
 <div class="mb-3">
     <h1 class="page-title">Postulaciones de Socios</h1>
-    <p class="page-subtitle mb-0">Revisa a los socios que llegan por una convocatoria y a los que proponen los equipos.</p>
+    <p class="page-subtitle mb-0">Revisa a los socios que llegan por una convocatoria, a los que proponen los equipos y a los que sugiere Dirección de Carrera.</p>
 </div>
 
 <nav class="tabs-revision mb-3" aria-label="Origen de los socios">
@@ -19,6 +19,10 @@
     <a href="?origen=equipos&amp;orden={{ orden }}" class="tab-revision{% if origen == 'equipos' %} activa{% endif %}"{% if origen == 'equipos' %} aria-current="page"{% endif %}>
         <i class="bi bi-people" aria-hidden="true"></i>Propuestos por equipos
         {% if propuestos %}<span class="tab-contador" title="Por revisar">{{ propuestos|length }}</span>{% endif %}
+    </a>
+    <a href="?origen=direccion&amp;orden={{ orden }}" class="tab-revision{% if origen == 'direccion' %} activa{% endif %}"{% if origen == 'direccion' %} aria-current="page"{% endif %}>
+        <i class="bi bi-building" aria-hidden="true"></i>Sugeridos por Dirección
+        {% if sugeridos_sin_registrar %}<span class="tab-contador" title="Sin registrar">{{ sugeridos_sin_registrar }}</span>{% endif %}
     </a>
 </nav>
 
@@ -90,6 +94,71 @@
     {% endif %}
 </div>
 
+{% elif origen == "direccion" %}
+<div class="card-ua">
+    <div class="card-header-ua">
+        <span><i class="bi bi-building me-2" style="color: var(--ua-red);"></i>Socios sugeridos por Dirección de Carrera</span>
+        {% if sugeridos %}{% include "includes/orden_listado.html" with opciones=opciones_orden %}{% endif %}
+    </div>
+    <p class="small text-muted px-4 pt-3 mb-0">
+        Dirección los anotó como posibles socios al enviar su planificación. Todavía no son socios: invítalos a postular con el formulario público.
+    </p>
+    {% if sugeridos %}
+        <div class="table-responsive">
+            <table class="table tabla-ua mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Socio sugerido</th>
+                        <th scope="col">Sugerido para</th>
+                        <th scope="col">Envío</th>
+                        <th scope="col" class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sugerido in sugeridos %}
+                        {% with fila=sugerido.fila enlace=sugerido.fila.planificacion.enlace %}
+                        <tr>
+                            <td>
+                                <span class="socio-nombre">{{ sugerido.nombre|default:"Sin nombre" }}</span>
+                                <div class="socio-rut">{{ sugerido.rubro|default:"Sin rubro" }}{% if sugerido.correo %} · {{ sugerido.correo }}{% endif %}</div>
+                            </td>
+                            <td>
+                                NRC {{ fila.nrc }} · {{ fila.asignatura_texto }}
+                                <div class="socio-rut">{{ enlace.unidad_academica }} · {{ enlace.campus }} · {{ enlace.periodo }}</div>
+                            </td>
+                            <td>{{ sugerido.fecha|date:"d/m/Y H:i"|default:"—" }}</td>
+                            <td class="text-end text-nowrap">
+                                {% if sugerido.socio_id %}
+                                    <span class="badge-estado estado-APROBADO">Ya registrado</span>
+                                    <a href="{% url 'socios:detalle_historial' sugerido.socio_id %}" class="btn-accion text-decoration-none ms-1">
+                                        <i class="bi bi-file-text me-1" aria-hidden="true"></i>Ver ficha
+                                    </a>
+                                {% elif sugerido.correo %}
+                                    <a href="mailto:{{ sugerido.correo|urlencode:'@' }}?subject={{ asunto_invitacion|urlencode }}&amp;body={{ cuerpo_invitacion|urlencode }}" class="btn-accion text-decoration-none">
+                                        <i class="bi bi-envelope me-1" aria-hidden="true"></i>Invitar a postular
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted small">Sin correo: comparte el enlace</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endwith %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="px-4 py-3 small border-top">
+            Enlace del formulario de postulación:
+            <code class="user-select-all">{{ enlace_postulacion }}</code>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <i class="bi bi-building" aria-hidden="true"></i>
+            <p class="mt-2 mb-0 fw-semibold">Dirección no ha sugerido socios en sus planificaciones enviadas</p>
+        </div>
+    {% endif %}
+</div>
+
 {% else %}
 <div class="card-ua">
     <div class="card-header-ua">
@@ -120,7 +189,7 @@
                             <td>
                                 {% if socio.equipo_origen %}
                                     Grupo {{ socio.equipo_origen.numero_grupo }} · NRC {{ socio.equipo_origen.seccion.nrc }}
-                                    <div class="socio-rut">{{ socio.equipo_origen.seccion.asignatura.nombre }} · {{ socio.equipo_origen.informante_nombre }}</div>
+                                    <div class="socio-rut">{{ socio.equipo_origen.seccion.asignatura.nombre }} · Informante: {{ socio.equipo_origen.informante_nombre }}</div>
                                 {% else %}
                                     <span class="text-muted small">Sin equipo asociado</span>
                                 {% endif %}
@@ -145,4 +214,4 @@
 </div>
 {% endif %}
 
-{% endblock %}
+{% endblock %}

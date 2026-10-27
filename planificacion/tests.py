@@ -545,9 +545,12 @@ class PlanificacionHU01TestCase(TestCase):
             "filas-0-asignatura_texto": self.asignatura.nombre,
             "filas-0-nivel": "5",
             "filas-0-jornada": "Diurna",
-            "filas-0-horario": "Lunes 10:00 - 12:00",
+            "filas-0-horario_0": ["Lu", "Ju"],
+            "filas-0-horario_1": "10:00",
             "filas-0-estudiantes_planificados": "30",
-            "filas-0-posible_socio_texto": "Fundación de prueba",
+            "socios-0-TOTAL_FORMS": "1",
+            "socios-0-INITIAL_FORMS": "0",
+            "socios-0-0-nombre": "Fundación de prueba",
             "docentes-0-TOTAL_FORMS": "1",
             "docentes-0-INITIAL_FORMS": "0",
             "docentes-0-MIN_NUM_FORMS": "0",
@@ -603,6 +606,9 @@ class PlanificacionHU01TestCase(TestCase):
         self.assertIsNotNone(
             fila.seccion_resultante
         )
+        self.assertEqual(fila.horario, "Lunes, Jueves 10:00")
+        self.assertEqual(fila.seccion_resultante.horario, "Lunes, Jueves 10:00")
+        self.assertEqual(fila.posible_socio_texto, "Fundación de prueba")
 
         self.assertTrue(
             Seccion.objects.filter(
@@ -643,3 +649,152 @@ class PlanificacionHU01TestCase(TestCase):
             ).count(),
             cantidad_secciones,
         )
+
+
+
+class HorarioYSociosPlanificacionTestCase(TestCase):
+    """Subtareas 2.1 y 2.2: horario por días y socios opcionales en la planilla de Dirección."""
+
+    setUp_base = PlanificacionHU01TestCase.setUp
+
+    def setUp(self):
+        self.setUp_base()
+        self.url = reverse("planificacion:formulario_tabular_as", kwargs={"token": self.enlace.token})
+
+    def datos(self, boton="guardar_borrador", dias=("Lu", "Mi"), hora="08:30", socios=()):
+        datos = {
+            boton: "1",
+            "filas-TOTAL_FORMS": "1",
+            "filas-INITIAL_FORMS": "0",
+            "filas-MIN_NUM_FORMS": "0",
+            "filas-MAX_NUM_FORMS": "1000",
+            "filas-0-facultad_texto": self.facultad.nombre,
+            "filas-0-carrera_texto": self.carrera.nombre,
+            "filas-0-declaracion_as": "on",
+            "filas-0-nrc": "HOR-100",
+            "filas-0-seccion": "1",
+            "filas-0-asignatura_texto": self.asignatura.nombre,
+            "filas-0-nivel": "5",
+            "filas-0-jornada": "Diurna",
+            "filas-0-horario_0": list(dias),
+            "filas-0-horario_1": hora,
+            "filas-0-horario_2": "",
+            "filas-0-estudiantes_planificados": "30",
+            "docentes-0-TOTAL_FORMS": "1",
+            "docentes-0-INITIAL_FORMS": "0",
+            "docentes-0-MIN_NUM_FORMS": "0",
+            "docentes-0-MAX_NUM_FORMS": "1000",
+            "docentes-0-0-rut": self.docente.rut,
+            "docentes-0-0-nombre": "Docente Prueba",
+            "docentes-0-0-correo": self.docente.correo_institucional,
+            "socios-0-TOTAL_FORMS": str(len(socios)),
+            "socios-0-INITIAL_FORMS": "0",
+            "socios-0-MIN_NUM_FORMS": "0",
+            "socios-0-MAX_NUM_FORMS": "1000",
+        }
+        for i, socio in enumerate(socios):
+            for campo, valor in socio.items():
+                datos[f"socios-0-{i}-{campo}"] = valor
+        return datos
+
+    def fila(self):
+        return FilaPlanificacion.objects.get(planificacion=self.planificacion, nrc="HOR-100")
+
+    def test_textos_de_horario_y_socios(self):
+        from datetime import time
+        from planificacion.textos import leer_horario, leer_socios, texto_horario, texto_socios
+
+        self.assertEqual(texto_horario(["Mi", "Lu"], time(8, 30)), "Lunes, Miércoles 08:30")
+        self.assertEqual(leer_horario("Lunes, Miércoles 08:30"), (["Lu", "Mi"], "08:30"))
+        self.assertEqual(leer_horario("Lu, Mi 08:30"), (["Lu", "Mi"], "08:30"))
+        self.assertIsNone(leer_horario("Lunes 10:00 - 12:00"))
+        self.assertEqual(
+            texto_socios([{"nombre": "Junta | Norte", "correo": "", "rubro": "Barrio"}, {"nombre": "", "correo": "", "rubro": ""}]),
+            "Junta / Norte |  | Barrio",
+        )
+        self.assertEqual(leer_socios("Fundación antigua"), [{"nombre": "Fundación antigua", "correo": "", "rubro": ""}])
+        self.assertEqual(leer_socios("Por definir"), [])
+
+    def test_marcar_dias_y_hora_guarda_el_texto_y_el_borrador_lo_vuelve_a_marcar(self):
+        self.client.post(self.url, self.datos())
+
+        self.assertEqual(self.fila().horario, "Lunes, Miércoles 08:30")
+        respuesta = self.client.get(self.url)
+        self.assertContains(respuesta, 'value="Lu" id="id_filas-0-horario_0_0" checked')
+        self.assertContains(respuesta, 'value="Mi" id="id_filas-0-horario_0_2" checked')
+        self.assertNotContains(respuesta, 'value="Ma" id="id_filas-0-horario_0_1" checked')
+        self.assertContains(respuesta, 'value="08:30"')
+
+    def test_hora_invalida_muestra_error_junto_al_campo(self):
+        respuesta = self.client.post(self.url, self.datos(hora="25:99"))
+
+        self.assertContains(respuesta, "Ingrese una hora válida")
+        self.assertFalse(FilaPlanificacion.objects.filter(nrc="HOR-100").exists())
+
+    def test_dias_sin_hora_pide_la_hora(self):
+        respuesta = self.client.post(self.url, self.datos(hora=""))
+
+        self.assertContains(respuesta, "Ingrese la hora de inicio")
+
+    def test_horario_antiguo_se_muestra_y_no_se_pierde(self):
+        form = FilaPlanificacionForm(instance=FilaPlanificacion(horario="Lunes 10:00 - 12:00"))
+        html = str(form["horario"])
+
+        self.assertIn("Guardado: Lunes 10:00 - 12:00", html)
+        self.assertIn('value="Lunes 10:00 - 12:00"', html)
+
+        datos = self.datos(dias=(), hora="")
+        datos["filas-0-horario_2"] = "Lunes 10:00 - 12:00"
+        self.client.post(self.url, datos)
+        self.assertEqual(self.fila().horario, "Lunes 10:00 - 12:00")
+
+    def test_envio_final_lleva_el_horario_a_la_seccion(self):
+        self.client.post(self.url, self.datos(boton="enviar_final"))
+
+        self.assertEqual(self.fila().seccion_resultante.horario, "Lunes, Miércoles 08:30")
+
+    def test_socios_opcionales_se_guardan_y_el_borrador_los_conserva(self):
+        socios = [
+            {"nombre": "Almacén Doña Rosa", "correo": "rosa@almacen.cl", "rubro": "Alimentación"},
+            {"nombre": "Taller Mecánico", "correo": "", "rubro": ""},
+        ]
+        self.client.post(self.url, self.datos(socios=socios))
+
+        self.assertEqual(
+            self.fila().posible_socio_texto,
+            "Almacén Doña Rosa | rosa@almacen.cl | Alimentación\nTaller Mecánico",
+        )
+        respuesta = self.client.get(self.url)
+        self.assertContains(respuesta, 'value="Almacén Doña Rosa"')
+        self.assertContains(respuesta, 'value="rosa@almacen.cl"')
+        self.assertContains(respuesta, 'value="Taller Mecánico"')
+        self.assertNotContains(respuesta, "Posible socio comunitario</th>")
+
+    def test_se_puede_enviar_sin_socios(self):
+        self.client.post(self.url, self.datos(boton="enviar_final", socios=[{"nombre": "", "correo": "", "rubro": ""}]))
+
+        self.planificacion.refresh_from_db()
+        self.assertEqual(self.planificacion.estado, "FINAL")
+        self.assertIsNone(self.fila().posible_socio_texto)
+
+    def test_socio_quitado_no_se_guarda(self):
+        socios = [{"nombre": "Se quita", "correo": "", "rubro": "", "DELETE": "on"}]
+        self.client.post(self.url, self.datos(socios=socios))
+
+        self.assertIsNone(self.fila().posible_socio_texto)
+
+    def test_la_casilla_de_socio_solo_aparece_al_presionar_el_boton(self):
+        respuesta = self.client.get(self.url)
+
+        self.assertContains(respuesta, "Agregar socio (opcional)")
+        self.assertContains(respuesta, 'name="socios-0-TOTAL_FORMS" value="0"')
+        self.assertNotContains(respuesta, 'name="socios-0-0-nombre"')
+
+    def test_correo_invalido_o_texto_muy_largo_muestra_error(self):
+        respuesta = self.client.post(self.url, self.datos(socios=[{"nombre": "X", "correo": "no-es-correo"}]))
+        self.assertContains(respuesta, "Introduzca una dirección de correo electrónico válida")
+
+        largos = [{"nombre": "N" * 100, "correo": "", "rubro": "R" * 60} for _ in range(2)]
+        respuesta = self.client.post(self.url, self.datos(socios=largos))
+        self.assertContains(respuesta, "Los datos de los socios son demasiado largos")
+        self.assertFalse(FilaPlanificacion.objects.filter(nrc="HOR-100").exists())
