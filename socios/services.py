@@ -4,9 +4,14 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.db import IntegrityError, transaction
+from django.db.models import Exists, OuterRef, Q
+from django.db.models.functions import Lower
 from django.utils import timezone
 from academico.models import Docente
 from comunicaciones.models import EnvioCorreo
+from encuestas.models import RespuestaPregunta
+from planificacion.models import FilaPlanificacion
+from planificacion.textos import leer_socios
 from proyectos.models import Equipo
 
 from auditoria.models import AuditoriaCambio
@@ -55,6 +60,65 @@ def correo_contacto_principal(socio):
         return None
     contacto = socio.contactos.filter(es_principal=True, activo=True).exclude(correo="").first()
     return contacto.correo if contacto and contacto.correo else None
+
+
+# Preguntas de la postulación que describen qué hace el socio (Ficha de emprendedores).
+PREGUNTAS_QUE_HACE = ("Producto o servicio", "Rubro")
+
+
+def _filtro_preguntas_que_hace(prefijo=""):
+    filtro = Q()
+    for inicio in PREGUNTAS_QUE_HACE:
+        filtro |= Q(**{f"{prefijo}pregunta__texto__istartswith": inicio})
+    return filtro
+
+
+def filtro_que_hace(texto):
+    """
+    Busca en lo mismo que muestra «Qué hace»: producto o servicio y rubro de
+    sus postulaciones y los servicios realizados en sus participaciones.
+    """
+    respuestas = RespuestaPregunta.objects.filter(
+        _filtro_preguntas_que_hace(),
+        respuesta__postulacion_socio__socio=OuterRef("pk"),
+        valor_texto__icontains=texto,
+    )
+    servicios = ParticipacionSocio.objects.filter(
+        socio=OuterRef("pk"), servicio_realizado__icontains=texto,
+    )
+    return Q(Exists(respuestas)) | Q(Exists(servicios))
+
+
+def descripciones_socios(socio_ids):
+    """
+    «Qué hace» cada socio para el catálogo del Docente (RF-SC-03), en dos consultas:
+    producto o servicio y rubro de su última postulación; si no postuló, el último
+    servicio realizado en sus participaciones. Nunca usa contactos ni evaluaciones.
+    """
+    respuestas = (
+        RespuestaPregunta.objects
+        .filter(_filtro_preguntas_que_hace(), respuesta__postulacion_socio__socio_id__in=socio_ids)
+        .exclude(valor_texto__isnull=True).exclude(valor_texto="")
+        .order_by("-respuesta__postulacion_socio__fecha_recepcion", "pregunta__orden")
+        .values_list("respuesta__postulacion_socio__socio_id", "respuesta_id", "valor_texto")
+    )
+    partes = {}
+    ultima_respuesta = {}
+    for socio_id, respuesta_id, valor in respuestas:
+        if ultima_respuesta.setdefault(socio_id, respuesta_id) == respuesta_id:
+            partes.setdefault(socio_id, []).append(valor.strip())
+    descripciones = {socio_id: " · ".join(valores) for socio_id, valores in partes.items()}
+
+    servicios = (
+        ParticipacionSocio.objects
+        .filter(socio_id__in=set(socio_ids) - set(descripciones))
+        .exclude(servicio_realizado__isnull=True).exclude(servicio_realizado="")
+        .order_by("-fecha_inicio", "-id")
+        .values_list("socio_id", "servicio_realizado")
+    )
+    for socio_id, servicio in servicios:
+        descripciones.setdefault(socio_id, servicio.strip())
+    return descripciones
 
 
 def historial_estados_socio(socio):
@@ -152,6 +216,51 @@ def socios_propuestos_por_equipos():
     return SocioComunitario.objects.filter(
         estado_revision="RECIBIDO", postulaciones__isnull=True,
     )
+
+
+def socios_sugeridos_por_direccion(orden=None):
+    """
+    Posibles socios que Dirección de Carrera anotó en su planificación enviada
+    (RF-ACA-03, campo posible_socio_texto). No son socios todavía: el
+    Coordinador los invita a postular por el formulario público (RF-SC-01).
+    Se marca si ya existe un socio con ese nombre o un contacto con ese correo.
+    """
+    filas = (
+        FilaPlanificacion.objects
+        .filter(planificacion__estado="FINAL")
+        .exclude(posible_socio_texto__isnull=True).exclude(posible_socio_texto="")
+        .select_related(
+            "planificacion__enlace__unidad_academica",
+            "planificacion__enlace__campus",
+            "planificacion__enlace__periodo",
+        )
+        .order_by("planificacion__fecha_envio_final", "numero_fila", "id")
+    )
+
+    sugeridos = []
+    for fila in filas:
+        for socio in leer_socios(fila.posible_socio_texto):
+            if socio["nombre"] or socio["correo"]:
+                sugeridos.append({**socio, "fila": fila, "fecha": fila.planificacion.fecha_envio_final})
+
+    nombres = {s["nombre"].lower() for s in sugeridos if s["nombre"]}
+    correos = {s["correo"].lower() for s in sugeridos if s["correo"]}
+    por_nombre = dict(
+        SocioComunitario.objects.annotate(clave=Lower("nombre_organizacion"))
+        .filter(clave__in=nombres).values_list("clave", "id")
+    )
+    por_correo = dict(
+        ContactoSocio.objects.annotate(clave=Lower("correo"))
+        .filter(clave__in=correos).values_list("clave", "socio_id")
+    )
+    for sugerido in sugeridos:
+        sugerido["socio_id"] = (
+            por_correo.get(sugerido["correo"].lower()) or por_nombre.get(sugerido["nombre"].lower())
+        )
+
+    if orden != "antiguos":
+        sugeridos.reverse()
+    return sugeridos
 
 
 CAMPOS_FICHA_SOCIO = [

@@ -6,9 +6,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from academico.constantes import TIPOS_CONTRATO
-from .forms import (DocenteFilaFormSet, FilaPlanificacionFormSet)
+from .forms import (DocenteFilaFormSet, FilaPlanificacionFormSet, SocioFilaFormSet)
 from .models import (FilaPlanificacion, FilaPlanificacionDocente, Planificacion, PlanificacionEnlace)
 from .services import validar_y_consolidar_planificacion
+from .textos import leer_socios, texto_socios
 from auditoria.services import registrar_auditoria
 
 
@@ -56,6 +57,36 @@ def _crear_formsets_docentes(request, formset_filas):
         formsets.append(formset_docentes)
 
     return formsets
+
+
+def _crear_formsets_socios(request, formset_filas):
+    """Posibles socios de cada fila (opcionales), guardados en posible_socio_texto."""
+    formsets = []
+
+    for indice, form_fila in enumerate(formset_filas.forms):
+        prefix = f"socios-{indice}"
+
+        if request.method == "POST":
+            datos = request.POST
+            if f"{prefix}-TOTAL_FORMS" not in datos:
+                # Fila enviada sin la casilla de socios: no trae socios.
+                datos = {f"{prefix}-TOTAL_FORMS": "0", f"{prefix}-INITIAL_FORMS": "0"}
+            formsets.append(SocioFilaFormSet(datos, prefix=prefix))
+        else:
+            formsets.append(SocioFilaFormSet(
+                prefix=prefix,
+                initial=leer_socios(form_fila.instance.posible_socio_texto),
+            ))
+
+    return formsets
+
+
+def _texto_socios_formset(formset_socios):
+    return texto_socios(
+        form.cleaned_data
+        for form in formset_socios.forms
+        if getattr(form, "cleaned_data", None) and not form.cleaned_data.get("DELETE")
+    )
 
 
 def _fila_esta_activa(form):
@@ -215,17 +246,27 @@ def formulario_tabular_as(request, token):
             request,
             formset,
         )
+        socios_formsets = _crear_formsets_socios(request, formset)
 
         formularios_validos = formset.is_valid()
         docentes_validos = True
 
-        for form_fila, formset_docentes in zip(
+        for form_fila, formset_docentes, formset_socios in zip(
             formset.forms,
             docentes_formsets,
+            socios_formsets,
         ):
             nrc_valor = getattr(form_fila, "cleaned_data", {}).get("nrc")
             if not _fila_esta_activa(form_fila) or not nrc_valor:
                 continue
+
+            if not formset_socios.is_valid():
+                docentes_validos = False
+            elif len(_texto_socios_formset(formset_socios)) > FilaPlanificacion._meta.get_field("posible_socio_texto").max_length:
+                formset_socios._non_form_errors = ErrorList(
+                    ["Los datos de los socios son demasiado largos. Acorte o quite alguno."]
+                )
+                docentes_validos = False
 
             if not formset_docentes.is_valid():
                 docentes_validos = False
@@ -267,9 +308,10 @@ def formulario_tabular_as(request, token):
                     or 0
                 )
 
-                for form_fila, formset_docentes in zip(
+                for form_fila, formset_docentes, formset_socios in zip(
                     formset.forms,
                     docentes_formsets,
+                    socios_formsets,
                 ):
                     nrc_valor = getattr(form_fila, "cleaned_data", {}).get("nrc")
                     if not _fila_esta_activa(form_fila) or not nrc_valor:
@@ -278,6 +320,7 @@ def formulario_tabular_as(request, token):
                     fila = form_fila.save(commit=False)
                     fila.planificacion = planificacion
                     fila.campus_texto = enlace.campus.nombre
+                    fila.posible_socio_texto = _texto_socios_formset(formset_socios) or None
                     fila.estado_validacion = "PENDIENTE"
 
                     if not fila.pk:
@@ -362,7 +405,6 @@ def formulario_tabular_as(request, token):
         fila_defecto = {
             "facultad_texto": facultad.nombre if facultad else "",
             "carrera_texto": unidad.carrera.nombre if unidad.carrera else "",
-            "posible_socio_texto": "",
         }
 
         if not queryset.exists():
@@ -380,9 +422,10 @@ def formulario_tabular_as(request, token):
             request,
             formset,
         )
+        socios_formsets = _crear_formsets_socios(request, formset)
 
     filas_con_docentes = list(
-        zip(formset.forms, docentes_formsets)
+        zip(formset.forms, docentes_formsets, socios_formsets)
     )
 
     docentes_empty_formset = DocenteFilaFormSet(

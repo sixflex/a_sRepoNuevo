@@ -89,12 +89,15 @@
                 </div>
 
                 <div class="card-ua p-3 p-md-4 mb-3">
-                    <h2 class="panel-titulo">Propuesto por</h2>
+                    <h2 class="panel-titulo">Propuesto por el equipo</h2>
                     {% for participacion in participaciones %}
                         <div class="{% if not forloop.first %}mt-3 pt-3 border-top{% endif %}">
                             <span class="socio-nombre">Grupo {{ participacion.equipo.numero_grupo }} · NRC {{ participacion.equipo.seccion.nrc }}</span>
                             <div class="socio-rut">{{ participacion.equipo.seccion.asignatura.nombre }}{% if participacion.periodo %} · {{ participacion.periodo }}{% endif %}</div>
-                            <div class="small mt-1">Informante: {{ participacion.equipo.informante_nombre }}</div>
+                            <div class="small mt-1">
+                                Lo registró {{ participacion.equipo.informante_nombre }}, estudiante informante del grupo, en el formulario de equipos que compartió
+                                {% with docentes=participacion.equipo.seccion.seccion_docentes.all %}{% if docentes %}{% for sd in docentes %}{% if not forloop.first %}{% if forloop.last %} y {% else %}, {% endif %}{% endif %}{{ sd.docente.nombres }} {{ sd.docente.apellidos }}{% endfor %} (Docente){% else %}el Docente de la sección{% endif %}{% endwith %}.
+                            </div>
                             {% if participacion.equipo.informante_correo %}
                                 <div class="dato-contacto">
                                     <a href="mailto:{{ participacion.equipo.informante_correo }}"><i class="bi bi-envelope" aria-hidden="true"></i>{{ participacion.equipo.informante_correo }}</a>

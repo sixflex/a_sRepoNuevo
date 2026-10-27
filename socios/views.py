@@ -67,24 +67,36 @@ def catalogo_socios_docente(request):
     q = request.GET.get('q', '').strip()
     comuna_id = request.GET.get('comuna')
     clasificacion_id = request.GET.get('clasificacion')
+    estado = request.GET.get('estado', '')
 
     if q:
+        # Nombre, RUT o lo que hace el socio (rubro, producto, servicio realizado).
         socios = socios.filter(
             Q(nombre_organizacion__icontains=q) |
-            Q(rut__icontains=q)
+            Q(rut__icontains=q) |
+            services.filtro_que_hace(q)
         )
     if comuna_id:
         socios = socios.filter(comuna_id=comuna_id)
     if clasificacion_id:
         socios = socios.filter(clasificacion_id=clasificacion_id)
+    if estado in ESTADOS_SELECCIONABLES:
+        socios = socios.filter(estado_revision=estado)
+
+    socios = list(socios)
+    descripciones = services.descripciones_socios([s.id for s in socios])
+    for socio in socios:
+        socio.que_hace = descripciones.get(socio.id, "")
 
     context = {
         'socios': socios,
         'comunas': comunas_con_socios(socios_disponibles()),
         'clasificaciones': ClasificacionSocio.objects.filter(activo=True),
+        'estados': ESTADOS_SELECCIONABLES,
         'q': q,
         'comuna_id': comuna_id,
         'clasificacion_id': clasificacion_id,
+        'estado': estado,
     }
     return render(request, 'socios/catalogo_docente.html', context)
 
@@ -270,11 +282,15 @@ def detalle_historial_socio(request, socio_id):
 @coordinador_required
 def lista_postulaciones(request):
     """
-    Lo que el coordinador debe revisar, en dos pestañas: las postulaciones que
-    llegan por el formulario de una convocatoria (RF-SC-01/02) y los socios que
-    propone un equipo al inscribirse (RF-SC-04).
+    Lo que el coordinador debe revisar, en tres pestañas: las postulaciones que
+    llegan por el formulario de una convocatoria (RF-SC-01/02), los socios que
+    propone un equipo al inscribirse (RF-SC-04) y los posibles socios que
+    sugiere Dirección de Carrera en su planificación (RF-ACA-03), para
+    invitarlos a postular.
     """
-    origen = 'equipos' if request.GET.get('origen') == 'equipos' else 'convocatoria'
+    origen = request.GET.get('origen')
+    if origen not in ('equipos', 'direccion'):
+        origen = 'convocatoria'
     orden = orden_pedido(request)
 
     postulaciones = ordenar_por_fecha(PostulacionSocio.objects.select_related(
@@ -296,8 +312,19 @@ def lista_postulaciones(request):
             socio.participaciones_equipo[0].equipo if socio.participaciones_equipo else None
         )
 
+    sugeridos = services.socios_sugeridos_por_direccion(orden)
+    enlace_postulacion = request.build_absolute_uri(reverse('socios:postular_publico'))
+
     return render(request, 'socios/lista_postulaciones.html', {
         'origen': origen,
+        'sugeridos': sugeridos,
+        'sugeridos_sin_registrar': sum(1 for s in sugeridos if not s['socio_id']),
+        'enlace_postulacion': enlace_postulacion,
+        'asunto_invitacion': 'Invitación a postular como Socio Comunitario A+S',
+        'cuerpo_invitacion': (
+            'Hola, Dirección de Carrera sugirió a su organización para trabajar con estudiantes '
+            f'en asignaturas A+S. Puede postular en este enlace: {enlace_postulacion}'
+        ),
         'postulaciones': postulaciones,
         'pendientes_convocatoria': sum(1 for p in postulaciones if p.estado == 'RECIBIDA'),
         'propuestos': propuestos,
@@ -342,7 +369,9 @@ def revisar_socio_propuesto(request, socio_id):
 
     participaciones = (
         socio.participaciones.filter(equipo__isnull=False)
-        .select_related('equipo__seccion__asignatura', 'periodo').order_by('fecha_inicio', 'pk')
+        .select_related('equipo__seccion__asignatura', 'periodo')
+        .prefetch_related('equipo__seccion__seccion_docentes__docente')
+        .order_by('fecha_inicio', 'pk')
     )
     return render(request, 'socios/revisar_propuesto.html', {
         'socio': socio,

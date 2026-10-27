@@ -1,0 +1,23 @@
+/* Lista desplegable en la que se puede escribir (static/js/select_buscable.js) */
+.select-buscable { position: relative; }
+.select-buscable-lista {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 2px);
+    left: 0;
+    min-width: 100%;
+    width: max-content;
+    max-width: min(380px, 90vw);
+    max-height: 260px;
+    margin: 0;
+    padding: 4px 0;
+    overflow-y: auto;
+    list-style: none;
+    background: #FFF;
+    border: 1px solid var(--ua-border-strong, #D1D5DB);
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+.select-buscable-lista li { padding: 6px 12px; font-size: 0.9rem; cursor: pointer; }
+.select-buscable-lista li.activa { background: var(--ua-red-soft, #FDEDEE); color: var(--ua-red-hover, #A71C23); }
+.select-buscable-lista li.sin-resultados { color: #6B7280; cursor: default; }

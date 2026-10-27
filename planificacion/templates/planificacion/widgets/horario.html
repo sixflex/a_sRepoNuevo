@@ -1,0 +1,22 @@
+{# Horario de la fila (subtarea 2.1): días de la semana y hora de inicio, en una sola línea. #}
+{% with dias=widget.subwidgets.0 hora=widget.subwidgets.1 anterior=widget.subwidgets.2 %}
+<div class="horario-campo">
+    <fieldset class="horario-dias">
+        <legend class="visually-hidden">Días de la semana</legend>
+        {% for _grupo, opciones, _indice in dias.optgroups %}{% for opcion in opciones %}
+            <label for="{{ opcion.attrs.id }}" title="{{ opcion.label }}">
+                <input type="checkbox" name="{{ opcion.name }}" value="{{ opcion.value }}" id="{{ opcion.attrs.id }}"{% if opcion.selected %} checked{% endif %}>
+                <span aria-hidden="true">{{ opcion.value }}</span><span class="visually-hidden">{{ opcion.label }}</span>
+            </label>
+        {% endfor %}{% endfor %}
+    </fieldset>
+    <label class="visually-hidden" for="{{ hora.attrs.id }}">Hora de inicio</label>
+    {% include hora.template_name with widget=hora %}
+    {% include anterior.template_name with widget=anterior %}
+    {% if anterior.value %}
+        <div class="horario-anterior" title="Horario guardado con otro formato; marque días y hora para reemplazarlo">
+            Guardado: {{ anterior.value }}
+        </div>
+    {% endif %}
+</div>
+{% endwith %}

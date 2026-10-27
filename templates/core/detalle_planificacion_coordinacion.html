@@ -140,7 +140,7 @@ Detalle de Planificación | Portal A+S
                                     <td>{{ fila.jornada|default:"—" }}</td>
                                     <td>{{ fila.horario|default:"—" }}</td>
                                     <td>{{ fila.estudiantes_planificados|default:"—" }}</td>
-                                    <td>{{ fila.posible_socio_texto|default:"—" }}</td>
+                                    <td>{% if fila.posible_socio_texto %}{{ fila.posible_socio_texto|linebreaksbr }}{% else %}Por definir{% endif %}</td>
 
                                     <td>
                                         {% for docente in fila.docentes.all %}

@@ -1,9 +1,10 @@
 {% extends "base.html" %}
-{% load core_extras %}
+{% load static core_extras %}
 
 {% block title %}Socios Comunitarios | Portal A+S{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'css/select_buscable.css' %}?v=2026-10-27b">
 <style>
     .page-title {
         font-family: 'Montserrat', 'Inter', sans-serif;
@@ -262,7 +263,7 @@
 
                 <div class="col-6 col-lg-3">
                     <label for="comuna" class="form-label-ua">Comuna</label>
-                    <select id="comuna" name="comuna" class="form-select">
+                    <select id="comuna" name="comuna" class="form-select" data-buscable>
                         <option value="">Todas</option>
                         {% for c in comunas %}
                             <option value="{{ c.id }}" {% if filtros.comuna == c.id|stringformat:"s" %}selected{% endif %}>{{ c }}</option>
@@ -498,4 +499,8 @@
         });
     });
 </script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/select_buscable.js' %}?v=2026-10-27"></script>
 {% endblock %}

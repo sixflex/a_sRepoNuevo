@@ -221,6 +221,50 @@ class EnvioCartaDocenteTestCase(TestCase):
         self.assertEqual(CartaDocumento.objects.count(), 1)
         self.assertNotContains(self.client.get(detalle), "Reintentar envío")
 
+class AlertaCartasPendientesTestCase(TestCase):
+    """SP7 2.4: la alerta del Coordinador indica la antigüedad de la carta pendiente más antigua (RF-CAR-05)."""
+
+    setUp_base = CartasServicesTestCase.setUp
+
+    def setUp(self):
+        self.setUp_base()
+        self.usuario.groups.add(Group.objects.get_or_create(name="Coordinador")[0])
+        self.client.force_login(self.usuario)
+        self.solicitud.estado = "PENDIENTE"
+        self.solicitud.fecha_aprobacion = None
+        self.solicitud.save()
+
+    def _alerta_con_antiguedad(self, dias):
+        SolicitudCarta.objects.filter(pk=self.solicitud.pk).update(
+            fecha_solicitud=timezone.now() - timedelta(days=dias)
+        )
+        respuesta = self.client.get(reverse("core:coordinacion"))
+        return respuesta.context["pendientes"][0]
+
+    def test_nivel_de_alerta_segun_dias_de_la_mas_antigua(self):
+        for dias, nivel in [(0, "baja"), (2, "baja"), (3, "media"), (6, "media"), (7, "alta"), (12, "alta")]:
+            with self.subTest(dias=dias):
+                alerta = self._alerta_con_antiguedad(dias)
+                self.assertEqual(alerta["value"], 1)
+                self.assertEqual(alerta["antiguedad_dias"], dias)
+                self.assertEqual(alerta["nivel_alerta"], nivel)
+
+    def test_usa_la_solicitud_mas_antigua(self):
+        SolicitudCarta.objects.filter(pk=self.solicitud.pk).update(
+            fecha_solicitud=timezone.now() - timedelta(days=8)
+        )
+        otra = SolicitudCarta.objects.get(pk=self.solicitud.pk)
+        otra.pk = None
+        otra.fecha_solicitud = timezone.now()
+        otra.save()
+
+        alerta = self.client.get(reverse("core:coordinacion")).context["pendientes"][0]
+
+        self.assertEqual(alerta["value"], 2)
+        self.assertEqual(alerta["antiguedad_dias"], 8)
+        self.assertEqual(alerta["solicitud_mas_antigua_id"], self.solicitud.pk)
+
+
 class SolicitudCartaFormTestCase(TestCase):
 
     def setUp(self):

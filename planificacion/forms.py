@@ -5,6 +5,7 @@ from academico.constantes import JORNADAS, NIVELES, TIPOS_CONTRATO
 from academico.models import Carrera, Facultad
 
 from .models import FilaPlanificacion
+from .textos import DIAS_SEMANA, leer_horario, texto_horario
 
 
 class SelectConValorGuardado(forms.Select):
@@ -63,7 +64,63 @@ def opciones_planificacion():
     }
 
 
+class HorarioWidget(forms.MultiWidget):
+    """Checks Lu a Sá y hora de inicio; un horario antiguo con otro formato se muestra tal cual."""
+
+    template_name = "planificacion/widgets/horario.html"
+
+    def __init__(self, attrs=None):
+        super().__init__(
+            [
+                forms.CheckboxSelectMultiple(choices=DIAS_SEMANA),
+                forms.TimeInput(format="%H:%M", attrs={"type": "time", "class": "form-control form-control-sm"}),
+                forms.HiddenInput(),
+            ],
+            attrs,
+        )
+
+    def decompress(self, value):
+        leido = leer_horario(value)
+        if leido:
+            return [leido[0], leido[1], ""]
+        return [[], "", value or ""]
+
+
+class HorarioField(forms.MultiValueField):
+    """Se guarda como texto en FilaPlanificacion.horario, por ejemplo «Lu, Mi 08:30» (RNF-USA-03)."""
+
+    widget = HorarioWidget
+
+    def __init__(self, **kwargs):
+        super().__init__(
+            fields=[
+                forms.MultipleChoiceField(choices=DIAS_SEMANA, required=False),
+                forms.TimeField(
+                    required=False,
+                    input_formats=["%H:%M"],
+                    error_messages={"invalid": "Ingrese una hora válida, por ejemplo 08:30."},
+                ),
+                forms.CharField(required=False),
+            ],
+            require_all_fields=False,
+            required=False,
+            **kwargs,
+        )
+
+    def compress(self, data_list):
+        dias, hora, anterior = (list(data_list) + [None, None, None])[:3]
+        if not dias and not hora:
+            return anterior or ""
+        if not dias:
+            raise forms.ValidationError("Marque al menos un día para la hora de inicio.")
+        if not hora:
+            raise forms.ValidationError("Ingrese la hora de inicio de los días marcados.")
+        return texto_horario(dias, hora)
+
+
 class FilaPlanificacionForm(forms.ModelForm):
+    horario = HorarioField(label="Horario")
+
     class Meta:
         model = FilaPlanificacion
         fields = [
@@ -77,7 +134,6 @@ class FilaPlanificacionForm(forms.ModelForm):
             "jornada",
             "horario",
             "estudiantes_planificados",
-            "posible_socio_texto",
         ]
         widgets = {
             "facultad_texto": _lista([]),
@@ -96,19 +152,10 @@ class FilaPlanificacionForm(forms.ModelForm):
             ),
             "nivel": _lista(NIVELES, "—"),
             "jornada": _lista(JORNADAS, "—"),
-            "horario": forms.TextInput(
-                attrs={"class": "form-control form-control-sm"}
-            ),
             "estudiantes_planificados": forms.NumberInput(
                 attrs={
                     "class": "form-control form-control-sm",
                     "min": 0,
-                }
-            ),
-            "posible_socio_texto": forms.TextInput(
-                attrs={
-                    "class": "form-control form-control-sm",
-                    "placeholder": "Por definir",
                 }
             ),
         }
@@ -147,7 +194,8 @@ class BaseFilaPlanificacionFormSet(BaseModelFormSet):
                     form.data.get(form.add_prefix("asignatura_texto")),
                     form.data.get(form.add_prefix("nivel")),
                     form.data.get(form.add_prefix("jornada")),
-                    form.data.get(form.add_prefix("horario")),
+                    *form.data.getlist(form.add_prefix("horario_0"), []),
+                    form.data.get(form.add_prefix("horario_1")),
                     form.data.get(form.add_prefix("estudiantes_planificados")),
                 ]
 
@@ -264,6 +312,38 @@ class DocenteFilaForm(forms.Form):
 
 DocenteFilaFormSet = formset_factory(
     DocenteFilaForm,
+    extra=0,
+    can_delete=True,
+)
+
+
+class SocioFilaForm(forms.Form):
+    """Posible socio comunitario de la fila: todo es opcional (RF-ACA-03)."""
+
+    nombre = forms.CharField(
+        max_length=120,
+        required=False,
+        widget=forms.TextInput(
+            attrs={"class": "form-control form-control-sm", "placeholder": "Organización"}
+        ),
+    )
+    correo = forms.EmailField(
+        required=False,
+        widget=forms.EmailInput(
+            attrs={"class": "form-control form-control-sm", "placeholder": "correo@dominio.cl"}
+        ),
+    )
+    rubro = forms.CharField(
+        max_length=80,
+        required=False,
+        widget=forms.TextInput(
+            attrs={"class": "form-control form-control-sm", "placeholder": "Negocio o rubro"}
+        ),
+    )
+
+
+SocioFilaFormSet = formset_factory(
+    SocioFilaForm,
     extra=0,
     can_delete=True,
 )
