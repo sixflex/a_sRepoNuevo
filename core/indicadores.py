@@ -10,7 +10,8 @@ evaluación (encuestas). No guarda nada: solo consulta.
 from collections import defaultdict
 from urllib.parse import urlencode
 
-from django.db.models import Avg, Count, Q, Sum
+from django.db.models import Avg, Count, F, Min, Q, Sum
+from django.db.models.functions import Coalesce, ExtractYear
 from django.urls import reverse
 
 from academico.models import (
@@ -27,7 +28,7 @@ from academico.models import (
 from proyectos.models import IntegranteEquipo
 from rutas.models import SeccionRuta
 from rutas.services import con_avance, porcentaje_avance
-from socios.models import Comuna, ParticipacionSocio
+from socios.models import Comuna, ParticipacionSocio, SocioComunitario
 
 
 # Parámetros GET del panel de filtros, en el orden en que se muestran los chips.
@@ -242,23 +243,34 @@ def _participaciones(filtros, periodo=None, anio=None):
 # Tarjetas
 # ---------------------------------------------------------------------------
 
-def _valores(filtros, periodo=None, anio=None):
-    secciones = _secciones(filtros, periodo, anio)
+def _seccion_carreras(filtros, secciones):
     seccion_carreras = SeccionCarrera.objects.filter(seccion__in=secciones)
     if filtros.get("facultad"):
         seccion_carreras = seccion_carreras.filter(carrera__facultad_id=filtros["facultad"])
     if filtros.get("carrera"):
         seccion_carreras = seccion_carreras.filter(carrera_id=filtros["carrera"])
+    return seccion_carreras
 
+
+def _estudiantes(secciones, seccion_carreras):
+    """(estudiantes, son_planificados): integrantes de equipos o, sin equipos, los planificados."""
     estudiantes = IntegranteEquipo.objects.filter(equipo__seccion__in=secciones).count()
-    estudiantes_planificados = False
-    if not estudiantes:
-        estudiantes = seccion_carreras.aggregate(
-            total=Sum("estudiantes_planificados"),
-        )["total"] or 0
-        estudiantes_planificados = bool(estudiantes)
+    if estudiantes:
+        return estudiantes, False
+    estudiantes = seccion_carreras.aggregate(
+        total=Sum("estudiantes_planificados"),
+    )["total"] or 0
+    return estudiantes, bool(estudiantes)
 
-    participaciones = _participaciones(filtros, periodo, anio)
+
+def _valores(filtros, periodo=None, anio=None):
+    secciones = _secciones(filtros, periodo, anio)
+    seccion_carreras = _seccion_carreras(filtros, secciones)
+    estudiantes, estudiantes_planificados = _estudiantes(secciones, seccion_carreras)
+    participaciones = _participaciones(filtros, periodo, anio).aggregate(
+        socios=Count("socio", distinct=True),
+        total=Count("id"),
+    )
 
     return {
         "asignaturas": secciones.values("asignatura").distinct().count(),
@@ -269,25 +281,24 @@ def _valores(filtros, periodo=None, anio=None):
         "carreras": seccion_carreras.values("carrera").distinct().count(),
         "estudiantes": estudiantes,
         "estudiantes_planificados": estudiantes_planificados,
-        "socios": participaciones.values("socio").distinct().count(),
-        "participaciones": participaciones.count(),
+        "socios": participaciones["socios"],
+        "participaciones": participaciones["total"],
     }
 
 
 def estudiantes_participantes(filtros):
-    return _valores(filtros)["estudiantes"]
+    """Solo el total de estudiantes (el portal público no necesita las demás tarjetas)."""
+    secciones = _secciones(filtros)
+    return _estudiantes(secciones, _seccion_carreras(filtros, secciones))[0]
 
 
 def _periodo_anterior(periodo_id):
     """El período que viene justo antes (por año, fecha de inicio e id)."""
-    periodos = list(
-        PeriodoAcademico.objects.order_by("anio", "fecha_inicio", "id")
-        .values_list("id", "anio")
-    )
-    ids = [id_ for id_, _ in periodos]
+    periodos = list(PeriodoAcademico.objects.order_by("anio", "fecha_inicio", "id"))
+    ids = [periodo.id for periodo in periodos]
     if periodo_id not in ids or ids.index(periodo_id) == 0:
         return None
-    return PeriodoAcademico.objects.get(pk=ids[ids.index(periodo_id) - 1])
+    return periodos[ids.index(periodo_id) - 1]
 
 
 def _variacion(actual, anterior):
@@ -404,15 +415,21 @@ def avance_por_carrera(filtros):
 # Satisfacción (encuestas de evaluación A+S)
 # ---------------------------------------------------------------------------
 
-def _respuestas_escala(codigo, filtros):
+def _respuestas_escala(codigos, filtros):
     from encuestas.models import RespuestaPregunta
 
+    # La encuesta se busca por la versión de la pregunta (es la misma de la
+    # respuesta): así PostgreSQL parte de las pocas preguntas de escala y usa
+    # el índice de pregunta_id, en vez de recorrer todas las respuestas.
     respuestas = RespuestaPregunta.objects.filter(
-        respuesta__version__plantilla__codigo=codigo,
+        pregunta__version__plantilla__codigo__in=codigos,
         pregunta__tipo="ESCALA",
         valor_escala__isnull=False,
     )
-    periodo = PeriodoAcademico.objects.filter(pk=filtros.get("periodo")).first()
+    periodo = (
+        PeriodoAcademico.objects.filter(pk=filtros["periodo"]).first()
+        if filtros.get("periodo") else None
+    )
     anio = filtros.get("anio") or (periodo.anio if periodo else None)
 
     if periodo:
@@ -453,38 +470,52 @@ def satisfaccion(filtros):
     (estudiantes P19, docentes P18, socios P12), con su n. Tabla: promedio
     1 a 5 por dimensión. Sin respuestas, el anillo queda vacío (no 0%).
     """
+    codigo_plantilla = "pregunta__version__plantilla__codigo"
+    respuestas = _respuestas_escala([codigo for codigo, _ in ENCUESTAS_SATISFACCION], filtros)
+
+    # Las tres encuestas van en la misma consulta, agrupadas por su código.
+    generales = respuestas.filter(pregunta__configuracion_json__valoracion_general=True)
+    if not INCLUIR_PERFIL_EGRESO:
+        generales = generales.exclude(pregunta__configuracion_json__perfil_egreso=True)
+    totales = {
+        fila[codigo_plantilla]: fila
+        for fila in generales.values(codigo_plantilla).annotate(
+            total=Count("id"),
+            satisfechas=Count("id", filter=Q(valor_escala__gte=SATISFECHO_DESDE)),
+            personas=Count("respuesta", distinct=True),
+        ).order_by()
+    }
+    # Número de la pregunta de la primera respuesta de cada encuesta.
+    numeros = {}
+    for fila in (
+        generales.values(codigo_plantilla, "pregunta__configuracion_json__numero")
+        .annotate(primera=Min("id"))
+        .order_by("primera")
+    ):
+        numeros.setdefault(fila[codigo_plantilla], fila["pregunta__configuracion_json__numero"])
+
     anillos = []
-    promedios = {clave: {} for clave, _ in DIMENSIONES}
-
     for codigo, publico in ENCUESTAS_SATISFACCION:
-        respuestas = _respuestas_escala(codigo, filtros)
-
-        generales = respuestas.filter(pregunta__configuracion_json__valoracion_general=True)
-        if not INCLUIR_PERFIL_EGRESO:
-            generales = generales.exclude(pregunta__configuracion_json__perfil_egreso=True)
-        total = generales.count()
-        satisfechas = generales.filter(valor_escala__gte=SATISFECHO_DESDE).count()
-        personas = generales.values("respuesta").distinct().count()
-        numero_pregunta = (
-            generales.values_list("pregunta__configuracion_json__numero", flat=True).first()
-        )
-        porcentaje = round(satisfechas * 100 / total, 1) if total else None
+        fila = totales.get(codigo, {})
+        total = fila.get("total", 0)
         anillos.append({
             "publico": publico,
-            "porcentaje": porcentaje,
-            "personas": personas,
-            "pregunta": numero_pregunta,
+            "porcentaje": round(fila["satisfechas"] * 100 / total, 1) if total else None,
+            "personas": fila.get("personas", 0),
+            "pregunta": numeros.get(codigo),
         })
 
-        por_dimension = (
-            respuestas.exclude(pregunta__configuracion_json__dimension=None)
-            .values("pregunta__configuracion_json__dimension")
-            .annotate(promedio=Avg("valor_escala"), cantidad=Count("id"))
-        )
-        for fila in por_dimension:
-            clave = fila["pregunta__configuracion_json__dimension"]
-            if clave in promedios:
-                promedios[clave][codigo] = round(float(fila["promedio"]), 1)
+    promedios = {clave: {} for clave, _ in DIMENSIONES}
+    por_dimension = (
+        respuestas.exclude(pregunta__configuracion_json__dimension=None)
+        .values(codigo_plantilla, "pregunta__configuracion_json__dimension")
+        .annotate(promedio=Avg("valor_escala"))
+        .order_by()
+    )
+    for fila in por_dimension:
+        clave = fila["pregunta__configuracion_json__dimension"]
+        if clave in promedios:
+            promedios[clave][fila[codigo_plantilla]] = round(float(fila["promedio"]), 1)
 
     tabla = []
     for clave, etiqueta in DIMENSIONES:
@@ -514,39 +545,50 @@ def mapa(filtros, detalle=False):
     punto incluye además sus socios con dirección exacta y contacto principal;
     las intervenciones se revisan en el historial del socio. El portal público lo llama sin detalle (RF-IND-03 CA1).
     """
-    participaciones = (
+    # Solo las combinaciones distintas que se usan, no cada participación: con
+    # años de históricos son miles de filas que no hace falta traer completas.
+    combinaciones = (
         _participaciones(filtros)
         .filter(socio__comuna__lat_centro__isnull=False, socio__comuna__lon_centro__isnull=False)
-        .select_related("socio__comuna", "carrera", "periodo")
+        .annotate(anio_participacion=Coalesce("periodo__anio", ExtractYear("fecha_inicio")))
+        .values_list(
+            "socio__comuna_id", "socio_id", "proyecto_id", "equipo_id",
+            "carrera__nombre", "anio_participacion",
+        )
+        .order_by()
+        .distinct()
     )
-    if detalle:
-        participaciones = participaciones.prefetch_related("socio__contactos")
 
     comunas = {}
-    for participacion in participaciones:
-        comuna = participacion.socio.comuna
-        datos = comunas.setdefault(comuna.id, {
-            "comuna": comuna.nombre,
-            "lat": float(comuna.lat_centro),
-            "lon": float(comuna.lon_centro),
+    for comuna_id, socio_id, proyecto_id, equipo_id, carrera, anio in combinaciones:
+        datos = comunas.setdefault(comuna_id, {
             "socios": set(),
             "proyectos": set(),
             "carreras": set(),
             "anios": set(),
             "detalle": {},
         })
-        datos["socios"].add(participacion.socio_id)
-        if participacion.proyecto_id:
-            datos["proyectos"].add(participacion.proyecto_id)
-        elif participacion.equipo_id:
-            datos["proyectos"].add(f"equipo-{participacion.equipo_id}")
-        if participacion.carrera:
-            datos["carreras"].add(participacion.carrera.nombre)
-        anio = _anio_participacion(participacion)
+        datos["socios"].add(socio_id)
+        if proyecto_id:
+            datos["proyectos"].add(proyecto_id)
+        elif equipo_id:
+            datos["proyectos"].add(f"equipo-{equipo_id}")
+        if carrera:
+            datos["carreras"].add(carrera)
         if anio:
             datos["anios"].add(anio)
-        if detalle:
-            _agregar_detalle(datos["detalle"], participacion.socio)
+
+    for comuna in Comuna.objects.filter(pk__in=comunas).order_by("nombre"):
+        datos = comunas.pop(comuna.id)
+        datos.update(comuna=comuna.nombre, lat=float(comuna.lat_centro), lon=float(comuna.lon_centro))
+        comunas[comuna.id] = datos
+
+    if detalle:
+        socios = SocioComunitario.objects.filter(
+            pk__in={socio for datos in comunas.values() for socio in datos["socios"]},
+        ).prefetch_related("contactos")
+        for socio in socios:
+            _agregar_detalle(comunas[socio.comuna_id]["detalle"], socio)
 
     puntos = []
     for datos in comunas.values():
@@ -570,14 +612,6 @@ def mapa(filtros, detalle=False):
         "total_socios": len({socio for datos in comunas.values() for socio in datos["socios"]}),
         "total_proyectos": sum(p["proyectos"] for p in puntos),
     }
-
-
-def _anio_participacion(participacion):
-    if participacion.periodo:
-        return participacion.periodo.anio
-    if participacion.fecha_inicio:
-        return participacion.fecha_inicio.year
-    return None
 
 
 def _agregar_detalle(socios, socio):
@@ -621,16 +655,67 @@ def _anios_con_datos():
     )
 
 
+def _por_anio(consulta, campo_anio, **totales):
+    """{año: {total: valor}} agrupando la consulta por el año indicado."""
+    return {
+        fila.pop("anio_grupo"): fila
+        for fila in consulta.values(anio_grupo=F(campo_anio)).annotate(**totales).order_by()
+    }
+
+
+def _valores_por_anio(filtros, anios):
+    """
+    Lo mismo que _valores para varios años, con una consulta por indicador
+    agrupada por año en vez de repetirlas año a año.
+    """
+    secciones = Seccion.objects.filter(pk__in=_secciones(filtros).filter(periodo__anio__in=anios))
+    seccion_carreras = _seccion_carreras(filtros, secciones)
+
+    # Las participaciones históricas sin período cuentan por el año de su inicio.
+    participaciones = _participaciones(filtros).annotate(
+        anio_participacion=Coalesce("periodo__anio", ExtractYear("fecha_inicio")),
+    ).filter(anio_participacion__in=anios)
+
+    asignaturas = _por_anio(secciones, "periodo__anio", n=Count("asignatura", distinct=True))
+    docentes = _por_anio(
+        SeccionDocente.objects.filter(seccion__in=secciones),
+        "seccion__periodo__anio", n=Count("docente", distinct=True),
+    )
+    carreras = _por_anio(
+        seccion_carreras, "seccion__periodo__anio",
+        n=Count("carrera", distinct=True), planificados=Sum("estudiantes_planificados"),
+    )
+    integrantes = _por_anio(
+        IntegranteEquipo.objects.filter(equipo__seccion__in=secciones),
+        "equipo__seccion__periodo__anio", n=Count("id"),
+    )
+    socios = _por_anio(participaciones, "anio_participacion", n=Count("socio", distinct=True))
+
+    valores = {}
+    for anio in anios:
+        estudiantes = integrantes.get(anio, {}).get("n", 0)
+        if not estudiantes:
+            estudiantes = carreras.get(anio, {}).get("planificados") or 0
+        valores[anio] = {
+            "asignaturas": asignaturas.get(anio, {}).get("n", 0),
+            "docentes": docentes.get(anio, {}).get("n", 0),
+            "carreras": carreras.get(anio, {}).get("n", 0),
+            "estudiantes": estudiantes,
+            "socios": socios.get(anio, {}).get("n", 0),
+        }
+    return valores
+
+
 def evolucion(filtros):
     """Indicadores por año con los demás filtros (el año y el período no aplican)."""
     sin_periodo = {**filtros, "periodo": None, "anio": None}
     anios = sorted(_anios_con_datos())[-6:]
 
+    por_anio = _valores_por_anio(sin_periodo, anios)
     series = {clave: [] for clave, _ in EVOLUCION_INDICADORES}
     for anio in anios:
-        valores = _valores(sin_periodo, anio=anio)
         for clave, _ in EVOLUCION_INDICADORES:
-            series[clave].append(valores[clave])
+            series[clave].append(por_anio[anio][clave])
 
     indicadores = []
     for clave, etiqueta in EVOLUCION_INDICADORES:

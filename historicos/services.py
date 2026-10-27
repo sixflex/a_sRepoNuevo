@@ -278,17 +278,21 @@ def analizar_archivo(*, archivo, tipo, usuario):
             CargaMapeo(carga=carga, columna_origen=columna[:180], campo_destino=campo[:180])
             for columna, campo in mapeo.items()
         ])
-        for resultado in resultados:
-            fila = CargaFila.objects.create(
+        # Filas y errores en dos inserciones en lote, no dos consultas por fila.
+        filas = CargaFila.objects.bulk_create([
+            CargaFila(
                 carga=carga,
                 numero_fila=resultado["numero"],
                 datos_raw_json=resultado["raw"],
                 estado=resultado["estado"],
             )
-            CargaError.objects.bulk_create([
-                CargaError(fila=fila, campo=(campo or "")[:120] or None, codigo=codigo, mensaje=mensaje)
-                for campo, codigo, mensaje in resultado["errores"]
-            ])
+            for resultado in resultados
+        ])
+        CargaError.objects.bulk_create([
+            CargaError(fila=fila, campo=(campo or "")[:120] or None, codigo=codigo, mensaje=mensaje)
+            for fila, resultado in zip(filas, resultados)
+            for campo, codigo, mensaje in resultado["errores"]
+        ])
     return carga
 
 
@@ -558,7 +562,7 @@ def _importar_formulario(carga, filas, campus):
             historica=True, fecha_envio=_fecha_hora(datos.get(columna_fecha)), contexto=contexto,
         )
         fila.respuesta_resultante = respuesta
-        fila.save(update_fields=["respuesta_resultante"])
+    CargaFila.objects.bulk_update(filas, ["respuesta_resultante"])
     return {"respuestas": len(filas)}
 
 
@@ -645,5 +649,5 @@ def _importar_registro_socios(carga, filas, campus):
 
         fila.socio_resultante = socio
         fila.participacion_resultante = ultima
-        fila.save(update_fields=["socio_resultante", "participacion_resultante"])
+    CargaFila.objects.bulk_update(filas, ["socio_resultante", "participacion_resultante"])
     return {"socios_nuevos": socios_creados, "participaciones": participaciones_creadas}
