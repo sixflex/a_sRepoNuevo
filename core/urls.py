@@ -10,6 +10,7 @@ urlpatterns = [
     path("", views.inicio, name="inicio"),
 
     path("coordinacion/", views.panel_coordinacion, name="coordinacion"),
+    path("coordinacion/exportar/", views.exportar_indicadores, name="exportar_indicadores"),
 
     path("docente/", views.panel_docente, name="docente"),
 

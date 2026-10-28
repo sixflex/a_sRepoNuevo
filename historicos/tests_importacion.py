@@ -9,12 +9,16 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
+from unittest.mock import patch
+from django.core.exceptions import ValidationError
 
-from academico.models import Campus, Carrera, Facultad, Sede
+from academico.models import Asignatura, Campus, Carrera, Facultad, Sede
 from auditoria.models import AuditoriaCambio
 from encuestas import services as encuestas_services
 from encuestas.models import RespuestaFormulario
 from socios.models import ClasificacionSocio, Comuna, ParticipacionSocio, SocioComunitario
+from academico.models import Seccion
+from proyectos.models import Equipo
 
 from . import services
 from .models import CargaHistorica
@@ -148,6 +152,456 @@ class ImportarRegistroSociosTests(TestCase):
         self.assertEqual(segunda.omitidas, 3)
         self.assertEqual(set(segunda.filas.values_list("errores__codigo", flat=True)), {"DUPLICADA", "SIN_SOCIO"})
 
+    
+    def test_importacion_historica_no_crea_secciones_ni_equipos(self):
+        """CDE-93: importar históricos no crea secciones ni equipos activos."""
+
+        secciones_antes = Seccion.objects.count()
+        equipos_antes = Equipo.objects.count()
+
+        carga = services.analizar_archivo(
+            archivo=excel(ENCABEZADOS_REGISTRO, self.filas()),
+            tipo=services.TIPO_REGISTRO_SOCIOS,
+            usuario=self.coordinador,
+        )
+
+        self.assertEqual(Seccion.objects.count(), secciones_antes)
+        self.assertEqual(Equipo.objects.count(), equipos_antes)
+
+        services.confirmar_carga(
+            solicitud(self.coordinador),
+            carga,
+            self.campus,
+        )
+
+        self.assertEqual(Seccion.objects.count(), secciones_antes)
+        self.assertEqual(Equipo.objects.count(), equipos_antes)
+
+        participaciones = ParticipacionSocio.objects.filter(
+            origen="HISTORICO"
+        )
+
+        self.assertEqual(participaciones.count(), 3)
+
+        for participacion in participaciones:
+            self.assertIsNone(participacion.seccion_id)
+            self.assertIsNone(participacion.equipo_id)
+
+    def test_consulta_historicos_con_filtros_combinados(self):
+        """CDE-94: comprobar filtros combinados de históricos."""
+
+        carga = services.analizar_archivo(
+            archivo=excel(ENCABEZADOS_REGISTRO, self.filas()),
+            tipo=services.TIPO_REGISTRO_SOCIOS,
+            usuario=self.coordinador,
+        )
+
+        services.confirmar_carga(
+            solicitud(self.coordinador),
+            carga,
+            self.campus,
+        )
+
+        self.client.force_login(self.coordinador)
+        url = reverse("historicos:consulta_historicos")
+
+        respuesta = self.client.get(url)
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(
+            respuesta.context["total_participaciones"], 3
+        )
+
+        respuesta = self.client.get(url, {"anio": "2024"})
+
+        self.assertEqual(
+            respuesta.context["total_participaciones"], 1
+        )
+        respuesta = self.client.get(url, {
+            "anio": "2024",
+            "sede": str(self.campus.sede_id),
+            "socio": "Las Rosas",
+        })
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(
+            respuesta.context["total_participaciones"], 1
+        )
+        self.assertEqual(
+            respuesta.context["total_socios"], 1
+        )
+
+        self.assertContains(respuesta, "Fundación Las Rosas")
+        self.assertNotContains(respuesta, "Junta Vecinal Norte")
+        respuesta = self.client.get(url, {
+            "anio": "2022",
+            "socio": "Las Rosas",
+        })
+
+        self.assertEqual(
+            respuesta.context["total_participaciones"], 0
+        )
+
+    def test_consulta_historicos_filtra_por_carrera(self):
+        """CDE-94: comprobar el filtro por carrera."""
+
+        carga = services.analizar_archivo(
+            archivo=excel(ENCABEZADOS_REGISTRO, self.filas()),
+            tipo=services.TIPO_REGISTRO_SOCIOS,
+            usuario=self.coordinador,
+        )
+
+        services.confirmar_carga(
+            solicitud(self.coordinador),
+            carga,
+            self.campus,
+        )
+
+        carrera = Carrera.objects.get(nombre="Psicología")
+
+        participaciones = ParticipacionSocio.objects.filter(
+            origen="HISTORICO"
+        ).order_by("id")
+
+        participaciones.update(carrera=None)
+
+        participacion = participaciones.first()
+        self.assertIsNotNone(participacion)
+
+        participacion.carrera = carrera
+        participacion.save(update_fields=["carrera"])
+
+        self.client.force_login(self.coordinador)
+
+        respuesta = self.client.get(
+            reverse("historicos:consulta_historicos"),
+            {"carrera": str(carrera.id)},
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+
+  
+        self.assertEqual(
+            respuesta.context["total_participaciones"], 1
+        )
+
+        self.assertEqual(
+            respuesta.context["total_socios"], 1
+        )
+
+        resultados = list(respuesta.context["pagina"])
+
+        self.assertEqual(len(resultados), 1)
+        self.assertEqual(resultados[0].id, participacion.id)
+        self.assertEqual(resultados[0].carrera_id, carrera.id)
+
+
+    def test_consulta_historicos_filtra_por_asignatura(self):
+        """CDE-94: comprobar el filtro por asignatura."""
+
+        carga = services.analizar_archivo(
+            archivo=excel(ENCABEZADOS_REGISTRO, self.filas()),
+            tipo=services.TIPO_REGISTRO_SOCIOS,
+            usuario=self.coordinador,
+        )
+
+        services.confirmar_carga(
+            solicitud(self.coordinador),
+            carga,
+            self.campus,
+        )
+
+        asignatura = Asignatura.objects.create(
+            codigo="TEST-AS-001",
+            nombre="Asignatura Histórica de Prueba",
+            activo=True,
+        )
+        participaciones = ParticipacionSocio.objects.filter(
+            origen="HISTORICO"
+        ).order_by("id")
+
+        participaciones.update(asignatura=None)
+
+        participacion = participaciones.first()
+        self.assertIsNotNone(participacion)
+
+        participacion.asignatura = asignatura
+        participacion.save(update_fields=["asignatura"])
+
+        self.client.force_login(self.coordinador)
+
+        respuesta = self.client.get(
+            reverse("historicos:consulta_historicos"),
+            {"asignatura": str(asignatura.id)},
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+
+        self.assertEqual(
+            respuesta.context["total_participaciones"], 1
+        )
+
+        self.assertEqual(
+            respuesta.context["total_socios"], 1
+        )
+
+        resultados = list(respuesta.context["pagina"])
+
+        self.assertEqual(len(resultados), 1)
+        self.assertEqual(resultados[0].id, participacion.id)
+        self.assertEqual(
+            resultados[0].asignatura_id,
+            asignatura.id,
+        )
+
+        self.assertContains(
+            respuesta,
+            "Asignatura Histórica de Prueba",
+        )
+
+    def test_consulta_historicos_paginacion(self):
+        """CDE-94: comprobar paginación y conservación de filtros."""
+
+        carga = services.analizar_archivo(
+            archivo=excel(ENCABEZADOS_REGISTRO, self.filas()),
+            tipo=services.TIPO_REGISTRO_SOCIOS,
+            usuario=self.coordinador,
+        )
+
+        services.confirmar_carga(
+            solicitud(self.coordinador),
+            carga,
+            self.campus,
+        )
+        original = ParticipacionSocio.objects.filter(
+            origen="HISTORICO"
+        ).first()
+
+        self.assertIsNotNone(original)
+
+        for i in range(22):
+            participacion = ParticipacionSocio.objects.get(
+                pk=original.pk
+            )
+            participacion.pk = None
+            participacion.save()
+
+        self.client.force_login(self.coordinador)
+        url = reverse("historicos:consulta_historicos")
+        respuesta = self.client.get(url)
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(
+            respuesta.context["total_participaciones"], 25
+        )
+        self.assertEqual(
+            len(respuesta.context["pagina"]), 20
+        )
+        self.assertTrue(
+            respuesta.context["pagina"].has_next()
+        )
+        respuesta = self.client.get(url, {"pagina": "2"})
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(
+            len(respuesta.context["pagina"]), 5
+        )
+        respuesta = self.client.get(url, {
+            "socio": "Las Rosas",
+            "pagina": "2",
+        })
+
+        self.assertIn(
+            "socio=Las+Rosas",
+            respuesta.context["query_filtros"],
+        )
+
+    def test_comparacion_metricas_historicas(self):
+        """CDE-95: comparar métricas históricas entre dos años."""
+
+        carga = services.analizar_archivo(
+            archivo=excel(ENCABEZADOS_REGISTRO, self.filas()),
+            tipo=services.TIPO_REGISTRO_SOCIOS,
+            usuario=self.coordinador,
+        )
+
+        services.confirmar_carga(
+            solicitud(self.coordinador),
+            carga,
+            self.campus,
+        )
+
+        self.client.force_login(self.coordinador)
+
+        respuesta = self.client.get(
+            reverse("historicos:consulta_historicos"),
+            {
+                "anio_a": "2023",
+                "anio_b": "2024",
+            },
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+
+        comparacion = respuesta.context["comparacion"]
+        self.assertIsNotNone(comparacion)
+
+        self.assertEqual(comparacion["a"]["participaciones"], 1)
+        self.assertEqual(comparacion["b"]["participaciones"], 1)
+
+        self.assertEqual(comparacion["a"]["socios"], 1)
+        self.assertEqual(comparacion["b"]["socios"], 1)
+
+        self.assertEqual(
+            comparacion["diferencia_participaciones"], 0
+        )
+        self.assertEqual(
+            comparacion["diferencia_socios"], 0
+        )
+
+        self.assertEqual(comparacion["a"]["beneficiarios"], 40)
+        self.assertEqual(comparacion["b"]["beneficiarios"], 40)
+
+    def test_organizaciones_unicas_vs_participaciones(self):
+        """CDE-96: distinguir socios únicos de participaciones."""
+
+        carga = services.analizar_archivo(
+            archivo=excel(ENCABEZADOS_REGISTRO, self.filas()),
+            tipo=services.TIPO_REGISTRO_SOCIOS,
+            usuario=self.coordinador,
+        )
+
+        services.confirmar_carga(
+            solicitud(self.coordinador),
+            carga,
+            self.campus,
+        )
+
+        self.client.force_login(self.coordinador)
+
+        respuesta = self.client.get(
+            reverse("historicos:consulta_historicos")
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+
+        self.assertEqual(
+            respuesta.context["total_participaciones"], 3
+        )
+
+        self.assertEqual(
+            respuesta.context["total_socios"], 2
+        )
+        respuesta = self.client.get(
+            reverse("historicos:consulta_historicos"),
+            {"socio": "Las Rosas"},
+        )
+
+        self.assertEqual(
+            respuesta.context["total_participaciones"], 2
+        )
+        self.assertEqual(
+            respuesta.context["total_socios"], 1
+        )
+
+    def test_exportar_historicos_excel_filtrado(self):
+        """CDE-97: exportar únicamente registros históricos filtrados."""
+
+        carga = services.analizar_archivo(
+            archivo=excel(ENCABEZADOS_REGISTRO, self.filas()),
+            tipo=services.TIPO_REGISTRO_SOCIOS,
+            usuario=self.coordinador,
+        )
+
+        services.confirmar_carga(
+            solicitud(self.coordinador),
+            carga,
+            self.campus,
+        )
+
+        self.client.force_login(self.coordinador)
+
+        respuesta = self.client.get(
+            reverse("historicos:exportar_historicos"),
+            {"anio": "2024"},
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+
+        self.assertIn(
+            "spreadsheetml.sheet",
+            respuesta["Content-Type"],
+        )
+
+        libro = openpyxl.load_workbook(
+            BytesIO(respuesta.content)
+        )
+
+        hoja = libro.active
+        self.assertEqual(hoja.max_row, 2)
+
+        self.assertEqual(
+            hoja.cell(row=1, column=1).value,
+            "Socio comunitario",
+        )
+
+        self.assertEqual(
+            hoja.cell(row=2, column=1).value,
+            "Fundación Las Rosas",
+        )
+        nombres = [
+            hoja.cell(row=fila, column=1).value
+            for fila in range(2, hoja.max_row + 1)
+        ]
+
+        self.assertNotIn("Junta Vecinal Norte", nombres)
+
+    def test_exportar_historicos_sin_limite_paginacion(self):
+        """CDE-97: el Excel exporta todos los resultados, no solo una página."""
+
+        carga = services.analizar_archivo(
+            archivo=excel(ENCABEZADOS_REGISTRO, self.filas()),
+            tipo=services.TIPO_REGISTRO_SOCIOS,
+            usuario=self.coordinador,
+        )
+
+        services.confirmar_carga(
+            solicitud(self.coordinador),
+            carga,
+            self.campus,
+        )
+        participacion_original = ParticipacionSocio.objects.filter(
+            origen="HISTORICO"
+        ).first()
+
+        self.assertIsNotNone(participacion_original)
+
+        for _ in range(22):
+            participacion_original.pk = None
+            participacion_original._state.adding = True
+            participacion_original.save()
+
+        total_esperado = ParticipacionSocio.objects.filter(
+            origen="HISTORICO"
+        ).count()
+
+        self.assertEqual(total_esperado, 25)
+
+        self.client.force_login(self.coordinador)
+
+        respuesta = self.client.get(
+            reverse("historicos:exportar_historicos")
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+
+        libro = openpyxl.load_workbook(
+            BytesIO(respuesta.content)
+        )
+
+        hoja = libro.active
+        self.assertEqual(hoja.max_row, 26)
+
 
 @override_settings(STORAGES=ALMACEN_EN_MEMORIA)
 class ImportarFormularioTests(TestCase):
@@ -270,3 +724,222 @@ class PantallaImportarTests(TestCase):
         carga.refresh_from_db()
         self.assertEqual(carga.estado, services.ESTADO_CANCELADA)
         self.assertFalse(SocioComunitario.objects.exists())
+
+
+class ValidacionEncabezadosTests(TestCase):
+    """Pruebas de validación de columnas históricas CDE-89."""
+
+    def test_rechaza_encabezados_duplicados(self):
+        archivo = excel(
+            ["Nombre", "NOMBRE", "Fecha"],
+            [["Ana", "Pedro", "2024-05-01"]]
+        )
+
+        with self.assertRaisesMessage(
+            ValidationError,
+            "encabezados duplicados"
+        ):
+            services.leer_tabla(archivo)
+
+    def test_acepta_encabezados_diferentes(self):
+        archivo = excel(
+            ["Nombre", "Correo", "Fecha"],
+            [["Ana", "ana@ejemplo.cl", "2024-05-01"]]
+        )
+
+        hoja, encabezados, filas = services.leer_tabla(archivo)
+
+        self.assertEqual(hoja, "Respuestas")
+        self.assertEqual(len(encabezados), 3)
+        self.assertEqual(len(filas), 1)
+
+    def test_mapeo_columnas_registro_socios(self):
+        encabezados = [
+            "Marca temporal",
+            "Nombre del Socio Comunitario",
+            "Correo electrónico del Socio Comunitarios",
+            "Sede",
+            "Carrera",
+            "Año en el que trabajo con el SC",
+        ]
+
+        columnas = services._columnas_registro_socios(encabezados)
+
+        self.assertEqual(
+            columnas["fecha"],
+            "Marca temporal"
+        )
+        self.assertEqual(
+            columnas["socio"],
+            "Nombre del Socio Comunitario"
+        )
+        self.assertEqual(
+            columnas["correo"],
+            "Correo electrónico del Socio Comunitarios"
+        )
+        self.assertEqual(
+            columnas["sede"],
+            "Sede"
+        )
+        self.assertEqual(
+            columnas["carrera"],
+            "Carrera"
+        )
+        self.assertEqual(
+            columnas["anios"],
+            "Año en el que trabajo con el SC"
+        )
+    
+    def test_no_confundir_correo_socio_con_informante(self):
+        encabezados = [
+            "Correo electrónico del Socio Comunitario",
+            "Correo electrónico de quien responde",
+        ]
+
+        columnas = services._columnas_registro_socios(encabezados)
+
+        self.assertEqual(
+            columnas.get("correo"),
+            "Correo electrónico del Socio Comunitario"
+        )
+
+        self.assertEqual(
+            columnas.get("informante_correo"),
+            "Correo electrónico de quien responde"
+        )
+
+    def test_ignora_columnas_desconocidas(self):
+        encabezados = [
+            "Nombre del Socio Comunitario",
+            "Sede",
+            "Código interno desconocido",
+        ]
+
+        columnas = services._columnas_registro_socios(encabezados)
+
+        self.assertEqual(
+            columnas.get("socio"),
+            "Nombre del Socio Comunitario"
+        )
+
+        self.assertEqual(
+            columnas.get("sede"),
+            "Sede"
+        )
+
+        self.assertNotIn(
+            "Código interno desconocido",
+            columnas.values()
+        )
+    def test_mapeo_sin_columna_socio(self):
+        encabezados = [
+            "Marca temporal",
+            "Sede",
+            "Carrera",
+            "Correo electrónico del Socio Comunitario",
+        ]
+
+        columnas = services._columnas_registro_socios(encabezados)
+
+        self.assertNotIn("socio", columnas)
+        self.assertIn("fecha", columnas)
+        self.assertIn("sede", columnas)
+        self.assertIn("carrera", columnas)
+
+    def test_rechaza_archivo_sin_columna_socio(self):
+        encabezados = [
+            "Marca temporal",
+            "Sede",
+            "Carrera",
+        ]
+
+        filas = [
+            (
+                2,
+                {
+                    "Marca temporal": "2024-05-01",
+                    "Sede": "Providencia",
+                    "Carrera": "Ingeniería Civil Informática",
+                }
+            )
+        ]
+
+        mapeo, resultados = services._analizar_registro_socios(
+            encabezados,
+            filas
+        )
+
+        self.assertEqual(mapeo, {})
+        self.assertEqual(resultados, [])
+
+    def test_importacion_rechaza_archivo_sin_socio(self):
+
+        archivo = excel(
+            ["Marca temporal", "Sede", "Carrera"],
+            [["2024-05-01", "Santiago", "Psicología"]]
+        )
+
+        with patch.object(
+            services,
+            "_analizar_registro_socios",
+            return_value=({}, [])
+        ):
+            with self.assertRaisesMessage(
+                ValidationError,
+                "No se reconoció ninguna columna"
+            ):
+                services.analizar_archivo(
+                    archivo=archivo,
+                    tipo=services.TIPO_REGISTRO_SOCIOS,
+                    usuario=None,
+                )
+
+    def test_rechaza_hoja_inexistente(self):
+        archivo = excel(
+            ["Nombre", "Fecha"],
+            [["Socio A", "2025-01-01"]]
+        )
+
+        with self.assertRaisesMessage(
+            ValidationError,
+            "no existe en el archivo Excel"
+        ):
+            services.leer_tabla(
+                archivo,
+                nombre_hoja="Hoja inexistente"
+            )
+    def test_obtener_hojas_excel(self):
+        archivo = excel(
+            ["Nombre", "Fecha"],
+            [["Socio A", "2025-01-01"]]
+        )
+
+        hojas = services.obtener_hojas_excel(archivo)
+
+        self.assertEqual(hojas, ["Respuestas"])
+
+    def test_obtener_varias_hojas_excel(self):
+        libro = openpyxl.Workbook()
+        libro.active.title = "Respuestas 2024"
+        libro.create_sheet("Respuestas 2025")
+        libro.create_sheet("Instrucciones")
+
+        contenido = BytesIO()
+        libro.save(contenido)
+        contenido.seek(0)
+
+        archivo = SimpleUploadedFile(
+            "historicos.xlsx",
+            contenido.getvalue(),
+            content_type=(
+                "application/vnd.openxmlformats-officedocument."
+                "spreadsheetml.sheet"
+            ),
+        )
+
+        hojas = services.obtener_hojas_excel(archivo)
+
+        self.assertEqual(
+            hojas,
+            ["Respuestas 2024", "Respuestas 2025", "Instrucciones"],
+        )

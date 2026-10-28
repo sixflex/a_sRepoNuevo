@@ -8,13 +8,14 @@ from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from academico.models import Carrera
 from archivos.services import abrir_archivo
 from core.ordenamiento import OPCIONES_ORDEN, orden_pedido, ordenar_por_fecha
 from core.qr import qr_base64
-from usuarios.decorators import coordinador_required
+from usuarios.decorators import coordinador_only_required, coordinador_required
 
 from . import constantes as c
 from . import services
@@ -690,6 +691,64 @@ def respuestas(request, version_id):
         "orden": orden,
         "opciones_orden": OPCIONES_ORDEN,
     })
+
+
+@coordinador_only_required
+def exportar_respuestas(request, version_id):
+    from auditoria.services import registrar_auditoria
+    from core import excel
+
+    version = _version_o_404(version_id)
+    _, preguntas = services.cargar_estructura(version)
+    selector = services.pregunta_selector(preguntas)
+    programas = {o.valor for o in services.opciones_ordenadas(selector)} if selector else set()
+    programa = request.GET.get("programa") or ""
+    if programa not in programas:
+        programa = ""
+
+    respuestas_filtradas = services.respuestas_filtradas(version, programa).order_by("fecha_envio", "id")
+    libro, hoja = excel.nuevo_libro(
+        "Respuestas",
+        {
+            "Formulario": version.plantilla.titulo,
+            "Versión": version.numero_version,
+            "Generado": timezone.localtime().strftime("%d/%m/%Y %H:%M"),
+            "Filtros aplicados": f"Programa: {programa}" if programa else "Todos los programas",
+        },
+    )
+    encabezados = ["ID", "Fecha de envío", "Nombre", "Correo", "RUT"] + [p.texto for p in preguntas]
+    hoja.append(encabezados)
+    for respuesta in respuestas_filtradas:
+        valores = dict(services.resumen_respuesta(respuesta))
+        fila = [
+            respuesta.id,
+            timezone.localtime(respuesta.fecha_envio).strftime("%d/%m/%Y %H:%M"),
+            respuesta.respondente_nombre or "",
+            respuesta.respondente_correo or "",
+            respuesta.respondente_rut or "",
+        ]
+        fila.extend(valores.get(pregunta, "") for pregunta in preguntas)
+        hoja.append(fila)
+        excel.celda_texto(hoja.cell(hoja.max_row, 5), respuesta.respondente_rut or "")
+        for columna, pregunta in enumerate(preguntas, start=6):
+            if pregunta.tipo == c.RUT:
+                excel.celda_texto(hoja.cell(hoja.max_row, columna), fila[columna - 1])
+
+    resumen = libro.create_sheet("Resumen por pregunta")
+    excel.agregar_metadatos(resumen, {
+        "Formulario": version.plantilla.titulo,
+        "Filtros aplicados": f"Programa: {programa}" if programa else "Todos los programas",
+    })
+    resumen.append(["Pregunta", "Respondidas", "Promedio", "Detalle"])
+    for fila in services.estadisticas(version, programa):
+        detalle = ", ".join(f'{opcion["texto"]}: {opcion["cantidad"]}' for opcion in fila.get("opciones", []))
+        resumen.append([fila["pregunta"].texto, fila["respondidas"], fila.get("promedio", ""), detalle])
+
+    registrar_auditoria(
+        request=request, entidad="FormularioVersion", entidad_id=version.id,
+        accion="EXPORTAR_RESPUESTAS", valores_nuevos={"programa": programa},
+    )
+    return excel.respuesta_excel(libro, f"respuestas_{version.id}.xlsx")
 
 
 # ---------------------------------------------------------------------------
