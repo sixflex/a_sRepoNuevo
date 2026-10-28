@@ -259,11 +259,70 @@
     .ua-footer-link:hover {
         color: #FFFFFF;
     }
+
+    /* ---- Estructura de la página pública (autocontenida: no depende de ux.css) ---- */
+    .pub-seccion { padding: 72px 0; }
+    .pub-seccion--alt { background: #FFFFFF; border-top: 1px solid var(--ua-border); border-bottom: 1px solid var(--ua-border); }
+    .pub-seccion--rojo { background: #FDEDEE; }
+    .pub-encabezado { text-align: center; max-width: 700px; margin: 0 auto 40px; }
+    .pub-eyebrow { display: inline-block; margin-bottom: 8px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ua-red); }
+    .pub-titulo { margin: 0 0 12px; font-size: 1.9rem; font-weight: 800; letter-spacing: -0.01em; }
+    .pub-lead { margin: 0; font-size: 1.02rem; color: var(--ua-text-muted); }
+
+    .publico-nav-links { gap: 28px; flex-shrink: 0; }
+    .btn-ua-login {
+        display: inline-block; padding: 8px 18px; white-space: nowrap;
+        border: 1.5px solid var(--ua-red); border-radius: 6px;
+        font-size: 0.85rem; font-weight: 700; color: var(--ua-red); text-decoration: none;
+        transition: background-color 0.15s ease, color 0.15s ease;
+    }
+    .btn-ua-login:hover { background: var(--ua-red); color: #FFFFFF; }
+
+    .ua-hero-acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+    .btn-ua-ghost {
+        display: inline-block; padding: 12px 24px;
+        background: #FFFFFF; border: 1px solid #D1D5DB; border-radius: 6px;
+        font-size: 0.85rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+        color: #374151; text-decoration: none;
+        transition: border-color 0.15s ease, color 0.15s ease;
+    }
+    .btn-ua-ghost:hover { border-color: var(--ua-red); color: var(--ua-red); }
+
+    .pilar-card {
+        height: 100%; padding: 24px;
+        background: #FFFFFF; border: 1px solid var(--ua-border); border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        transition: box-shadow 0.15s ease, transform 0.15s ease;
+    }
+    .pilar-card:hover { box-shadow: 0 6px 16px rgba(0, 0, 0, 0.07); transform: translateY(-2px); }
+    .pilar-icono {
+        width: 44px; height: 44px; margin-bottom: 16px;
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 50%; background: #FDEDEE; color: var(--ua-red); font-size: 1.2rem;
+    }
+    .pilar-card h3 { margin-bottom: 6px; font-size: 1.02rem; font-weight: 700; }
+    .pilar-card p { margin: 0; font-size: 0.9rem; line-height: 1.55; color: var(--ua-text-muted); }
+
+    @media (max-width: 575.98px) {
+        .pub-seccion { padding: 44px 0; }
+        .pub-encabezado { margin-bottom: 28px; }
+        .pub-titulo { font-size: 1.55rem; }
+        .publico-nav-links { gap: 14px; }
+        .ua-hero { padding: 40px 0 36px; }
+        .ua-hero-title { font-size: 2rem; }
+        .ua-hero-subtitle { font-size: 1.25rem; }
+        .ua-hero-desc { font-size: 0.98rem; }
+        .macro-number { font-size: 1.7rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .pilar-card { transition: none; }
+        .pilar-card:hover { transform: none; }
+    }
 </style>
 
 
 <nav class="ua-navbar sticky-top">
-    <div class="container d-flex align-items-center justify-content-between">
+    <div class="container d-flex align-items-center justify-content-between gap-3">
         <!-- Logo Institucional desde static/img/logo_ua.png -->
         <a href="{% url 'core:inicio' %}" class="d-flex align-items-center text-decoration-none">
             <img src="{% static 'img/logo_ua.png' %}" 
@@ -284,15 +343,15 @@
             </div>
         </a>
 
-        <div class="d-none d-md-block position-relative" style="width: 440px;">
+        <div class="d-none d-lg-block position-relative flex-grow-1" style="max-width: 440px;">
             <i class="bi bi-search position-absolute top-50 translate-middle-y text-muted" style="left: 18px;"></i>
-            <input type="text" class="form-control ua-search-input w-100" placeholder="Buscar proyectos, carreras, documentos...">
+            <input type="text" class="form-control ua-search-input w-100" placeholder="Buscar proyectos, carreras, documentos..." aria-label="Buscar en el portal">
         </div>
 
-        <div class="d-flex align-items-center gap-4">
-            <a href="{% url 'core:inicio' %}" class="ua-nav-link active">Portal Público</a>
-            <a href="{% url 'usuarios:login' %}" class="ua-nav-link">Inicio de Sesión</a>
-            <a href="#" class="ua-nav-link">Ayuda</a>
+        <div class="d-flex align-items-center publico-nav-links">
+            <a href="{% url 'core:inicio' %}" class="ua-nav-link active d-none d-md-inline">Portal Público</a>
+            <a href="#que-es" class="ua-nav-link d-none d-sm-inline">¿Qué es A+S?</a>
+            <a href="{% url 'usuarios:login' %}" class="btn-ua-login">Iniciar sesión</a>
         </div>
     </div>
 </nav>
@@ -304,17 +363,69 @@
         <h1 class="ua-hero-title">Vinculación con el Medio UA</h1>
         <div class="ua-hero-subtitle">Aprendizaje + Servicio (A+S)</div>
         <p class="ua-hero-desc">Conectando la academia con las comunidades de Chile</p>
-        <a href="#proyectos" class="btn btn-ua-hero shadow-sm">
-            EXPLORAR PROYECTOS
-        </a>
+        <div class="ua-hero-acciones">
+            <a href="#proyectos" class="btn btn-ua-hero shadow-sm">EXPLORAR PROYECTOS</a>
+            <a href="#que-es" class="btn-ua-ghost">Conoce el modelo</a>
+        </div>
     </div>
 </section>
 
 
-<section class="container py-5">
-    <h3 class="fw-bold mb-4" style="font-size: 1.4rem;">Accesos Directos</h3>
-    <div class="row g-4">
-        <div class="col-12 col-md-6">
+<section id="que-es" class="pub-seccion pub-seccion--alt" aria-labelledby="que-es-titulo">
+    <div class="container">
+        <header class="pub-encabezado">
+            <span class="pub-eyebrow">El modelo</span>
+            <h2 id="que-es-titulo" class="pub-titulo">¿Qué es A+S?</h2>
+            <p class="pub-lead">
+                Aprendizaje + Servicio es una metodología de enseñanza de la Universidad Autónoma de Chile.
+                Los estudiantes aplican lo que aprenden en su asignatura para responder, junto a una
+                organización de la comunidad, a una necesidad real. Así aprenden más y la comunidad
+                recibe un aporte concreto.
+            </p>
+        </header>
+        <div class="row g-4">
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="pilar-card">
+                    <div class="pilar-icono"><i class="bi bi-journal-bookmark" aria-hidden="true"></i></div>
+                    <h3>Parte de la asignatura</h3>
+                    <p>La experiencia está planificada dentro del curso y apunta a sus resultados de aprendizaje.</p>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="pilar-card">
+                    <div class="pilar-icono"><i class="bi bi-people" aria-hidden="true"></i></div>
+                    <h3>Con la comunidad</h3>
+                    <p>Los equipos trabajan con un socio comunitario para atender una necesidad que la propia comunidad reconoce.</p>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="pilar-card">
+                    <div class="pilar-icono"><i class="bi bi-chat-square-text" aria-hidden="true"></i></div>
+                    <h3>Reflexión y evaluación</h3>
+                    <p>Los estudiantes reflexionan durante todo el proceso, y se evalúan tanto su aprendizaje como el servicio entregado.</p>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="pilar-card">
+                    <div class="pilar-icono"><i class="bi bi-mortarboard" aria-hidden="true"></i></div>
+                    <h3>Protagonismo del estudiante</h3>
+                    <p>Desarrollan trabajo en equipo, responsabilidad social, comportamiento ético y pensamiento crítico.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<section id="accesos" class="pub-seccion" aria-labelledby="accesos-titulo">
+    <div class="container">
+        <header class="pub-encabezado">
+            <span class="pub-eyebrow">Accesos</span>
+            <h2 id="accesos-titulo" class="pub-titulo">Accesos directos</h2>
+            <p class="pub-lead">Elige tu perfil y ve directo a lo que necesitas.</p>
+        </header>
+        <div class="row g-4">
+        <div class="col-12 col-md-6" id="accesos-estudiantes">
             <div class="mockup-card p-4 h-100 d-flex flex-column justify-content-between">
                 <div>
                     <div class="d-flex align-items-center gap-3 mb-3">
@@ -345,12 +456,12 @@
             </div>
         </div>
 
-        <div class="col-12 col-md-6">
+        <div class="col-12 col-md-6" id="accesos-socios">
             <div class="mockup-card p-4 h-100 d-flex flex-column justify-content-between">
                 <div>
                     <div class="d-flex align-items-center gap-3 mb-3">
                         <div class="icon-bubble">
-                            <i class="bi bi-handshake-fill"></i>
+                            <i class="bi bi-buildings-fill"></i>
                         </div>
                         <h4 class="mb-0 fw-bold" style="font-size: 1.25rem;">Portal Socios Comunitarios</h4>
                     </div>
@@ -375,17 +486,48 @@
                 </div>
             </div>
         </div>
+        </div>
     </div>
 </section>
 
 
-<section id="proyectos" class="container pb-5">
-    <div class="mb-3">
-        <h3 class="fw-bold mb-1" style="font-size: 1.4rem;">Nuestro Impacto Territorial</h3>
-        <p class="text-muted small mb-0">Socios comunitarios y proyectos A+S agrupados por comuna. Solo se muestran totales: el mapa no expone direcciones ni datos personales.</p>
-    </div>
+<section id="proyectos" class="pub-seccion pub-seccion--alt" aria-labelledby="impacto-titulo">
+    <div class="container">
+        <header class="pub-encabezado">
+            <span class="pub-eyebrow">Territorio</span>
+            <h2 id="impacto-titulo" class="pub-titulo">Nuestro impacto territorial</h2>
+            <p class="pub-lead">
+                Socios comunitarios y proyectos A+S agrupados por comuna. Solo se muestran totales:
+                el mapa no expone direcciones ni datos personales.
+            </p>
+        </header>
 
-    {# Filtros públicos (RF-PUB-01): sede, año, carrera y comuna #}
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-md-4">
+                <div class="mockup-card p-3 text-center">
+                    <div class="metric-bubble"><i class="bi bi-mortarboard-fill"></i></div>
+                    <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">{{ estudiantes }}</div>
+                    <div class="text-muted small">Estudiantes Participantes</div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="mockup-card p-3 text-center">
+                    <div class="metric-bubble"><i class="bi bi-geo-alt-fill"></i></div>
+                    <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">{{ mapa.puntos|length }}</div>
+                    <div class="text-muted small">Comunas Alcanzadas</div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="mockup-card p-3 text-center">
+                    <div class="metric-bubble"><i class="bi bi-layers-fill"></i></div>
+                    <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">{{ mapa.total_proyectos }}</div>
+                    <div class="text-muted small">Proyectos Ejecutados</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mockup-card p-3 p-md-4">
+            {# Filtros públicos (RF-PUB-01): sede, año, carrera y comuna #}
     <form method="get" action="{% url 'core:inicio' %}#proyectos" class="row g-2 align-items-end mb-3" aria-label="Filtros del mapa">
         <div class="col-6 col-md-3">
             <label for="filtro-sede" class="form-label small fw-semibold mb-1">Sede</label>
@@ -416,56 +558,38 @@
             </select>
         </div>
         <div class="col-12 col-md-2 d-flex gap-2">
-            <button type="submit" class="btn btn-sm btn-danger flex-grow-1" style="background: var(--ua-red); border-color: var(--ua-red);">Filtrar</button>
+            <button type="submit" class="btn-ua-login flex-grow-1 text-center">Filtrar</button>
             {% if filtros.sede or filtros.anio or filtros.carrera or filtros.comuna %}
                 <a href="{% url 'core:inicio' %}#proyectos" class="btn btn-sm btn-outline-secondary">Limpiar</a>
             {% endif %}
         </div>
     </form>
 
-    <div class="mockup-card overflow-hidden mb-3 p-2">
-        {% if mapa.puntos %}
-            <div class="d-flex justify-content-end mb-2">
-                <div class="btn-group btn-group-sm" role="group" aria-label="Qué mostrar en el mapa">
-                    <button type="button" class="btn btn-outline-secondary active" aria-pressed="true" data-mapa-modo="proyectos">Proyectos</button>
-                    <button type="button" class="btn btn-outline-secondary" aria-pressed="false" data-mapa-modo="socios">Socios comunitarios</button>
-                </div>
-            </div>
-            <div id="mapaTerritorial" class="mapa-territorial" role="region" aria-label="Mapa de comunas con socios y proyectos A+S"></div>
-            {{ mapa.puntos|json_script:"mapa-puntos" }}
-        {% else %}
-            <p class="text-muted text-center my-5">Aún no hay datos territoriales para estos filtros.</p>
-        {% endif %}
-    </div>
-
-    <div class="row g-3">
-        <div class="col-12 col-md-4">
-            <div class="mockup-card p-3 text-center">
-                <div class="metric-bubble"><i class="bi bi-mortarboard-fill"></i></div>
-                <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">{{ estudiantes }}</div>
-                <div class="text-muted small">Estudiantes Participantes</div>
-            </div>
-        </div>
-        <div class="col-12 col-md-4">
-            <div class="mockup-card p-3 text-center">
-                <div class="metric-bubble"><i class="bi bi-geo-alt-fill"></i></div>
-                <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">{{ mapa.puntos|length }}</div>
-                <div class="text-muted small">Comunas Alcanzadas</div>
-            </div>
-        </div>
-        <div class="col-12 col-md-4">
-            <div class="mockup-card p-3 text-center">
-                <div class="metric-bubble"><i class="bi bi-layers-fill"></i></div>
-                <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">{{ mapa.total_proyectos }}</div>
-                <div class="text-muted small">Proyectos Ejecutados</div>
+            <div class="overflow-hidden">
+                {% if mapa.puntos %}
+                    <div class="d-flex justify-content-end mb-2">
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Qué mostrar en el mapa">
+                            <button type="button" class="btn btn-outline-secondary active" aria-pressed="true" data-mapa-modo="proyectos">Proyectos</button>
+                            <button type="button" class="btn btn-outline-secondary" aria-pressed="false" data-mapa-modo="socios">Socios comunitarios</button>
+                        </div>
+                    </div>
+                    <div id="mapaTerritorial" class="mapa-territorial" role="region" aria-label="Mapa de comunas con socios y proyectos A+S"></div>
+                    {{ mapa.puntos|json_script:"mapa-puntos" }}
+                {% else %}
+                    <p class="text-muted text-center my-5">Aún no hay datos territoriales para estos filtros.</p>
+                {% endif %}
             </div>
         </div>
     </div>
 </section>
 
 
-<section class="container pb-5">
-    <h3 class="fw-bold mb-3" style="font-size: 1.35rem;">Cifras Macro del Programa A+S</h3>
+<section class="pub-seccion pub-seccion--rojo" aria-labelledby="macro-titulo">
+    <div class="container">
+        <header class="pub-encabezado">
+            <span class="pub-eyebrow">El programa en cifras</span>
+            <h2 id="macro-titulo" class="pub-titulo">Cifras macro del programa A+S</h2>
+        </header>
     <div class="row g-3">
         <div class="col-6 col-md-3">
             <div class="mockup-card p-4 d-flex justify-content-between align-items-center">
@@ -504,11 +628,16 @@
             </div>
         </div>
     </div>
+    </div>
 </section>
 
 
-<section class="container pb-5">
-    <h3 class="fw-bold mb-3" style="font-size: 1.35rem;">Noticias y Recursos</h3>
+<section class="pub-seccion" aria-labelledby="noticias-titulo">
+    <div class="container">
+        <header class="pub-encabezado">
+            <span class="pub-eyebrow">Novedades</span>
+            <h2 id="noticias-titulo" class="pub-titulo">Noticias y recursos</h2>
+        </header>
     <div class="row g-4">
         <div class="col-12 col-md-4">
             <div class="mockup-card h-100 overflow-hidden d-flex flex-column">
@@ -550,11 +679,16 @@
             </div>
         </div>
     </div>
+    </div>
 </section>
 
 
-<section id="documentos" class="container pb-5">
-    <h3 class="fw-bold mb-3" style="font-size: 1.35rem;">Documentos Descargables</h3>
+<section id="documentos" class="pub-seccion pub-seccion--alt" aria-labelledby="docs-titulo">
+    <div class="container">
+        <header class="pub-encabezado">
+            <span class="pub-eyebrow">Descargas</span>
+            <h2 id="docs-titulo" class="pub-titulo">Documentos descargables</h2>
+        </header>
     <div class="row g-3">
         <div class="col-12 col-md-3">
             <a href="#" class="doc-card">
@@ -605,6 +739,7 @@
             </a>
         </div>
     </div>
+    </div>
 </section>
 
 
@@ -638,13 +773,14 @@
             <div class="col-6 col-md-2">
                 <div class="ua-footer-title">PORTAL</div>
                 <a href="{% url 'core:inicio' %}" class="ua-footer-link">Inicio</a>
+                <a href="#que-es" class="ua-footer-link">¿Qué es A+S?</a>
                 <a href="#proyectos" class="ua-footer-link">Proyectos</a>
             </div>
 
             <div class="col-6 col-md-2">
                 <div class="ua-footer-title">ACCESOS</div>
-                <a href="#documentos" class="ua-footer-link">Estudiantes</a>
-                <a href="#" class="ua-footer-link">Socios</a>
+                <a href="#accesos-estudiantes" class="ua-footer-link">Estudiantes</a>
+                <a href="#accesos-socios" class="ua-footer-link">Socios</a>
             </div>
 
             <div class="col-12 col-md-3">

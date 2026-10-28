@@ -48,6 +48,25 @@
         {% endif %}
     </div>
 
+    <!-- Alerta de cartas pendientes: lo primero que ve el Coordinador al entrar -->
+    {% for pendiente in pendientes %}
+        {% if pendiente.label == "Cartas por revisar" and pendiente.value > 0 %}
+            <section class="alerta-cartas alerta-cartas--{% if pendiente.nivel_alerta == 'alta' %}alta{% elif pendiente.nivel_alerta == 'media' %}media{% else %}baja{% endif %}"
+                     aria-labelledby="alerta-cartas-titulo">
+                <i class="bi bi-envelope-paper alerta-cartas-icono" aria-hidden="true"></i>
+                <div class="alerta-cartas-texto">
+                    <h2 id="alerta-cartas-titulo" class="alerta-cartas-titulo">
+                        {{ pendiente.value }} solicitud{{ pendiente.value|pluralize:",es" }} de carta{{ pendiente.value|pluralize }} por revisar
+                    </h2>
+                    <p class="alerta-cartas-detalle">
+                        {% if pendiente.nivel_alerta == "alta" %}Atención prioritaria. {% elif pendiente.nivel_alerta == "media" %}Requiere atención. {% endif %}La más antigua espera hace {{ pendiente.antiguedad_dias }} día{{ pendiente.antiguedad_dias|pluralize }}.
+                    </p>
+                </div>
+                <a href="{{ pendiente.url }}?prioridad=pendientes" class="btn btn-rojo">Revisar solicitudes</a>
+            </section>
+        {% endif %}
+    {% endfor %}
+
     <!-- 1. Indicadores del período -->
     <section aria-label="Indicadores del período" class="row g-3 mb-4">
         {% for tarjeta in tarjetas %}
@@ -115,54 +134,7 @@
             <h2 id="pend-titulo" class="panel-titulo mb-3">Pendientes</h2>
             <div class="row g-3">
                 {% for pendiente in pendientes %}
-                    {% if pendiente.label == "Cartas por revisar" %}
-                        <div class="col-12">
-                            <div class="card shadow-sm h-100 border-{% if pendiente.value == 0 %}success{% elif pendiente.nivel_alerta == 'alta' %}danger{% elif pendiente.nivel_alerta == 'media' %}warning{% else %}primary{% endif %}">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <div>
-                                            <h3 class="h6 mb-1">
-                                                <i class="bi bi-envelope-paper me-2"></i>
-                                                Cartas por revisar
-                                            </h3>
-                                            <span class="fs-2 fw-bold">{{ pendiente.value }}</span>
-                                            <p class="text-muted small mb-0">Solicitudes pendientes</p>
-                                        </div>
-                                        {% if pendiente.value > 0 %}
-                                            <span class="badge bg-{% if pendiente.nivel_alerta == 'alta' %}danger{% elif pendiente.nivel_alerta == 'media' %}warning text-dark{% else %}primary{% endif %}">
-                                                {% if pendiente.nivel_alerta == "alta" %}
-                                                    Atención prioritaria
-                                                {% elif pendiente.nivel_alerta == "media" %}
-                                                    Requiere atención
-                                                {% else %}
-                                                    Pendiente
-                                                {% endif %}
-                                            </span>
-                                        {% endif %}
-                                    </div>
-
-                                    {% if pendiente.value > 0 %}
-                                        <p class="small mb-2">
-                                            <i class="bi bi-clock-history me-1"></i>
-                                            Solicitud más antigua:
-                                            <strong>{{ pendiente.antiguedad_dias }} día{{ pendiente.antiguedad_dias|pluralize }}</strong>
-                                        </p>
-                                        <a href="{{ pendiente.url }}?prioridad=pendientes" class="btn btn-outline-primary btn-sm">
-                                            Revisar solicitudes
-                                        </a>
-                                    {% else %}
-                                        <p class="small text-success mb-2">
-                                            <i class="bi bi-check-circle me-1"></i>
-                                            No hay cartas pendientes.
-                                        </p>
-                                        <a href="{{ pendiente.url }}" class="stretched-link" aria-label="Ver todas las solicitudes de cartas"></a>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    {% else %}
-                        {% include "core/partials/_metric_card.html" with label=pendiente.label value=pendiente.value icon=pendiente.icon url=pendiente.url ancho="12" %}
-                    {% endif %}
+                    {% include "core/partials/_metric_card.html" with label=pendiente.label value=pendiente.value icon=pendiente.icon url=pendiente.url ancho="12" %}
                 {% endfor %}
             </div>
         </section>
