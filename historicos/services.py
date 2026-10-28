@@ -162,14 +162,42 @@ def nombre_tipo(codigo):
     return dict(tipos_origen()).get(codigo, codigo)
 
 
+def obtener_hojas_excel(archivo):
+    """Devuelve los nombres de las hojas disponibles en un Excel."""
+    extension = Path(archivo.name or "").suffix.lower().lstrip(".")
+
+    if extension not in EXTENSIONES:
+        raise ValidationError(
+            "Sube el archivo exportado en formato Excel (.xlsx)."
+        )
+
+    try:
+        libro = openpyxl.load_workbook(
+            archivo,
+            read_only=True,
+            data_only=True,
+        )
+    except Exception as error:
+        raise ValidationError(
+            "No se pudo leer el archivo. Verifica que sea un Excel válido."
+        ) from error
+
+    try:
+        return list(libro.sheetnames)
+    finally:
+        libro.close()
+        archivo.seek(0)
+
 # ---------------------------------------------------------------------------
 # Lectura del archivo
 # ---------------------------------------------------------------------------
 
-def leer_tabla(archivo):
+
+def leer_tabla(archivo, nombre_hoja=None):
     """
     (hoja, encabezados, filas) de la primera hoja con datos. Cada fila es
     (número de fila en Excel, {encabezado: celda}); se saltan las vacías.
+    Si se indica nombre_hoja, solo se analiza esa hoja.
     """
     extension = Path(archivo.name or "").suffix.lower().lstrip(".")
     if extension not in EXTENSIONES:
@@ -178,30 +206,64 @@ def leer_tabla(archivo):
     try:
         libro = openpyxl.load_workbook(archivo, read_only=True, data_only=True)
     except Exception as error:
-        raise ValidationError("No se pudo leer el archivo. Verifica que sea un Excel válido.") from error
+        raise ValidationError(
+            "No se pudo leer el archivo. Verifica que sea un Excel válido."
+        ) from error
 
     try:
-        for hoja in libro.worksheets:
+        if nombre_hoja is not None:
+            if nombre_hoja not in libro.sheetnames:
+                raise ValidationError(
+                    f"La hoja '{nombre_hoja}' no existe en el archivo Excel."
+                )
+            hojas = [libro[nombre_hoja]]
+        else:
+            hojas = libro.worksheets
+
+        for hoja in hojas:
             filas = hoja.iter_rows(values_only=True)
             encabezados = None
             datos = []
+
             for numero, fila in enumerate(filas, start=1):
                 if encabezados is None:
                     if sum(1 for v in fila if _texto(v)) >= 2:
                         encabezados = [_texto(v) for v in fila]
+                        normalizados = [
+                            _n(nombre)
+                            for nombre in encabezados
+                            if nombre
+                        ]
+                        if len(normalizados) != len(set(normalizados)):
+                            raise ValidationError(
+                                f"La hoja '{hoja.title}' contiene "
+                                "encabezados duplicados. "
+                                "Corrige los nombres antes de importar."
+                            )
                     continue
+
                 if not any(_texto(v) for v in fila):
                     continue
-                datos.append((numero, {
-                    encabezado: valor for encabezado, valor in zip(encabezados, fila) if encabezado
-                }))
+
+                datos.append((
+                    numero,
+                    {
+                        encabezado: valor
+                        for encabezado, valor in zip(encabezados, fila)
+                        if encabezado
+                    }
+                ))
+
             if encabezados and datos:
                 return hoja.title, [e for e in encabezados if e], datos
+
     finally:
         libro.close()
         archivo.seek(0)
 
-    raise ValidationError("El archivo no tiene filas con datos bajo una fila de encabezados.")
+    raise ValidationError(
+        "El archivo no tiene filas con datos bajo una fila de encabezados."
+    )
 
 
 def _raw(fila):
@@ -245,12 +307,15 @@ def _columna_fecha(encabezados):
 # Paso 1: análisis y vista previa
 # ---------------------------------------------------------------------------
 
-def analizar_archivo(*, archivo, tipo, usuario):
+def analizar_archivo(*, archivo, tipo, usuario, nombre_hoja=None):
     """Guarda el archivo y deja la carga en estado PREVIA con cada fila clasificada."""
     if tipo not in dict(tipos_origen()):
         raise ValidationError("Elige qué formulario contiene el archivo.")
 
-    hoja, encabezados, filas = leer_tabla(archivo)
+    hoja, encabezados, filas = leer_tabla(
+    archivo,
+    nombre_hoja=nombre_hoja,
+    )
     if tipo == TIPO_REGISTRO_SOCIOS:
         mapeo, resultados = _analizar_registro_socios(encabezados, filas)
     else:

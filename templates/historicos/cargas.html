@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 {% load static %}
 
@@ -16,38 +17,87 @@
 </div>
 
 <div class="card-ua p-4 mb-4">
-    <form method="post" enctype="multipart/form-data" id="formCarga" novalidate>
+    <form method="post" enctype="multipart/form-data" id="formCarga" novalidate
+          data-archivo-pendiente="{% if archivo_pendiente %}true{% else %}false{% endif %}">
         {% csrf_token %}
+
+        {% if archivo_pendiente %}
+            <div class="d-flex align-items-center gap-2 mb-3 text-success">
+                <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                <span class="small fw-semibold">
+                    Excel cargado correctamente. Selecciona la hoja que deseas revisar.
+                </span>
+            </div>
+        {% endif %}
+
         <div class="row g-3">
             <div class="col-12 col-lg-5">
                 <label for="tipo" class="form-label-ua">¿Qué formulario contiene el archivo?</label>
-                <select id="tipo" name="tipo" class="form-select" required aria-describedby="tipoAyuda">
+                <select id="tipo" name="tipo" class="form-select" required
+                        aria-describedby="tipoAyuda" {% if archivo_pendiente %}disabled{% endif %}>
                     <option value="">Selecciona...</option>
                     {% for codigo, nombre in tipos %}
-                        <option value="{{ codigo }}" {% if codigo == tipo_elegido %}selected{% endif %}>{{ nombre }}</option>
+                        <option value="{{ codigo }}" {% if codigo == tipo_elegido %}selected{% endif %}>
+                            {{ nombre }}
+                        </option>
                     {% endfor %}
                 </select>
                 <div id="tipoAyuda" class="form-text">
-                    El Registro de Socios crea socios y participaciones para el mapa. Las encuestas y fichas se guardan
-                    como respuestas históricas de ese formulario.
+                    El Registro de Socios crea socios y participaciones para el mapa.
+                    Las encuestas y fichas se guardan como respuestas históricas de ese formulario.
                 </div>
             </div>
-            <div class="col-12 col-lg-7">
-                <span class="form-label-ua d-block">Archivo</span>
-                <label for="archivo" class="zona-carga" data-zona-carga>
-                    <input type="file" id="archivo" name="archivo" accept=".xlsx" class="visually-hidden" required>
-                    <i class="bi bi-cloud-arrow-up zona-carga-icono" aria-hidden="true"></i>
-                    <span class="zona-carga-texto" data-zona-texto>
-                        <strong>Arrastra aquí el Excel</strong> o haz clic para elegirlo
-                    </span>
-                    <span class="zona-carga-ayuda">Formato .xlsx, tal como lo descarga Forms («Descargar respuestas» o «Abrir en Excel»).</span>
-                </label>
-            </div>
+
+            {% if not archivo_pendiente %}
+                <div class="col-12 col-lg-7">
+                    <span class="form-label-ua d-block">Archivo</span>
+                    <label for="archivo" class="zona-carga" data-zona-carga>
+                        <input type="file" id="archivo" name="archivo" accept=".xlsx"
+                               class="visually-hidden" required>
+                        <i class="bi bi-cloud-arrow-up zona-carga-icono" aria-hidden="true"></i>
+                        <span class="zona-carga-texto" data-zona-texto>
+                            <strong>Arrastra aquí el Excel</strong> o haz clic para elegirlo
+                        </span>
+                        <span class="zona-carga-ayuda">
+                            Formato .xlsx, tal como lo descarga Forms
+                            («Descargar respuestas» o «Abrir en Excel»).
+                        </span>
+                    </label>
+                </div>
+            {% else %}
+                <div class="col-12 col-lg-7">
+                    <label for="nombre_hoja" class="form-label-ua">
+                        Selecciona la hoja que deseas importar
+                    </label>
+                    <select id="nombre_hoja" name="nombre_hoja" class="form-select" required>
+                        <option value="">Selecciona una hoja...</option>
+                        {% for hoja in hojas_disponibles %}
+                            <option value="{{ hoja }}" {% if hoja == hoja_elegida %}selected{% endif %}>
+                                {{ hoja }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text">
+                        Solo se analizarán los registros de la hoja seleccionada.
+                    </div>
+                </div>
+            {% endif %}
         </div>
+
         <div class="d-flex justify-content-end mt-3">
+            {% if archivo_pendiente %}
+                <button type="submit" name="reiniciar_carga" value="1"
+                        class="btn btn-outline-secondary me-2" formnovalidate>
+                    <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>
+                    Subir otro Excel
+                </button>
+            {% endif %}
+
             <button type="submit" class="btn btn-ua" data-boton-analizar>
-                <span class="spinner-border spinner-border-sm me-1 d-none" aria-hidden="true" data-cargando></span>
-                <i class="bi bi-search me-1" aria-hidden="true"></i>Revisar archivo
+                <span class="spinner-border spinner-border-sm me-1 d-none"
+                      aria-hidden="true" data-cargando></span>
+                <i class="bi bi-search me-1" aria-hidden="true"></i>
+                {% if archivo_pendiente %}Revisar hoja{% else %}Revisar archivo{% endif %}
             </button>
         </div>
     </form>
@@ -55,9 +105,15 @@
 
 <div class="card-ua">
     <div class="card-header-ua">
-        <span><i class="bi bi-clock-history me-2" style="color: var(--ua-red);" aria-hidden="true"></i>Cargas anteriores</span>
-        {% if cargas %}{% include "includes/orden_listado.html" with opciones=opciones_orden %}{% endif %}
+        <span>
+            <i class="bi bi-clock-history me-2" style="color: var(--ua-red);" aria-hidden="true"></i>
+            Cargas anteriores
+        </span>
+        {% if cargas %}
+            {% include "includes/orden_listado.html" with opciones=opciones_orden %}
+        {% endif %}
     </div>
+
     {% if cargas %}
         <div class="table-responsive">
             <table class="table tabla-ua mb-0">
@@ -77,23 +133,37 @@
                         <tr>
                             <td class="fw-semibold">{{ carga.nombre_tipo }}</td>
                             <td>
-                                <div class="text-truncate" style="max-width: 220px;" title="{{ carga.archivo.nombre_original }}">{{ carga.archivo.nombre_original }}</div>
-                                {% if carga.hoja %}<div class="socio-rut">Hoja: {{ carga.hoja }}</div>{% endif %}
+                                <div class="text-truncate" style="max-width: 220px;"
+                                     title="{{ carga.archivo.nombre_original }}">
+                                    {{ carga.archivo.nombre_original }}
+                                </div>
+                                {% if carga.hoja %}
+                                    <div class="socio-rut">Hoja: {{ carga.hoja }}</div>
+                                {% endif %}
                             </td>
                             <td class="text-nowrap">{{ carga.fecha_carga|date:"d/m/Y H:i" }}</td>
-                            <td>{{ carga.responsable_usuario.get_full_name|default:carga.responsable_usuario.username|default:"—" }}</td>
+                            <td>
+                                {{ carga.responsable_usuario.get_full_name|default:carga.responsable_usuario.username|default:"—" }}
+                            </td>
                             <td class="text-nowrap">
                                 <span title="Aceptadas">{{ carga.aceptadas }}</span> ·
                                 <span class="text-warning-emphasis" title="Observadas">{{ carga.observadas }}</span> ·
                                 <span class="text-muted" title="Omitidas">{{ carga.omitidas }}</span>
                             </td>
-                            <td><span class="badge-estado carga-{{ carga.estado }}">{{ carga.nombre_estado }}</span></td>
+                            <td>
+                                <span class="badge-estado carga-{{ carga.estado }}">
+                                    {{ carga.nombre_estado }}
+                                </span>
+                            </td>
                             <td class="text-end text-nowrap">
-                                <a href="{% url 'historicos:detalle' carga.id %}" class="btn-accion text-decoration-none">
+                                <a href="{% url 'historicos:detalle' carga.id %}"
+                                   class="btn-accion text-decoration-none">
                                     {% if carga.estado == "PREVIA" %}
-                                        <i class="bi bi-eye me-1" aria-hidden="true"></i>Revisar y confirmar
+                                        <i class="bi bi-eye me-1" aria-hidden="true"></i>
+                                        Revisar y confirmar
                                     {% else %}
-                                        <i class="bi bi-file-text me-1" aria-hidden="true"></i>Ver detalle
+                                        <i class="bi bi-file-text me-1" aria-hidden="true"></i>
+                                        Ver detalle
                                     {% endif %}
                                 </a>
                             </td>
@@ -105,10 +175,12 @@
     {% else %}
         <div class="empty-state">
             <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
-            <p class="mt-2 mb-0 fw-semibold">Aún no se ha importado ningún archivo</p>
+            <p class="mt-2 mb-0 fw-semibold">
+                Aún no se ha importado ningún archivo
+            </p>
         </div>
     {% endif %}
 </div>
 
-<script src="{% static 'js/importar_historicos.js' %}?v=2026-10-17"></script>
+<script src="{% static 'js/importar_historicos.js' %}?v=2026-10-28c"></script>
 {% endblock %}
