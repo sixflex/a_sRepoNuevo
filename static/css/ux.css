@@ -321,3 +321,52 @@ h1, h2, h3, h4, h5, h6,
     .accion-card--fila .accion-card-avance { flex: 0 0 260px; margin: 0 !important; }
     .accion-card--fila .accion-card-pie { margin-top: 0; flex: 0 0 auto; }
 }
+
+/* 12. Formulario de planificación (público, por enlace): ancho completo y estética del portal.
+   Se apoya en .plan-pagina (ya existe en la plantilla) para ganar especificidad sin !important. */
+.plan-pagina { background: var(--ua-bg, #F7F7F8); }
+.plan-pagina .plan-contenedor {
+    max-width: none;
+    width: 100%;
+    margin: 0;
+    padding: 24px clamp(16px, 3vw, 40px) 40px;
+}
+.plan-pagina .plan-encabezado,
+.plan-pagina .plan-planilla,
+.plan-pagina .plan-instrucciones,
+.plan-pagina .plan-aviso {
+    background: #fff;
+    border: 1px solid var(--ua-border, #E5E7EB);
+    border-radius: var(--ua-radius, 12px);
+    box-shadow: var(--ua-shadow-sm, 0 1px 2px rgba(0,0,0,.05));
+}
+.plan-pagina .plan-encabezado { border-top: 4px solid var(--ua-red, #C8232C); padding: 20px 24px; margin-bottom: 16px; }
+.plan-pagina .plan-planilla { padding: 16px 20px 20px; margin-bottom: 16px; }
+.plan-pagina .plan-tabla-scroll { overflow-x: auto; max-width: 100%; border: 0; padding: 0; margin: 0; min-width: 0; }
+.plan-pagina .plan-titulo { font-family: 'Montserrat', sans-serif; font-weight: 700; color: var(--ua-text, #1F2937); }
+.plan-pagina .plan-antetitulo { color: var(--ua-red, #C8232C); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-size: .75rem; }
+.plan-pagina .plan-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 24px; margin: 16px 0 0; }
+.plan-pagina .plan-datos > div { min-width: 0; }
+
+/* Una sola acción en rojo (Enviar versión final); lo demás, contorno */
+.plan-pagina .plan-boton-primario {
+    background: var(--ua-red, #C8232C); border: 1px solid var(--ua-red, #C8232C); color: #fff;
+}
+.plan-pagina .plan-boton-primario:hover,
+.plan-pagina .plan-boton-primario:focus-visible { background: var(--ua-red-hover, #A71C23); border-color: var(--ua-red-hover, #A71C23); color: #fff; }
+.plan-pagina .plan-boton-secundario,
+.plan-pagina .plan-agregar-fila,
+.plan-pagina .plan-agregar-docente {
+    background: #fff; color: var(--ua-red, #C8232C); border: 1px solid var(--ua-red, #C8232C);
+}
+.plan-pagina .plan-boton-secundario:hover,
+.plan-pagina .plan-agregar-fila:hover,
+.plan-pagina .plan-agregar-docente:hover { background: var(--ua-red-soft, #FDEDEE); color: var(--ua-red-hover, #A71C23); }
+.plan-pagina .plan-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+
+@media (max-width: 575.98px) {
+    .plan-pagina .plan-contenedor { padding: 16px 12px 32px; }
+    .plan-pagina .plan-encabezado, .plan-pagina .plan-planilla { padding: 16px; }
+    .plan-pagina .plan-acciones .d-flex { width: 100%; flex-direction: column; }
+    .plan-pagina .plan-boton { width: 100%; justify-content: center; }
+}
