@@ -1,0 +1,449 @@
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Consultar históricos | Portal A+S{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
+<link rel="stylesheet" href="{% static 'css/historicos.css' %}?v=2026-10-19">
+
+<!-- Encabezado -->
+<div class="mb-4">
+    <h1 class="page-title">Consultar históricos</h1>
+    <p class="page-subtitle mb-0">
+        Consulta las participaciones históricas de los socios comunitarios,
+        combina filtros, compara períodos y exporta los resultados.
+    </p>
+</div>
+
+<!-- CDE-94: Filtros de búsqueda -->
+<div class="card-ua p-4 mb-4">
+    <h2 class="h5 mb-3">
+        <i class="bi bi-funnel me-2" aria-hidden="true"></i>
+        Filtros de búsqueda
+    </h2>
+
+    <form method="get" action="{% url 'historicos:consulta_historicos' %}">
+
+        <!-- Mantener los años de comparación -->
+        <input type="hidden" name="anio_a" value="{{ filtros.anio_a }}">
+        <input type="hidden" name="anio_b" value="{{ filtros.anio_b }}">
+
+        <div class="row g-3">
+
+            <div class="col-12 col-md-4">
+                <label for="anio" class="form-label-ua">Año</label>
+                <input
+                    type="number"
+                    id="anio"
+                    name="anio"
+                    class="form-control"
+                    min="1900"
+                    max="2100"
+                    placeholder="Ej. 2024"
+                    value="{{ filtros.anio }}"
+                >
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label for="sede" class="form-label-ua">Sede</label>
+                <select id="sede" name="sede" class="form-select">
+                    <option value="">Todas las sedes</option>
+                    {% for sede in sedes %}
+                        <option
+                            value="{{ sede.id }}"
+                            {% if filtros.sede == sede.id|stringformat:"s" %}selected{% endif %}
+                        >
+                            {{ sede.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label for="carrera" class="form-label-ua">Carrera</label>
+                <select id="carrera" name="carrera" class="form-select">
+                    <option value="">Todas las carreras</option>
+                    {% for carrera in carreras %}
+                        <option
+                            value="{{ carrera.id }}"
+                            {% if filtros.carrera == carrera.id|stringformat:"s" %}selected{% endif %}
+                        >
+                            {{ carrera.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label for="asignatura" class="form-label-ua">Asignatura</label>
+                <select id="asignatura" name="asignatura" class="form-select">
+                    <option value="">Todas las asignaturas</option>
+                    {% for asignatura in asignaturas %}
+                        <option
+                            value="{{ asignatura.id }}"
+                            {% if filtros.asignatura == asignatura.id|stringformat:"s" %}selected{% endif %}
+                        >
+                            {{ asignatura.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-12 col-md-8">
+                <label for="socio" class="form-label-ua">
+                    Socio comunitario
+                </label>
+                <input
+                    type="search"
+                    id="socio"
+                    name="socio"
+                    class="form-control"
+                    placeholder="Buscar por nombre de organización"
+                    value="{{ filtros.socio }}"
+                >
+            </div>
+
+        </div>
+
+        <!-- Acciones de filtros y exportación -->
+        <div class="d-flex justify-content-end flex-wrap gap-2 mt-4">
+
+            <a
+                href="{% url 'historicos:consulta_historicos' %}"
+                class="btn btn-outline-secondary"
+            >
+                <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>
+                Limpiar filtros
+            </a>
+
+            <!-- CDE-97: Exportar Excel -->
+            <button
+                type="submit"
+                class="btn btn-outline-success"
+                formaction="{% url 'historicos:exportar_historicos' %}"
+                formmethod="get"
+            >
+                <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i>
+                Exportar Excel
+            </button>
+
+            <button type="submit" class="btn btn-ua">
+                <i class="bi bi-search me-1" aria-hidden="true"></i>
+                Aplicar filtros
+            </button>
+
+        </div>
+    </form>
+</div>
+
+<!-- CDE-96: Métricas generales -->
+<div class="row g-3 mb-4">
+
+    <div class="col-12 col-md-6">
+        <div class="card-ua p-4 h-100">
+            <div class="text-muted small mb-1">
+                Organizaciones distintas
+            </div>
+
+            <div class="fs-2 fw-bold">
+                {{ total_socios }}
+            </div>
+
+            <div class="small text-muted">
+                Socios comunitarios únicos según los filtros.
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6">
+        <div class="card-ua p-4 h-100">
+            <div class="text-muted small mb-1">
+                Participaciones históricas
+            </div>
+
+            <div class="fs-2 fw-bold">
+                {{ total_participaciones }}
+            </div>
+
+            <div class="small text-muted">
+                Total de participaciones según los filtros.
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- CDE-95: Comparación de períodos -->
+<div class="card-ua p-4 mb-4">
+
+    <h2 class="h5 mb-2">
+        <i class="bi bi-bar-chart-line me-2" aria-hidden="true"></i>
+        Comparación de períodos históricos
+    </h2>
+
+    <p class="small text-muted mb-3">
+        Selecciona dos años para comparar participaciones,
+        organizaciones distintas y beneficiarios estimados.
+        Se respetan los filtros de sede, carrera, asignatura
+        y socio comunitario.
+    </p>
+
+    <form
+        method="get"
+        action="{% url 'historicos:consulta_historicos' %}"
+    >
+
+        <!-- Conservar filtros de búsqueda -->
+        <input type="hidden" name="anio" value="{{ filtros.anio }}">
+        <input type="hidden" name="sede" value="{{ filtros.sede }}">
+        <input type="hidden" name="carrera" value="{{ filtros.carrera }}">
+        <input type="hidden" name="asignatura" value="{{ filtros.asignatura }}">
+        <input type="hidden" name="socio" value="{{ filtros.socio }}">
+
+        <div class="row g-3 align-items-end">
+
+            <div class="col-12 col-md-4">
+                <label for="anio_a" class="form-label-ua">
+                    Primer año
+                </label>
+
+                <input
+                    type="number"
+                    id="anio_a"
+                    name="anio_a"
+                    class="form-control"
+                    min="1900"
+                    max="2100"
+                    placeholder="Ej. 2023"
+                    value="{{ filtros.anio_a }}"
+                    required
+                >
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label for="anio_b" class="form-label-ua">
+                    Segundo año
+                </label>
+
+                <input
+                    type="number"
+                    id="anio_b"
+                    name="anio_b"
+                    class="form-control"
+                    min="1900"
+                    max="2100"
+                    placeholder="Ej. 2024"
+                    value="{{ filtros.anio_b }}"
+                    required
+                >
+            </div>
+
+            <div class="col-12 col-md-4">
+                <button
+                    type="submit"
+                    class="btn btn-ua w-100"
+                >
+                    <i class="bi bi-bar-chart me-1" aria-hidden="true"></i>
+                    Comparar períodos
+                </button>
+            </div>
+
+        </div>
+    </form>
+
+    {% if comparacion %}
+        <div class="table-responsive mt-4">
+            <table class="table tabla-ua mb-0">
+
+                <thead>
+                    <tr>
+                        <th scope="col">Métrica</th>
+                        <th scope="col">{{ comparacion.anio_a }}</th>
+                        <th scope="col">{{ comparacion.anio_b }}</th>
+                        <th scope="col">Diferencia (B - A)</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    <tr>
+                        <td class="fw-semibold">
+                            Participaciones históricas
+                        </td>
+                        <td>{{ comparacion.a.participaciones }}</td>
+                        <td>{{ comparacion.b.participaciones }}</td>
+                        <td>
+                            {{ comparacion.diferencia_participaciones }}
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="fw-semibold">
+                            Organizaciones distintas
+                        </td>
+                        <td>{{ comparacion.a.socios }}</td>
+                        <td>{{ comparacion.b.socios }}</td>
+                        <td>
+                            {{ comparacion.diferencia_socios }}
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="fw-semibold">
+                            Beneficiarios estimados
+                        </td>
+                        <td>
+                            {{ comparacion.a.beneficiarios|default_if_none:"Sin datos" }}
+                        </td>
+                        <td>
+                            {{ comparacion.b.beneficiarios|default_if_none:"Sin datos" }}
+                        </td>
+                        <td>—</td>
+                    </tr>
+
+                </tbody>
+            </table>
+        </div>
+
+        <p class="small text-muted mt-3 mb-0">
+            La diferencia se calcula como segundo año menos primer año.
+            Una participación que abarque ambos años se contabiliza en ambos.
+            Los beneficiarios se suman por participación y no representan
+            necesariamente personas únicas. Si no hay valores registrados,
+            se muestra "Sin datos".
+        </p>
+
+    {% else %}
+
+        <div class="text-muted small mt-3">
+            Selecciona dos años y presiona
+            <strong>Comparar períodos</strong>
+            para visualizar las métricas.
+        </div>
+
+    {% endif %}
+
+</div>
+
+<!-- CDE-94: Tabla de resultados históricos -->
+<div class="card-ua">
+
+    <div class="card-header-ua">
+        <span>
+            <i class="bi bi-clock-history me-2" aria-hidden="true"></i>
+            Resultados históricos
+        </span>
+    </div>
+
+    {% if pagina.object_list %}
+
+        <div class="table-responsive">
+            <table class="table tabla-ua mb-0">
+
+                <thead>
+                    <tr>
+                        <th scope="col">Socio comunitario</th>
+                        <th scope="col">Sede</th>
+                        <th scope="col">Carrera</th>
+                        <th scope="col">Asignatura</th>
+                        <th scope="col">Período</th>
+                        <th scope="col">Beneficiarios</th>
+                        <th scope="col">Evaluación</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for participacion in pagina %}
+                        <tr>
+
+                            <td class="fw-semibold">
+                                {{ participacion.socio.nombre_organizacion }}
+                            </td>
+
+                            <td>
+                                {{ participacion.sede.nombre|default:"—" }}
+                            </td>
+
+                            <td>
+                                {{ participacion.carrera.nombre|default:"—" }}
+                            </td>
+
+                            <td>
+                                {{ participacion.asignatura.nombre|default:"—" }}
+                            </td>
+
+                            <td class="text-nowrap">
+                                {{ participacion.fecha_inicio|date:"d/m/Y"|default:"—" }}
+                                –
+                                {{ participacion.fecha_fin|date:"d/m/Y"|default:"—" }}
+                            </td>
+
+                            <td>
+                                {{ participacion.beneficiarios_estimados|default_if_none:"—" }}
+                            </td>
+
+                            <td>
+                                {{ participacion.evaluacion|default_if_none:"—" }}
+                            </td>
+
+                        </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+
+        <!-- Paginación -->
+        {% if pagina.has_other_pages %}
+            <div class="d-flex justify-content-between align-items-center p-3">
+
+                <span class="small text-muted">
+                    Página {{ pagina.number }}
+                    de {{ pagina.paginator.num_pages }}
+                </span>
+
+                <div class="d-flex gap-2">
+
+                    {% if pagina.has_previous %}
+                        <a
+                            class="btn btn-outline-secondary btn-sm"
+                            href="?{{ query_filtros }}&pagina={{ pagina.previous_page_number }}"
+                        >
+                            Anterior
+                        </a>
+                    {% endif %}
+
+                    {% if pagina.has_next %}
+                        <a
+                            class="btn btn-outline-secondary btn-sm"
+                            href="?{{ query_filtros }}&pagina={{ pagina.next_page_number }}"
+                        >
+                            Siguiente
+                        </a>
+                    {% endif %}
+
+                </div>
+            </div>
+        {% endif %}
+
+    {% else %}
+
+        <div class="empty-state">
+            <i class="bi bi-search" aria-hidden="true"></i>
+
+            <p class="mt-2 mb-0 fw-semibold">
+                No se encontraron participaciones históricas
+            </p>
+
+            <p class="small text-muted mt-1">
+                Prueba cambiando o eliminando algunos filtros.
+            </p>
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}
