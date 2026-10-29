@@ -2,7 +2,10 @@
    Las animaciones se apagan solas si el sistema pide reducir movimiento (ux.css). */
 
 :root {
+    /* Ya no limita el ancho de los formularios (SP7-T06): ocupan toda la pantalla.
+       Se deja definida por si otra plantilla la usa. */
     --enc-ancho: 800px;
+    --enc-barra-ancho: 92px; /* espacio que ocupa la barra flotante a la derecha del editor */
     --enc-transicion: 0.18s ease;
     --enc-estrella: #F5A524;
 }
@@ -37,7 +40,7 @@
 .enc-nota { font-size: 0.82rem; color: var(--ua-text-muted); }
 
 /* ---------- Formulario público ---------- */
-.enc-contenedor { max-width: var(--enc-ancho); }
+.enc-contenedor { max-width: none; width: 100%; padding-left: clamp(16px, 3vw, 40px); padding-right: clamp(16px, 3vw, 40px); }
 
 .enc-encabezado { border-top: 8px solid var(--ua-red); }
 
@@ -290,7 +293,7 @@
 /* ---------- Constructor (editor en una sola página) ---------- */
 .enc-constructor { position: relative; container-type: inline-size; }
 
-.enc-lienzo { max-width: var(--enc-ancho); margin: 0 auto; }
+.enc-lienzo { max-width: none; margin: 0; padding-right: var(--enc-barra-ancho); }
 
 .enc-tarjeta {
     position: relative;
@@ -472,7 +475,7 @@
 .enc-barra {
     position: absolute;
     top: var(--barra-top, 0);
-    left: calc(50% + var(--enc-ancho) / 2 + 14px);
+    right: 0;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -504,18 +507,19 @@
 .enc-barra-boton i { font-size: 1.3rem; }
 .enc-barra-boton:hover { background: var(--ua-red-soft); color: var(--ua-red); }
 
-/* Sin espacio al costado: la barra queda fija abajo, al centro. */
-@container (max-width: 990px) {
+/* Pantallas angostas: la barra queda fija abajo, al centro. */
+@container (max-width: 640px) {
     .enc-barra {
         position: fixed;
         top: auto;
+        right: auto;
         left: 50%;
         bottom: 18px;
         transform: translateX(-50%);
         flex-direction: row;
         transition: none;
     }
-    .enc-lienzo { padding-bottom: 80px; }
+    .enc-lienzo { padding-right: 0; padding-bottom: 80px; }
 }
 
 /* Editor de pregunta dentro de la tarjeta */
