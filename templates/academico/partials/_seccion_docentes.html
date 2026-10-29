@@ -1,40 +1,34 @@
 <div class="card shadow-sm border-0 mb-4">
     <div class="card-header bg-white border-bottom py-3">
-        <h5 class="fw-bold mb-0">Docentes asociados</h5>
+        <h2 class="h5 fw-bold mb-0">Docentes asociados</h2>
     </div>
     <div class="card-body p-4">
         {% for relacion in seccion.seccion_docentes.all %}
-            <div class="border rounded p-3 mb-3">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <small class="text-muted">Docente</small>
-                        <p class="fw-semibold mb-0">
-                            {{ relacion.docente.nombres }} {{ relacion.docente.apellidos }}
-                        </p>
+            <div class="ficha-item">
+                <dl class="ficha-datos ficha-datos--docente">
+                    <div class="dato dato--ancho">
+                        <dt>Docente</dt>
+                        <dd>{{ relacion.docente.nombres }} {{ relacion.docente.apellidos }}</dd>
                     </div>
-                    <div class="col-md-6">
-                        <small class="text-muted">RUT</small>
-                        <p class="fw-semibold mb-0">{{ relacion.docente.rut }}</p>
+                    <div class="dato">
+                        <dt>RUT</dt>
+                        <dd>{{ relacion.docente.rut }}</dd>
                     </div>
-                    <div class="col-md-6">
-                        <small class="text-muted">Correo institucional</small>
-                        <p class="fw-semibold mb-0">{{ relacion.docente.correo_institucional }}</p>
+                    <div class="dato dato--ancho">
+                        <dt>Correo institucional</dt>
+                        <dd>{{ relacion.docente.correo_institucional }}</dd>
                     </div>
-                    <div class="col-md-6">
-                        <small class="text-muted">Teléfono</small>
-                        <p class="fw-semibold mb-0">
-                            {{ relacion.docente.telefono|default:"No registrado" }}
-                        </p>
+                    <div class="dato">
+                        <dt>Teléfono</dt>
+                        <dd>{{ relacion.docente.telefono|default:"No registrado" }}</dd>
                     </div>
-                    <div class="col-md-6">
-                        <small class="text-muted">Tipo de contrato</small>
-                        <p class="fw-semibold mb-0">
-                            {{ relacion.tipo_contrato|default:"No especificado" }}
-                        </p>
+                    <div class="dato">
+                        <dt>Tipo de contrato</dt>
+                        <dd>{{ relacion.tipo_contrato|default:"No especificado" }}</dd>
                     </div>
-                    <div class="col-md-6">
-                        <small class="text-muted">Capacitado A+S</small>
-                        <p class="fw-semibold mb-0">
+                    <div class="dato">
+                        <dt>Capacitado A+S</dt>
+                        <dd>
                             {% if relacion.capacitado_as == True %}
                                 Sí
                             {% elif relacion.capacitado_as == False %}
@@ -42,9 +36,9 @@
                             {% else %}
                                 No especificado
                             {% endif %}
-                        </p>
+                        </dd>
                     </div>
-                </div>
+                </dl>
             </div>
         {% empty %}
             <p class="text-muted mb-0">No existen docentes asociados a esta sección.</p>

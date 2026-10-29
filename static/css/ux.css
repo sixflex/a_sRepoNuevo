@@ -20,15 +20,20 @@
     outline-offset: 2px;
 }
 
-/* 3. Barra superior: texto blanco pleno (el 75 % de opacidad no cumple contraste AA sobre el rojo) */
-.navbar-dark.navbar-sistema .navbar-nav .nav-link {
-    color: var(--ua-bg-card);
+/* 3. Barra superior blanca con línea roja (texto oscuro: contraste AA sobre blanco) */
+.navbar.navbar-sistema {
+    background: var(--ua-bg-card, #fff) !important;
+    border-bottom: 3px solid var(--ua-red, #C8232C);
+    box-shadow: var(--ua-shadow-sm, 0 1px 2px rgba(0,0,0,.05));
 }
-.navbar-dark.navbar-sistema .navbar-nav .nav-link:hover,
-.navbar-dark.navbar-sistema .navbar-nav .nav-link:focus-visible {
-    color: var(--ua-bg-card);
-    text-decoration: underline;
-}
+.navbar-sistema .navbar-brand,
+.navbar-sistema .navbar-brand:hover { color: var(--ua-text, #1F2937); font-family: 'Montserrat', 'Inter', sans-serif; }
+.navbar-sistema .brand-logo-container { height: 44px !important; }
+.navbar-sistema .brand-logo-img { height: 40px !important; max-height: 40px !important; width: auto; }
+.navbar-sistema .navbar-nav .nav-link { color: var(--ua-text-secondary, #374151); font-weight: 500; }
+.navbar-sistema .navbar-nav .nav-link:hover,
+.navbar-sistema .navbar-nav .nav-link:focus-visible { color: var(--ua-red, #C8232C); text-decoration: underline; }
+.navbar-sistema .navbar-toggler { border-color: var(--ua-border-strong, #D1D5DB); }
 
 /* 4. Tipografía: Montserrat para títulos, Inter para el resto (ya se cargan en base.html) */
 h1, h2, h3, h4, h5, h6,
@@ -50,3 +55,333 @@ h1, h2, h3, h4, h5, h6,
         scroll-behavior: auto !important;
     }
 }
+
+/* =========================================================
+   SP7-T06 · Ajustes visuales pedidos en la reunión del 22/10
+   Solo colores, forma y layout. Todo con tokens --ua-*.
+   ========================================================= */
+
+/* 7. Sin azul de Bootstrap.
+      Bootstrap trae el azul #0d6efd fijo en botones, enlaces, foco, casillas,
+      paginación y barras. Se reemplaza aquí, una sola vez, por el rojo institucional. */
+:root {
+    --bs-link-color: var(--ua-red);
+    --bs-link-color-rgb: var(--ua-red-rgb);
+    --bs-link-hover-color: var(--ua-red-hover);
+    --bs-link-hover-color-rgb: 167, 28, 35;
+    --bs-primary-text-emphasis: var(--ua-red-hover);
+    --bs-primary-bg-subtle: var(--ua-red-soft);
+    --bs-primary-border-subtle: #F5C2C5;
+    --bs-focus-ring-color: rgba(var(--ua-red-rgb), 0.25);
+}
+
+/* Acción principal de la pantalla: único botón con relleno rojo */
+.btn-primary,
+.btn-rojo {
+    --bs-btn-color: #FFF;
+    --bs-btn-bg: var(--ua-red);
+    --bs-btn-border-color: var(--ua-red);
+    --bs-btn-hover-color: #FFF;
+    --bs-btn-hover-bg: var(--ua-red-hover);
+    --bs-btn-hover-border-color: var(--ua-red-hover);
+    --bs-btn-active-color: #FFF;
+    --bs-btn-active-bg: var(--ua-red-hover);
+    --bs-btn-active-border-color: var(--ua-red-hover);
+    --bs-btn-focus-shadow-rgb: var(--ua-red-rgb);
+    --bs-btn-disabled-color: #FFF;
+    --bs-btn-disabled-bg: var(--ua-red);
+    --bs-btn-disabled-border-color: var(--ua-red);
+}
+
+/* Acciones secundarias: contorno rojo, sin relleno */
+.btn-outline-primary,
+.btn-ua-outline {
+    --bs-btn-color: var(--ua-red);
+    --bs-btn-border-color: var(--ua-red);
+    --bs-btn-hover-color: var(--ua-red-hover);
+    --bs-btn-hover-bg: var(--ua-red-soft);
+    --bs-btn-hover-border-color: var(--ua-red);
+    --bs-btn-active-color: var(--ua-red-hover);
+    --bs-btn-active-bg: var(--ua-red-soft);
+    --bs-btn-active-border-color: var(--ua-red);
+    --bs-btn-focus-shadow-rgb: var(--ua-red-rgb);
+    --bs-btn-disabled-color: var(--ua-red);
+    --bs-btn-disabled-border-color: var(--ua-red);
+}
+.btn-ua-outline {
+    display: inline-block;
+    padding: var(--bs-btn-padding-y, 0.375rem) var(--bs-btn-padding-x, 0.75rem);
+    font-weight: 600;
+    background: transparent;
+    color: var(--bs-btn-color);
+    border: 1px solid var(--bs-btn-border-color);
+    border-radius: var(--ua-radius-sm);
+    text-decoration: none;
+}
+.btn-ua-outline:hover,
+.btn-ua-outline:focus-visible {
+    background-color: var(--ua-red-soft);
+    color: var(--ua-red-hover);
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--ua-red);
+    box-shadow: 0 0 0 0.2rem rgba(var(--ua-red-rgb), 0.15);
+}
+.form-check-input:focus {
+    border-color: var(--ua-red);
+    box-shadow: 0 0 0 0.2rem rgba(var(--ua-red-rgb), 0.15);
+}
+.form-check-input:checked,
+.form-check-input[type="checkbox"]:indeterminate {
+    background-color: var(--ua-red);
+    border-color: var(--ua-red);
+}
+.progress-bar { background-color: var(--ua-red); }
+.page-link { color: var(--ua-red); }
+.page-link:hover { color: var(--ua-red-hover); }
+.page-item.active .page-link {
+    background-color: var(--ua-red);
+    border-color: var(--ua-red);
+    color: #FFF;
+}
+.nav-pills .nav-link.active,
+.list-group-item.active,
+.dropdown-item.active {
+    background-color: var(--ua-red);
+    border-color: var(--ua-red);
+    color: #FFF;
+}
+.accordion-button:not(.collapsed) {
+    color: var(--ua-red-hover);
+    background-color: var(--ua-red-soft);
+}
+.btn-close:focus { box-shadow: 0 0 0 0.2rem rgba(var(--ua-red-rgb), 0.25); }
+
+/* 8. Alerta de cartas pendientes (arriba del Inicio del Coordinador) */
+.alerta-cartas {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+    margin-bottom: 1.5rem;
+    padding: 14px 18px;
+    background: var(--ua-bg-subtle);
+    border: 1px solid var(--ua-border);
+    border-left: 5px solid var(--ua-text-muted);
+    border-radius: var(--ua-radius);
+    color: var(--ua-text-dark);
+}
+.alerta-cartas--media {
+    background: var(--ua-warning-soft);
+    border-color: var(--ua-warning);
+}
+.alerta-cartas--alta {
+    background: var(--ua-red-soft);
+    border-color: var(--ua-red);
+}
+.alerta-cartas-icono { font-size: 1.6rem; line-height: 1; color: var(--ua-text-secondary); }
+.alerta-cartas--media .alerta-cartas-icono { color: var(--ua-warning); }
+.alerta-cartas--alta .alerta-cartas-icono { color: var(--ua-red); }
+.alerta-cartas-texto { flex: 1 1 260px; min-width: 0; }
+.alerta-cartas-titulo { font-weight: 700; margin: 0; font-size: 1rem; }
+.alerta-cartas-detalle { margin: 2px 0 0; font-size: 0.88rem; color: var(--ua-text-secondary); }
+
+/* 9. Ficha de NRC: tarjetas compactas, sin bloques en blanco */
+.ficha-seccion > .card,
+.ficha-seccion .card.mb-4 {
+    margin-bottom: 1rem !important;
+}
+.ficha-seccion .card-body { padding: 1rem 1.25rem !important; }
+.ficha-seccion .card-header { padding: 0.75rem 1.25rem !important; }
+
+.accion-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 1rem 1.25rem;
+    background: var(--ua-bg-card);
+    border: 1px solid var(--ua-border);
+    border-radius: var(--ua-radius);
+    box-shadow: var(--ua-shadow);
+}
+.accion-card-titulo {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 4px;
+    font-size: 1rem;
+    font-weight: 700;
+}
+.accion-card-titulo i { color: var(--ua-red); }
+.accion-card-texto { margin: 0 0 12px; font-size: 0.88rem; color: var(--ua-text-muted); }
+.accion-card-pie { margin-top: auto; }
+.avance-mini { height: 6px; border-radius: 999px; background: var(--ua-bg-subtle); overflow: hidden; }
+.avance-mini > span { display: block; height: 100%; background: var(--ua-red); }
+
+/* 10. Ficha de NRC: datos en grilla (sin filas altas ni bloques en blanco) */
+.ficha-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+@media (min-width: 992px) {
+    .ficha-grid--2 { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+}
+.ficha-seccion .ficha-grid > .card { margin-bottom: 0 !important; }
+
+.ficha-datos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 14px 24px;
+    margin: 0;
+}
+.ficha-datos .dato { min-width: 0; }
+.ficha-datos .dato--ancho { grid-column: span 2; }
+@media (max-width: 575.98px) {
+    .ficha-datos .dato--ancho { grid-column: auto; }
+}
+.ficha-datos dt {
+    margin: 0 0 2px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ua-text-muted);
+}
+.ficha-datos dd {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--ua-text-dark);
+    overflow-wrap: anywhere;
+}
+.ficha-item {
+    padding: 12px 16px;
+    border: 1px solid var(--ua-border);
+    border-radius: var(--ua-radius);
+    background: var(--ua-bg-card);
+}
+.ficha-item + .ficha-item { margin-top: 10px; }
+
+/* 11. Gestión de enlaces: acciones solo con ícono, del mismo tamaño */
+.icono-marca { color: var(--ua-red); }
+.acciones-enlace {
+    display: inline-flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+}
+.acciones-enlace form { margin: 0; }
+.btn-icono {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    font-size: 1rem;
+    line-height: 1;
+    background: var(--ua-bg-card);
+    border: 1px solid var(--ua-border-strong);
+    border-radius: var(--ua-radius-sm);
+    color: var(--ua-text-secondary);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.btn-icono:hover,
+.btn-icono:focus-visible {
+    background: var(--ua-red-soft);
+    border-color: var(--ua-red);
+    color: var(--ua-red-hover);
+}
+.btn-icono:disabled,
+.btn-icono[aria-disabled="true"] {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+/* Candado: abierto = enlace activo; cerrado = enlace inactivo */
+.btn-icono--abierto { color: var(--ua-success); border-color: var(--ua-success); }
+.btn-icono--abierto:hover,
+.btn-icono--abierto:focus-visible { background: var(--ua-success-soft); border-color: var(--ua-success); color: var(--ua-success); }
+.btn-icono--cerrado { color: var(--ua-red); border-color: var(--ua-red); }
+
+/* Filas de carreras y docentes: columnas fijas en pantallas anchas */
+@media (min-width: 992px) {
+    .ficha-datos--carrera { grid-template-columns: 2fr 2fr 1fr 1fr 1.2fr; }
+    .ficha-datos--docente { grid-template-columns: 2fr 1fr 2fr; }
+    .ficha-datos--carrera .dato--ancho,
+    .ficha-datos--docente .dato--ancho { grid-column: auto; }
+}
+
+/* Tarjeta de acción en fila (Ruta en la vista del Coordinador) */
+@media (min-width: 768px) {
+    .accion-card--fila { flex-direction: row; align-items: center; gap: 24px; }
+    .accion-card--fila .accion-card-cuerpo { flex: 1 1 auto; min-width: 0; }
+    .accion-card--fila .accion-card-texto { margin-bottom: 0; }
+    .accion-card--fila .accion-card-avance { flex: 0 0 260px; margin: 0 !important; }
+    .accion-card--fila .accion-card-pie { margin-top: 0; flex: 0 0 auto; }
+}
+
+/* 12. Formulario de planificación (público, por enlace): ancho completo y estética del portal.
+   Se apoya en .plan-pagina (ya existe en la plantilla) para ganar especificidad sin !important. */
+.plan-pagina { background: var(--ua-bg, #F7F7F8); }
+.plan-pagina .plan-contenedor {
+    max-width: none;
+    width: 100%;
+    margin: 0;
+    padding: 24px clamp(16px, 3vw, 40px) 40px;
+}
+.plan-pagina .plan-encabezado,
+.plan-pagina .plan-planilla,
+.plan-pagina .plan-instrucciones,
+.plan-pagina .plan-aviso {
+    background: #fff;
+    border: 1px solid var(--ua-border, #E5E7EB);
+    border-radius: var(--ua-radius, 12px);
+    box-shadow: var(--ua-shadow-sm, 0 1px 2px rgba(0,0,0,.05));
+}
+.plan-pagina .plan-encabezado { border-top: 4px solid var(--ua-red, #C8232C); padding: 20px 24px; margin-bottom: 16px; }
+.plan-pagina .plan-planilla { padding: 16px 20px 20px; margin-bottom: 16px; }
+.plan-pagina .plan-tabla-scroll { overflow-x: auto; max-width: 100%; border: 0; padding: 0; margin: 0; min-width: 0; }
+.plan-pagina .plan-titulo { font-family: 'Montserrat', sans-serif; font-weight: 700; color: var(--ua-text, #1F2937); }
+.plan-pagina .plan-antetitulo { color: var(--ua-red, #C8232C); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-size: .75rem; }
+.plan-pagina .plan-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 24px; margin: 16px 0 0; }
+.plan-pagina .plan-datos > div { min-width: 0; }
+
+/* Una sola acción en rojo (Enviar versión final); lo demás, contorno */
+.plan-pagina .plan-boton-primario {
+    background: var(--ua-red, #C8232C); border: 1px solid var(--ua-red, #C8232C); color: #fff;
+}
+.plan-pagina .plan-boton-primario:hover,
+.plan-pagina .plan-boton-primario:focus-visible { background: var(--ua-red-hover, #A71C23); border-color: var(--ua-red-hover, #A71C23); color: #fff; }
+.plan-pagina .plan-boton-secundario,
+.plan-pagina .plan-agregar-fila,
+.plan-pagina .plan-agregar-docente {
+    background: #fff; color: var(--ua-red, #C8232C); border: 1px solid var(--ua-red, #C8232C);
+}
+.plan-pagina .plan-boton-secundario:hover,
+.plan-pagina .plan-agregar-fila:hover,
+.plan-pagina .plan-agregar-docente:hover { background: var(--ua-red-soft, #FDEDEE); color: var(--ua-red-hover, #A71C23); }
+.plan-pagina .plan-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+
+@media (max-width: 575.98px) {
+    .plan-pagina .plan-contenedor { padding: 16px 12px 32px; }
+    .plan-pagina .plan-encabezado, .plan-pagina .plan-planilla { padding: 16px; }
+    .plan-pagina .plan-acciones .d-flex { width: 100%; flex-direction: column; }
+    .plan-pagina .plan-boton { width: 100%; justify-content: center; }
+}
+
+/* 13. Insignias de estado en colores suaves (fondo tenue + texto oscuro, sin colores Bootstrap saturados) */
+.badge.bg-success, .badge.text-bg-success { background-color: var(--ua-success-soft, #E6F4EA) !important; color: #166534 !important; }
+.badge.bg-warning, .badge.text-bg-warning { background-color: var(--ua-warning-soft, #FEF3C7) !important; color: #92400E !important; }
+.badge.bg-danger,  .badge.text-bg-danger  { background-color: var(--ua-red-soft, #FDEDEE) !important; color: var(--ua-red-hover, #A71C23) !important; }
+.badge.bg-info,    .badge.text-bg-info,
+.badge.bg-primary, .badge.text-bg-primary { background-color: #E0F2FE !important; color: #075985 !important; }
+.badge.bg-secondary, .badge.text-bg-secondary,
+.badge.bg-dark,    .badge.text-bg-dark    { background-color: var(--ua-bg-subtle, #F3F4F6) !important; color: var(--ua-text-secondary, #374151) !important; }
+.badge { font-weight: 600; border: 1px solid transparent; }
