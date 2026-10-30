@@ -95,7 +95,7 @@
                                                 {{ actividad.ruta_actividad.descripcion }}
                                             </p>
                                         {% endif %}
-                                        {% if actividad.ruta_actividad.formulario_version %}
+                                        {% if actividad.ruta_actividad.formulario_version and not actividad.formulario_compartible %}
                                             <div class="mt-2 mb-2">
                                                 <span class="badge bg-light text-secondary border">
                                                     <i class="bi bi-ui-checks me-1"></i>Formulario: {{ actividad.ruta_actividad.formulario_version.plantilla.titulo }}
@@ -103,9 +103,19 @@
                                             </div>
                                         {% endif %}
 
-                                        {% if actividad.enlace_formulario or actividad.ruta_actividad.archivo_recurso or actividad.url_recurso and not actividad.completada_por_docente and seccion_ruta.estado != "COMPLETADA" %}
+
+                                        {% if actividad.formulario_directo or actividad.enlace_formulario or actividad.formulario_compartible or actividad.ruta_actividad.archivo_recurso or actividad.url_recurso %}
                                             <div class="mt-3 d-flex flex-wrap gap-2">
-                                                {% if actividad.enlace_formulario %}
+                                                
+                                                {% if actividad.formulario_directo %}
+                                                    <a
+                                                        href="{{ actividad.formulario_directo }}"
+                                                        class="btn btn-primary btn-sm"
+                                                    >
+                                                        <i class="bi bi-file-earmark-text me-1"></i>
+                                                        Completar formulario
+                                                    </a>
+                                                {% elif actividad.enlace_formulario and not actividad.formulario_compartible %}
                                                     <a
                                                         href="{% url 'encuestas:responder' actividad.enlace_formulario.token %}"
                                                         target="_blank"
@@ -115,6 +125,54 @@
                                                         <i class="bi bi-file-earmark-text me-1"></i>
                                                         {{ actividad.enlace_formulario.version.plantilla.titulo }}
                                                     </a>
+                                                {% endif %}
+
+                                                {% if actividad.formulario_compartible %}
+                                                    <div class="mt-3 p-3 border rounded bg-light w-100">
+                                                        <h6 class="fw-semibold mb-2">
+                                                            <i class="bi bi-qr-code me-2"></i>
+                                                            Compartir registro de Socio Comunitario
+                                                        </h6>
+
+                                                        <p class="small text-muted mb-3">
+                                                            Comparte este formulario con el estudiante encargado
+                                                            de registrar los datos del Socio Comunitario.
+                                                        </p>
+
+                                                        <div class="d-flex flex-wrap align-items-center gap-3">
+                                                            <img
+                                                                src="data:image/png;base64,{{ actividad.formulario_compartible.qr_base64 }}"
+                                                                alt="Código QR del formulario de registro"
+                                                                width="150"
+                                                                height="150"
+                                                                class="border rounded bg-white p-2"
+                                                            >
+
+                                                            <div class="flex-grow-1">
+                                                                <label class="form-label small fw-semibold">
+                                                                    Enlace del formulario
+                                                                </label>
+
+                                                                <input
+                                                                    type="text"
+                                                                    class="form-control form-control-sm mb-2"
+                                                                    value="{{ actividad.formulario_compartible.url }}"
+                                                                    readonly
+                                                                    onclick="this.select()"
+                                                                >
+
+                                                                <a
+                                                                    href="{{ actividad.formulario_compartible.url }}"
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    class="btn btn-outline-primary btn-sm"
+                                                                >
+                                                                    <i class="bi bi-box-arrow-up-right me-1"></i>
+                                                                    Abrir formulario
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 {% endif %}
 
                                                 {% if actividad.url_recurso and not actividad.completada_por_docente and seccion_ruta.estado != "COMPLETADA" %}
@@ -138,6 +196,30 @@
                                                 {% endif %}
                                             </div>
                                         {% endif %}
+                                        
+                                        {% if actividad.encuestas_as %}
+                                            <div class="mt-3">
+                                                <h6 class="fw-semibold mb-2">
+                                                    <i class="bi bi-ui-checks me-1"></i>
+                                                    Encuestas de evaluación A+S
+                                                </h6>
+
+                                                <div class="d-flex flex-wrap gap-2">
+                                                    {% for encuesta in actividad.encuestas_as %}
+                                                        <a
+                                                            href="{% url 'encuestas:responder' encuesta.token %}"
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            class="btn btn-outline-primary btn-sm"
+                                                        >
+                                                            <i class="bi bi-box-arrow-up-right me-1"></i>
+                                                            {{ encuesta.titulo }}
+                                                        </a>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        {% endif %}
+
 
                                         {% if actividad.es_cierre %}
                                             {% include "rutas/includes/cierre_docente.html" %}
@@ -192,7 +274,7 @@
                                         {% endif %}
 
                                         {% if seccion_ruta.estado != "COMPLETADA" %}
-                                            {% if not actividad.completada_por_docente %}
+                                            {% if not actividad.completada_por_docente and not actividad.formulario_compartible %}
                                                 <button
                                                     type="button"
                                                     class="btn btn-outline-primary btn-sm mt-3"

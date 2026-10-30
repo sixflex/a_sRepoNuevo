@@ -43,18 +43,12 @@ from .models import (
     RespuestaPregunta,
 )
 
-
 class FormularioNoEditable(Exception):
     """La versión ya tiene respuestas o no está en un estado editable (RN-17)."""
 
 
 class TransicionInvalida(Exception):
     """El cambio de estado pedido no corresponde al estado actual."""
-
-
-# ---------------------------------------------------------------------------
-# Estructura y visibilidad
-# ---------------------------------------------------------------------------
 
 def cargar_estructura(version):
     """Devuelve (bloques, preguntas) de la versión, ya ordenados."""
@@ -374,7 +368,7 @@ def publicar(version, usuario=None, inicio=None, fin=None):
     version.fecha_fin_vigencia = fin
     version.save()
 
-    enlace = version.enlaces.filter(activo=True).first()
+    enlace = version.enlaces.filter(activo=True,seccion__isnull=True,).first()
     if enlace is None:
         enlace = crear_enlace(version, usuario)
     return enlace

@@ -633,7 +633,7 @@ def publicacion(request, version_id):
             messages.error(request, str(error))
             return redirect("encuestas:publicacion", version_id=version.id)
 
-    enlace = version.enlaces.filter(activo=True).order_by("id").first()
+    enlace = version.enlaces.filter(activo=True,seccion__isnull=True,).order_by("id").first()
     url_publica = qr = None
     if enlace is not None:
         url_publica = request.build_absolute_uri(reverse("encuestas:responder", args=[enlace.token]))
