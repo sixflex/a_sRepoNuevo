@@ -515,3 +515,21 @@ def detalle_planificacion_coordinacion(
             "filas": filas,
         },
     )
+
+@coordinador_required
+def panel_indicadores_coordinacion(request):
+    from . import indicadores
+    filtros = indicadores.leer_filtros(request.GET)
+
+    contexto = {
+        "filtros": filtros,
+        "chips": indicadores.chips(filtros),
+        "opciones": indicadores.opciones_filtros(),
+        "tarjetas": indicadores.tarjetas(filtros),
+        "evolucion": indicadores.evolucion(filtros),
+        "avance_carreras": indicadores.avance_por_carrera(filtros),
+        "satisfaccion": indicadores.satisfaccion(filtros),
+        "mapa": indicadores.mapa(filtros, detalle=True),
+    }
+
+    return render(request, "core/indicadores_coordinacion.html", contexto)
