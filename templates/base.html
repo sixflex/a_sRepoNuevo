@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
     <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=2026-10-19">
-    <link rel="stylesheet" href="{% static 'css/ux.css' %}?v=2026-10-28">
+    <link rel="stylesheet" href="{% static 'css/ux.css' %}?v=2026-10-30">
     {% block extra_css %}{% endblock %}
 </head>
 
@@ -24,22 +24,12 @@
 
     {% block layout_completo %}
         {% block main_navbar %}
-        <nav class="navbar navbar-expand-lg navbar-light navbar-sistema py-2">
+        <nav class="navbar navbar-expand-lg navbar-dark navbar-sistema py-2">
             <div class="container-fluid">
-                <a class="navbar-brand d-flex align-items-center gap-3 fw-bold py-0" href="{% url 'core:inicio' %}">
-                    <div class="brand-logo-container d-flex align-items-center" style="height: 48px;">
-                        <img src="{% static 'img/logo_ua.png' %}" 
-                             alt="Universidad Autónoma de Chile" 
-                             class="brand-logo-img"
-                             style="height: 44px; max-height: 44px; width: auto; object-fit: contain;"
-                             onerror="this.style.display='none'; document.getElementById('fallback-ua-badge').style.display='inline-block';">
-                        
-                        <span id="fallback-ua-badge" class="d-none fw-bold" style="color: #FFFFFF; font-size: 0.9rem; background: #C8232C; padding: 3px 8px; border-radius: 4px;">
-                            UA
-                        </span>
-                    </div>
-
-                    <span style="letter-spacing: 0.02em; font-size: 1.2rem;">Portal A+S</span>
+                <a class="navbar-brand marca marca--clara py-0" href="{% url 'core:inicio' %}">
+                    <img src="{% static 'img/escudo_ua_blanco.png' %}" alt="Universidad Autónoma de Chile" class="marca-escudo">
+                    <span class="marca-divisor" aria-hidden="true"></span>
+                    <img src="{% static 'img/logo_as_blanco.png' %}" alt="Aprendizaje + Servicio" class="marca-as">
                 </a>
 
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarPrincipal">

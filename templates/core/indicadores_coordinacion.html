@@ -1,12 +1,10 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Consulta de Indicadores | Portal A+S{% endblock %}
+{% block title %}Panel de indicadores | Portal A+S{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="{% static 'css/coordinacion.css' %}?v=2026-10-17">
-<link rel="stylesheet" href="{% static 'css/mapa_territorial.css' %}?v=2026-10-19">
+<link rel="stylesheet" href="{% static 'css/coordinacion.css' %}?v=2026-10-30">
 {% endblock %}
 
 {% block content %}
@@ -14,12 +12,13 @@
 
     <div class="coord-header d-flex justify-content-between align-items-start flex-wrap gap-3">
         <div>
-            <h1 class="coord-title mb-1">Consulta de Indicadores</h1>
-            <p class="coord-subtitle mb-0">Explorador de métricas históricas y actuales con filtros combinados.</p>
+            <a href="{% url 'core:coordinacion' %}" class="enlace-volver"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver al Inicio</a>
+            <h1 class="coord-title mb-1">Panel de indicadores</h1>
+            <p class="coord-subtitle mb-0">Filtra, compara entre años y exporta a Excel lo que estás viendo.</p>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <a href="{% url 'core:exportar_indicadores' %}?{{ request.GET.urlencode }}" class="btn btn-outline-success bg-white fw-semibold">
-                <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Exportar a Excel
+            <a href="{% url 'core:exportar_indicadores' %}?{{ request.GET.urlencode }}" class="btn btn-rojo">
+                <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i>Exportar a Excel
             </a>
             <button type="button" class="btn btn-ua-filtros" data-bs-toggle="offcanvas"
                     data-bs-target="#panelFiltros" aria-controls="panelFiltros" aria-haspopup="dialog">
@@ -48,17 +47,23 @@
 
     <section aria-label="Indicadores generales" class="row g-3 mb-4">
         {% for tarjeta in tarjetas %}
-            {% include "core/partials/_metric_card.html" with label=tarjeta.etiqueta value=tarjeta.valor detalle=tarjeta.detalle clase="col-12 col-sm-6 col-xl tarjeta-indicador" %}
+            {% cycle 'bi-journal-bookmark' 'bi-person-video3' 'bi-mortarboard' 'bi-people' 'bi-building' as icono silent %}
+            {% include "core/partials/_kpi_card.html" with tarjeta=tarjeta icono=icono %}
         {% endfor %}
     </section>
 
     <div class="row g-4 mb-4">
-        <section class="col-12 col-xl-6" aria-labelledby="avance-titulo">
+        <section class="col-12" aria-labelledby="avance-titulo">
             <div class="panel-card h-100">
                 <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
                     <div>
-                        <h2 id="avance-titulo" class="panel-titulo">Avance por Carrera</h2>
-                        <p class="panel-ayuda mb-0">Rutas A+S filtradas.</p>
+                        <h2 id="avance-titulo" class="panel-titulo">Avance de la Ruta A+S por carrera</h2>
+                        <p class="panel-ayuda mb-0">Promedio de actividades obligatorias completadas, según los filtros. Toca una carrera para ver a cada docente.</p>
+                    </div>
+                    <div class="avance-leyenda d-flex flex-wrap gap-3">
+                        <span><span class="avance-punto avance-bajo"></span>Bajo, menos de {{ umbrales.medio }}%</span>
+                        <span><span class="avance-punto avance-medio"></span>Medio, {{ umbrales.medio }} a {{ umbrales.alto|add:"-1" }}%</span>
+                        <span><span class="avance-punto avance-alto"></span>Alto, {{ umbrales.alto }}% o más</span>
                     </div>
                 </div>
                 {% for carrera in avance_carreras %}
@@ -92,28 +97,61 @@
             </div>
         </section>
 
-        <section class="col-12 col-xl-6" aria-labelledby="sat-titulo">
-            <div class="panel-card h-100">
-                <h2 id="sat-titulo" class="panel-titulo">Satisfacción General</h2>
-                <p class="panel-ayuda">Porcentaje con respuestas 4 o 5.</p>
+        <section class="col-12" aria-labelledby="sat-titulo">
+            <div class="panel-card">
+                <h2 id="sat-titulo" class="panel-titulo">Satisfacción con A+S</h2>
+                <p class="panel-ayuda">Porcentaje que respondió 4 o 5 (de acuerdo o muy positivo) en la valoración general de cada encuesta de evaluación.</p>
+
                 {% if satisfaccion.hay_datos %}
-                    <div class="d-flex flex-wrap justify-content-around gap-3 mb-4">
-                        {% for anillo in satisfaccion.anillos %}
-                            <div class="anillo-contenedor text-center">
-                                {% if anillo.porcentaje is not None %}
-                                    <div class="anillo" style="--valor: {{ anillo.porcentaje|stringformat:'s' }}" role="img">
-                                        <span>{{ anillo.porcentaje|floatformat:1 }}%</span>
+                    <div class="row g-4 align-items-center">
+                        <div class="col-12 col-lg-5">
+                            <div class="d-flex flex-wrap justify-content-around gap-3">
+                                {% for anillo in satisfaccion.anillos %}
+                                    <div class="anillo-contenedor text-center">
+                                        {% if anillo.porcentaje is not None %}
+                                            <div class="anillo" style="--valor: {{ anillo.porcentaje|stringformat:'s' }}" role="img"
+                                                 aria-label="{{ anillo.publico }}: {{ anillo.porcentaje }}% satisfechos">
+                                                <span>{{ anillo.porcentaje|floatformat:1 }}%</span>
+                                            </div>
+                                        {% else %}
+                                            <div class="anillo anillo-vacio" role="img" aria-label="{{ anillo.publico }}: sin respuestas">
+                                                <span>—</span>
+                                            </div>
+                                        {% endif %}
+                                        <strong class="d-block mt-2">{{ anillo.publico }}</strong>
+                                        <span class="text-muted small">
+                                            {% if anillo.personas %}{{ anillo.personas }} respuesta{{ anillo.personas|pluralize }}{% else %}Sin respuestas{% endif %}{% if anillo.pregunta %} · pregunta {{ anillo.pregunta }}{% endif %}
+                                        </span>
                                     </div>
-                                {% else %}
-                                    <div class="anillo anillo-vacio" role="img"><span>—</span></div>
-                                {% endif %}
-                                <strong class="d-block mt-2">{{ anillo.publico }}</strong>
-                                <span class="text-muted small">n = {{ anillo.personas|default:"0" }}</span>
+                                {% endfor %}
                             </div>
-                        {% endfor %}
+                        </div>
+                        <div class="col-12 col-lg-7">
+                            <div class="table-responsive">
+                                <table class="table tabla-dimensiones align-middle mb-0">
+                                    <caption class="caption-top">Promedio por dimensión (1 a 5)</caption>
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Dimensión</th>
+                                            {% for publico in satisfaccion.publicos %}<th scope="col">{{ publico }}</th>{% endfor %}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for fila in satisfaccion.tabla %}
+                                            <tr>
+                                                <th scope="row">{{ fila.dimension }}</th>
+                                                {% for valor in fila.valores %}
+                                                    <td>{% if valor is not None %}{{ valor|floatformat:1 }}{% else %}<span class="text-muted small">no se pregunta</span>{% endif %}</td>
+                                                {% endfor %}
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 {% else %}
-                    <p class="estado-vacio">Aún no hay respuestas para estos filtros.</p>
+                    <p class="estado-vacio">Aún no hay respuestas de las encuestas de evaluación A+S para estos filtros.</p>
                 {% endif %}
             </div>
         </section>
@@ -122,7 +160,7 @@
     <section class="panel-card mb-4" aria-labelledby="evo-titulo">
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
             <div>
-                <h2 id="evo-titulo" class="panel-titulo">Evolución Histórica</h2>
+                <h2 id="evo-titulo" class="panel-titulo">Evolución por año</h2>
             </div>
             <div class="d-flex flex-wrap gap-2" role="group">
                 {% for indicador in evolucion %}
@@ -202,7 +240,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="{% static 'js/panel_coordinador.js' %}?v=2026-10-17b"></script>
-<script src="{% static 'js/mapa_territorial.js' %}?v=2026-10-19"></script>
 {% endblock %}

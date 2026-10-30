@@ -133,7 +133,7 @@ class NavegacionTestCase(TestCase):
         response = self.client.get(reverse("core:coordinacion"))
 
         self.assertContains(response, "<title>Inicio | Portal A+S</title>")
-        self.assertContains(response, "Período actual: Primavera 2026")
+        self.assertContains(response, "Período actual: <strong>Primavera 2026</strong>")
         self.assertContains(response, "Pendientes")
         self.assertContains(response, reverse("socios:lista_postulaciones"))
 
@@ -144,7 +144,6 @@ class NavegacionTestCase(TestCase):
 
         self.assertContains(response, "Sin período activo")
         self.assertIsNone(response.context["filtros"]["periodo"])
-        self.assertEqual(response.context["chips"], [])
 
     def test_prototipo_validar_planificacion_eliminado(self):
         # RF-ACA-04 lo resuelve la app planificacion.
@@ -156,12 +155,13 @@ class NavegacionTestCase(TestCase):
 
         response = self.client.get(reverse("core:coordinacion"))
 
+        # Las cartas pendientes van en la franja de arriba, no como tarjeta.
         for nombre in [
-            "cartas:listar_solicitudes_coordinacion",
             "core:planificacion_coordinacion",
             "socios:lista_postulaciones",
         ]:
             self.assertContains(response, f'href="{reverse(nombre)}" class="stretched-link"')
+        self.assertContains(response, 'href="#avance-titulo" class="stretched-link"')
 
     def test_panel_sin_enlaces_vacios(self):
         self.client.force_login(self.coordinador)
@@ -475,7 +475,35 @@ class PanelIndicadoresTestCase(TestCase):
         self.client.force_login(self.coordinador)
 
     def panel(self, **parametros):
+        return self.client.get(reverse("core:indicadores_coordinacion"), parametros)
+
+    def inicio(self, **parametros):
         return self.client.get(reverse("core:coordinacion"), parametros)
+
+    def test_inicio_muestra_solo_el_periodo_vigente(self):
+        response = self.inicio(periodo=self.otono.id, carrera=self.industrial.id)
+
+        # El Inicio ignora los filtros del Panel de indicadores.
+        self.assertEqual(response.context["filtros"]["periodo"], self.primavera.id)
+        self.assertIsNone(response.context["filtros"]["carrera"])
+        self.assertContains(response, "Período actual: <strong>Primavera 2026 (2º semestre)</strong>")
+        self.assertContains(response, reverse("core:indicadores_coordinacion"))
+
+    def test_inicio_filtra_por_sede(self):
+        otra = Sede.objects.create(nombre="Talca", activo=True)
+
+        response = self.inicio(sede=otra.id)
+
+        self.assertEqual(response.context["sede_actual"], otra)
+        tarjetas = {t["etiqueta"]: t for t in response.context["tarjetas"]}
+        self.assertEqual(tarjetas["Asignaturas A+S"]["valor"], 0)
+        self.assertEqual(self.inicio().context["sede_actual"], None)
+
+    def test_inicio_cuenta_rutas_con_avance_bajo(self):
+        pendientes = {p["label"]: p for p in self.inicio().context["pendientes"]}
+
+        # Informática va en 25 % (bajo); Industrial en 100 %; la de Otoño no es del período.
+        self.assertEqual(pendientes["Docentes con Ruta bajo 40 %"]["value"], 1)
 
     def test_sin_filtros_parte_en_el_periodo_vigente(self):
         response = self.panel()
@@ -523,7 +551,7 @@ class PanelIndicadoresTestCase(TestCase):
         self.assertEqual(len(response.context["chips"]), 2)
 
     def test_mapa_agrupa_por_comuna_sin_direcciones(self):
-        mapa = self.panel().context["mapa"]
+        mapa = self.inicio().context["mapa"]
 
         self.assertEqual(len(mapa["puntos"]), 1)
         punto = mapa["puntos"][0]

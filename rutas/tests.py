@@ -1282,32 +1282,24 @@ class AuditoriaYPruebasAvanzadasRutaTestCase(SeguimientoRutaTestCase):
 
     def test_auditoria_al_completar_desmarcar_actividad(self):
         self.client.force_login(self.usuario_docente)
+        url = reverse("rutas:completar_actividad", args=[self.actividad_obligatoria.id])
 
-        # 1. Completar actividad
-        self.client.post(
-            reverse("rutas:completar_actividad", args=[self.actividad_obligatoria.id])
+        # Marcar y luego desmarcar: un solo registro por cambio (BUG-03, sin duplicados).
+        self.client.post(url)
+        self.client.post(url)
+        registros = list(
+            AuditoriaCambio.objects.filter(
+                entidad="SeccionActividad",
+                entidad_id=self.actividad_obligatoria.id,
+            ).order_by("id")
         )
-        auditoria_marcar = AuditoriaCambio.objects.filter(
-            entidad="SeccionActividad",
-            entidad_id=self.actividad_obligatoria.id,
-            accion="MARCAR_ACTIVIDAD",
-        ).first()
 
-        self.assertIsNotNone(auditoria_marcar)
-        self.assertEqual(auditoria_marcar.valores_nuevos_json.get("estado"), "COMPLETADA")
-
-        # 2. Desmarcar actividad
-        self.client.post(
-            reverse("rutas:completar_actividad", args=[self.actividad_obligatoria.id])
-        )
-        auditoria_desmarcar = AuditoriaCambio.objects.filter(
-            entidad="SeccionActividad",
-            entidad_id=self.actividad_obligatoria.id,
-            accion="DESMARCAR_ACTIVIDAD",
-        ).first()
-
-        self.assertIsNotNone(auditoria_desmarcar)
-        self.assertEqual(auditoria_desmarcar.valores_nuevos_json.get("estado"), "PENDIENTE")
+        self.assertEqual([r.accion for r in registros], ["CAMBIAR_ESTADO_ACTIVIDAD"] * 2)
+        marcar, desmarcar = registros
+        self.assertEqual(marcar.valores_anteriores_json.get("estado"), "PENDIENTE")
+        self.assertEqual(marcar.valores_nuevos_json.get("estado"), "COMPLETADA")
+        self.assertEqual(desmarcar.valores_anteriores_json.get("estado"), "COMPLETADA")
+        self.assertEqual(desmarcar.valores_nuevos_json.get("estado"), "PENDIENTE")
 
     @patch("archivos.services.obtener_storage_privado", return_value=InMemoryStorage())
     def test_auditoria_al_subir_y_eliminar_evidencia(self, _storage):

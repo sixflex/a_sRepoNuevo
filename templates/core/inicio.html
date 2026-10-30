@@ -295,23 +295,10 @@
 
 <nav class="ua-navbar sticky-top">
     <div class="container d-flex align-items-center justify-content-between">
-        <a href="{% url 'core:inicio' %}" class="d-flex align-items-center text-decoration-none">
-            <img src="{% static 'img/logo_ua.png' %}" 
-                 alt="Universidad Autónoma de Chile" 
-                 style="height: 48px; width: auto; object-fit: contain;"
-                 onerror="this.style.display='none'; document.getElementById('logo-fallback-nav').style.display='flex';">
-            
-            <div id="logo-fallback-nav" class="d-none align-items-stretch" style="height: 48px;">
-                <div style="background-color: #C8232C; width: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3px; border-radius: 3px 0 0 3px;">
-                    <span style="color: rgba(255,255,255,0.7); font-size: 4px; font-weight: 700;">DUC IN ALTUM</span>
-                    <span style="color: #FFFFFF; font-size: 16px; font-weight: 900; line-height: 1;">UA</span>
-                </div>
-                <div style="background-color: #2F3235; color: #FFFFFF; display: flex; flex-direction: column; justify-content: center; padding: 0 10px; border-radius: 0 3px 3px 0;">
-                    <div style="font-size: 9px; font-weight: 800; line-height: 1.1;">UNIVERSIDAD</div>
-                    <div style="font-size: 9px; font-weight: 800; line-height: 1.1;">AUTONOMA</div>
-                    <div style="font-size: 6.5px; font-weight: 500; color: #D1D5DB;">DE CHILE</div>
-                </div>
-            </div>
+        <a href="{% url 'core:inicio' %}" class="marca">
+            <img src="{% static 'img/escudo_ua.png' %}" alt="Universidad Autónoma de Chile" class="marca-escudo">
+            <span class="marca-divisor" aria-hidden="true"></span>
+            <img src="{% static 'img/logo_as.png' %}" alt="Aprendizaje + Servicio" class="marca-as">
         </a>
 
         <div class="d-none d-md-block position-relative" style="width: 440px;">
@@ -698,22 +685,10 @@
     <div class="container">
         <div class="row g-4 pb-4">
             <div class="col-12 col-md-5">
-                <div class="d-flex align-items-stretch mb-3" style="height: 48px; width: fit-content;">
-                    <img src="{% static 'img/logo_ua.png' %}" 
-                         alt="Universidad Autónoma de Chile" 
-                         style="height: 46px; width: auto; object-fit: contain;"
-                         onerror="this.style.display='none'; document.getElementById('logo-fallback-footer').style.display='flex';">
-                    
-                    <div id="logo-fallback-footer" class="d-none align-items-stretch" style="height: 46px;">
-                        <div style="background-color: #C8232C; width: 38px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px; border-radius: 3px 0 0 3px;">
-                            <span style="color: rgba(255,255,255,0.7); font-size: 4px; font-weight: 700;">DUC IN ALTUM</span>
-                            <span style="color: #FFFFFF; font-size: 15px; font-weight: 900; line-height: 1;">UA</span>
-                        </div>
-                        <div style="background-color: #383B3E; color: #FFFFFF; display: flex; flex-direction: column; justify-content: center; padding: 0 10px; border-radius: 0 3px 3px 0;">
-                            <div style="font-size: 8.5px; font-weight: 800; line-height: 1.1;">UNIVERSIDAD AUTONOMA</div>
-                            <div style="font-size: 6.5px; font-weight: 500; color: #D1D5DB;">DE CHILE</div>
-                        </div>
-                    </div>
+                <div class="marca marca--clara mb-3">
+                    <img src="{% static 'img/escudo_ua_footer.png' %}" alt="Universidad Autónoma de Chile" class="marca-escudo">
+                    <span class="marca-divisor" aria-hidden="true"></span>
+                    <img src="{% static 'img/logo_as_blanco.png' %}" alt="Aprendizaje + Servicio" class="marca-as">
                 </div>
                 <p class="small pe-md-4 mb-0" style="color: #9CA3AF; line-height: 1.6; font-size: 0.88rem;">
                     Portal Integrado de Gestión e Información A+S. Fortaleciendo el aprendizaje de nuestros estudiantes mediante el servicio activo a nuestras comunidades.

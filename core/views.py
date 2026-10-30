@@ -35,9 +35,11 @@ def inicio(request):
 @coordinador_required
 def panel_coordinacion(request):
     """
-    Panel del coordinador (HU-08): indicadores del período, avance de la Ruta
-    por carrera, satisfacción, mapa y evolución, con los filtros del panel
-    lateral (RF-IND-01). Los cálculos están en core/indicadores.py.
+    Inicio del coordinador: lo que pasa en el período vigente y lo que hay que
+    atender (cartas, pendientes, indicadores, mapa y avance de la Ruta), con un
+    selector de sede. El análisis con todos los filtros, la satisfacción, la
+    evolución y la exportación a Excel están en el Panel de indicadores
+    (RF-IND-01, RF-IND-04). Los cálculos están en core/indicadores.py.
     """
     from cartas.models import SolicitudCarta
     from planificacion.models import Planificacion
@@ -45,13 +47,13 @@ def panel_coordinacion(request):
 
     from . import indicadores
 
-    filtros = indicadores.leer_filtros(request.GET)
-    periodo_actual = (
-        PeriodoAcademico.objects
-        .filter(estado="Activo")
-        .order_by("-anio", "-id")
-        .first()
-    )
+    from academico.models import Sede
+
+    filtros = indicadores.filtros_inicio(request.GET)
+    periodo_actual = PeriodoAcademico.objects.filter(pk=filtros["periodo"]).first()
+    sedes = Sede.objects.order_by("nombre")
+    sede_actual = sedes.filter(pk=filtros["sede"]).first() if filtros["sede"] else None
+    avance_carreras = indicadores.avance_por_carrera(filtros)
     cartas_pendientes = SolicitudCarta.objects.filter(
         estado="PENDIENTE"
     ).order_by("fecha_solicitud", "id")
@@ -99,9 +101,14 @@ def panel_coordinacion(request):
             "icon": "bi-person-plus",
             "url": reverse("socios:lista_postulaciones"),
         },
+        {
+            "label": f"Docentes con Ruta bajo {indicadores.UMBRAL_MEDIO} %",
+            "value": indicadores.rutas_bajo_umbral(avance_carreras),
+            "icon": "bi-hourglass-split",
+            "url": "#avance-titulo",
+        },
     ]
 
-    chips = indicadores.chips(filtros)
     # El mapa del coordinador sí trae dirección, contacto e intervenciones de cada socio.
     mapa = indicadores.mapa(filtros, detalle=True)
 
@@ -110,17 +117,14 @@ def panel_coordinacion(request):
         "core/coordinacion.html",
         {
             "filtros": filtros,
-            "chips": chips,
-            "cantidad_filtros": len(chips),
-            "opciones": indicadores.opciones_filtros(),
             "periodo_actual": periodo_actual,
+            "sedes": sedes,
+            "sede_actual": sede_actual,
             "tarjetas": indicadores.tarjetas(filtros),
-            "avance_carreras": indicadores.avance_por_carrera(filtros),
+            "avance_carreras": avance_carreras,
             "umbrales": {"medio": indicadores.UMBRAL_MEDIO, "alto": indicadores.UMBRAL_ALTO},
             "pendientes": pendientes,
-            "satisfaccion": indicadores.satisfaccion(filtros),
             "mapa": mapa,
-            "evolucion": indicadores.evolucion(filtros),
         },
     )
 
@@ -528,8 +532,8 @@ def panel_indicadores_coordinacion(request):
         "tarjetas": indicadores.tarjetas(filtros),
         "evolucion": indicadores.evolucion(filtros),
         "avance_carreras": indicadores.avance_por_carrera(filtros),
+        "umbrales": {"medio": indicadores.UMBRAL_MEDIO, "alto": indicadores.UMBRAL_ALTO},
         "satisfaccion": indicadores.satisfaccion(filtros),
-        "mapa": indicadores.mapa(filtros, detalle=True),
     }
 
     return render(request, "core/indicadores_coordinacion.html", contexto)
