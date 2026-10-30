@@ -10,6 +10,7 @@ urlpatterns = [
     path("", views.inicio, name="inicio"),
 
     path("coordinacion/", views.panel_coordinacion, name="coordinacion"),
+    path("coordinacion/exportar/", views.exportar_indicadores, name="exportar_indicadores"),
 
     path("docente/", views.panel_docente, name="docente"),
 
@@ -21,4 +22,5 @@ urlpatterns = [
 
     path("coordinacion/planificacion/<int:planificacion_id>/", views.detalle_planificacion_coordinacion, name="detalle_planificacion_coordinacion"),
 
+    path("coordinacion/indicadores/", views.panel_indicadores_coordinacion, name="indicadores_coordinacion"),
 ]

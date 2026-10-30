@@ -440,3 +440,96 @@
     font-size: 0.85rem;
     color: var(--ua-text-muted);
 }
+
+/* Inicio: botón al Panel de indicadores (se pinta rojo al pasar el cursor) */
+.btn-ua-panel {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 44px;
+    padding: 0 1rem;
+    font-weight: 600;
+    color: var(--ua-text-dark);
+    background: var(--ua-bg-card);
+    border: 1px solid var(--ua-border-strong);
+    border-radius: var(--ua-radius-sm);
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.btn-ua-panel:hover,
+.btn-ua-panel:focus-visible {
+    color: #FFF;
+    background: var(--ua-red);
+    border-color: var(--ua-red);
+}
+
+/* Inicio: pendientes en tarjetas chicas */
+.pend-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 100%;
+    padding: 14px 16px;
+    background: var(--ua-bg-card);
+    border: 1px solid var(--ua-border);
+    border-radius: var(--ua-radius);
+    box-shadow: var(--ua-shadow);
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.pend-card:hover { border-color: var(--ua-red); background: var(--ua-red-soft); }
+.pend-icono {
+    flex: 0 0 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: var(--ua-red-soft);
+    color: var(--ua-red);
+    font-size: 1.15rem;
+}
+.pend-texto { flex: 1; font-weight: 600; font-size: 0.9rem; color: var(--ua-text-dark); }
+.pend-num {
+    min-width: 34px;
+    padding: 3px 10px;
+    text-align: center;
+    font-weight: 700;
+    border-radius: 999px;
+    background: var(--ua-bg-subtle);
+}
+.pend-num--hay { background: var(--ua-red-soft); color: var(--ua-red-hover); }
+
+/* Inicio: indicadores del período (ícono y número arriba, etiqueta en una línea) */
+.kpi-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    height: 100%;
+    padding: 14px 16px;
+    background: var(--ua-bg-card);
+    border: 1px solid var(--ua-border);
+    border-radius: var(--ua-radius);
+    box-shadow: var(--ua-shadow);
+}
+.kpi-cabeza { display: flex; align-items: center; gap: 10px; }
+.kpi-icono {
+    flex: 0 0 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: var(--ua-red-soft);
+    color: var(--ua-red);
+}
+.kpi-valor { font: 700 1.75rem/1.1 'Montserrat', 'Inter', sans-serif; color: var(--ua-text-dark); }
+.kpi-etiqueta { font-size: 0.85rem; font-weight: 600; color: var(--ua-text-secondary); }
+.kpi-detalle { font-size: 0.72rem; line-height: 1.3; color: var(--ua-text-muted); }
+
+/* Panel de indicadores: enlace de vuelta al Inicio */
+.enlace-volver {
+    display: inline-block;
+    margin-bottom: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+}

@@ -1,11 +1,13 @@
 from types import SimpleNamespace
 from unittest.mock import patch
+from io import BytesIO
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import NoReverseMatch, reverse
+from openpyxl import load_workbook
 
 from academico.models import Asignatura, Campus, Docente, PeriodoAcademico, Seccion, Sede
 from planificacion.services import _resolver_docente
@@ -131,7 +133,7 @@ class NavegacionTestCase(TestCase):
         response = self.client.get(reverse("core:coordinacion"))
 
         self.assertContains(response, "<title>Inicio | Portal A+S</title>")
-        self.assertContains(response, "Período actual: Primavera 2026")
+        self.assertContains(response, "Período actual: <strong>Primavera 2026</strong>")
         self.assertContains(response, "Pendientes")
         self.assertContains(response, reverse("socios:lista_postulaciones"))
 
@@ -142,7 +144,6 @@ class NavegacionTestCase(TestCase):
 
         self.assertContains(response, "Sin período activo")
         self.assertIsNone(response.context["filtros"]["periodo"])
-        self.assertEqual(response.context["chips"], [])
 
     def test_prototipo_validar_planificacion_eliminado(self):
         # RF-ACA-04 lo resuelve la app planificacion.
@@ -154,12 +155,13 @@ class NavegacionTestCase(TestCase):
 
         response = self.client.get(reverse("core:coordinacion"))
 
+        # Las cartas pendientes van en la franja de arriba, no como tarjeta.
         for nombre in [
-            "cartas:listar_solicitudes_coordinacion",
             "core:planificacion_coordinacion",
             "socios:lista_postulaciones",
         ]:
             self.assertContains(response, f'href="{reverse(nombre)}" class="stretched-link"')
+        self.assertContains(response, 'href="#avance-titulo" class="stretched-link"')
 
     def test_panel_sin_enlaces_vacios(self):
         self.client.force_login(self.coordinador)
@@ -473,7 +475,35 @@ class PanelIndicadoresTestCase(TestCase):
         self.client.force_login(self.coordinador)
 
     def panel(self, **parametros):
+        return self.client.get(reverse("core:indicadores_coordinacion"), parametros)
+
+    def inicio(self, **parametros):
         return self.client.get(reverse("core:coordinacion"), parametros)
+
+    def test_inicio_muestra_solo_el_periodo_vigente(self):
+        response = self.inicio(periodo=self.otono.id, carrera=self.industrial.id)
+
+        # El Inicio ignora los filtros del Panel de indicadores.
+        self.assertEqual(response.context["filtros"]["periodo"], self.primavera.id)
+        self.assertIsNone(response.context["filtros"]["carrera"])
+        self.assertContains(response, "Período actual: <strong>Primavera 2026 (2º semestre)</strong>")
+        self.assertContains(response, reverse("core:indicadores_coordinacion"))
+
+    def test_inicio_filtra_por_sede(self):
+        otra = Sede.objects.create(nombre="Talca", activo=True)
+
+        response = self.inicio(sede=otra.id)
+
+        self.assertEqual(response.context["sede_actual"], otra)
+        tarjetas = {t["etiqueta"]: t for t in response.context["tarjetas"]}
+        self.assertEqual(tarjetas["Asignaturas A+S"]["valor"], 0)
+        self.assertEqual(self.inicio().context["sede_actual"], None)
+
+    def test_inicio_cuenta_rutas_con_avance_bajo(self):
+        pendientes = {p["label"]: p for p in self.inicio().context["pendientes"]}
+
+        # Informática va en 25 % (bajo); Industrial en 100 %; la de Otoño no es del período.
+        self.assertEqual(pendientes["Docentes con Ruta bajo 40 %"]["value"], 1)
 
     def test_sin_filtros_parte_en_el_periodo_vigente(self):
         response = self.panel()
@@ -521,7 +551,7 @@ class PanelIndicadoresTestCase(TestCase):
         self.assertEqual(len(response.context["chips"]), 2)
 
     def test_mapa_agrupa_por_comuna_sin_direcciones(self):
-        mapa = self.panel().context["mapa"]
+        mapa = self.inicio().context["mapa"]
 
         self.assertEqual(len(mapa["puntos"]), 1)
         punto = mapa["puntos"][0]
@@ -941,3 +971,93 @@ class PanelDocentePendientesRutaTestCase(TestCase):
         
         seccion_context = response.context["secciones"][0]
         self.assertFalse(seccion_context.recordatorio_ruta["mostrar_invitacion"])
+
+
+class ExportacionIndicadoresTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.coordinador = User.objects.create_user(username="coord_export", password="Clave1234")
+        self.coordinador.groups.add(Group.objects.create(name="Coordinador"))
+        self.docente = User.objects.create_user(username="doc_export", password="Clave1234")
+        self.docente.groups.add(Group.objects.create(name="Docente"))
+
+    def test_coordinador_descarga_xlsx_con_filtros(self):
+        self.client.force_login(self.coordinador)
+
+        response = self.client.get(reverse("core:exportar_indicadores"), {"f": "1"})
+
+        self.assertEqual(response.status_code, 200)
+        libro = load_workbook(BytesIO(response.content), read_only=True)
+        self.assertIn("Resumen", libro.sheetnames)
+        self.assertEqual(libro["Resumen"]["A1"].value, "Metadato")
+
+    def test_docente_no_puede_descargar_indicadores(self):
+        self.client.force_login(self.docente)
+
+        response = self.client.get(reverse("core:exportar_indicadores"))
+
+        self.assertEqual(response.status_code, 403)
+
+class IndicadoresUnicosTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        """Prepara los datos base para la prueba del ticket CDE-603."""
+        from django.utils import timezone
+        from core import indicadores
+        from academico.models import Carrera, Facultad, PeriodoAcademico, Sede
+        from socios.models import Comuna, ParticipacionSocio, SocioComunitario
+        
+        # 1. Crear configuración básica obligatoria
+        cls.sede = Sede.objects.create(nombre="Santiago", activo=True)
+        cls.periodo = PeriodoAcademico.objects.create(
+            anio=2026, tipo="Semestral", nombre="2026-2", estado="Activo"
+        )
+        cls.comuna = Comuna.objects.create(
+            nombre="Maipú", region="RM", activo=True, lat_centro=-33.51, lon_centro=-70.75
+        )
+        cls.facultad = Facultad.objects.create(nombre="Ingeniería", activo=True)
+        cls.carrera = Carrera.objects.create(facultad=cls.facultad, nombre="Informática", activo=True)
+        
+        # 2. Crear exactamente 1 Socio (Organización) con sus campos requeridos
+        cls.socio = SocioComunitario.objects.create(
+            nombre_organizacion="Junta de Vecinos El Abrazo",
+            comuna=cls.comuna,
+            estado_revision="APROBADO",
+            es_provisional=False,
+            activo=True,
+            fecha_creacion=timezone.now()
+        )
+        
+        # 3. Crear 3 participaciones distintas para el MISMO socio
+        for _ in range(3):
+            ParticipacionSocio.objects.create(
+                socio=cls.socio, 
+                sede=cls.sede, 
+                periodo=cls.periodo,
+                carrera=cls.carrera,
+                origen="HISTORICO"
+            )
+
+    def test_conteo_socios_unicos_vs_participaciones(self):
+        """
+        SP7-T03: Verifica que una organización con 3 participaciones 
+        cuente como 1 Socio único y 3 participaciones.
+        """
+        from core import indicadores
+        
+        filtros = {
+            "periodo": self.periodo.id, 
+            "anio": None, "sede": None, "campus": None, 
+            "facultad": None, "carrera": None, "asignatura": None, "comuna": None
+        }
+        
+        valores = indicadores._valores(filtros)
+        
+        self.assertEqual(
+            valores["participaciones"], 3, 
+            "El total de participaciones debe ser 3."
+        )
+        self.assertEqual(
+            valores["socios"], 1, 
+            "El total de socios únicos debe ser 1 (uso correcto de distinct)."
+        )

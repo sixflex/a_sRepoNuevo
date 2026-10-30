@@ -1,5 +1,6 @@
 import shutil
 import tempfile
+from io import BytesIO
 from io import StringIO
 
 from django.contrib.auth import get_user_model
@@ -9,6 +10,7 @@ from django.core.management import call_command
 from django.http import QueryDict
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from openpyxl import load_workbook
 
 from academico.models import Asignatura, Campus, Carrera, Facultad, PeriodoAcademico, Sede, Seccion
 
@@ -966,3 +968,22 @@ class TemaTests(FormularioBaseTestCase):
         self.client.force_login(self.docente)
         self.guardar({"color": "azul"})
         self.assertIsNone(FormularioPlantilla.objects.get(pk=self.version.plantilla_id).tema_json)
+
+
+class ExportacionRespuestasTests(FormularioBaseTestCase):
+    def test_coordinador_descarga_xlsx_con_metadatos(self):
+        self.client.force_login(self.coordinador)
+
+        response = self.client.get(reverse("encuestas:exportar_respuestas", args=[self.version.id]))
+
+        self.assertEqual(response.status_code, 200)
+        libro = load_workbook(BytesIO(response.content), read_only=True)
+        self.assertIn("Respuestas", libro.sheetnames)
+        self.assertEqual(libro["Respuestas"]["A1"].value, "Metadato")
+
+    def test_docente_no_puede_descargar_respuestas(self):
+        self.client.force_login(self.docente)
+
+        response = self.client.get(reverse("encuestas:exportar_respuestas", args=[self.version.id]))
+
+        self.assertEqual(response.status_code, 403)

@@ -2,14 +2,14 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 
 from core.ordenamiento import OPCIONES_ORDEN, orden_pedido, ordenar_por_fecha
 from rutas.services import obtener_recordatorios_ruta
 from usuarios.permissions import es_coordinador, es_docente
-from usuarios.decorators import coordinador_required, docente_required
+from usuarios.decorators import coordinador_only_required, coordinador_required, docente_required
 
 from academico.models import (PeriodoAcademico,Seccion,)
-from django.utils import timezone
 
 def inicio(request):
     if request.user.is_authenticated:
@@ -35,9 +35,11 @@ def inicio(request):
 @coordinador_required
 def panel_coordinacion(request):
     """
-    Panel del coordinador (HU-08): indicadores del período, avance de la Ruta
-    por carrera, satisfacción, mapa y evolución, con los filtros del panel
-    lateral (RF-IND-01). Los cálculos están en core/indicadores.py.
+    Inicio del coordinador: lo que pasa en el período vigente y lo que hay que
+    atender (cartas, pendientes, indicadores, mapa y avance de la Ruta), con un
+    selector de sede. El análisis con todos los filtros, la satisfacción, la
+    evolución y la exportación a Excel están en el Panel de indicadores
+    (RF-IND-01, RF-IND-04). Los cálculos están en core/indicadores.py.
     """
     from cartas.models import SolicitudCarta
     from planificacion.models import Planificacion
@@ -45,13 +47,13 @@ def panel_coordinacion(request):
 
     from . import indicadores
 
-    filtros = indicadores.leer_filtros(request.GET)
-    periodo_actual = (
-        PeriodoAcademico.objects
-        .filter(estado="Activo")
-        .order_by("-anio", "-id")
-        .first()
-    )
+    from academico.models import Sede
+
+    filtros = indicadores.filtros_inicio(request.GET)
+    periodo_actual = PeriodoAcademico.objects.filter(pk=filtros["periodo"]).first()
+    sedes = Sede.objects.order_by("nombre")
+    sede_actual = sedes.filter(pk=filtros["sede"]).first() if filtros["sede"] else None
+    avance_carreras = indicadores.avance_por_carrera(filtros)
     cartas_pendientes = SolicitudCarta.objects.filter(
         estado="PENDIENTE"
     ).order_by("fecha_solicitud", "id")
@@ -99,9 +101,14 @@ def panel_coordinacion(request):
             "icon": "bi-person-plus",
             "url": reverse("socios:lista_postulaciones"),
         },
+        {
+            "label": f"Docentes con Ruta bajo {indicadores.UMBRAL_MEDIO} %",
+            "value": indicadores.rutas_bajo_umbral(avance_carreras),
+            "icon": "bi-hourglass-split",
+            "url": "#avance-titulo",
+        },
     ]
 
-    chips = indicadores.chips(filtros)
     # El mapa del coordinador sí trae dirección, contacto e intervenciones de cada socio.
     mapa = indicadores.mapa(filtros, detalle=True)
 
@@ -110,19 +117,77 @@ def panel_coordinacion(request):
         "core/coordinacion.html",
         {
             "filtros": filtros,
-            "chips": chips,
-            "cantidad_filtros": len(chips),
-            "opciones": indicadores.opciones_filtros(),
             "periodo_actual": periodo_actual,
+            "sedes": sedes,
+            "sede_actual": sede_actual,
             "tarjetas": indicadores.tarjetas(filtros),
-            "avance_carreras": indicadores.avance_por_carrera(filtros),
+            "avance_carreras": avance_carreras,
             "umbrales": {"medio": indicadores.UMBRAL_MEDIO, "alto": indicadores.UMBRAL_ALTO},
             "pendientes": pendientes,
-            "satisfaccion": indicadores.satisfaccion(filtros),
             "mapa": mapa,
-            "evolucion": indicadores.evolucion(filtros),
         },
     )
+
+
+@coordinador_only_required
+def exportar_indicadores(request):
+    from auditoria.services import registrar_auditoria
+    from . import excel, indicadores
+
+    filtros = indicadores.leer_filtros(request.GET)
+    filtros_legibles = indicadores.chips(filtros)
+    metadatos = {
+        "Generado": timezone.localtime().strftime("%d/%m/%Y %H:%M"),
+        "Filtros aplicados": ", ".join(c["etiqueta"] for c in filtros_legibles)
+        or "Todos los períodos, sedes y carreras",
+    }
+    libro, hoja = excel.nuevo_libro("Resumen", metadatos)
+    hoja.append(["Indicador", "Valor", "Detalle"])
+    for tarjeta in indicadores.tarjetas(filtros):
+        hoja.append([tarjeta["etiqueta"], tarjeta["valor"], tarjeta["detalle"] or ""])
+
+    avance = libro.create_sheet("Avance por carrera")
+    excel.agregar_metadatos(avance, metadatos)
+    avance.append(["Carrera", "Porcentaje", "Nivel", "Docente", "Sección", "Pendientes"])
+    for carrera in indicadores.avance_por_carrera(filtros):
+        for docente in carrera["docentes"]:
+            avance.append([
+                carrera["carrera"], carrera["porcentaje"], carrera["nivel"]["texto"],
+                docente["docente"], docente["seccion"], docente["pendientes"],
+            ])
+
+    satisfaccion = libro.create_sheet("Satisfacción")
+    excel.agregar_metadatos(satisfaccion, metadatos)
+    satisfaccion.append(["Público", "Porcentaje", "Personas", "Pregunta"])
+    for fila in indicadores.satisfaccion(filtros)["anillos"]:
+        satisfaccion.append([fila["publico"], fila["porcentaje"], fila["personas"], fila["pregunta"]])
+
+    evolucion = libro.create_sheet("Evolución")
+    excel.agregar_metadatos(evolucion, metadatos)
+    evolucion.append(["Indicador", "Año", "Valor"])
+    for serie in indicadores.evolucion(filtros):
+        for barra in serie["barras"]:
+            evolucion.append([serie["etiqueta"], barra["anio"], barra["valor"]])
+
+    mapa = libro.create_sheet("Mapa territorial")
+    excel.agregar_metadatos(mapa, metadatos)
+    mapa.append(["Comuna", "Latitud", "Longitud", "Socios", "Proyectos", "Carreras", "Años", "Teléfono"])
+    for punto in indicadores.mapa(filtros, detalle=True)["puntos"]:
+        detalles = punto.get("detalle") or [{}]
+        for detalle in detalles:
+            fila = mapa.max_row + 1
+            mapa.append([
+                punto["comuna"], punto["lat"], punto["lon"], punto["socios"],
+                punto["proyectos"], ", ".join(punto["carreras"]),
+                ", ".join(str(anio) for anio in punto["anios"]), "",
+            ])
+            excel.celda_texto(mapa.cell(fila, 8), detalle.get("telefono", ""))
+
+    registrar_auditoria(
+        request=request, entidad="Indicadores", entidad_id="panel",
+        accion="EXPORTAR_INDICADORES", valores_nuevos={"filtros": filtros},
+    )
+    return excel.respuesta_excel(libro, "indicadores.xlsx")
 
 
 @coordinador_required
@@ -454,3 +519,21 @@ def detalle_planificacion_coordinacion(
             "filas": filas,
         },
     )
+
+@coordinador_required
+def panel_indicadores_coordinacion(request):
+    from . import indicadores
+    filtros = indicadores.leer_filtros(request.GET)
+
+    contexto = {
+        "filtros": filtros,
+        "chips": indicadores.chips(filtros),
+        "opciones": indicadores.opciones_filtros(),
+        "tarjetas": indicadores.tarjetas(filtros),
+        "evolucion": indicadores.evolucion(filtros),
+        "avance_carreras": indicadores.avance_por_carrera(filtros),
+        "umbrales": {"medio": indicadores.UMBRAL_MEDIO, "alto": indicadores.UMBRAL_ALTO},
+        "satisfaccion": indicadores.satisfaccion(filtros),
+    }
+
+    return render(request, "core/indicadores_coordinacion.html", contexto)

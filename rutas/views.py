@@ -291,6 +291,7 @@ def completar_actividad(request, actividad_id):
         )
 
     estado_anterior = actividad.estado
+    fecha_completada_anterior = actividad.fecha_completada
 
     if actividad.completada_por_docente_id is None:
         actividad.completada_por_docente = docente
@@ -309,6 +310,7 @@ def completar_actividad(request, actividad_id):
             "observacion",
         ]
     )
+
     registrar_auditoria(
         request=request,
         entidad="SeccionActividad",
@@ -316,7 +318,7 @@ def completar_actividad(request, actividad_id):
         accion="CAMBIAR_ESTADO_ACTIVIDAD",
         valores_anteriores={
             "estado": estado_anterior,
-            "fecha_completada": actividad.fecha_completada.isoformat() if actividad.fecha_completada else None,
+            "fecha_completada": fecha_completada_anterior.isoformat() if fecha_completada_anterior else None,
         },
         valores_nuevos={
             "estado": actividad.estado,
@@ -324,22 +326,7 @@ def completar_actividad(request, actividad_id):
         },
     )
 
-    recalcular_avance(
-        seccion_ruta
-    )
-
-    registrar_auditoria(
-        request=request,
-        entidad="SeccionActividad",
-        entidad_id=actividad.pk,
-        accion="MARCAR_ACTIVIDAD" if actividad.estado == "COMPLETADA" else "DESMARCAR_ACTIVIDAD",
-        valores_anteriores={"estado": estado_anterior},
-        valores_nuevos={
-            "estado": actividad.estado,
-            "fecha_completada": str(actividad.fecha_completada) if actividad.fecha_completada else None,
-        },
-    )
-
+    recalcular_avance(seccion_ruta)
     return redirect(
         "rutas:detalle_ruta_docente",
         seccion_ruta_id=seccion_ruta.id,
@@ -648,14 +635,6 @@ def eliminar_evidencia(request, evidencia_id):
 
     if storage.exists(storage_key):
         storage.delete(storage_key)
-
-    registrar_auditoria(
-        request=request,
-        entidad="Evidencia",
-        entidad_id=evidencia_id_backup,
-        accion="ELIMINAR_EVIDENCIA",
-        valores_anteriores={"actividad_id": actividad.pk},
-    )
 
     messages.success(
         request,
@@ -1136,47 +1115,3 @@ def descargar_expediente(request, seccion_ruta_id):
         filename=nombre,
         content_type="application/zip",
     )
-
-def filtrar_seguimiento_rutas(queryset, request):
-
-    campus_id = request.GET.get('campus')
-    sede_id = request.GET.get('sede')
-    periodo_id = request.GET.get('periodo')
-    estado = request.GET.get('estado')
-
-    if campus_id:
-        queryset = queryset.filter(seccion__campus_id=campus_id)
-    if sede_id:
-        queryset = queryset.filter(seccion__campus__sede_id=sede_id)
-    if periodo_id:
-        queryset = queryset.filter(seccion__periodo_id=periodo_id)
-    if estado:
-        queryset = queryset.filter(estado=estado)
-
-    return queryset
-
-@login_required
-@coordinador_required
-def seguimiento_rutas_coordinacion(request):
-    secciones_rutas = SeccionRuta.objects.select_related(
-        'seccion__asignatura',
-        'seccion__periodo',
-        'seccion__campus__sede',
-    ).prefetch_related(
-        'seccion__docentes',
-        'actividades__ruta_actividad'
-    ).order_by('-id')
-
-    secciones_filtradas = filtrar_seguimiento_rutas(secciones_rutas, request)
-
-    context = {
-        'rutas': secciones_filtradas,
-        'sedes': Sede.objects.all(),
-        'campus_list': Campus.objects.all(),
-        'periodos': PeriodoAcademico.objects.all(),
-        'filtro_campus': request.GET.get('campus', ''),
-        'filtro_sede': request.GET.get('sede', ''),
-        'filtro_periodo': request.GET.get('periodo', ''),
-        'filtro_estado': request.GET.get('estado', ''),
-    }
-    return render(request, 'rutas/seguimiento_coordinacion.html', context)

@@ -5,7 +5,7 @@
 {% block content %}
 
 {# Ficha única de la sección: la usan el Coordinador y el Docente (vista_coordinador). #}
-<div class="container-fluid py-2">
+<div class="container-fluid py-2 ficha-seccion">
 
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
         <div>
@@ -35,8 +35,11 @@
         </div>
     </div>
 
-    {% include "academico/partials/_seccion_general.html" %}
-    {% include "academico/partials/_seccion_ubicacion.html" %}
+    <div class="ficha-grid ficha-grid--2">
+        {% include "academico/partials/_seccion_general.html" %}
+        {% include "academico/partials/_seccion_ubicacion.html" %}
+    </div>
+
     {% include "academico/partials/_seccion_carreras.html" %}
 
     {% if vista_coordinador %}
@@ -95,96 +98,88 @@
             </div>
         </div>
 
-    {% else %}
+    {% endif %}
 
-        <!-- REGISTRO DE EQUIPOS (herramienta del docente) -->
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-body p-4">
-                <div class="row align-items-center">
-                    <div class="col-lg-8">
-                        <h5 class="fw-bold mb-1">
-                            <i class="bi bi-people me-2 text-danger" aria-hidden="true"></i>Registro de equipos y estudiantes
-                        </h5>
-                        <p class="text-muted mb-lg-0 mt-2">
-                            Habilita y administra el formulario utilizado por los
-                            estudiantes para registrar los integrantes de sus equipos
-                            asociados a esta sección.
-                        </p>
-                    </div>
-                    <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
-                        <a href="{% url 'proyectos:gestionar_registro_equipos' seccion.id %}" class="btn btn-rojo px-4">
+    <!-- HERRAMIENTAS DE LA SECCIÓN: tarjetas del mismo alto, en fila -->
+    <div class="row g-3 mb-3">
+        {% if not vista_coordinador %}
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="accion-card">
+                    <h2 class="accion-card-titulo">
+                        <i class="bi bi-people" aria-hidden="true"></i>Registro de equipos
+                    </h2>
+                    <p class="accion-card-texto">
+                        Habilita y administra el formulario con el que los estudiantes
+                        registran los integrantes de sus equipos.
+                    </p>
+                    <div class="accion-card-pie">
+                        <a href="{% url 'proyectos:gestionar_registro_equipos' seccion.id %}" class="btn btn-ua-outline btn-sm">
                             Gestionar registro
                         </a>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- EQUIPOS REGISTRADOS -->
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-body p-4">
-                <div class="row align-items-center">
-                    <div class="col-lg-8">
-                        <h5 class="fw-bold mb-1">
-                            <i class="bi bi-people-fill me-2 text-danger" aria-hidden="true"></i>Equipos registrados
-                        </h5>
-                        <p class="text-muted mb-lg-0 mt-2">
-                            Revisa los equipos registrados en esta sección,
-                            consulta sus integrantes y gestiona sus datos,
-                            etiquetas y Socio Comunitario.
-                        </p>
-                    </div>
-                    <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
-                        <a href="{% url 'proyectos:gestionar_equipos_seccion' seccion.id %}" class="btn btn-rojo px-4">
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="accion-card">
+                    <h2 class="accion-card-titulo">
+                        <i class="bi bi-people-fill" aria-hidden="true"></i>Equipos registrados
+                    </h2>
+                    <p class="accion-card-texto">
+                        Revisa los equipos, consulta sus integrantes y gestiona
+                        sus datos, etiquetas y Socio Comunitario.
+                    </p>
+                    <div class="accion-card-pie">
+                        <a href="{% url 'proyectos:gestionar_equipos_seccion' seccion.id %}" class="btn btn-ua-outline btn-sm">
                             Ver equipos registrados
                         </a>
                     </div>
                 </div>
             </div>
-        </div>
+        {% endif %}
 
-    {% endif %}
-
-    <!-- RUTA A+S -->
-    {% if seccion.ruta_asignada %}
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-body p-4">
-                <div class="row align-items-center">
-                    <div class="col-lg-8">
-                        <h5 class="fw-bold mb-1">
-                            <i class="bi bi-list-check me-2 text-danger" aria-hidden="true"></i>Ruta del Docente A+S
-                            <span class="badge bg-secondary ms-1">
+        {% if seccion.ruta_asignada %}
+            <div class="col-12 {% if not vista_coordinador %}col-xl-4{% endif %}">
+                <div class="accion-card{% if vista_coordinador %} accion-card--fila{% endif %}">
+                    <div class="accion-card-cuerpo">
+                        <h2 class="accion-card-titulo">
+                            <i class="bi bi-list-check" aria-hidden="true"></i>Ruta del Docente A+S
+                            <span class="badge bg-secondary">
                                 {% if seccion.ruta_asignada.estado == "COMPLETADA" %}Completada{% else %}En progreso{% endif %}
                             </span>
-                        </h5>
-                        <p class="text-muted mb-2 mt-2">
+                        </h2>
+                        <p class="accion-card-texto">
                             {% if vista_coordinador %}
-                                Consulta el avance de las actividades de la Ruta y las evidencias cargadas por el docente.
+                                Avance de las actividades de la Ruta y evidencias cargadas por el docente.
                             {% else %}
-                                Consulta y registra el avance de las actividades de la
-                                Ruta del Docente A+S asociadas a esta sección.
+                                Consulta y registra el avance de las actividades de tu Ruta A+S.
                             {% endif %}
                         </p>
-                        <div class="small text-muted">
-                            Avance actual:
-                            <strong>{{ seccion.ruta_asignada.porcentaje_final|default:"0"|floatformat:0 }}%</strong>
+                    </div>
+                    <div class="accion-card-avance mb-3">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Avance actual</span>
+                            <strong class="text-dark">{{ seccion.ruta_asignada.porcentaje_final|default:"0"|floatformat:0 }}%</strong>
+                        </div>
+                        <div class="avance-mini" aria-hidden="true">
+                            <span style="width: {{ seccion.ruta_asignada.porcentaje_final|default:'0'|floatformat:0 }}%"></span>
                         </div>
                     </div>
-                    <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                    <div class="accion-card-pie">
                         {% if vista_coordinador %}
-                            <a href="{% url 'rutas:detalle_ruta_coordinacion' seccion.ruta_asignada.id %}" class="btn btn-outline-secondary px-4">
+                            <a href="{% url 'rutas:detalle_ruta_coordinacion' seccion.ruta_asignada.id %}" class="btn btn-rojo btn-sm">
                                 Ver Ruta y evidencias
                             </a>
                         {% else %}
-                            <a href="{% url 'rutas:detalle_ruta_docente' seccion.ruta_asignada.id %}" class="btn btn-rojo px-4">
+                            <a href="{% url 'rutas:detalle_ruta_docente' seccion.ruta_asignada.id %}" class="btn btn-rojo btn-sm">
                                 Ver mi Ruta A+S
                             </a>
                         {% endif %}
                     </div>
                 </div>
             </div>
-        </div>
-    {% endif %}
+        {% endif %}
+    </div>
 
     <div class="mt-4">
         {% if vista_coordinador %}

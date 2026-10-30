@@ -129,22 +129,35 @@
                     </a>
                 </li>
 
+                
+                <!-- IMPORTAR HISTÓRICOS -->
                 <li class="nav-item">
-                    <a class="nav-link {% if m == 'historicos' %}active{% endif %}" {% if m == 'historicos' %}aria-current="page"{% endif %} href="{% url 'historicos:cargas' %}">
-                        <i class="bi bi-cloud-arrow-up me-2" aria-hidden="true"></i>Importar históricos
+                    <a class="nav-link {% if m == 'historicos' and request.resolver_match.url_name == 'cargas' %}active{% endif %}"
+                        {% if m == 'historicos' and request.resolver_match.url_name == 'cargas' %}aria-current="page"{% endif %}
+                        href="{% url 'historicos:cargas' %}">
+                         <i class="bi bi-cloud-arrow-up me-2" aria-hidden="true"></i>Importar históricos
                     </a>
                 </li>
 
+                 <!-- CONSULTAR HISTÓRICOS -->
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'consulta_historicos' %}active{% endif %}"
+                        {% if request.resolver_match.url_name == 'consulta_historicos' %}aria-current="page"{% endif %}
+                        href="{% url 'historicos:consulta_historicos' %}">
+                         <i class="bi bi-clock-history me-2" aria-hidden="true"></i>Consultar históricos
+                    </a>
+                </li>
+                
                 {# Módulos aún sin vista: se muestran deshabilitados en vez de un enlace "#" que no hace nada #}
                 <li class="nav-item">
                     <a class="nav-link disabled" aria-disabled="true" tabindex="-1">
-                        <i class="bi bi-folder me-2" aria-hidden="true"></i>Proyectos
+                        <i class="bi bi-file-earmark-bar-graph me-2" aria-hidden="true"></i>Reportes
                         <span class="badge text-bg-light border ms-auto">Pronto</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link disabled" aria-disabled="true" tabindex="-1">
-                        <i class="bi bi-file-earmark-bar-graph me-2" aria-hidden="true"></i>Reportes
+                        <i class="bi bi-folder me-2" aria-hidden="true"></i>Proyectos
                         <span class="badge text-bg-light border ms-auto">Pronto</span>
                     </a>
                 </li>

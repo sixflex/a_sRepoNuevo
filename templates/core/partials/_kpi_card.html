@@ -1,0 +1,11 @@
+{# Tarjeta de indicador del período (Inicio y Panel de indicadores). Uso: {% include "core/partials/_kpi_card.html" with tarjeta=tarjeta icono="bi-..." %} #}
+<div class="col-12 col-sm-6 col-xl">
+    <div class="kpi-card">
+        <div class="kpi-cabeza">
+            <span class="kpi-icono"><i class="bi {{ icono }}" aria-hidden="true"></i></span>
+            <span class="kpi-valor">{{ tarjeta.valor|default:"0" }}</span>
+        </div>
+        <div class="kpi-etiqueta">{{ tarjeta.etiqueta }}</div>
+        {% if tarjeta.detalle %}<div class="kpi-detalle">{{ tarjeta.detalle }}</div>{% endif %}
+    </div>
+</div>

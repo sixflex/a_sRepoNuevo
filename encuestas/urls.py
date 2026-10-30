@@ -19,6 +19,7 @@ urlpatterns = [
     path("version/<int:version_id>/nueva-version/", views.nueva_version, name="nueva_version"),
     path("version/<int:version_id>/copiar/", views.copiar_formulario, name="copiar"),
     path("version/<int:version_id>/respuestas/", views.respuestas, name="respuestas"),
+    path("version/<int:version_id>/respuestas/exportar/", views.exportar_respuestas, name="exportar_respuestas"),
     path("seccion/<int:bloque_id>/", views.editar_seccion, name="editar_seccion"),
     path("seccion/<int:bloque_id>/eliminar/", views.eliminar_seccion, name="eliminar_seccion"),
     path("seccion/<int:bloque_id>/mover/<str:direccion>/", views.mover_seccion, name="mover_seccion"),
