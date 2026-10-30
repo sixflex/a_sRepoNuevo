@@ -20,20 +20,22 @@
     outline-offset: 2px;
 }
 
-/* 3. Barra superior blanca con línea roja (texto oscuro: contraste AA sobre blanco) */
-.navbar.navbar-sistema {
-    background: var(--ua-bg-card, #fff) !important;
-    border-bottom: 3px solid var(--ua-red, #C8232C);
-    box-shadow: var(--ua-shadow-sm, 0 1px 2px rgba(0,0,0,.05));
-}
-.navbar-sistema .navbar-brand,
-.navbar-sistema .navbar-brand:hover { color: var(--ua-text, #1F2937); font-family: 'Montserrat', 'Inter', sans-serif; }
-.navbar-sistema .brand-logo-container { height: 44px !important; }
-.navbar-sistema .brand-logo-img { height: 40px !important; max-height: 40px !important; width: auto; }
-.navbar-sistema .navbar-nav .nav-link { color: var(--ua-text-secondary, #374151); font-weight: 500; }
+/* 3. Barra superior roja institucional (styles.css) con el escudo UA y el logo A+S en blanco */
+.navbar-sistema .navbar-nav .nav-link { color: rgba(255, 255, 255, 0.9); font-weight: 500; }
 .navbar-sistema .navbar-nav .nav-link:hover,
-.navbar-sistema .navbar-nav .nav-link:focus-visible { color: var(--ua-red, #C8232C); text-decoration: underline; }
-.navbar-sistema .navbar-toggler { border-color: var(--ua-border-strong, #D1D5DB); }
+.navbar-sistema .navbar-nav .nav-link:focus-visible { color: #FFF; text-decoration: underline; }
+.navbar-sistema .navbar-toggler { border-color: rgba(255, 255, 255, 0.5); }
+
+/* Marca: escudo UA + divisor + logo A+S (barra del portal, portal público y su pie) */
+.marca { display: inline-flex; align-items: center; gap: 14px; text-decoration: none; }
+.marca-escudo { height: 46px; width: auto; }
+.marca-as { height: 34px; width: auto; }
+.marca-divisor { width: 1px; height: 32px; background: var(--ua-border, #E5E7EB); }
+.marca--clara .marca-divisor { background: rgba(255, 255, 255, 0.4); }
+@media (max-width: 575.98px) {
+    .marca-escudo { height: 38px; }
+    .marca-as { height: 26px; }
+}
 
 /* 4. Tipografía: Montserrat para títulos, Inter para el resto (ya se cargan en base.html) */
 h1, h2, h3, h4, h5, h6,

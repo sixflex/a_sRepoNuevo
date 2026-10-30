@@ -102,6 +102,35 @@ def leer_filtros(get):
     return filtros
 
 
+def filtros_inicio(get):
+    """
+    Filtros del Inicio del coordinador: siempre el período vigente y, si se
+    eligió, una sede. El resto de los filtros está en el Panel de indicadores.
+    """
+    filtros = {nombre: None for nombre in FILTROS}
+    vigente = (
+        PeriodoAcademico.objects
+        .filter(estado="Activo")
+        .order_by("-anio", "-id")
+        .first()
+    )
+    if vigente:
+        filtros["periodo"] = vigente.id
+    filtros["sede"] = _entero(get.get("sede"))
+    filtros["comparar"] = True
+    return filtros
+
+
+def rutas_bajo_umbral(avance):
+    """Rutas con avance bajo (menos de UMBRAL_MEDIO), contadas una vez aunque tengan varias carreras."""
+    return len({
+        docente["ruta_id"]
+        for carrera in avance
+        for docente in carrera["docentes"]
+        if docente["nivel"]["clave"] == "bajo"
+    })
+
+
 def filtros_publicos(get):
     """Filtros del mapa público: parte con todos los años (sin período vigente)."""
     filtros = {nombre: None for nombre in FILTROS}
@@ -384,6 +413,7 @@ def avance_por_carrera(filtros):
             f"{docente.nombres} {docente.apellidos}" for docente in ruta.seccion.docentes.all()
         ) or "Sin docente asignado"
         detalle = {
+            "ruta_id": ruta.id,
             "docente": docentes,
             "seccion": f"{ruta.seccion.asignatura.nombre} · Sección {ruta.seccion.seccion}",
             "porcentaje": porcentaje,
