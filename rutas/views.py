@@ -28,6 +28,7 @@ from .services import enlaces_abiertos_por_plantilla, url_recurso
 from socios.models import InvitacionCierre
 
 from academico.models import Sede, Campus, PeriodoAcademico
+from .models import Evidencia, ExpedienteSeccion, SeccionActividad, SeccionRuta, RutaVersion
 
 def verificar_acceso_ruta(user, seccion_ruta):
     if es_coordinador(user):
@@ -148,9 +149,35 @@ def detalle_ruta_docente(request, seccion_ruta_id):
         for actividad in actividades
         if actividad.ruta_actividad.formulario_version_id
     })
+    
+    plantillas_encuestas = FormularioPlantilla.objects.filter(
+        versiones__id__in=[3, 4, 5],
+        versiones__estado="PUBLICADA",
+        activo=True,
+    ).distinct().order_by("titulo")
+
+    enlaces_encuestas = enlaces_abiertos_por_plantilla(
+        list(plantillas_encuestas.values_list("id", flat=True))
+    )
+
+    encuestas_as = [
+        {
+            "titulo": plantilla.titulo,
+            "token": enlaces_encuestas[plantilla.id].token,
+        }
+        for plantilla in plantillas_encuestas
+        if plantilla.id in enlaces_encuestas
+    ]
+
 
     for actividad in actividades:
         actividad.url_recurso = url_recurso(actividad)
+        actividad.encuestas_as = (
+            encuestas_as
+            if seccion_ruta.ruta_version.numero_version == 2
+            and actividad.ruta_actividad.orden == 19
+            else []
+        )
         actividad.enlace_formulario = (
             enlaces_por_plantilla.get(
                 actividad.ruta_actividad.formulario_version.plantilla_id
@@ -158,7 +185,40 @@ def detalle_ruta_docente(request, seccion_ruta_id):
             if actividad.ruta_actividad.formulario_version_id
             else None
         )
+        actividad.formulario_compartible = None
+        actividad.formulario_directo = None
 
+        if (
+            seccion_ruta.ruta_version.numero_version == 2
+            and actividad.ruta_actividad.orden in (5, 13)
+            and actividad.ruta_actividad.formulario_version_id
+        ):
+            from rutas.services import obtener_o_crear_enlace_seccion
+
+            enlace_seccion = obtener_o_crear_enlace_seccion(
+                version_formulario=actividad.ruta_actividad.formulario_version,
+                seccion=seccion_ruta.seccion,
+                usuario=request.user,
+            )
+
+            actividad.enlace_formulario = enlace_seccion
+
+            if enlace_seccion is not None:
+                url_formulario = request.build_absolute_uri(
+                    reverse(
+                        "encuestas:responder",
+                        args=[enlace_seccion.token],
+                    )
+                )
+
+                if actividad.ruta_actividad.orden == 5:
+                    actividad.formulario_directo = url_formulario
+
+                elif actividad.ruta_actividad.orden == 13:
+                    actividad.formulario_compartible = {
+                        "url": url_formulario,
+                        "qr_base64": qr_base64(url_formulario),
+                    }
         actividad.es_cierre = servicios.es_actividad_cierre(
             actividad.ruta_actividad
         )
@@ -767,9 +827,10 @@ def detalle_ruta_coordinacion(request, seccion_ruta_id):
     )
 
 
+
+
 @login_required
 def formularios_qr(request):
-
     if not (es_docente(request.user) or es_coordinador(request.user)):
         raise PermissionDenied
 

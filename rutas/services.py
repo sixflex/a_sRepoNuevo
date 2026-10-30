@@ -20,7 +20,38 @@ from socios.services import correo_contacto_principal
 from django.db.models import Count, Max, Q
 
 from .models import RutaActividad, RutaVersion, SeccionActividad, SeccionRuta
+from academico.models import Seccion
 
+@transaction.atomic
+def obtener_o_crear_enlace_seccion(version_formulario, seccion, usuario=None):
+    if not encuestas_services.version_abierta(version_formulario):
+        return None
+
+    Seccion.objects.select_for_update().get(pk=seccion.pk)
+
+    enlaces = (
+        EnlaceFormulario.objects
+        .filter(
+            version=version_formulario,
+            seccion=seccion,
+        )
+        .order_by("-id")
+    )
+
+    for enlace in enlaces:
+        if encuestas_services.enlace_abierto(enlace):
+            return enlace
+
+    enlace = encuestas_services.crear_enlace(
+        version_formulario,
+        usuario=usuario,
+        seccion=seccion,
+    )
+
+    if not encuestas_services.enlace_abierto(enlace):
+        return None
+
+    return enlace
 
 @transaction.atomic
 def asignar_ruta_a_seccion(seccion, ruta_version):
