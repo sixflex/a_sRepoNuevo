@@ -969,3 +969,67 @@ class ExportacionIndicadoresTests(TestCase):
         response = self.client.get(reverse("core:exportar_indicadores"))
 
         self.assertEqual(response.status_code, 403)
+
+class IndicadoresUnicosTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        """Prepara los datos base para la prueba del ticket CDE-603."""
+        from django.utils import timezone
+        from core import indicadores
+        from academico.models import Carrera, Facultad, PeriodoAcademico, Sede
+        from socios.models import Comuna, ParticipacionSocio, SocioComunitario
+        
+        # 1. Crear configuración básica obligatoria
+        cls.sede = Sede.objects.create(nombre="Santiago", activo=True)
+        cls.periodo = PeriodoAcademico.objects.create(
+            anio=2026, tipo="Semestral", nombre="2026-2", estado="Activo"
+        )
+        cls.comuna = Comuna.objects.create(
+            nombre="Maipú", region="RM", activo=True, lat_centro=-33.51, lon_centro=-70.75
+        )
+        cls.facultad = Facultad.objects.create(nombre="Ingeniería", activo=True)
+        cls.carrera = Carrera.objects.create(facultad=cls.facultad, nombre="Informática", activo=True)
+        
+        # 2. Crear exactamente 1 Socio (Organización) con sus campos requeridos
+        cls.socio = SocioComunitario.objects.create(
+            nombre_organizacion="Junta de Vecinos El Abrazo",
+            comuna=cls.comuna,
+            estado_revision="APROBADO",
+            es_provisional=False,
+            activo=True,
+            fecha_creacion=timezone.now()
+        )
+        
+        # 3. Crear 3 participaciones distintas para el MISMO socio
+        for _ in range(3):
+            ParticipacionSocio.objects.create(
+                socio=cls.socio, 
+                sede=cls.sede, 
+                periodo=cls.periodo,
+                carrera=cls.carrera,
+                origen="HISTORICO"
+            )
+
+    def test_conteo_socios_unicos_vs_participaciones(self):
+        """
+        SP7-T03: Verifica que una organización con 3 participaciones 
+        cuente como 1 Socio único y 3 participaciones.
+        """
+        from core import indicadores
+        
+        filtros = {
+            "periodo": self.periodo.id, 
+            "anio": None, "sede": None, "campus": None, 
+            "facultad": None, "carrera": None, "asignatura": None, "comuna": None
+        }
+        
+        valores = indicadores._valores(filtros)
+        
+        self.assertEqual(
+            valores["participaciones"], 3, 
+            "El total de participaciones debe ser 3."
+        )
+        self.assertEqual(
+            valores["socios"], 1, 
+            "El total de socios únicos debe ser 1 (uso correcto de distinct)."
+        )
