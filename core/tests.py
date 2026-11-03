@@ -560,6 +560,32 @@ class PanelIndicadoresTestCase(TestCase):
         self.assertEqual(punto["anios"], [2026])
         self.assertNotIn("direccion", punto)
 
+    def test_portal_publico_usa_payload_agregado_sin_datos_personales(self):
+        self.client.logout()
+
+        response = self.client.get(
+            reverse("core:inicio"),
+            {"facultad": self.informatica.facultad_id},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["filtros"]["facultad"], self.informatica.facultad_id)
+        self.assertEqual(len(response.context["mapa"]["puntos"]), 1)
+        for punto in response.context["mapa"]["puntos"]:
+            self.assertEqual(
+                set(punto),
+                {"comuna", "lat", "lon", "socios", "participaciones", "proyectos", "carreras", "anios"},
+            )
+            self.assertNotIn("detalle", punto)
+            self.assertNotIn("rut", punto)
+            self.assertNotIn("correo", punto)
+            self.assertNotIn("telefono", punto)
+            self.assertNotIn("direccion", punto)
+            self.assertNotIn("nombre", punto)
+
+        self.assertNotContains(response, "direccion_exacta")
+        self.assertNotContains(response, "informante_correo")
+
     def test_satisfaccion_vacia_no_muestra_cero(self):
         response = self.panel()
 

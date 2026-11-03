@@ -30,7 +30,7 @@ def inicio(request):
         "filtros": filtros,
         "hay_filtros": any(filtros.get(nombre) for nombre in indicadores.FILTROS_PUBLICOS),
         "opciones": indicadores.opciones_publicas(),
-        "mapa": indicadores.mapa(filtros),
+        "mapa": indicadores.mapa_publico(filtros),
         "cifras": indicadores.cifras_publicas(filtros),
         "catalogo": catalogo,
         "catalogo_anios": sorted({p["anio"] for p in catalogo if p["anio"]}, reverse=True),
