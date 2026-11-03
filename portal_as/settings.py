@@ -5,6 +5,9 @@ import dj_database_url
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+print("BASE_DIR =", BASE_DIR)
+print("ENV PATH =", BASE_DIR / ".env")
+
 load_dotenv()
 
 
@@ -92,7 +95,7 @@ if os.getenv("DATABASE_URL"):
     DATABASES = {
         "default": dj_database_url.parse(
             os.environ["DATABASE_URL"],
-            conn_max_age=60,
+            conn_max_age=600,
             conn_health_checks=True,
         )
     }
@@ -239,25 +242,15 @@ PRIVATE_STORAGE_ALLOWED_EXTENSIONS = os.getenv(
 PRIVATE_STORAGE_RETENTION_YEARS = int(os.getenv("PRIVATE_STORAGE_RETENTION_YEARS", "5"))
 
 # Configuración de Correo
-EMAIL_BACKEND_DEFAULT = (
-    "portal_as.email_backend.BrevoEmailBackend"
-    if os.getenv("BREVO_API_KEY")
-    else (
-        "django.core.mail.backends.console.EmailBackend"
-        if DEBUG
-        else "django.core.mail.backends.smtp.EmailBackend"
-    )
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend"
 )
-EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", EMAIL_BACKEND_DEFAULT)
-
-# SMTP remains available for local/other hosts; Render uses Brevo's HTTP API.
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.office365.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
-BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
-BREVO_API_URL = os.getenv("BREVO_API_URL", "https://api.brevo.com/v3/smtp/email")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@portal-as.cl")
 
 if not DEBUG:
