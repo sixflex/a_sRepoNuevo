@@ -340,6 +340,13 @@ class SocioFilaForm(forms.Form):
             attrs={"class": "form-control form-control-sm", "placeholder": "Negocio o rubro"}
         ),
     )
+    direccion = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(
+            attrs={"class": "form-control form-control-sm", "placeholder": "Dirección"}
+        ),
+    )
 
 
 SocioFilaFormSet = formset_factory(

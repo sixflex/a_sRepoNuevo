@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Repositorio público | Portal A+S{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
+
+<div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+    <div>
+        <h1 class="page-title">Repositorio de documentos</h1>
+        <p class="page-subtitle mb-0">
+            Sube formatos, guías y documentos. Los marcados como <strong>Públicos</strong> se pueden descargar
+            desde el portal público; los <strong>Privados</strong> solo los ve Coordinación.
+        </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'archivos:repositorio_publico' %}" class="btn btn-light-ua" target="_blank" rel="noopener">
+            <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Ver como visitante
+        </a>
+        <a href="{% url 'archivos:crear_recurso' %}" class="btn btn-ua">
+            <i class="bi bi-cloud-arrow-up me-1" aria-hidden="true"></i>Subir documento
+        </a>
+    </div>
+</div>
+
+<p class="small text-muted mb-3">
+    {{ total }} documento{{ total|pluralize }} · {{ publicos }} visible{{ publicos|pluralize }} en el portal público
+</p>
+
+{% for categoria, recursos in grupos %}
+    <div class="card-ua mb-4">
+        <div class="card-header-ua">{{ categoria }} <span class="text-muted small fw-normal">{{ recursos|length }}</span></div>
+        <div class="table-responsive">
+            <table class="table tabla-ua align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">Documento</th>
+                        <th scope="col">Visibilidad</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col" class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for recurso in recursos %}
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">{{ recurso.titulo }}</div>
+                                {% if recurso.descripcion %}<div class="small text-muted">{{ recurso.descripcion|truncatechars:120 }}</div>{% endif %}
+                                <div class="small mt-1">
+                                    {% if recurso.archivo %}
+                                        <a href="{% url 'archivos:descargar_recurso' recurso.pk %}" class="text-decoration-none">
+                                            <i class="bi bi-file-earmark-arrow-down me-1" aria-hidden="true"></i>{{ recurso.archivo.nombre_original }}
+                                        </a>
+                                    {% elif recurso.url_externa %}
+                                        <a href="{{ recurso.url_externa }}" target="_blank" rel="noopener" class="text-decoration-none">
+                                            <i class="bi bi-link-45deg me-1" aria-hidden="true"></i>Enlace externo
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if recurso.visibilidad == "PUBLICO" %}
+                                    <span class="badge rounded-pill text-bg-success-subtle text-success-emphasis">Público</span>
+                                {% else %}
+                                    <span class="badge rounded-pill text-bg-secondary">Privado</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if recurso.estado == "PUBLICADO" %}
+                                    <span class="small">Publicado{% if recurso.fecha_publicacion %} · {{ recurso.fecha_publicacion|date:"d/m/Y" }}{% endif %}</span>
+                                {% else %}
+                                    <span class="small text-muted">Retirado</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex flex-wrap justify-content-end gap-1">
+                                    <a href="{% url 'archivos:editar_recurso' recurso.pk %}" class="btn btn-accion btn-sm" title="Editar o reemplazar">
+                                        <i class="bi bi-pencil" aria-hidden="true"></i><span class="visually-hidden">Editar {{ recurso.titulo }}</span>
+                                    </a>
+                                    <form method="post" action="{% url 'archivos:cambiar_estado_recurso' recurso.pk %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-accion btn-sm" title="{% if recurso.estado == 'PUBLICADO' %}Retirar del portal{% else %}Volver a publicar{% endif %}">
+                                            <i class="bi {% if recurso.estado == 'PUBLICADO' %}bi-eye-slash{% else %}bi-eye{% endif %}" aria-hidden="true"></i>
+                                            <span class="visually-hidden">{% if recurso.estado == 'PUBLICADO' %}Retirar{% else %}Publicar{% endif %} {{ recurso.titulo }}</span>
+                                        </button>
+                                    </form>
+                                    <form method="post" action="{% url 'archivos:eliminar_recurso' recurso.pk %}"
+                                          onsubmit="return confirm('¿Eliminar «{{ recurso.titulo|escapejs }}» del repositorio?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-accion btn-sm text-danger" title="Eliminar">
+                                            <i class="bi bi-trash" aria-hidden="true"></i><span class="visually-hidden">Eliminar {{ recurso.titulo }}</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% empty %}
+    <div class="card-ua p-5 text-center">
+        <i class="bi bi-folder2-open fs-1 text-muted" aria-hidden="true"></i>
+        <p class="fw-semibold mt-2 mb-1">Aún no hay documentos</p>
+        <p class="small text-muted mb-3">Sube el primero: quedará disponible en el portal público si lo marcas como Público.</p>
+        <a href="{% url 'archivos:crear_recurso' %}" class="btn btn-ua">Subir documento</a>
+    </div>
+{% endfor %}
+{% endblock %}

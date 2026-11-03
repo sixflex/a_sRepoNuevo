@@ -77,6 +77,24 @@ class CargarDatosDemoTests(TestCase):
         self.assertContains(respuesta, 'id="mapa-puntos"')
         self.assertNotContains(respuesta, socio.direccion_exacta)
 
+    def test_portal_publico_cifras_reales_y_catalogo_sin_nombres(self):
+        filtros = indicadores.filtros_publicos({})
+        cifras = indicadores.cifras_publicas(filtros)
+        self.assertEqual(cifras["socios"], ParticipacionSocio.objects.values("socio").distinct().count())
+        self.assertEqual(cifras["participaciones"], ParticipacionSocio.objects.count())
+        # RF-IND-02: cada comuna distingue socios únicos de participaciones.
+        mapa = indicadores.mapa(filtros)
+        self.assertEqual(mapa["total_participaciones"], sum(p["participaciones"] for p in mapa["puntos"]))
+
+        catalogo = indicadores.catalogo_publico(filtros)
+        self.assertTrue(catalogo)
+        self.assertNotIn("nombre", catalogo[0])
+        respuesta = self.client.get(reverse("core:inicio"))
+        self.assertContains(respuesta, 'id="catalogo"')
+        socio = SocioComunitario.objects.filter(participaciones__isnull=False).first()
+        self.assertNotContains(respuesta, socio.nombre_organizacion)
+        self.assertNotContains(respuesta, "Vinculación con el Medio UA")
+
     def test_mapa_del_coordinador_trae_direccion_y_contacto(self):
         privado = indicadores.mapa(indicadores.filtros_publicos({}), detalle=True)
         socios = [socio for punto in privado["puntos"] for socio in punto["detalle"]]

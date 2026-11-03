@@ -378,10 +378,10 @@
 .socios-encabezado,
 .socio-subcard {
     display: grid;
-    grid-template-columns: minmax(180px, 1.6fr) minmax(180px, 1.4fr) minmax(160px, 1fr) 32px;
+    grid-template-columns: minmax(170px, 1.5fr) minmax(170px, 1.3fr) minmax(140px, 1fr) minmax(170px, 1.3fr) 32px;
     gap: 6px;
     align-items: center;
-    max-width: 760px;
+    max-width: 920px;
 }
 .socios-encabezado {
     padding: 0 8px 2px;

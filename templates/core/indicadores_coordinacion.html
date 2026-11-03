@@ -129,7 +129,7 @@
                         <div class="col-12 col-lg-7">
                             <div class="table-responsive">
                                 <table class="table tabla-dimensiones align-middle mb-0">
-                                    <caption class="caption-top">Promedio por dimensión (1 a 5)</caption>
+                                    <caption class="caption-top">% que respondió 4 o 5, por dimensión</caption>
                                     <thead>
                                         <tr>
                                             <th scope="col">Dimensión</th>
@@ -141,7 +141,7 @@
                                             <tr>
                                                 <th scope="row">{{ fila.dimension }}</th>
                                                 {% for valor in fila.valores %}
-                                                    <td>{% if valor is not None %}{{ valor|floatformat:1 }}{% else %}<span class="text-muted small">no se pregunta</span>{% endif %}</td>
+                                                    <td>{% if valor is not None %}{{ valor|floatformat:1 }}%{% else %}<span class="text-muted small">no se pregunta</span>{% endif %}</td>
                                                 {% endfor %}
                                             </tr>
                                         {% endfor %}
@@ -149,6 +149,34 @@
                                 </table>
                             </div>
                         </div>
+                    </div>
+
+                    {# Un gráfico por pregunta de la valoración general (pedido del cliente, 2/11). #}
+                    <h3 class="h6 fw-bold mt-4 mb-3">Por pregunta <span class="text-muted fw-normal small">· % que respondió 4 o 5 en cada ítem</span></h3>
+                    <div class="row g-4">
+                        {% for anillo in satisfaccion.anillos %}
+                            {% if anillo.preguntas %}
+                                <div class="col-12 col-lg-4">
+                                    <strong class="d-block mb-2">{{ anillo.publico }}</strong>
+                                    <ul class="list-unstyled mb-0 barras-pregunta">
+                                        {% for pregunta in anillo.preguntas %}
+                                            <li class="mb-2">
+                                                <div class="d-flex justify-content-between gap-2 small">
+                                                    <span>{{ pregunta.texto }}</span>
+                                                    <strong class="text-nowrap">{{ pregunta.porcentaje|floatformat:1 }}%</strong>
+                                                </div>
+                                                <div class="progress" style="height: 8px;" role="progressbar"
+                                                     aria-label="{{ pregunta.texto }}" aria-valuenow="{{ pregunta.porcentaje|stringformat:'s' }}"
+                                                     aria-valuemin="0" aria-valuemax="100">
+                                                    <div class="progress-bar" style="width: {{ pregunta.porcentaje|stringformat:'s' }}%; background-color: var(--ua-red);"></div>
+                                                </div>
+                                                <span class="text-muted" style="font-size: 0.75rem;">{{ pregunta.respuestas }} respuesta{{ pregunta.respuestas|pluralize }}</span>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
                     </div>
                 {% else %}
                     <p class="estado-vacio">Aún no hay respuestas de las encuestas de evaluación A+S para estos filtros.</p>

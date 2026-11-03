@@ -4,7 +4,7 @@
 {% block title %}Planificación A+S | Universidad Autónoma de Chile{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/planificacion.css' %}?v=2026-10-27d">
+<link rel="stylesheet" href="{% static 'css/planificacion.css' %}?v=2026-11-03">
 {% endblock %}
 
 {% block layout_completo %}
@@ -175,7 +175,7 @@
                                                     <ul class="plan-errores">{% for error in socios_formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}</ul>
                                                 {% endif %}
                                                 <div class="socios-encabezado"{% if not socios_formset.forms %} hidden{% endif %} aria-hidden="true">
-                                                    <span>Organización</span><span>Correo</span><span>Negocio o rubro</span><span></span>
+                                                    <span>Organización</span><span>Correo</span><span>Negocio o rubro</span><span>Dirección</span><span></span>
                                                 </div>
                                                 <div class="socios-container" data-prefix="{{ socios_formset.prefix }}">
                                                     {% for socio in socios_formset %}
@@ -290,7 +290,7 @@
                                         <input type="hidden" name="socios-__prefix__-MAX_NUM_FORMS" value="1000" id="id_socios-__prefix__-MAX_NUM_FORMS">
                                         <div class="docentes-titulo socios-titulo">Posible(s) socio(s) comunitario(s) <span class="socios-opcional">opcional</span></div>
                                         <div class="socios-encabezado" hidden aria-hidden="true">
-                                            <span>Organización</span><span>Correo</span><span>Negocio o rubro</span><span></span>
+                                            <span>Organización</span><span>Correo</span><span>Negocio o rubro</span><span>Dirección</span><span></span>
                                         </div>
                                         <div class="socios-container" data-prefix="socios-__prefix__"></div>
                                         <button type="button" class="plan-agregar-docente agregar-socio" data-prefix="socios-__prefix__">
@@ -301,6 +301,7 @@
                                                 <div><label class="visually-hidden" for="id_socios-__prefix__-__soc_prefix__-nombre">Nombre de la organización</label><input type="text" name="socios-__prefix__-__soc_prefix__-nombre" maxlength="120" class="form-control form-control-sm" placeholder="Organización" id="id_socios-__prefix__-__soc_prefix__-nombre"></div>
                                                 <div><label class="visually-hidden" for="id_socios-__prefix__-__soc_prefix__-correo">Correo</label><input type="email" name="socios-__prefix__-__soc_prefix__-correo" class="form-control form-control-sm" placeholder="correo@dominio.cl" id="id_socios-__prefix__-__soc_prefix__-correo"></div>
                                                 <div><label class="visually-hidden" for="id_socios-__prefix__-__soc_prefix__-rubro">Negocio o rubro</label><input type="text" name="socios-__prefix__-__soc_prefix__-rubro" maxlength="80" class="form-control form-control-sm" placeholder="Negocio o rubro" id="id_socios-__prefix__-__soc_prefix__-rubro"></div>
+                                                <div><label class="visually-hidden" for="id_socios-__prefix__-__soc_prefix__-direccion">Dirección</label><input type="text" name="socios-__prefix__-__soc_prefix__-direccion" maxlength="100" class="form-control form-control-sm" placeholder="Dirección" id="id_socios-__prefix__-__soc_prefix__-direccion"></div>
                                                 <div class="docente-quitar">
                                                     <input type="checkbox" name="socios-__prefix__-__soc_prefix__-DELETE" id="id_socios-__prefix__-__soc_prefix__-DELETE">
                                                     <label for="id_socios-__prefix__-__soc_prefix__-DELETE" title="Quitar socio"><i class="bi bi-x-lg" aria-hidden="true"></i><span class="visually-hidden">Quitar socio</span></label>

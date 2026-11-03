@@ -121,6 +121,7 @@
                             <td>
                                 <span class="socio-nombre">{{ sugerido.nombre|default:"Sin nombre" }}</span>
                                 <div class="socio-rut">{{ sugerido.rubro|default:"Sin rubro" }}{% if sugerido.correo %} · {{ sugerido.correo }}{% endif %}</div>
+                                {% if sugerido.direccion %}<div class="socio-rut"><i class="bi bi-geo-alt me-1" aria-hidden="true"></i>{{ sugerido.direccion }}</div>{% endif %}
                             </td>
                             <td>
                                 NRC {{ fila.nrc }} · {{ fila.asignatura_texto }}
