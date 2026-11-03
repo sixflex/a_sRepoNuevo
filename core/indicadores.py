@@ -10,7 +10,7 @@ evaluación (encuestas). No guarda nada: solo consulta.
 from collections import defaultdict
 from urllib.parse import urlencode
 
-from django.db.models import Avg, Count, F, Min, Q, Sum
+from django.db.models import Count, F, Min, Q, Sum
 from django.db.models.functions import Coalesce, ExtractYear
 from django.urls import reverse
 
@@ -34,8 +34,8 @@ from socios.models import Comuna, ParticipacionSocio, SocioComunitario
 # Parámetros GET del panel de filtros, en el orden en que se muestran los chips.
 FILTROS = ["sede", "campus", "anio", "periodo", "facultad", "carrera", "asignatura", "comuna"]
 
-# Filtros del mapa del portal público (RF-PUB-01): sin período ni asignatura.
-FILTROS_PUBLICOS = ["sede", "anio", "carrera", "comuna"]
+# Filtros del mapa del portal público (RF-PUB-01 y RF-IND-03): sin período ni asignatura.
+FILTROS_PUBLICOS = ["sede", "campus", "anio", "facultad", "carrera", "comuna"]
 
 # Marca que indica que el usuario ya eligió filtros (aunque los haya quitado
 # todos): sin ella el panel parte en el período vigente.
@@ -147,7 +147,11 @@ def opciones_publicas():
             Q(participaciones_socios__in=participaciones)
             | Q(campus__participaciones_socios__in=participaciones)
         ).distinct().order_by("nombre"),
+        "campus": Campus.objects.filter(participaciones_socios__in=participaciones)
+        .select_related("sede").distinct().order_by("sede__nombre", "nombre"),
         "anios": sorted(_anios_con_datos(), reverse=True),
+        "facultades": Facultad.objects.filter(carreras__participaciones_socios__in=participaciones)
+        .distinct().order_by("nombre"),
         "carreras": Carrera.objects.filter(participaciones_socios__in=participaciones).distinct().order_by("nombre"),
         "comunas": Comuna.objects.filter(socios__participaciones__in=participaciones).distinct().order_by("nombre"),
     }
@@ -235,6 +239,11 @@ def _secciones(filtros, periodo=None, anio=None):
     return secciones.distinct()
 
 
+def participaciones_filtradas(filtros):
+    """Participaciones de socios con los filtros del panel (para los reportes)."""
+    return _participaciones(filtros)
+
+
 def _participaciones(filtros, periodo=None, anio=None):
     """
     Participaciones de socios con los filtros. Se filtra por el contexto de la
@@ -313,12 +322,6 @@ def _valores(filtros, periodo=None, anio=None):
         "socios": participaciones["socios"],
         "participaciones": participaciones["total"],
     }
-
-
-def estudiantes_participantes(filtros):
-    """Solo el total de estudiantes (el portal público no necesita las demás tarjetas)."""
-    secciones = _secciones(filtros)
-    return _estudiantes(secciones, _seccion_carreras(filtros, secciones))[0]
 
 
 def _periodo_anterior(periodo_id):
@@ -494,11 +497,20 @@ def _respuestas_escala(codigos, filtros):
     return respuestas
 
 
+def _porcentaje(satisfechas, total):
+    return round(satisfechas * 100 / total, 1) if total else None
+
+
 def satisfaccion(filtros):
     """
     Anillos: % de respuestas 4 o 5 en la valoración general de cada encuesta
-    (estudiantes P19, docentes P18, socios P12), con su n. Tabla: promedio
-    1 a 5 por dimensión. Sin respuestas, el anillo queda vacío (no 0%).
+    (estudiantes P19, docentes P18, socios P12), con su n. Por pregunta: el
+    mismo % para cada ítem de esa valoración general, un gráfico por pregunta
+    como pidió el cliente. Tabla: % de 4 y 5 por dimensión.
+
+    Siempre % de 4 y 5 sobre el total, nunca promedio: el cliente quiere saber
+    cuántos están "bien y muy bien", y el promedio lo baja con los 1, 2 y 3.
+    Sin respuestas, el anillo queda vacío (no 0%).
     """
     codigo_plantilla = "pregunta__version__plantilla__codigo"
     respuestas = _respuestas_escala([codigo for codigo, _ in ENCUESTAS_SATISFACCION], filtros)
@@ -524,35 +536,56 @@ def satisfaccion(filtros):
     ):
         numeros.setdefault(fila[codigo_plantilla], fila["pregunta__configuracion_json__numero"])
 
+    # Cada ítem de la valoración general por separado. Se agrupa por el texto
+    # (no por la pregunta) para juntar las respuestas de distintas versiones.
+    preguntas = defaultdict(list)
+    for fila in (
+        generales.values(codigo_plantilla, "pregunta__texto")
+        .annotate(
+            total=Count("id"),
+            satisfechas=Count("id", filter=Q(valor_escala__gte=SATISFECHO_DESDE)),
+            orden=Min("pregunta__orden"),
+        )
+        .order_by("orden", "pregunta__texto")
+    ):
+        preguntas[fila[codigo_plantilla]].append({
+            "texto": fila["pregunta__texto"],
+            "porcentaje": _porcentaje(fila["satisfechas"], fila["total"]),
+            "respuestas": fila["total"],
+        })
+
     anillos = []
     for codigo, publico in ENCUESTAS_SATISFACCION:
         fila = totales.get(codigo, {})
-        total = fila.get("total", 0)
         anillos.append({
             "publico": publico,
-            "porcentaje": round(fila["satisfechas"] * 100 / total, 1) if total else None,
+            "porcentaje": _porcentaje(fila.get("satisfechas", 0), fila.get("total", 0)),
             "personas": fila.get("personas", 0),
             "pregunta": numeros.get(codigo),
+            "preguntas": preguntas.get(codigo, []),
         })
 
-    promedios = {clave: {} for clave, _ in DIMENSIONES}
+    porcentajes = {clave: {} for clave, _ in DIMENSIONES}
     por_dimension = (
         respuestas.exclude(pregunta__configuracion_json__dimension=None)
         .values(codigo_plantilla, "pregunta__configuracion_json__dimension")
-        .annotate(promedio=Avg("valor_escala"))
+        .annotate(
+            total=Count("id"),
+            satisfechas=Count("id", filter=Q(valor_escala__gte=SATISFECHO_DESDE)),
+        )
         .order_by()
     )
     for fila in por_dimension:
         clave = fila["pregunta__configuracion_json__dimension"]
-        if clave in promedios:
-            promedios[clave][fila[codigo_plantilla]] = round(float(fila["promedio"]), 1)
+        if clave in porcentajes:
+            porcentajes[clave][fila[codigo_plantilla]] = _porcentaje(fila["satisfechas"], fila["total"])
 
     tabla = []
     for clave, etiqueta in DIMENSIONES:
         tabla.append({
             "dimension": etiqueta,
             "valores": [
-                promedios[clave].get(codigo) for codigo, _ in ENCUESTAS_SATISFACCION
+                porcentajes[clave].get(codigo) for codigo, _ in ENCUESTAS_SATISFACCION
             ],
         })
     return {
@@ -608,6 +641,15 @@ def mapa(filtros, detalle=False):
         if anio:
             datos["anios"].add(anio)
 
+    # RF-IND-02: además de los socios únicos, cuántas participaciones tuvieron.
+    participaciones_por_comuna = dict(
+        _participaciones(filtros)
+        .filter(socio__comuna_id__in=comunas)
+        .values_list("socio__comuna_id")
+        .annotate(total=Count("id"))
+        .order_by()
+    )
+
     for comuna in Comuna.objects.filter(pk__in=comunas).order_by("nombre"):
         datos = comunas.pop(comuna.id)
         datos.update(comuna=comuna.nombre, lat=float(comuna.lat_centro), lon=float(comuna.lon_centro))
@@ -621,12 +663,13 @@ def mapa(filtros, detalle=False):
             _agregar_detalle(comunas[socio.comuna_id]["detalle"], socio)
 
     puntos = []
-    for datos in comunas.values():
+    for comuna_id, datos in comunas.items():
         punto = {
             "comuna": datos["comuna"],
             "lat": datos["lat"],
             "lon": datos["lon"],
             "socios": len(datos["socios"]),
+            "participaciones": participaciones_por_comuna.get(comuna_id, 0),
             "proyectos": len(datos["proyectos"]),
             "carreras": sorted(datos["carreras"]),
             "anios": sorted(datos["anios"]),
@@ -640,6 +683,7 @@ def mapa(filtros, detalle=False):
         "top_proyectos": sorted(puntos, key=lambda p: -p["proyectos"])[:5],
         "top_socios": sorted(puntos, key=lambda p: -p["socios"])[:5],
         "total_socios": len({socio for datos in comunas.values() for socio in datos["socios"]}),
+        "total_participaciones": sum(p["participaciones"] for p in puntos),
         "total_proyectos": sum(p["proyectos"] for p in puntos),
     }
 
@@ -658,6 +702,93 @@ def _agregar_detalle(socios, socio):
         "correo": (contacto.correo or "") if contacto else "",
         "url": reverse("socios:detalle_historial", args=[socio.id]),
     }
+
+
+# ---------------------------------------------------------------------------
+# Portal público (HU-10, RF-PUB-01): cifras y catálogo, solo agregados
+# ---------------------------------------------------------------------------
+
+def cifras_publicas(filtros):
+    """
+    Cifras macro del portal público. Suma las secciones del sistema y las
+    participaciones (también las históricas, que no tienen sección).
+    """
+    secciones = _secciones(filtros)
+    seccion_carreras = _seccion_carreras(filtros, secciones)
+    participaciones = _participaciones(filtros)
+
+    carreras = (
+        set(seccion_carreras.values_list("carrera_id", flat=True))
+        | set(participaciones.exclude(carrera=None).values_list("carrera_id", flat=True))
+    )
+    asignaturas = (
+        set(secciones.values_list("asignatura_id", flat=True))
+        | set(participaciones.exclude(asignatura=None).values_list("asignatura_id", flat=True))
+    )
+    totales = participaciones.aggregate(socios=Count("socio", distinct=True), total=Count("id"))
+
+    return {
+        "asignaturas": len(asignaturas),
+        "carreras": len(carreras),
+        "facultades": (
+            Carrera.objects.filter(pk__in=carreras, facultad__isnull=False)
+            .values("facultad").distinct().count()
+        ),
+        "socios": totales["socios"],
+        "participaciones": totales["total"],
+        "estudiantes": _estudiantes(secciones, seccion_carreras)[0],
+    }
+
+
+def catalogo_publico(filtros):
+    """
+    Proyectos A+S del mapa ordenados como catálogo: uno por año, carrera,
+    asignatura y servicio realizado (lo que se hizo, que es el título de la
+    tarjeta), con cuántos socios participaron, sus comunas y tipos. No
+    incluye nombres de socios ni de personas (RNF-PRI-01): muchos socios son
+    emprendedores, es decir, personas naturales.
+    """
+    filas = (
+        _participaciones(filtros)
+        .annotate(anio_participacion=Coalesce("periodo__anio", ExtractYear("fecha_inicio")))
+        .values_list(
+            "anio_participacion", "carrera__nombre", "asignatura__nombre", "servicio_realizado",
+            "socio_id", "socio__comuna__nombre", "socio__clasificacion__nombre",
+        )
+        .order_by()
+        .distinct()
+    )
+
+    proyectos = {}
+    for anio, carrera, asignatura, servicio, socio_id, comuna, tipo in filas:
+        servicio = " ".join((servicio or "").split())
+        servicio = servicio[:1].upper() + servicio[1:]
+        datos = proyectos.setdefault((anio, carrera or "", asignatura or "", servicio), {
+            "socios": set(), "comunas": defaultdict(set), "tipos": set(),
+        })
+        datos["socios"].add(socio_id)
+        if comuna:
+            datos["comunas"][comuna].add(socio_id)
+        if tipo:
+            datos["tipos"].add(tipo)
+
+    catalogo = [
+        {
+            "anio": anio,
+            "carrera": carrera,
+            "asignatura": asignatura,
+            "servicio": servicio,
+            "socios": len(datos["socios"]),
+            # Primero las comunas con más socios: la tarjeta muestra solo las primeras.
+            "comunas": sorted(datos["comunas"], key=lambda c: (-len(datos["comunas"][c]), c)),
+            "tipos": sorted(datos["tipos"]),
+        }
+        for (anio, carrera, asignatura, servicio), datos in proyectos.items()
+    ]
+    catalogo.sort(key=lambda p: (
+        -(p["anio"] or 0), p["carrera"].lower(), p["asignatura"].lower(), p["servicio"].lower(),
+    ))
+    return catalogo
 
 
 # ---------------------------------------------------------------------------

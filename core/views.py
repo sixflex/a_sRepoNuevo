@@ -24,11 +24,16 @@ def inicio(request):
     from . import indicadores
 
     filtros = indicadores.filtros_publicos(request.GET)
+    # El catálogo va completo: se recorre y se filtra por año en la misma página.
+    catalogo = indicadores.catalogo_publico(filtros)
     return render(request, "core/inicio.html", {
         "filtros": filtros,
+        "hay_filtros": any(filtros.get(nombre) for nombre in indicadores.FILTROS_PUBLICOS),
         "opciones": indicadores.opciones_publicas(),
         "mapa": indicadores.mapa(filtros),
-        "estudiantes": indicadores.estudiantes_participantes(filtros),
+        "cifras": indicadores.cifras_publicas(filtros),
+        "catalogo": catalogo,
+        "catalogo_anios": sorted({p["anio"] for p in catalogo if p["anio"]}, reverse=True),
     })
 
 
@@ -158,9 +163,15 @@ def exportar_indicadores(request):
 
     satisfaccion = libro.create_sheet("Satisfacción")
     excel.agregar_metadatos(satisfaccion, metadatos)
-    satisfaccion.append(["Público", "Porcentaje", "Personas", "Pregunta"])
-    for fila in indicadores.satisfaccion(filtros)["anillos"]:
+    satisfaccion.append(["Público", "Porcentaje 4 y 5", "Personas", "Pregunta"])
+    datos_satisfaccion = indicadores.satisfaccion(filtros)
+    for fila in datos_satisfaccion["anillos"]:
         satisfaccion.append([fila["publico"], fila["porcentaje"], fila["personas"], fila["pregunta"]])
+    satisfaccion.append([])
+    satisfaccion.append(["Público", "Ítem", "Porcentaje 4 y 5", "Respuestas"])
+    for fila in datos_satisfaccion["anillos"]:
+        for pregunta in fila["preguntas"]:
+            satisfaccion.append([fila["publico"], pregunta["texto"], pregunta["porcentaje"], pregunta["respuestas"]])
 
     evolucion = libro.create_sheet("Evolución")
     excel.agregar_metadatos(evolucion, metadatos)

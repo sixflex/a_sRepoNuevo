@@ -566,7 +566,7 @@ class PanelIndicadoresTestCase(TestCase):
         self.assertFalse(response.context["satisfaccion"]["hay_datos"])
         self.assertContains(response, "Aún no hay respuestas de las encuestas de evaluación")
 
-    def test_satisfaccion_porcentaje_de_4_y_5_y_promedio_por_dimension(self):
+    def test_satisfaccion_porcentaje_de_4_y_5_por_encuesta_pregunta_y_dimension(self):
         from django.utils import timezone
 
         from encuestas.definiciones import evaluaciones
@@ -597,7 +597,14 @@ class PanelIndicadoresTestCase(TestCase):
         self.assertEqual(docentes["personas"], 2)
         self.assertEqual(docentes["pregunta"], 18)
         self.assertIsNone(satisfaccion["anillos"][0]["porcentaje"])
-        self.assertEqual(satisfaccion["tabla"][0]["valores"], [None, 4.0, None])
+        # Un gráfico por pregunta: la primera tuvo 5 y 5, la quinta 2 y 5.
+        por_pregunta = docentes["preguntas"]
+        self.assertEqual(len(por_pregunta), 6)
+        self.assertEqual(por_pregunta[0]["porcentaje"], 100.0)
+        self.assertEqual(por_pregunta[4]["porcentaje"], 50.0)
+        self.assertEqual(por_pregunta[0]["respuestas"], 2)
+        # La dimensión también es % de 4 y 5, no el promedio.
+        self.assertEqual(satisfaccion["tabla"][0]["valores"], [None, 100.0, None])
 
 
 class OrdenListadosTests(TestCase):

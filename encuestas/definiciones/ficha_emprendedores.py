@@ -8,6 +8,7 @@ con su pestaña.
 
 from encuestas import constantes as c
 from encuestas.semillas import opcion, otras, pregunta, seccion
+from socios.centros_sercotec import CENTROS
 
 INV_MERCADOS = "INV_MERCADOS"
 CONSULTORIA = "CONSULTORIA_EMPRESAS"
@@ -72,7 +73,12 @@ DEFINICION = {
                 'Más de 3 personas',
                 opcion('Otras', otras=True, solo_si=solo([CONSULTORIA])),
             ]),
-            pregunta('Favor indiquemos a que Centro de Negocios de Sercotec esta asociado, si es que lo esta.', c.TEXTO_CORTO, obligatoria=False),
+            # Lista cerrada para poder agrupar por centro (cliente, 2/11/2026); antes era texto libre.
+            pregunta('Favor indiquemos a que Centro de Negocios de Sercotec esta asociado, si es que lo esta.', c.LISTA, [
+                *CENTROS,
+                'No estoy asociado a un Centro de Negocios',
+                otras('Otro centro'),
+            ], obligatoria=False),
             pregunta('Favor indíquenos el nombre del  ASESOR del Centro de Negocios Sercotec con que está trabajando.', c.TEXTO_CORTO, obligatoria=False),
             pregunta('Favor indiquenos el correo electrónico de su asesor Sercotec para invitarlo a una primera reunión junto con usted', c.CORREO, obligatoria=False),
         ]),

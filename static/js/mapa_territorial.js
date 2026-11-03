@@ -129,8 +129,9 @@
 
             const popup =
                 "<strong>" + texto(punto.comuna) + "</strong><br>" +
-                plural(punto.socios, "socio", "socios") + " · " +
-                plural(punto.proyectos, "proyecto", "proyectos") +
+                plural(punto.socios, "socio", "socios") +
+                (punto.participaciones ? " (" + plural(punto.participaciones, "participación", "participaciones") + ")" : "") +
+                " · " + plural(punto.proyectos, "proyecto", "proyectos") +
                 (punto.carreras.length ? "<br>Carreras: " + texto(punto.carreras.join(", ")) : "") +
                 (punto.anios.length ? "<br>Años: " + punto.anios.join(", ") : "");
             marcador.bindPopup(popup);

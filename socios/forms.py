@@ -2,6 +2,7 @@ from django import forms
 
 from core.validators import validar_rut_chileno
 
+from .centros_sercotec import CENTROS, OPCIONES as OPCIONES_CENTROS, normalizar_centro
 from .models import ClasificacionSocio, Comuna, SocioComunitario
 
 # RF-SC-04 CA2: después de revisar los datos, el coordinador decide si el
@@ -58,9 +59,23 @@ class SocioPropuestoForm(forms.ModelForm):
             "clasificacion_otra": "Solo si no corresponde a ninguna de la lista.",
         }
 
+    def clean_centro_servicio(self):
+        return self.cleaned_data.get("centro_servicio") or None
+
     def __init__(self, *args, contacto=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.contacto = contacto
+        # Centro SERCOTEC como lista cerrada (cliente, 2/11/2026). Si el socio
+        # trae un texto antiguo que no está en la lista, se conserva como opción.
+        actual = self.instance.centro_servicio if self.instance else None
+        opciones = [("", "Sin centro")] + OPCIONES_CENTROS
+        if actual and actual not in CENTROS:
+            opciones.append((actual, f"{actual} (texto anterior)"))
+        self.fields["centro_servicio"] = forms.ChoiceField(
+            label=self.fields["centro_servicio"].label, choices=opciones, required=False,
+        )
+        if actual and not self.is_bound:
+            self.initial["centro_servicio"] = normalizar_centro(actual) or actual
         if contacto and not self.is_bound:
             self.initial.update({
                 "contacto_nombre": contacto.nombre,

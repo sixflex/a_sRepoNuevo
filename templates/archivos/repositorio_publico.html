@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Repositorio público | Aprendizaje + Servicio (A+S){% endblock %}
+
+{% block content_public %}
+<style>
+    .repo-hero { background: #FDEDEE; border-bottom: 1px solid #F3D0D3; }
+    .repo-titulo { font-family: 'Montserrat', 'Inter', sans-serif; font-weight: 700; color: #111827; }
+    .repo-categoria { font-family: 'Montserrat', 'Inter', sans-serif; font-weight: 700; font-size: 1.1rem; color: #111827; }
+    .repo-doc {
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 10px;
+        padding: 14px 16px; height: 100%; text-decoration: none; color: inherit;
+        transition: border-color .15s, box-shadow .15s;
+    }
+    .repo-doc:hover, .repo-doc:focus-visible { border-color: #C8232C; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+    .repo-doc-titulo { font-weight: 600; color: #111827; font-size: .95rem; }
+    .repo-doc-meta { color: #6B7280; font-size: .78rem; }
+</style>
+
+<section class="repo-hero py-4 mb-4">
+    <div class="container">
+        <a href="{% url 'core:inicio' %}" class="small text-decoration-none text-danger">
+            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver al portal
+        </a>
+        <h1 class="repo-titulo h3 mt-2 mb-1">Repositorio público A+S</h1>
+        <p class="text-muted mb-0">Formatos oficiales, guías metodológicas y documentos del programa Aprendizaje + Servicio.</p>
+    </div>
+</section>
+
+<div class="container pb-5">
+    {% for categoria, recursos in grupos %}
+        <section class="mb-4" aria-labelledby="cat-{{ forloop.counter }}">
+            <h2 id="cat-{{ forloop.counter }}" class="repo-categoria mb-3">{{ categoria }}</h2>
+            <div class="row g-3">
+                {% for recurso in recursos %}
+                    <div class="col-12 col-md-6 col-lg-4">
+                        {% if recurso.archivo %}
+                            <a href="{% url 'archivos:descargar_recurso_publico' recurso.pk %}" class="repo-doc">
+                                <div class="d-flex align-items-center gap-3">
+                                    <i class="bi {% if recurso.archivo.extension == 'pdf' %}bi-file-earmark-pdf text-danger{% elif 'xls' in recurso.archivo.extension %}bi-file-earmark-excel text-success{% else %}bi-file-earmark-word text-primary{% endif %} fs-4" aria-hidden="true"></i>
+                                    <div>
+                                        <div class="repo-doc-titulo">{{ recurso.titulo }}</div>
+                                        {% if recurso.descripcion %}<div class="repo-doc-meta">{{ recurso.descripcion|truncatechars:90 }}</div>{% endif %}
+                                        <div class="repo-doc-meta">{{ recurso.archivo.extension|upper }} · {{ recurso.archivo.tamano_bytes|filesizeformat }}</div>
+                                    </div>
+                                </div>
+                                <i class="bi bi-download text-muted" aria-hidden="true"></i>
+                                <span class="visually-hidden">Descargar</span>
+                            </a>
+                        {% else %}
+                            <a href="{{ recurso.url_externa }}" class="repo-doc" target="_blank" rel="noopener">
+                                <div class="d-flex align-items-center gap-3">
+                                    <i class="bi bi-link-45deg fs-4 text-secondary" aria-hidden="true"></i>
+                                    <div>
+                                        <div class="repo-doc-titulo">{{ recurso.titulo }}</div>
+                                        {% if recurso.descripcion %}<div class="repo-doc-meta">{{ recurso.descripcion|truncatechars:90 }}</div>{% endif %}
+                                        <div class="repo-doc-meta">Enlace externo</div>
+                                    </div>
+                                </div>
+                                <i class="bi bi-box-arrow-up-right text-muted" aria-hidden="true"></i>
+                                <span class="visually-hidden">(se abre en otra pestaña)</span>
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    {% empty %}
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-folder2-open fs-1" aria-hidden="true"></i>
+            <p class="mt-2 mb-0">Todavía no hay documentos publicados.</p>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

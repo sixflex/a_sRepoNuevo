@@ -3,6 +3,7 @@
     <div><label class="visually-hidden" for="{{ socio.nombre.id_for_label }}">Nombre de la organización</label>{{ socio.nombre }}</div>
     <div><label class="visually-hidden" for="{{ socio.correo.id_for_label }}">Correo</label>{{ socio.correo }}</div>
     <div><label class="visually-hidden" for="{{ socio.rubro.id_for_label }}">Negocio o rubro</label>{{ socio.rubro }}</div>
+    <div><label class="visually-hidden" for="{{ socio.direccion.id_for_label }}">Dirección</label>{{ socio.direccion }}</div>
     <div class="docente-quitar">
         {% if editable %}
             {{ socio.DELETE }}

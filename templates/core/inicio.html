@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Vinculación con el Medio UA | Aprendizaje + Servicio (A+S){% endblock %}
+{% block title %}Aprendizaje + Servicio | Universidad Autónoma de Chile{% endblock %}
 
 {% block main_navbar %}{% endblock %}
 {% block main_footer %}{% endblock %}
@@ -290,6 +290,26 @@
     .ua-footer-link:hover {
         color: #FFFFFF;
     }
+
+    /* Catálogo de proyectos: fila que se desliza de lado (3 / 2 / 1 tarjetas según el ancho) */
+    .catalogo-pista {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: calc((100% - 2rem) / 3);
+        gap: 1rem;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scroll-behavior: smooth;
+        scrollbar-width: none;
+        padding-bottom: 2px;
+    }
+    .catalogo-pista::-webkit-scrollbar { display: none; }
+    .catalogo-pista:focus-visible { outline: 2px solid var(--ua-red); outline-offset: 4px; }
+    .catalogo-item { scroll-snap-align: start; min-width: 0; }
+    .catalogo-item[hidden] { display: none; }
+    @media (max-width: 991.98px) { .catalogo-pista { grid-auto-columns: calc((100% - 1rem) / 2); } }
+    @media (max-width: 575.98px) { .catalogo-pista { grid-auto-columns: 88%; } }
+    @media (prefers-reduced-motion: reduce) { .catalogo-pista { scroll-behavior: auto; } }
 </style>
 
 
@@ -301,15 +321,12 @@
             <img src="{% static 'img/logo_as.png' %}" alt="Aprendizaje + Servicio" class="marca-as">
         </a>
 
-        <div class="d-none d-md-block position-relative" style="width: 440px;">
-            <i class="bi bi-search position-absolute top-50 translate-middle-y text-muted" style="left: 18px;"></i>
-            <input type="text" class="form-control ua-search-input w-100" placeholder="Buscar proyectos, carreras, documentos...">
-        </div>
 
-        <div class="d-flex align-items-center gap-4">
+        <div class="d-flex align-items-center flex-wrap gap-3 gap-md-4">
             <a href="{% url 'core:inicio' %}" class="ua-nav-link active">Portal Público</a>
             <a href="{% url 'usuarios:login' %}" class="ua-nav-link">Inicio de Sesión</a>
-            <a href="#" class="ua-nav-link">Ayuda</a>
+            <a href="#participa" class="ua-nav-link">Participa</a>
+            <a href="{% url 'archivos:repositorio_publico' %}" class="ua-nav-link">Repositorio</a>
         </div>
     </div>
 </nav>
@@ -318,8 +335,8 @@
 <section class="ua-hero">
     <div class="container position-relative">
         <span class="ua-badge-model">MODELO EDUCATIVO A+S</span>
-        <h1 class="ua-hero-title">Vinculación con el Medio UA</h1>
-        <div class="ua-hero-subtitle">Aprendizaje + Servicio (A+S)</div>
+        <h1 class="ua-hero-title">Aprendizaje + Servicio</h1>
+        <div class="ua-hero-subtitle">Vicerrectoría Académica · Universidad Autónoma de Chile</div>
         <p class="ua-hero-desc">Conectando la academia con las comunidades de Chile</p>
         <a href="#proyectos" class="btn btn-ua-hero shadow-sm">
             EXPLORAR PROYECTOS
@@ -390,39 +407,53 @@
         <p class="text-muted small mb-0">Socios comunitarios y proyectos A+S agrupados por comuna. Solo se muestran totales: el mapa no expone direcciones ni datos personales.</p>
     </div>
 
-    {# Filtros públicos (RF-PUB-01): sede, año, carrera y comuna #}
+    {# Filtros públicos (RF-PUB-01, RF-IND-03): sede, campus, año, facultad, carrera y comuna #}
     <form method="get" action="{% url 'core:inicio' %}#proyectos" class="row g-2 align-items-end mb-3" aria-label="Filtros del mapa">
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-md-4 col-lg-2">
             <label for="filtro-sede" class="form-label small fw-semibold mb-1">Sede</label>
             <select id="filtro-sede" name="sede" class="form-select form-select-sm">
                 <option value="">Todas</option>
                 {% for sede in opciones.sedes %}<option value="{{ sede.id }}" {% if filtros.sede == sede.id %}selected{% endif %}>{{ sede.nombre }}</option>{% endfor %}
             </select>
         </div>
-        <div class="col-6 col-md-2">
+        <div class="col-6 col-md-4 col-lg-2">
+            <label for="filtro-campus" class="form-label small fw-semibold mb-1">Campus</label>
+            <select id="filtro-campus" name="campus" class="form-select form-select-sm">
+                <option value="">Todos</option>
+                {% for campus in opciones.campus %}<option value="{{ campus.id }}" {% if filtros.campus == campus.id %}selected{% endif %}>{{ campus.nombre }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
             <label for="filtro-anio" class="form-label small fw-semibold mb-1">Año</label>
             <select id="filtro-anio" name="anio" class="form-select form-select-sm">
                 <option value="">Todos</option>
                 {% for anio in opciones.anios %}<option value="{{ anio }}" {% if filtros.anio == anio %}selected{% endif %}>{{ anio }}</option>{% endfor %}
             </select>
         </div>
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-md-4 col-lg-2">
+            <label for="filtro-facultad" class="form-label small fw-semibold mb-1">Facultad</label>
+            <select id="filtro-facultad" name="facultad" class="form-select form-select-sm">
+                <option value="">Todas</option>
+                {% for facultad in opciones.facultades %}<option value="{{ facultad.id }}" {% if filtros.facultad == facultad.id %}selected{% endif %}>{{ facultad.nombre }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
             <label for="filtro-carrera" class="form-label small fw-semibold mb-1">Carrera</label>
             <select id="filtro-carrera" name="carrera" class="form-select form-select-sm">
                 <option value="">Todas</option>
                 {% for carrera in opciones.carreras %}<option value="{{ carrera.id }}" {% if filtros.carrera == carrera.id %}selected{% endif %}>{{ carrera.nombre }}</option>{% endfor %}
             </select>
         </div>
-        <div class="col-6 col-md-2">
+        <div class="col-6 col-md-4 col-lg-2">
             <label for="filtro-comuna" class="form-label small fw-semibold mb-1">Comuna</label>
             <select id="filtro-comuna" name="comuna" class="form-select form-select-sm">
                 <option value="">Todas</option>
                 {% for comuna in opciones.comunas %}<option value="{{ comuna.id }}" {% if filtros.comuna == comuna.id %}selected{% endif %}>{{ comuna.nombre }}</option>{% endfor %}
             </select>
         </div>
-        <div class="col-12 col-md-2 d-flex gap-2">
+        <div class="col-12 col-md-4 col-lg-3 ms-lg-auto d-flex gap-2">
             <button type="submit" class="btn btn-sm btn-danger flex-grow-1" style="background: var(--ua-red); border-color: var(--ua-red);">Filtrar</button>
-            {% if filtros.sede or filtros.anio or filtros.carrera or filtros.comuna %}
+            {% if hay_filtros %}
                 <a href="{% url 'core:inicio' %}#proyectos" class="btn btn-sm btn-outline-secondary">Limpiar</a>
             {% endif %}
         </div>
@@ -444,27 +475,95 @@
     </div>
 
     <div class="row g-3">
-        <div class="col-12 col-md-4">
-            <div class="mockup-card p-3 text-center">
-                <div class="metric-bubble"><i class="bi bi-mortarboard-fill"></i></div>
-                <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">{{ estudiantes }}</div>
-                <div class="text-muted small">Estudiantes Participantes</div>
+        <div class="col-6 col-md-3">
+            <div class="mockup-card p-3 text-center h-100">
+                <div class="metric-bubble"><i class="bi bi-people-fill" aria-hidden="true"></i></div>
+                <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">{{ cifras.socios }}</div>
+                <div class="text-muted small">Socios Comunitarios</div>
             </div>
         </div>
-        <div class="col-12 col-md-4">
-            <div class="mockup-card p-3 text-center">
-                <div class="metric-bubble"><i class="bi bi-geo-alt-fill"></i></div>
+        <div class="col-6 col-md-3">
+            <div class="mockup-card p-3 text-center h-100">
+                <div class="metric-bubble"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></div>
+                <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">{{ cifras.participaciones }}</div>
+                <div class="text-muted small">Participaciones</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="mockup-card p-3 text-center h-100">
+                <div class="metric-bubble"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i></div>
                 <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">{{ mapa.puntos|length }}</div>
                 <div class="text-muted small">Comunas Alcanzadas</div>
             </div>
         </div>
-        <div class="col-12 col-md-4">
-            <div class="mockup-card p-3 text-center">
-                <div class="metric-bubble"><i class="bi bi-layers-fill"></i></div>
-                <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">{{ mapa.total_proyectos }}</div>
-                <div class="text-muted small">Proyectos Ejecutados</div>
+        <div class="col-6 col-md-3">
+            <div class="mockup-card p-3 text-center h-100">
+                <div class="metric-bubble"><i class="bi bi-mortarboard-fill" aria-hidden="true"></i></div>
+                <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">{{ cifras.estudiantes }}</div>
+                <div class="text-muted small">Estudiantes Participantes</div>
             </div>
         </div>
+    </div>
+    <p class="text-muted small mt-2 mb-0">
+        Un socio que participa en varios proyectos cuenta una vez como socio y una vez por cada participación.
+    </p>
+
+    {# Catálogo de proyectos (RF-PUB-01): los mismos datos del mapa, ordenados; sin nombres de socios ni personas.
+       Se desliza de lado sin recargar la página, y el año se filtra aquí mismo. #}
+    <div id="catalogo" class="mt-5" data-catalogo>
+        <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
+            <div>
+                <h3 class="fw-bold mb-1" style="font-size: 1.25rem;">Catálogo de Proyectos A+S</h3>
+                <p class="text-muted small mb-0">Asignaturas que trabajaron con socios comunitarios, con los filtros del mapa.</p>
+            </div>
+            {% if catalogo %}
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <label for="catalogo-anio" class="small fw-semibold mb-0">Año</label>
+                    <select id="catalogo-anio" class="form-select form-select-sm" style="width: auto;" data-catalogo-anio>
+                        <option value="">Todos</option>
+                        {% for anio in catalogo_anios %}<option value="{{ anio }}">{{ anio }}</option>{% endfor %}
+                    </select>
+                    <span class="text-muted small" data-catalogo-total aria-live="polite">{{ catalogo|length }} proyecto{{ catalogo|length|pluralize }}</span>
+                    <div class="btn-group btn-group-sm ms-1" role="group" aria-label="Recorrer el catálogo">
+                        <button type="button" class="btn btn-outline-secondary" data-catalogo-anterior aria-label="Proyectos anteriores">
+                            <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" data-catalogo-siguiente aria-label="Más proyectos">
+                            <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        {% if catalogo %}
+            <div class="catalogo-pista" data-catalogo-pista tabindex="0" aria-label="Proyectos del catálogo">
+                {% for proyecto in catalogo %}
+                    <div class="catalogo-item" data-anio="{{ proyecto.anio|default:'' }}">
+                        <div class="mockup-card p-3 h-100">
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                                <span class="ua-badge-model mb-0">{{ proyecto.anio|default:"Sin año" }}</span>
+                                <span class="text-muted small text-end">{{ proyecto.socios }} socio{{ proyecto.socios|pluralize }}</span>
+                            </div>
+                            {# Título: lo que se hizo (servicio realizado); si no se informó, la carrera. #}
+                            <div class="fw-bold" style="color: #111827;">{{ proyecto.servicio|default:proyecto.carrera|default:"Proyecto A+S" }}</div>
+                            <div class="text-muted small">
+                                {% if proyecto.servicio %}{{ proyecto.carrera|default:"Carrera sin informar" }}{% if proyecto.asignatura %} · {% endif %}{% endif %}{{ proyecto.asignatura }}
+                            </div>
+                            {# Solo un resumen: hasta 3 comunas y 3 tipos de socio, el resto como "y N más". #}
+                            {% if proyecto.comunas %}
+                                <div class="small mt-2"><i class="bi bi-geo-alt text-danger me-1" aria-hidden="true"></i>{{ proyecto.comunas|slice:":3"|join:", " }}{% if proyecto.comunas|length > 3 %} y {{ proyecto.comunas|length|add:"-3" }} más{% endif %}</div>
+                            {% endif %}
+                            {% if proyecto.tipos %}
+                                <div class="small text-muted"><i class="bi bi-tag me-1" aria-hidden="true"></i>{{ proyecto.tipos|slice:":3"|join:", " }}{% if proyecto.tipos|length > 3 %} y {{ proyecto.tipos|length|add:"-3" }} más{% endif %}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            <p class="text-muted small mt-2 mb-0" data-catalogo-pagina aria-live="polite"></p>
+        {% else %}
+            <p class="text-muted small">No hay proyectos para estos filtros.</p>
+        {% endif %}
     </div>
 </section>
 
@@ -473,107 +572,95 @@
     <h3 class="fw-bold mb-3" style="font-size: 1.35rem;">Cifras Macro del Programa A+S</h3>
     <div class="row g-3">
         <div class="col-6 col-md-3">
-            <div class="mockup-card p-4 d-flex justify-content-between align-items-center">
+            <div class="mockup-card p-4 d-flex justify-content-between align-items-center h-100">
                 <div>
-                    <div class="macro-number">156</div>
-                    <div class="text-muted small mt-1">Total Asignaturas A+S</div>
+                    <div class="macro-number">{{ cifras.asignaturas }}</div>
+                    <div class="text-muted small mt-1">Asignaturas A+S</div>
                 </div>
-                <i class="bi bi-book fs-3 text-muted opacity-50"></i>
+                <i class="bi bi-book fs-3 text-muted opacity-50" aria-hidden="true"></i>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="mockup-card p-4 d-flex justify-content-between align-items-center">
+            <div class="mockup-card p-4 d-flex justify-content-between align-items-center h-100">
                 <div>
-                    <div class="macro-number">42</div>
+                    <div class="macro-number">{{ cifras.carreras }}</div>
                     <div class="text-muted small mt-1">Carreras Participantes</div>
                 </div>
-                <i class="bi bi-award fs-3 text-muted opacity-50"></i>
+                <i class="bi bi-award fs-3 text-muted opacity-50" aria-hidden="true"></i>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="mockup-card p-4 d-flex justify-content-between align-items-center">
+            <div class="mockup-card p-4 d-flex justify-content-between align-items-center h-100">
                 <div>
-                    <div class="macro-number">8</div>
+                    <div class="macro-number">{{ cifras.facultades }}</div>
                     <div class="text-muted small mt-1">Facultades Involucradas</div>
                 </div>
-                <i class="bi bi-shield fs-3 text-muted opacity-50"></i>
+                <i class="bi bi-shield fs-3 text-muted opacity-50" aria-hidden="true"></i>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="mockup-card p-4 d-flex justify-content-between align-items-center">
+            <div class="mockup-card p-4 d-flex justify-content-between align-items-center h-100">
                 <div>
-                    <div class="macro-number">95</div>
-                    <div class="text-muted small mt-1">Socios Comunitarios Activos</div>
+                    <div class="macro-number">{{ cifras.socios }}</div>
+                    <div class="text-muted small mt-1">Socios Comunitarios</div>
                 </div>
-                <i class="bi bi-briefcase fs-3 text-muted opacity-50"></i>
+                <i class="bi bi-briefcase fs-3 text-muted opacity-50" aria-hidden="true"></i>
             </div>
         </div>
     </div>
 </section>
 
 
-<section class="container pb-5">
-    <h3 class="fw-bold mb-4" style="font-size: 1.4rem;">Accesos Directos</h3>
+<section id="participa" class="container pb-5">
+    <h3 class="fw-bold mb-4" style="font-size: 1.4rem;">Participa en A+S</h3>
     <div class="row g-4">
         <div class="col-12 col-md-6">
             <div class="mockup-card p-4 h-100 d-flex flex-column justify-content-between">
                 <div>
                     <div class="d-flex align-items-center gap-3 mb-3">
                         <div class="icon-bubble">
-                            <i class="bi bi-people-fill"></i>
+                            <i class="bi bi-shop" aria-hidden="true"></i>
                         </div>
-                        <h4 class="mb-0 fw-bold" style="font-size: 1.25rem;">Portal Estudiantes</h4>
+                        <h4 class="mb-0 fw-bold" style="font-size: 1.25rem;">Socios Comunitarios y Emprendedores</h4>
                     </div>
+                    <p class="text-muted small mb-2">
+                        Organizaciones, fundaciones y emprendedores que quieran trabajar con estudiantes de la Universidad.
+                    </p>
                     <div class="py-2">
-                        <a href="#documentos" class="list-action-item">
-                            <i class="bi bi-chevron-right"></i> Solicitar Carta de Presentación
+                        <a href="{% url 'socios:postular_publico_fijo' %}" class="list-action-item">
+                            <i class="bi bi-chevron-right" aria-hidden="true"></i> Postular como Socio Comunitario
                         </a>
-                        <a href="#documentos" class="list-action-item">
-                            <i class="bi bi-chevron-right"></i> Registrar Socio Comunitario
+                        <a href="#catalogo" class="list-action-item">
+                            <i class="bi bi-chevron-right" aria-hidden="true"></i> Catálogo de Proyectos A+S
                         </a>
-                        <a href="#" class="list-action-item">
-                            <i class="bi bi-chevron-right"></i> Encuesta de Evaluación A+S
-                        </a>
-                        <a href="#" class="list-action-item">
-                            <i class="bi bi-chevron-right"></i> Consultar Estado de Trámites
+                        <a href="#proyectos" class="list-action-item">
+                            <i class="bi bi-chevron-right" aria-hidden="true"></i> Mapa de Impacto Territorial
                         </a>
                     </div>
-                </div>
-                <div class="d-flex gap-2 pt-3 flex-wrap">
-                    <a href="#documentos" class="btn-ua-outline-tag">FORMATOS OFICIALES</a>
-                    <a href="#documentos" class="btn-ua-outline-tag">GUÍAS METODOLÓGICAS</a>
                 </div>
             </div>
         </div>
-
         <div class="col-12 col-md-6">
             <div class="mockup-card p-4 h-100 d-flex flex-column justify-content-between">
                 <div>
                     <div class="d-flex align-items-center gap-3 mb-3">
                         <div class="icon-bubble">
-                            <i class="bi bi-handshake-fill"></i>
+                            <i class="bi bi-folder2-open" aria-hidden="true"></i>
                         </div>
-                        <h4 class="mb-0 fw-bold" style="font-size: 1.25rem;">Portal Socios Comunitarios</h4>
+                        <h4 class="mb-0 fw-bold" style="font-size: 1.25rem;">Repositorio Público A+S</h4>
                     </div>
-                    <div class="py-2">
-                        <a href="#" class="list-action-item">
-                            <i class="bi bi-chevron-right"></i> Postulación vía Formulario
-                        </a>
-                        <a href="#" class="list-action-item">
-                            <i class="bi bi-chevron-right"></i> Catálogo de Proyectos Disponibles
-                        </a>
-                        <a href="#" class="list-action-item">
-                            <i class="bi bi-chevron-right"></i> Confirmar Asistencia a Reunión
-                        </a>
-                        <a href="#" class="list-action-item">
-                            <i class="bi bi-chevron-right"></i> Encuesta de Satisfacción
-                        </a>
-                    </div>
+                    <p class="text-muted small mb-3">
+                        Formatos oficiales, guías metodológicas y documentos del programa, listos para descargar.
+                    </p>
+                    <a href="{% url 'archivos:repositorio_publico' %}" class="btn btn-ua-hero shadow-sm" style="font-size: 0.85rem;">
+                        ACCEDER AL REPOSITORIO PÚBLICO A+S
+                    </a>
                 </div>
-                <div class="d-flex gap-2 pt-3 flex-wrap">
-                    <a href="#" class="btn-ua-outline-tag">OFERTAS SEMESTRALES</a>
-                    <a href="#" class="btn-ua-outline-tag">PROYECTOS ICÓNICOS</a>
-                </div>
+                <p class="text-muted small mb-0 mt-4 pt-3 border-top">
+                    <i class="bi bi-mortarboard me-1" aria-hidden="true"></i>
+                    <strong>¿Eres estudiante?</strong> El registro de tu equipo, la solicitud de carta y las encuestas
+                    se abren con el enlace o código QR que te comparte tu docente.
+                </p>
             </div>
         </div>
     </div>
@@ -589,10 +676,9 @@
                 <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
                     <div>
                         <div class="news-date mb-2">14 Mar, 2025</div>
-                        <h5 class="fw-bold mb-2" style="font-size: 1.05rem;">Lanzamiento de Proyectos de Vinculación con el Medio UA 2025</h5>
+                        <h5 class="fw-bold mb-2" style="font-size: 1.05rem;">Lanzamiento de Proyectos A+S UA 2025</h5>
                         <p class="text-muted small mb-3">La Universidad Autónoma de Chile oficializa el inicio de los proyectos A+S con una participación récord de socios comunitarios locales.</p>
                     </div>
-                    <a href="#" class="text-danger fw-semibold small text-decoration-none">Leer más &gt;</a>
                 </div>
             </div>
         </div>
@@ -605,7 +691,6 @@
                         <h5 class="fw-bold mb-2" style="font-size: 1.05rem;">Estudiantes de Salud UA impactan positivamente en comunas vulnerables</h5>
                         <p class="text-muted small mb-3">Operativos integrales de salud liderados bajo la metodología A+S logran excelente recepción por parte de juntas vecinales territoriales.</p>
                     </div>
-                    <a href="#" class="text-danger fw-semibold small text-decoration-none">Leer más &gt;</a>
                 </div>
             </div>
         </div>
@@ -618,64 +703,8 @@
                         <h5 class="fw-bold mb-2" style="font-size: 1.05rem;">Nueva Guía de Buenas Prácticas Metodológicas A+S</h5>
                         <p class="text-muted small mb-3">Publicamos el documento integrador que asiste a los académicos en la formulación de evaluaciones con enfoque de servicio comunitario.</p>
                     </div>
-                    <a href="#" class="text-danger fw-semibold small text-decoration-none">Leer más &gt;</a>
                 </div>
             </div>
-        </div>
-    </div>
-</section>
-
-
-<section id="documentos" class="container pb-5">
-    <h3 class="fw-bold mb-3" style="font-size: 1.35rem;">Documentos Descargables</h3>
-    <div class="row g-3">
-        <div class="col-12 col-md-3">
-            <a href="#" class="doc-card">
-                <div class="d-flex align-items-center gap-3">
-                    <i class="bi bi-file-earmark-pdf text-danger fs-4"></i>
-                    <div>
-                        <div class="fw-semibold text-dark small">Guía de Reflexión A+S</div>
-                        <div class="text-muted" style="font-size: 0.72rem;">PDF (1.2 MB)</div>
-                    </div>
-                </div>
-                <i class="bi bi-download text-muted"></i>
-            </a>
-        </div>
-        <div class="col-12 col-md-3">
-            <a href="#" class="doc-card">
-                <div class="d-flex align-items-center gap-3">
-                    <i class="bi bi-file-earmark-pdf text-danger fs-4"></i>
-                    <div>
-                        <div class="fw-semibold text-dark small">Reglamento A+S</div>
-                        <div class="text-muted" style="font-size: 0.72rem;">PDF (1.2 MB)</div>
-                    </div>
-                </div>
-                <i class="bi bi-download text-muted"></i>
-            </a>
-        </div>
-        <div class="col-12 col-md-3">
-            <a href="#" class="doc-card">
-                <div class="d-flex align-items-center gap-3">
-                    <i class="bi bi-file-earmark-pdf text-danger fs-4"></i>
-                    <div>
-                        <div class="fw-semibold text-dark small">Infografía del Modelo</div>
-                        <div class="text-muted" style="font-size: 0.72rem;">PDF (1.2 MB)</div>
-                    </div>
-                </div>
-                <i class="bi bi-download text-muted"></i>
-            </a>
-        </div>
-        <div class="col-12 col-md-3">
-            <a href="#" class="doc-card">
-                <div class="d-flex align-items-center gap-3">
-                    <i class="bi bi-file-earmark-pdf text-danger fs-4"></i>
-                    <div>
-                        <div class="fw-semibold text-dark small">Formato Convenio</div>
-                        <div class="text-muted" style="font-size: 0.72rem;">PDF (1.2 MB)</div>
-                    </div>
-                </div>
-                <i class="bi bi-download text-muted"></i>
-            </a>
         </div>
     </div>
 </section>
@@ -698,13 +727,15 @@
             <div class="col-6 col-md-2">
                 <div class="ua-footer-title">PORTAL</div>
                 <a href="{% url 'core:inicio' %}" class="ua-footer-link">Inicio</a>
-                <a href="#proyectos" class="ua-footer-link">Proyectos</a>
+                <a href="#proyectos" class="ua-footer-link">Mapa de impacto</a>
+                <a href="#catalogo" class="ua-footer-link">Proyectos</a>
             </div>
 
             <div class="col-6 col-md-2">
                 <div class="ua-footer-title">ACCESOS</div>
-                <a href="#documentos" class="ua-footer-link">Estudiantes</a>
-                <a href="#" class="ua-footer-link">Socios</a>
+                <a href="{% url 'socios:postular_publico_fijo' %}" class="ua-footer-link">Postular como socio</a>
+                <a href="{% url 'archivos:repositorio_publico' %}" class="ua-footer-link">Repositorio público</a>
+                <a href="{% url 'usuarios:login' %}" class="ua-footer-link">Docentes y Coordinación</a>
             </div>
 
             <div class="col-12 col-md-3">
@@ -743,5 +774,58 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="{% static 'js/mapa_territorial.js' %}?v=2026-10-19"></script>
+<script src="{% static 'js/mapa_territorial.js' %}?v=2026-11-03"></script>
+<script>
+    // Catálogo: anterior/siguiente deslizan la fila sin recargar; el año se filtra aquí mismo.
+    (function () {
+        const catalogo = document.querySelector("[data-catalogo]");
+        const pista = catalogo && catalogo.querySelector("[data-catalogo-pista]");
+        if (!pista) {
+            return;
+        }
+        const anterior = catalogo.querySelector("[data-catalogo-anterior]");
+        const siguiente = catalogo.querySelector("[data-catalogo-siguiente]");
+        const total = catalogo.querySelector("[data-catalogo-total]");
+        const pagina = catalogo.querySelector("[data-catalogo-pagina]");
+        const items = Array.from(pista.querySelectorAll(".catalogo-item"));
+
+        // Cuánto avanza "siguiente": las tarjetas que caben a la vista, con su separación.
+        function medidas() {
+            const visibles = items.filter(function (item) { return !item.hidden; });
+            const primera = visibles[0];
+            const separacion = parseFloat(getComputedStyle(pista).columnGap) || 0;
+            const tarjeta = primera ? primera.getBoundingClientRect().width + separacion : pista.clientWidth;
+            const porPagina = Math.max(1, Math.round((pista.clientWidth + separacion) / tarjeta));
+            return { paso: porPagina * tarjeta, paginas: Math.max(1, Math.ceil(visibles.length / porPagina)) };
+        }
+
+        function actualizar() {
+            const m = medidas();
+            const actual = Math.min(m.paginas, Math.round(pista.scrollLeft / m.paso) + 1);
+            anterior.disabled = pista.scrollLeft <= 2;
+            siguiente.disabled = pista.scrollLeft + pista.clientWidth >= pista.scrollWidth - 2;
+            pagina.textContent = m.paginas > 1 ? "Página " + actual + " de " + m.paginas : "";
+        }
+
+        anterior.addEventListener("click", function () { pista.scrollBy({ left: -medidas().paso }); });
+        siguiente.addEventListener("click", function () { pista.scrollBy({ left: medidas().paso }); });
+        pista.addEventListener("scroll", function () { window.requestAnimationFrame(actualizar); }, { passive: true });
+        window.addEventListener("resize", actualizar);
+
+        catalogo.querySelector("[data-catalogo-anio]").addEventListener("change", function (evento) {
+            const anio = evento.target.value;
+            let visibles = 0;
+            items.forEach(function (item) {
+                const mostrar = !anio || item.dataset.anio === anio;
+                item.hidden = !mostrar;
+                visibles += mostrar ? 1 : 0;
+            });
+            total.textContent = visibles + (visibles === 1 ? " proyecto" : " proyectos");
+            pista.scrollTo({ left: 0, behavior: "auto" });
+            actualizar();
+        });
+
+        actualizar();
+    })();
+</script>
 {% endblock layout_completo %}

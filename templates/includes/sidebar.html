@@ -148,13 +148,19 @@
                     </a>
                 </li>
                 
-                {# Módulos aún sin vista: se muestran deshabilitados en vez de un enlace "#" que no hace nada #}
                 <li class="nav-item">
-                    <a class="nav-link disabled" aria-disabled="true" tabindex="-1">
-                        <i class="bi bi-file-earmark-bar-graph me-2" aria-hidden="true"></i>Reportes
-                        <span class="badge text-bg-light border ms-auto">Pronto</span>
+                    <a class="nav-link {% if m == 'repositorio' %}active{% endif %}" {% if m == 'repositorio' %}aria-current="page"{% endif %} href="{% url 'archivos:repositorio' %}">
+                        <i class="bi bi-folder2-open me-2" aria-hidden="true"></i>Repositorio público
                     </a>
                 </li>
+
+                <li class="nav-item">
+                    <a class="nav-link {% if m == 'reportes' %}active{% endif %}" {% if m == 'reportes' %}aria-current="page"{% endif %} href="{% url 'reportes:inicio' %}">
+                        <i class="bi bi-file-earmark-bar-graph me-2" aria-hidden="true"></i>Reportes
+                    </a>
+                </li>
+
+                {# Módulos aún sin vista: se muestran deshabilitados en vez de un enlace "#" que no hace nada #}
                 <li class="nav-item">
                     <a class="nav-link disabled" aria-disabled="true" tabindex="-1">
                         <i class="bi bi-folder me-2" aria-hidden="true"></i>Proyectos

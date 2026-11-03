@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reportes | Portal A+S{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/coordinacion.css' %}?v=2026-10-30">
+<style>
+    .reporte-card { display: flex; flex-direction: column; gap: 10px; height: 100%; }
+    .reporte-icono {
+        width: 42px; height: 42px; border-radius: 10px; display: grid; place-items: center;
+        background: var(--ua-red-soft, #FDEDEE); color: var(--ua-red, #C8232C); font-size: 1.25rem;
+    }
+    .reporte-card ul { padding-left: 1.1rem; margin-bottom: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+
+    <div class="coord-header mb-3">
+        <h1 class="coord-title mb-1">Reportes</h1>
+        <p class="coord-subtitle mb-0">
+            Elige los filtros y descarga en Excel lo que necesites. Cada archivo indica los filtros con que se generó
+            y trae una flecha en cada columna para seguir filtrando dentro del Excel.
+        </p>
+    </div>
+
+    <h2 class="h6 fw-bold mb-2"><span class="badge rounded-pill text-bg-danger me-2">1</span>¿Qué datos quieres?</h2>
+    <form method="get" class="panel-card mb-3" aria-label="Filtros de los reportes">
+        <input type="hidden" name="f" value="1">
+        <div class="row g-2 align-items-end">
+            <div class="col-6 col-md-4 col-xl-2">
+                <label for="r-anio" class="form-label fw-semibold small mb-1">Año</label>
+                <select id="r-anio" name="anio" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    {% for anio in opciones.anios %}<option value="{{ anio }}" {% if filtros.anio == anio %}selected{% endif %}>{{ anio }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <label for="r-periodo" class="form-label fw-semibold small mb-1">Período</label>
+                <select id="r-periodo" name="periodo" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    {% for periodo in opciones.periodos %}<option value="{{ periodo.id }}" {% if filtros.periodo == periodo.id %}selected{% endif %}>{{ periodo.nombre }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <label for="r-sede" class="form-label fw-semibold small mb-1">Sede</label>
+                <select id="r-sede" name="sede" class="form-select form-select-sm">
+                    <option value="">Todas</option>
+                    {% for sede in opciones.sedes %}<option value="{{ sede.id }}" {% if filtros.sede == sede.id %}selected{% endif %}>{{ sede.nombre }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <label for="r-campus" class="form-label fw-semibold small mb-1">Campus</label>
+                <select id="r-campus" name="campus" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    {% for campus in opciones.campus %}<option value="{{ campus.id }}" {% if filtros.campus == campus.id %}selected{% endif %}>{{ campus.sede.nombre }} · {{ campus.nombre }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <label for="r-facultad" class="form-label fw-semibold small mb-1">Facultad</label>
+                <select id="r-facultad" name="facultad" class="form-select form-select-sm">
+                    <option value="">Todas</option>
+                    {% for facultad in opciones.facultades %}<option value="{{ facultad.id }}" {% if filtros.facultad == facultad.id %}selected{% endif %}>{{ facultad.nombre }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <label for="r-carrera" class="form-label fw-semibold small mb-1">Carrera</label>
+                <select id="r-carrera" name="carrera" class="form-select form-select-sm">
+                    <option value="">Todas</option>
+                    {% for carrera in opciones.carreras %}<option value="{{ carrera.id }}" {% if filtros.carrera == carrera.id %}selected{% endif %}>{{ carrera.nombre }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-4 col-xl-3">
+                <label for="r-asignatura" class="form-label fw-semibold small mb-1">Asignatura</label>
+                <select id="r-asignatura" name="asignatura" class="form-select form-select-sm">
+                    <option value="">Todas</option>
+                    {% for asignatura in opciones.asignaturas %}<option value="{{ asignatura.id }}" {% if filtros.asignatura == asignatura.id %}selected{% endif %}>{{ asignatura.nombre }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-4 col-xl-2">
+                <label for="r-comuna" class="form-label fw-semibold small mb-1">Comuna</label>
+                <select id="r-comuna" name="comuna" class="form-select form-select-sm">
+                    <option value="">Todas</option>
+                    {% for comuna in opciones.comunas %}<option value="{{ comuna.id }}" {% if filtros.comuna == comuna.id %}selected{% endif %}>{{ comuna.nombre }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-4 col-xl-3 ms-xl-auto d-flex gap-2">
+                <a href="?" class="btn btn-sm btn-outline-secondary flex-fill">Limpiar</a>
+                <button type="submit" class="btn btn-sm btn-rojo flex-fill">Aplicar filtros</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="filtros-chips d-flex align-items-center flex-wrap gap-2 mb-4" aria-label="Filtros aplicados">
+        <span class="text-muted small fw-semibold">Los reportes incluirán:</span>
+        {% for chip in chips %}
+            <span class="filtro-chip">{{ chip.etiqueta }}</span>
+        {% empty %}
+            <span class="text-muted small">Todos los años, sedes y carreras</span>
+        {% endfor %}
+    </div>
+
+    <h2 class="h6 fw-bold mb-2"><span class="badge rounded-pill text-bg-danger me-2">2</span>Elige el reporte y descárgalo</h2>
+    <div class="row g-3">
+        <div class="col-12 col-lg-6">
+            <section class="panel-card reporte-card" aria-labelledby="rep-participaciones">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="reporte-icono"><i class="bi bi-diagram-3" aria-hidden="true"></i></div>
+                    <h2 id="rep-participaciones" class="panel-titulo mb-0">Proyectos y participaciones</h2>
+                </div>
+                <p class="panel-ayuda mb-0">Una fila por cada vez que un socio trabajó con una asignatura: año, carrera, asignatura, NRC, docente, socio, comuna y centro SERCOTEC. Incluye los datos históricos importados.</p>
+                <p class="small text-muted mb-0">Ejemplo: «proyectos de 2024 con sus docentes y socios».</p>
+                <div class="mt-auto d-flex align-items-center flex-wrap gap-3">
+                    <a href="{% url 'reportes:participaciones' %}?{{ consulta }}" class="btn btn-rojo">
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i>Descargar Excel
+                    </a>
+                    <span class="small text-muted">{{ conteos.participaciones }} fila{{ conteos.participaciones|pluralize }} con estos filtros</span>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-12 col-lg-6">
+            <section class="panel-card reporte-card" aria-labelledby="rep-sercotec">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="reporte-icono"><i class="bi bi-shop" aria-hidden="true"></i></div>
+                    <h2 id="rep-sercotec" class="panel-titulo mb-0">Emprendedores por Centro SERCOTEC</h2>
+                </div>
+                <p class="panel-ayuda mb-0">Los emprendedores con los que realmente se trabajó (los que eligió el docente), agrupados por Centro de Negocios y año, con su contacto. Sirve para el seguimiento que hace SERCOTEC.</p>
+                <p class="small text-muted mb-0">Trae una hoja de resumen por centro y otra con el detalle de cada emprendedor.</p>
+                <div class="mt-auto d-flex align-items-center flex-wrap gap-3">
+                    <a href="{% url 'reportes:centros_sercotec' %}?{{ consulta }}" class="btn btn-rojo">
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i>Descargar Excel
+                    </a>
+                    <span class="small text-muted">{{ conteos.socios }} socio{{ conteos.socios|pluralize }} con estos filtros</span>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-12 col-lg-6">
+            <section class="panel-card reporte-card" aria-labelledby="rep-indicadores">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="reporte-icono"><i class="bi bi-bar-chart" aria-hidden="true"></i></div>
+                    <h2 id="rep-indicadores" class="panel-titulo mb-0">Indicadores</h2>
+                </div>
+                <p class="panel-ayuda mb-0">Resumen de asignaturas, docentes, estudiantes y socios; avance de la Ruta por carrera; satisfacción por encuesta y por pregunta; evolución por año y mapa por comuna.</p>
+                <div class="mt-auto d-flex flex-wrap gap-2">
+                    <a href="{{ url_indicadores }}" class="btn btn-rojo">
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i>Descargar Excel
+                    </a>
+                    <a href="{% url 'core:indicadores_coordinacion' %}?{{ consulta }}" class="btn btn-outline-secondary">Ver en el panel</a>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-12 col-lg-6">
+            <section class="panel-card reporte-card" aria-labelledby="rep-respuestas">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="reporte-icono"><i class="bi bi-ui-checks" aria-hidden="true"></i></div>
+                    <h2 id="rep-respuestas" class="panel-titulo mb-0">Respuestas de un formulario</h2>
+                </div>
+                <p class="panel-ayuda mb-0">Todas las respuestas de un formulario o encuesta, con RUT y teléfonos como texto. Este reporte no usa los filtros de arriba.</p>
+                {% if formularios %}
+                    <form class="mt-auto d-flex flex-wrap gap-2" method="get" data-respuestas>
+                        <label for="r-formulario" class="visually-hidden">Formulario</label>
+                        <select id="r-formulario" class="form-select form-select-sm" style="max-width: 420px;" required>
+                            {% for version in formularios %}
+                                <option value="{% url 'encuestas:exportar_respuestas' version.id %}">{{ version.plantilla.titulo }} · versión {{ version.numero_version }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-rojo btn-sm">
+                            <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i>Descargar Excel
+                        </button>
+                    </form>
+                {% else %}
+                    <p class="small text-muted mb-0 mt-auto">Todavía no hay formularios con respuestas.</p>
+                {% endif %}
+            </section>
+        </div>
+
+        <div class="col-12">
+            <p class="small text-muted mb-0">
+                ¿Necesitas los registros históricos tal como se importaron? Están en
+                <a href="{% url 'historicos:consulta_historicos' %}">Consultar históricos</a>.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // El formulario de respuestas lleva directo al Excel del formulario elegido.
+    document.querySelectorAll("[data-respuestas]").forEach(function (form) {
+        form.addEventListener("submit", function (evento) {
+            evento.preventDefault();
+            window.location.href = form.querySelector("select").value;
+        });
+    });
+</script>
+{% endblock %}

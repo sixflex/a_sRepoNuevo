@@ -43,14 +43,18 @@ def leer_horario(texto):
     return [_CODIGO_DE[dia] for dia in coincidencia.group("dias").split(", ")], coincidencia.group("hora")
 
 
+# La dirección la pidió el cliente (2/11/2026) para contactar al socio sugerido.
+CAMPOS_SOCIO = ("nombre", "correo", "rubro", "direccion")
+
+
 def texto_socios(socios):
     """
-    Un socio por línea: 'Nombre | correo | rubro'. Sin socios queda vacío y
-    la pantalla muestra «Por definir».
+    Un socio por línea: 'Nombre | correo | rubro | dirección'. Sin socios
+    queda vacío y la pantalla muestra «Por definir».
     """
     lineas = []
     for socio in socios:
-        partes = [(socio.get(campo) or "").strip().replace("|", "/") for campo in ("nombre", "correo", "rubro")]
+        partes = [(socio.get(campo) or "").strip().replace("|", "/") for campo in CAMPOS_SOCIO]
         if any(partes):
             lineas.append(SEPARADOR_SOCIO.join(partes).rstrip(" |"))
     return "\n".join(lineas)
@@ -65,6 +69,7 @@ def leer_socios(texto):
     for linea in (texto or "").splitlines():
         if linea.strip().lower() in SIN_SOCIO:
             continue
-        partes = [parte.strip() for parte in linea.split("|")] + ["", ""]
-        socios.append({"nombre": partes[0], "correo": partes[1], "rubro": partes[2]})
+        # Las líneas guardadas antes de agregar la dirección tienen 3 partes.
+        partes = [parte.strip() for parte in linea.split("|")] + [""] * len(CAMPOS_SOCIO)
+        socios.append(dict(zip(CAMPOS_SOCIO, partes)))
     return socios

@@ -712,7 +712,16 @@ class HorarioYSociosPlanificacionTestCase(TestCase):
             texto_socios([{"nombre": "Junta | Norte", "correo": "", "rubro": "Barrio"}, {"nombre": "", "correo": "", "rubro": ""}]),
             "Junta / Norte |  | Barrio",
         )
-        self.assertEqual(leer_socios("Fundación antigua"), [{"nombre": "Fundación antigua", "correo": "", "rubro": ""}])
+        self.assertEqual(
+            leer_socios("Fundación antigua"),
+            [{"nombre": "Fundación antigua", "correo": "", "rubro": "", "direccion": ""}],
+        )
+        # Las líneas guardadas antes de la dirección se siguen leyendo.
+        self.assertEqual(leer_socios("Almacén | a@b.cl | Comercio")[0]["direccion"], "")
+        self.assertEqual(
+            texto_socios([{"nombre": "Almacén", "correo": "", "rubro": "Comercio", "direccion": "Av. Siempre Viva 742"}]),
+            "Almacén |  | Comercio | Av. Siempre Viva 742",
+        )
         self.assertEqual(leer_socios("Por definir"), [])
 
     def test_marcar_dias_y_hora_guarda_el_texto_y_el_borrador_lo_vuelve_a_marcar(self):

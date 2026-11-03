@@ -22,6 +22,8 @@ MENU_POR_APP = {
     "cartas": "cartas",
     "encuestas": "encuestas",
     "historicos": "historicos",
+    "archivos": "repositorio",
+    "reportes": "reportes",
 }
 
 
