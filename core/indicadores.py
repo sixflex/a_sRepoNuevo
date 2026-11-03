@@ -688,6 +688,24 @@ def mapa(filtros, detalle=False):
     }
 
 
+def mapa_publico(filtros):
+    """Payload público con una lista blanca de coordenadas y métricas agregadas."""
+    datos = mapa(filtros)
+    campos_punto = {
+        "comuna", "lat", "lon", "socios", "participaciones", "proyectos", "carreras", "anios",
+    }
+    puntos = [
+        {campo: punto[campo] for campo in campos_punto if campo in punto}
+        for punto in datos["puntos"]
+    ]
+    return {
+        "puntos": puntos,
+        "total_socios": datos["total_socios"],
+        "total_participaciones": datos["total_participaciones"],
+        "total_proyectos": datos["total_proyectos"],
+    }
+
+
 def _agregar_detalle(socios, socio):
     """Datos del socio para el mapa del coordinador (el detalle está en su historial)."""
     if socio.id in socios:
