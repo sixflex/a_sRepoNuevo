@@ -23,13 +23,9 @@ def inicio(request):
     # Mapa público (HU-10, RF-PUB-01): solo totales por comuna, sin datos personales.
     from . import indicadores
 
-    from django.core.paginator import Paginator
-
     filtros = indicadores.filtros_publicos(request.GET)
-    catalogo = Paginator(indicadores.catalogo_publico(filtros), 9).get_page(request.GET.get("pagina"))
-    # Para que la paginación del catálogo conserve los filtros del mapa.
-    parametros = request.GET.copy()
-    parametros.pop("pagina", None)
+    # El catálogo va completo: se recorre y se filtra por año en la misma página.
+    catalogo = indicadores.catalogo_publico(filtros)
     return render(request, "core/inicio.html", {
         "filtros": filtros,
         "hay_filtros": any(filtros.get(nombre) for nombre in indicadores.FILTROS_PUBLICOS),
@@ -37,7 +33,7 @@ def inicio(request):
         "mapa": indicadores.mapa(filtros),
         "cifras": indicadores.cifras_publicas(filtros),
         "catalogo": catalogo,
-        "parametros_filtros": parametros.urlencode(),
+        "catalogo_anios": sorted({p["anio"] for p in catalogo if p["anio"]}, reverse=True),
     })
 
 

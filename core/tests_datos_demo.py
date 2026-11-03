@@ -101,3 +101,22 @@ class CargarDatosDemoTests(TestCase):
         self.assertEqual(len(socios), privado["total_socios"])
         self.assertTrue(any(socio["direccion"] and socio["contacto"] for socio in socios))
         self.assertNotIn("intervenciones", socios[0])
+
+
+class PrepararDatosDesarrolloTests(TestCase):
+    def test_deja_la_base_lista_sin_comunas_con_direcciones_y_se_puede_repetir(self):
+        from rutas.models import RutaActividad, RutaVersion
+        from socios.models import Comuna
+
+        salida = StringIO()
+        call_command("preparar_datos_desarrollo", stdout=salida)
+        call_command("preparar_datos_desarrollo", stdout=salida)
+
+        self.assertFalse(Comuna.objects.filter(nombre__contains=",").exists())
+        self.assertFalse(Comuna.objects.filter(nombre__endswith="-").exists())
+        self.assertTrue(Comuna.objects.filter(nombre="Carahue", lat_centro__isnull=False).exists())
+        self.assertEqual(Seccion.objects.count(), 15)
+        borrador = RutaVersion.objects.get(estado="BORRADOR")
+        vinculadas = RutaActividad.objects.filter(ruta_version=borrador, orden__in=[5, 13])
+        self.assertTrue(all(actividad.formulario_version_id for actividad in vinculadas))
+

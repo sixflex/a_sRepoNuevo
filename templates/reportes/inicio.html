@@ -21,10 +21,12 @@
     <div class="coord-header mb-3">
         <h1 class="coord-title mb-1">Reportes</h1>
         <p class="coord-subtitle mb-0">
-            Elige los filtros y descarga en Excel lo que necesites. Cada archivo indica los filtros con que se generó.
+            Elige los filtros y descarga en Excel lo que necesites. Cada archivo indica los filtros con que se generó
+            y trae una flecha en cada columna para seguir filtrando dentro del Excel.
         </p>
     </div>
 
+    <h2 class="h6 fw-bold mb-2"><span class="badge rounded-pill text-bg-danger me-2">1</span>¿Qué datos quieres?</h2>
     <form method="get" class="panel-card mb-3" aria-label="Filtros de los reportes">
         <input type="hidden" name="f" value="1">
         <div class="row g-2 align-items-end">
@@ -100,6 +102,7 @@
         {% endfor %}
     </div>
 
+    <h2 class="h6 fw-bold mb-2"><span class="badge rounded-pill text-bg-danger me-2">2</span>Elige el reporte y descárgalo</h2>
     <div class="row g-3">
         <div class="col-12 col-lg-6">
             <section class="panel-card reporte-card" aria-labelledby="rep-participaciones">
@@ -109,10 +112,11 @@
                 </div>
                 <p class="panel-ayuda mb-0">Una fila por cada vez que un socio trabajó con una asignatura: año, carrera, asignatura, NRC, docente, socio, comuna y centro SERCOTEC. Incluye los datos históricos importados.</p>
                 <p class="small text-muted mb-0">Ejemplo: «proyectos de 2024 con sus docentes y socios».</p>
-                <div class="mt-auto">
+                <div class="mt-auto d-flex align-items-center flex-wrap gap-3">
                     <a href="{% url 'reportes:participaciones' %}?{{ consulta }}" class="btn btn-rojo">
                         <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i>Descargar Excel
                     </a>
+                    <span class="small text-muted">{{ conteos.participaciones }} fila{{ conteos.participaciones|pluralize }} con estos filtros</span>
                 </div>
             </section>
         </div>
@@ -125,10 +129,11 @@
                 </div>
                 <p class="panel-ayuda mb-0">Los emprendedores con los que realmente se trabajó (los que eligió el docente), agrupados por Centro de Negocios y año, con su contacto. Sirve para el seguimiento que hace SERCOTEC.</p>
                 <p class="small text-muted mb-0">Trae una hoja de resumen por centro y otra con el detalle de cada emprendedor.</p>
-                <div class="mt-auto">
+                <div class="mt-auto d-flex align-items-center flex-wrap gap-3">
                     <a href="{% url 'reportes:centros_sercotec' %}?{{ consulta }}" class="btn btn-rojo">
                         <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i>Descargar Excel
                     </a>
+                    <span class="small text-muted">{{ conteos.socios }} socio{{ conteos.socios|pluralize }} con estos filtros</span>
                 </div>
             </section>
         </div>

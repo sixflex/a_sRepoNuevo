@@ -92,6 +92,19 @@ def si(valor):
     return texto(valor).upper() in ("SI", "SÍ", "TRUE", "1")
 
 
+# En la hoja Comunas del Excel algunas "comunas" son en realidad direcciones
+# (venían así del formulario original). Se cargan con la comuna correcta para
+# que el mapa y el catálogo públicos no muestren direcciones (RNF-PRI-01);
+# la dirección de esos socios ya está en su columna Dirección.
+CORRECCIONES_COMUNA = {
+    "carahue -": ("Carahue", "La Araucanía", Decimal("-38.7114"), Decimal("-73.1647")),
+    "el establecimiento se encuentra camino quepe, boroa km 5, temuco": ("Temuco", None, None, None),
+    "padre las casas, temuco": ("Padre Las Casas", None, None, None),
+    "temuco, araucanía.": ("Temuco", None, None, None),
+    "temuco- sector fundo del carmen": ("Temuco", None, None, None),
+}
+
+
 def leer_libro(ruta):
     libro = openpyxl.load_workbook(ruta, data_only=True)
     hojas = {}
@@ -266,17 +279,22 @@ class Command(BaseCommand):
 
     def cargar_socios(self):
         comunas = {}
-        for fila in self.datos["Comunas"]:
-            nombre = texto(fila["Comuna"])
+        # Primero las comunas correctas, así las corregidas reutilizan su ubicación.
+        filas = sorted(self.datos["Comunas"], key=lambda f: texto(f["Comuna"]).lower() in CORRECCIONES_COMUNA)
+        for fila in filas:
+            original = texto(fila["Comuna"])
+            nombre, region, lat, lon = CORRECCIONES_COMUNA.get(
+                original.lower(), (original, None, Decimal(str(fila["Latitud"])), Decimal(str(fila["Longitud"]))),
+            )
             # Una comuna ya registrada se reutiliza; solo se completa su ubicación para el mapa.
             comuna = Comuna.objects.filter(nombre__iexact=nombre).first()
             if comuna is None:
-                comuna = Comuna.objects.create(nombre=nombre, region=texto(fila["Región"]), activo=True)
-            if comuna.lat_centro is None or comuna.lon_centro is None:
-                comuna.lat_centro = Decimal(str(fila["Latitud"]))
-                comuna.lon_centro = Decimal(str(fila["Longitud"]))
+                comuna = Comuna.objects.create(nombre=nombre, region=region or texto(fila["Región"]), activo=True)
+            if (comuna.lat_centro is None or comuna.lon_centro is None) and lat is not None:
+                comuna.lat_centro = lat
+                comuna.lon_centro = lon
                 comuna.save(update_fields=["lat_centro", "lon_centro"])
-            comunas[nombre] = comuna
+            comunas[original] = comuna
 
         self.socios = {}
         for fila in self.datos["Socios"]:

@@ -742,8 +742,9 @@ def cifras_publicas(filtros):
 
 def catalogo_publico(filtros):
     """
-    Proyectos A+S del mapa ordenados como catálogo: uno por año, carrera y
-    asignatura, con cuántos socios participaron, sus comunas y tipos. No
+    Proyectos A+S del mapa ordenados como catálogo: uno por año, carrera,
+    asignatura y servicio realizado (lo que se hizo, que es el título de la
+    tarjeta), con cuántos socios participaron, sus comunas y tipos. No
     incluye nombres de socios ni de personas (RNF-PRI-01): muchos socios son
     emprendedores, es decir, personas naturales.
     """
@@ -751,7 +752,7 @@ def catalogo_publico(filtros):
         _participaciones(filtros)
         .annotate(anio_participacion=Coalesce("periodo__anio", ExtractYear("fecha_inicio")))
         .values_list(
-            "anio_participacion", "carrera__nombre", "asignatura__nombre",
+            "anio_participacion", "carrera__nombre", "asignatura__nombre", "servicio_realizado",
             "socio_id", "socio__comuna__nombre", "socio__clasificacion__nombre",
         )
         .order_by()
@@ -759,13 +760,15 @@ def catalogo_publico(filtros):
     )
 
     proyectos = {}
-    for anio, carrera, asignatura, socio_id, comuna, tipo in filas:
-        datos = proyectos.setdefault((anio, carrera or "", asignatura or ""), {
-            "socios": set(), "comunas": set(), "tipos": set(),
+    for anio, carrera, asignatura, servicio, socio_id, comuna, tipo in filas:
+        servicio = " ".join((servicio or "").split())
+        servicio = servicio[:1].upper() + servicio[1:]
+        datos = proyectos.setdefault((anio, carrera or "", asignatura or "", servicio), {
+            "socios": set(), "comunas": defaultdict(set), "tipos": set(),
         })
         datos["socios"].add(socio_id)
         if comuna:
-            datos["comunas"].add(comuna)
+            datos["comunas"][comuna].add(socio_id)
         if tipo:
             datos["tipos"].add(tipo)
 
@@ -774,13 +777,17 @@ def catalogo_publico(filtros):
             "anio": anio,
             "carrera": carrera,
             "asignatura": asignatura,
+            "servicio": servicio,
             "socios": len(datos["socios"]),
-            "comunas": sorted(datos["comunas"]),
+            # Primero las comunas con más socios: la tarjeta muestra solo las primeras.
+            "comunas": sorted(datos["comunas"], key=lambda c: (-len(datos["comunas"][c]), c)),
             "tipos": sorted(datos["tipos"]),
         }
-        for (anio, carrera, asignatura), datos in proyectos.items()
+        for (anio, carrera, asignatura, servicio), datos in proyectos.items()
     ]
-    catalogo.sort(key=lambda p: (-(p["anio"] or 0), p["carrera"].lower(), p["asignatura"].lower()))
+    catalogo.sort(key=lambda p: (
+        -(p["anio"] or 0), p["carrera"].lower(), p["asignatura"].lower(), p["servicio"].lower(),
+    ))
     return catalogo
 
 

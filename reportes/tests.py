@@ -99,3 +99,12 @@ class ReportesTests(TestCase):
         hoja = leer(self.client.get(reverse("reportes:participaciones")))["Participaciones"]
         anios = {fila[0] for fila in hoja.iter_rows(values_only=True) if fila and fila[0] in (2024, 2025)}
         self.assertEqual(anios, {2024, 2025})
+
+    def test_excel_trae_filtros_desplegables_y_encabezado_destacado(self):
+        hoja = leer(self.client.get(reverse("reportes:participaciones")))["Participaciones"]
+        encabezado = next(fila[0].row for fila in hoja.iter_rows() if fila[0].value == "Año")
+
+        self.assertEqual(hoja.auto_filter.ref.split(":")[0], f"A{encabezado}")
+        self.assertEqual(hoja.freeze_panes, f"A{encabezado + 1}")
+        self.assertEqual(hoja.cell(encabezado, 1).fill.fgColor.rgb[-6:], "C8232C")
+

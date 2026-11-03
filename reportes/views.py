@@ -1,3 +1,4 @@
+from django.db.models import Count
 from django.shortcuts import render
 from django.urls import reverse
 
@@ -32,6 +33,9 @@ def inicio(request):
         "consulta": consulta,
         "url_indicadores": f"{reverse('core:exportar_indicadores')}?{consulta}",
         "formularios": formularios,
+        "conteos": indicadores.participaciones_filtradas(filtros).aggregate(
+            participaciones=Count("id"), socios=Count("socio", distinct=True),
+        ),
     })
 
 
