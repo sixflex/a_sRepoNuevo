@@ -321,7 +321,6 @@
             <img src="{% static 'img/logo_as.png' %}" alt="Aprendizaje + Servicio" class="marca-as">
         </a>
 
-
         <div class="d-flex align-items-center flex-wrap gap-3 gap-md-4">
             <a href="{% url 'core:inicio' %}" class="ua-nav-link active">Portal Público</a>
             <a href="{% url 'usuarios:login' %}" class="ua-nav-link">Inicio de Sesión</a>
@@ -670,42 +669,63 @@
 <section class="container pb-5">
     <h3 class="fw-bold mb-3" style="font-size: 1.35rem;">Noticias y Recursos</h3>
     <div class="row g-4">
-        <div class="col-12 col-md-4">
-            <div class="mockup-card h-100 overflow-hidden d-flex flex-column">
-                <img src="https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=600&auto=format&fit=crop" class="news-card-img" alt="Reunión UA">
-                <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
-                    <div>
-                        <div class="news-date mb-2">14 Mar, 2025</div>
-                        <h5 class="fw-bold mb-2" style="font-size: 1.05rem;">Lanzamiento de Proyectos A+S UA 2025</h5>
-                        <p class="text-muted small mb-3">La Universidad Autónoma de Chile oficializa el inicio de los proyectos A+S con una participación récord de socios comunitarios locales.</p>
+        {% if noticias %}
+            {% for noticia in noticias %}
+                <div class="col-12 col-md-4">
+                    <div class="mockup-card h-100 overflow-hidden d-flex flex-column">
+                        <img src="{{ noticia.imagen_url|default:'https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=600&auto=format&fit=crop' }}" class="news-card-img" alt="{{ noticia.titulo }}">
+                        <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
+                            <div>
+                                <div class="news-date mb-2">{{ noticia.fecha_publicacion|date:"d M, Y" }}</div>
+                                <h5 class="fw-bold mb-2" style="font-size: 1.05rem;">{{ noticia.titulo }}</h5>
+                                <p class="text-muted small mb-3">{{ noticia.resumen|truncatewords:20 }}</p>
+                            </div>
+                            {% if noticia.url_fuente %}
+                                <a href="{{ noticia.url_fuente }}" target="_blank" rel="noopener" class="text-danger fw-semibold small text-decoration-none">Leer más &gt;</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <!-- Tarjetas estáticas predeterminadas si no hay noticias en la BD -->
+            <div class="col-12 col-md-4">
+                <div class="mockup-card h-100 overflow-hidden d-flex flex-column">
+                    <img src="https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=600&auto=format&fit=crop" class="news-card-img" alt="Reunión UA">
+                    <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
+                        <div>
+                            <div class="news-date mb-2">14 Mar, 2025</div>
+                            <h5 class="fw-bold mb-2" style="font-size: 1.05rem;">Lanzamiento de Proyectos A+S UA 2025</h5>
+                            <p class="text-muted small mb-3">La Universidad Autónoma de Chile oficializa el inicio de los proyectos A+S con una participación récord de socios comunitarios locales.</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="col-12 col-md-4">
-            <div class="mockup-card h-100 overflow-hidden d-flex flex-column">
-                <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?q=80&w=600&auto=format&fit=crop" class="news-card-img" alt="Salud UA">
-                <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
-                    <div>
-                        <div class="news-date mb-2">10 Mar, 2025</div>
-                        <h5 class="fw-bold mb-2" style="font-size: 1.05rem;">Estudiantes de Salud UA impactan positivamente en comunas vulnerables</h5>
-                        <p class="text-muted small mb-3">Operativos integrales de salud liderados bajo la metodología A+S logran excelente recepción por parte de juntas vecinales territoriales.</p>
+            <div class="col-12 col-md-4">
+                <div class="mockup-card h-100 overflow-hidden d-flex flex-column">
+                    <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?q=80&w=600&auto=format&fit=crop" class="news-card-img" alt="Salud UA">
+                    <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
+                        <div>
+                            <div class="news-date mb-2">10 Mar, 2025</div>
+                            <h5 class="fw-bold mb-2" style="font-size: 1.05rem;">Estudiantes de Salud UA impactan positivamente en comunas vulnerables</h5>
+                            <p class="text-muted small mb-3">Operativos integrales de salud liderados bajo la metodología A+S logran excelente recepción por parte de juntas vecinales territoriales.</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="col-12 col-md-4">
-            <div class="mockup-card h-100 overflow-hidden d-flex flex-column">
-                <img src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=600&auto=format&fit=crop" class="news-card-img" alt="Guía A+S">
-                <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
-                    <div>
-                        <div class="news-date mb-2">05 Mar, 2025</div>
-                        <h5 class="fw-bold mb-2" style="font-size: 1.05rem;">Nueva Guía de Buenas Prácticas Metodológicas A+S</h5>
-                        <p class="text-muted small mb-3">Publicamos el documento integrador que asiste a los académicos en la formulación de evaluaciones con enfoque de servicio comunitario.</p>
+            <div class="col-12 col-md-4">
+                <div class="mockup-card h-100 overflow-hidden d-flex flex-column">
+                    <img src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=600&auto=format&fit=crop" class="news-card-img" alt="Guía A+S">
+                    <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
+                        <div>
+                            <div class="news-date mb-2">05 Mar, 2025</div>
+                            <h5 class="fw-bold mb-2" style="font-size: 1.05rem;">Nueva Guía de Buenas Prácticas Metodológicas A+S</h5>
+                            <p class="text-muted small mb-3">Publicamos el documento integrador que asiste a los académicos en la formulación de evaluaciones con enfoque de servicio comunitario.</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        {% endif %}
     </div>
 </section>
 
