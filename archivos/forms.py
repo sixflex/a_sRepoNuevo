@@ -1,6 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 
+from core.models import Noticia
 from .models import RecursoRepositorio
 from .validators import get_extensiones_permitidas
 
@@ -86,3 +87,37 @@ class RecursoRepositorioForm(forms.ModelForm):
         if not tiene_archivo and not datos.get("url_externa"):
             raise ValidationError("Sube un archivo o indica un enlace externo.")
         return datos
+
+
+class NoticiaForm(forms.ModelForm):
+    class Meta:
+        model = Noticia
+        fields = [
+            "titulo",
+            "resumen",
+            "fuente",
+            "url_fuente",
+            "imagen_url",
+            "fecha_publicacion",
+            "estado",
+        ]
+        widgets = {
+            "fecha_publicacion": forms.DateTimeInput(attrs={"type": "datetime-local", "class": "form-control"}),
+            "titulo": forms.TextInput(attrs={"class": "form-control"}),
+            "resumen": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "fuente": forms.TextInput(attrs={"class": "form-control"}),
+            "url_fuente": forms.URLInput(attrs={"class": "form-control", "placeholder": "https://..."}),
+            "imagen_url": forms.URLInput(attrs={"class": "form-control", "placeholder": "https://..."}),
+            "estado": forms.Select(choices=[("PUBLICADA", "Publicada"), ("BORRADOR", "Borrador")], attrs={"class": "form-select"}),
+        }
+
+    def clean_url_fuente(self):
+        url_fuente = (self.cleaned_data.get("url_fuente") or "").strip()
+        if url_fuente:
+            # Criterio de aceptación: las noticias no se duplican por URL
+            qs = Noticia.objects.filter(url_fuente=url_fuente)
+            if self.instance and self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise ValidationError("Ya existe una noticia registrada con esta misma URL de fuente.")
+        return url_fuente

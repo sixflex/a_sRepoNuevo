@@ -10,23 +10,30 @@ from usuarios.permissions import es_coordinador, es_docente
 from usuarios.decorators import coordinador_only_required, coordinador_required, docente_required
 from usuarios.services import aviso_vincular_cuenta
 
-from academico.models import (PeriodoAcademico,Seccion,)
+from academico.models import (PeriodoAcademico, Seccion)
+
+from core.models import Noticia
+from archivos.models import RecursoRepositorio
 
 def inicio(request):
     if request.user.is_authenticated:
         if es_coordinador(request.user):
             return redirect("core:coordinacion")
         if es_docente(request.user):
-            # El inicio del docente es el resumen de sus Rutas A+S;
-            # "Mis secciones" (core:docente) queda como opción del menú.
             return redirect("core:inicio_docente")
 
-    # Mapa público (HU-10, RF-PUB-01): solo totales por comuna, sin datos personales.
     from . import indicadores
 
     filtros = indicadores.filtros_publicos(request.GET)
-    # El catálogo va completo: se recorre y se filtra por año en la misma página.
     catalogo = indicadores.catalogo_publico(filtros)
+
+    noticias = Noticia.objects.filter(estado="PUBLICADA").order_by("-fecha_publicacion")[:3]
+
+    documentos_publicos = RecursoRepositorio.objects.filter(
+        visibilidad="PUBLICO",
+        estado="ACTIVO"
+    ).order_by("-id")[:4]
+
     return render(request, "core/inicio.html", {
         "filtros": filtros,
         "hay_filtros": any(filtros.get(nombre) for nombre in indicadores.FILTROS_PUBLICOS),
@@ -35,6 +42,8 @@ def inicio(request):
         "cifras": indicadores.cifras_publicas(filtros),
         "catalogo": catalogo,
         "catalogo_anios": sorted({p["anio"] for p in catalogo if p["anio"]}, reverse=True),
+        "noticias": noticias,
+        "documentos_publicos": documentos_publicos,
     })
 
 
