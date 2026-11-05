@@ -850,6 +850,9 @@ def _guardar_docente(request, docente):
         ):
             error = "Ya existe un docente con ese correo institucional."
 
+        elif error_correo := _correo_de_otra_persona(docente):
+            error = error_correo
+
         else:
             try:
                 validate_email(docente.correo_institucional)
@@ -867,6 +870,29 @@ def _guardar_docente(request, docente):
             "error": error,
         },
     )
+
+
+def _correo_de_otra_persona(docente):
+    """
+    Una persona puede tener dos cuentas (@uautonoma.cl y @cloud.uautonoma.cl).
+    El correo no puede ser una cuenta vinculada de alguien que ya es otro docente
+    (o de otra persona distinta a la enlazada con este docente).
+    Devuelve el mensaje de error o None.
+    """
+    from usuarios.services import usuario_por_correo
+
+    duenio = usuario_por_correo(docente.correo_institucional)
+    if duenio is None:
+        return None
+    if docente.usuario_id and duenio.pk != docente.usuario_id:
+        return "Ese correo es una cuenta vinculada de otra persona del portal."
+    otro_docente = Docente.objects.filter(usuario=duenio).exclude(pk=docente.pk).first()
+    if otro_docente:
+        return (
+            "Ese correo es otra cuenta de una persona que ya está registrada "
+            f"como docente ({otro_docente})."
+        )
+    return None
 
 
 @coordinador_required

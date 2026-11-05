@@ -7,6 +7,7 @@ from django.utils import timezone
 from academico.models import Docente, Seccion
 from core.ordenamiento import OPCIONES_ORDEN, orden_pedido, ordenar_por_fecha
 from usuarios.permissions import es_coordinador, es_docente
+from usuarios.services import correo_de_sesion, oid_de_sesion
 
 from .models import (
     CartaEstudiante,
@@ -711,12 +712,12 @@ def solicitar_carta_estudiante(request, token):
             solicitud.solicitante_nombre = (
                 f"{request.user.first_name} {request.user.last_name}"
             ).strip() or request.user.username
+            # La cuenta con que entró en esta sesión (puede tener dos).
             solicitud.solicitante_correo = (
-                request.user.correo_institucional
-                or request.user.email
+                correo_de_sesion(request)
                 or request.user.username
             )
-            solicitud.solicitante_entra_id = request.user.entra_oid or None
+            solicitud.solicitante_entra_id = oid_de_sesion(request)
             solicitud.estado = "PENDIENTE"
             solicitud.fecha_solicitud = timezone.now()
 

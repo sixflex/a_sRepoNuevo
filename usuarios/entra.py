@@ -9,8 +9,14 @@ Configuración (en settings.py o como variables de entorno en .env):
 
     ENTRA_MODO               "simulado" | "desactivado".
                              Por defecto "simulado" solo si DEBUG=True.
-    ENTRA_DOMINIO_PERMITIDO  Por defecto "uautonoma.cl".
+    ENTRA_DOMINIOS_PERMITIDOS  Dominios separados por coma.
+                             Por defecto "uautonoma.cl,cloud.uautonoma.cl"
+                             (funcionarios y docentes/estudiantes).
+    ENTRA_DOMINIO_PERMITIDO  Antiguo, un solo dominio. Si está definido manda.
     ENTRA_CONECTOR           Ruta de la clase conector. Por defecto el simulado.
+
+Una persona puede tener las dos cuentas; ambas llegan al mismo Usuario
+(ver usuarios/services.py).
 """
 import os
 import re
@@ -18,13 +24,7 @@ import uuid
 from dataclasses import dataclass
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
-from django.db import transaction
-from django.utils import timezone
 from django.utils.module_loading import import_string
-
-from .models import Rol
 
 
 ROL_COORDINADOR = "Coordinador"
@@ -41,7 +41,14 @@ CUENTAS_PRUEBA = (
     {"correo": "coordinador@uautonoma.cl", "nombre": "Coordinador Prueba", "rol": ROL_COORDINADOR},
     {"correo": "docente@uautonoma.cl", "nombre": "Docente Prueba", "rol": ROL_DOCENTE},
     {"correo": "estudiante@uautonoma.cl", "nombre": "Estudiante Prueba", "rol": ROL_ESTUDIANTE},
+    # La misma persona que docente@uautonoma.cl, con su cuenta cloud. No viene
+    # vinculada: sirve para probar "Vincular otra cuenta" en /cuenta/.
+    {"correo": "docente@cloud.uautonoma.cl", "nombre": "Docente Prueba", "rol": ROL_DOCENTE},
+    {"correo": "estudiante@cloud.uautonoma.cl", "nombre": "Estudiante Cloud", "rol": ROL_ESTUDIANTE},
 )
+
+TENANT_SIMULADO = "simulado"
+DOMINIOS_POR_DEFECTO = "uautonoma.cl,cloud.uautonoma.cl"
 
 
 class EntraError(Exception):
@@ -55,6 +62,7 @@ class IdentidadEntra:
     nombre: str
     apellido: str
     rol: str
+    tenant_id: str = TENANT_SIMULADO
 
 
 def modo():
@@ -64,11 +72,34 @@ def modo():
     return "simulado" if settings.DEBUG else "desactivado"
 
 
-def dominio_permitido():
-    valor = getattr(settings, "ENTRA_DOMINIO_PERMITIDO", None) or os.getenv(
-        "ENTRA_DOMINIO_PERMITIDO", "uautonoma.cl"
+def dominios_permitidos():
+    """Dominios aceptados, en orden. El antiguo ENTRA_DOMINIO_PERMITIDO manda si existe."""
+    valor = (
+        getattr(settings, "ENTRA_DOMINIO_PERMITIDO", None)
+        or os.getenv("ENTRA_DOMINIO_PERMITIDO")
+        or getattr(settings, "ENTRA_DOMINIOS_PERMITIDOS", None)
+        or os.getenv("ENTRA_DOMINIOS_PERMITIDOS", DOMINIOS_POR_DEFECTO)
     )
-    return valor.strip().lower().lstrip("@")
+    dominios = [d.strip().lower().lstrip("@") for d in valor.split(",")]
+    return [d for d in dominios if d]
+
+
+def dominio_permitido():
+    """Primer dominio permitido (se usa en ejemplos de texto)."""
+    return dominios_permitidos()[0]
+
+
+def texto_dominios():
+    """'@uautonoma.cl o @cloud.uautonoma.cl'."""
+    dominios = [f"@{d}" for d in dominios_permitidos()]
+    if len(dominios) == 1:
+        return dominios[0]
+    return ", ".join(dominios[:-1]) + " o " + dominios[-1]
+
+
+def oid_simulado(correo):
+    """El mismo correo siempre genera el mismo oid de prueba."""
+    return "sim-" + str(uuid.uuid5(_NAMESPACE_OID, correo.strip().lower()))
 
 
 class ConectorEntraSimulado:
@@ -81,9 +112,9 @@ class ConectorEntraSimulado:
             raise EntraError("Escribe un correo válido, por ejemplo nombre@uautonoma.cl.")
 
         dominio = correo.rsplit("@", 1)[1]
-        if dominio != dominio_permitido():
+        if dominio not in dominios_permitidos():
             raise EntraError(
-                f"Solo se permiten cuentas institucionales @{dominio_permitido()}."
+                f"Solo se permiten cuentas institucionales {texto_dominios()}."
             )
 
         cuenta = next((c for c in CUENTAS_PRUEBA if c["correo"] == correo), None)
@@ -96,11 +127,12 @@ class ConectorEntraSimulado:
             nombre, apellido = correo.split("@", 1)[0], ""
 
         return IdentidadEntra(
-            oid="sim-" + str(uuid.uuid5(_NAMESPACE_OID, correo)),
+            oid=oid_simulado(correo),
             correo=correo,
             nombre=nombre,
             apellido=apellido,
             rol=rol,
+            tenant_id=TENANT_SIMULADO,
         )
 
 
@@ -112,46 +144,11 @@ def get_conector():
 
 
 def autenticar_con_entra(correo):
-    """Valida el correo con el conector y devuelve el usuario local (lo crea si falta)."""
+    """
+    Valida el correo con el conector y devuelve (usuario, identidad) locales.
+    Crea el usuario si es su primera vez.
+    """
+    from .services import obtener_o_crear_usuario_por_identidad
+
     identidad = get_conector().identificar(correo)
-    return _provisionar_usuario(identidad)
-
-
-def _provisionar_usuario(identidad):
-    Usuario = get_user_model()
-
-    with transaction.atomic():
-        usuario = (
-            Usuario.objects.filter(entra_oid=identidad.oid).first()
-            or Usuario.objects.filter(correo_institucional__iexact=identidad.correo).first()
-            or Usuario.objects.filter(username__iexact=identidad.correo).first()
-        )
-
-        if usuario is None:
-            usuario = Usuario(
-                username=identidad.correo,
-                email=identidad.correo,
-                first_name=identidad.nombre,
-                last_name=identidad.apellido,
-            )
-            usuario.set_unusable_password()
-
-        if not usuario.is_active or not usuario.activo:
-            raise EntraError("Tu cuenta está desactivada. Contacta a la coordinación.")
-
-        if not usuario.entra_oid:
-            usuario.entra_oid = identidad.oid
-        if not usuario.correo_institucional:
-            usuario.correo_institucional = identidad.correo
-        if not usuario.rol_id:
-            usuario.rol, _ = Rol.objects.get_or_create(nombre=identidad.rol)
-
-        usuario.fecha_ultimo_acceso = timezone.now()
-        usuario.save()
-
-        # El menú lateral y los decoradores trabajan con grupos de Django.
-        if not usuario.groups.exists():
-            grupo, _ = Group.objects.get_or_create(name=identidad.rol)
-            usuario.groups.add(grupo)
-
-    return usuario
+    return obtener_o_crear_usuario_por_identidad(identidad)

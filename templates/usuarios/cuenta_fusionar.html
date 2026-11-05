@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Unir cuentas | Portal A+S{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/coordinacion.css' %}?v=2026-10-30">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2" style="max-width: 720px;">
+    <div class="coord-header mb-3">
+        <h1 class="coord-title mb-1">Unir cuentas</h1>
+        <p class="coord-subtitle mb-0">Revisa antes de confirmar.</p>
+    </div>
+
+    <section class="panel-card">
+        <p>
+            <strong>{{ correo }}</strong> ya tiene datos en el portal. Si es tuya, la unimos a esta cuenta
+            y todo quedará en un solo lugar.
+        </p>
+
+        {% if resumen %}
+            <p class="mb-1 fw-semibold">Esto pasará a tu cuenta actual:</p>
+            <ul class="mb-3">
+                {% for nombre, cantidad in resumen %}
+                    <li>{{ nombre }}: {{ cantidad }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-muted">No tiene cartas, formularios ni evidencias a su nombre.</p>
+        {% endif %}
+
+        <p class="small text-muted">
+            Después podrás entrar con cualquiera de las dos cuentas y verás lo mismo.
+            La cuenta antigua queda desactivada; no se borra nada.
+        </p>
+
+        <form method="post" class="d-flex gap-2 justify-content-end">
+            {% csrf_token %}
+            <button type="submit" name="accion" value="cancelar" class="btn btn-outline-secondary">Cancelar</button>
+            <button type="submit" name="accion" value="confirmar" class="btn btn-primary">Sí, unir cuentas</button>
+        </form>
+    </section>
+</div>
+{% endblock %}

@@ -167,7 +167,16 @@
                      class="brand-logo-img">
             </div>
 
-            <h1 class="fw-bold mb-3" style="font-size: 1.55rem; color: #1b1b1b;">Iniciar sesión</h1>
+            <h1 class="fw-bold mb-3" style="font-size: 1.55rem; color: #1b1b1b;">{% if vincular %}Vincular otra cuenta{% else %}Iniciar sesión{% endif %}</h1>
+
+            {% if vincular %}
+                <p class="small mb-3" style="color: #333;">
+                    Inicia sesión con tu <strong>otra</strong> cuenta institucional. Seguirás conectado como
+                    <strong>{{ user.username }}</strong>.
+                </p>
+            {% else %}
+                <p class="small mb-3" style="color: #333;">Usa tu cuenta {{ dominios }}.</p>
+            {% endif %}
 
             <div class="small mb-4 p-2" style="background: #FFF4CE; color: #5c4400;" role="note">
                 <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>
@@ -190,15 +199,23 @@
                            id="correo"
                            class="ms-input"
                            placeholder="tucorreo@{{ dominio }}"
+                           aria-describedby="ayuda-correo"
                            value="{{ correo|default:'' }}"
                            autocomplete="off"
                            required
                            autofocus
-                           {% if error %}aria-invalid="true" aria-describedby="error-correo"{% endif %}>
+                           {% if error %}aria-invalid="true" aria-describedby="error-correo ayuda-correo"{% endif %}>
+                    <div id="ayuda-correo" class="form-text" style="font-size: .78rem;">
+                        Funcionarios: @uautonoma.cl · Docentes y estudiantes: @cloud.uautonoma.cl
+                    </div>
                 </div>
 
                 <div class="d-flex justify-content-end align-items-center mt-4">
-                    <a href="{% url 'usuarios:login' %}" class="btn btn-ms-secondary text-decoration-none text-center">Atrás</a>
+                    {% if vincular %}
+                        <a href="{% url 'usuarios:cuenta' %}" class="btn btn-ms-secondary text-decoration-none text-center">Cancelar</a>
+                    {% else %}
+                        <a href="{% url 'usuarios:login' %}" class="btn btn-ms-secondary text-decoration-none text-center">Atrás</a>
+                    {% endif %}
                     <button type="submit" class="btn btn-ms-primary">Siguiente</button>
                 </div>
             </form>
