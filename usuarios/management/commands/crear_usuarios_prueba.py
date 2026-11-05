@@ -3,6 +3,8 @@ from django.contrib.auth.models import Group
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
+from usuarios.services import asegurar_identidad_principal
+
 from academico.models import (
     Asignatura,
     Campus,
@@ -147,6 +149,11 @@ class Command(BaseCommand):
                 "activo": True,
             },
         )
+
+        # Cuenta Microsoft (simulada) de cada usuario, para entrar también por Entra.
+        asegurar_identidad_principal(usuario_docente1, docente1.correo_institucional)
+        asegurar_identidad_principal(usuario_docente2, docente2.correo_institucional)
+        asegurar_identidad_principal(usuario_estudiante)
 
         seccion1, _ = Seccion.objects.get_or_create(
             periodo=periodo,

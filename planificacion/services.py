@@ -171,7 +171,29 @@ def _resolver_docente(docente_fila):
             correo_institucional__iexact=correo
         ).first()
 
+    if docente is None and correo:
+        # La persona puede tener dos cuentas (@uautonoma.cl y @cloud.uautonoma.cl):
+        # se busca al docente registrado con cualquiera de sus correos vinculados.
+        from usuarios.services import correos_de_usuario, usuario_por_correo
+
+        usuario = usuario_por_correo(correo)
+        if usuario is not None:
+            docente = Docente.objects.filter(usuario=usuario).first()
+            if docente is None:
+                docente = (
+                    Docente.objects.filter(usuario__isnull=True)
+                    .filter(_q_correos(correos_de_usuario(usuario)))
+                    .first()
+                )
+
     return docente
+
+
+def _q_correos(correos):
+    filtro = Q(pk__in=[])
+    for correo in correos:
+        filtro |= Q(correo_institucional__iexact=correo)
+    return filtro
 
 def _validar_docentes(fila):
     docentes_fila = list(fila.docentes.all())

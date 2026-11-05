@@ -8,6 +8,7 @@ from core.ordenamiento import OPCIONES_ORDEN, orden_pedido, ordenar_por_fecha
 from rutas.services import obtener_recordatorios_ruta
 from usuarios.permissions import es_coordinador, es_docente
 from usuarios.decorators import coordinador_only_required, coordinador_required, docente_required
+from usuarios.services import aviso_vincular_cuenta
 
 from academico.models import (PeriodoAcademico,Seccion,)
 
@@ -130,6 +131,7 @@ def panel_coordinacion(request):
             "umbrales": {"medio": indicadores.UMBRAL_MEDIO, "alto": indicadores.UMBRAL_ALTO},
             "pendientes": pendientes,
             "mapa": mapa,
+            "aviso_vincular": aviso_vincular_cuenta(request),
         },
     )
 
@@ -427,6 +429,7 @@ def inicio_docente(request):
             "total_pendientes": total_pendientes,
             "avance_general": avance_general,
             "rutas": rutas,
+            "aviso_vincular": aviso_vincular_cuenta(request),
         },
     )
 

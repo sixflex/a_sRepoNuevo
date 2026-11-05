@@ -54,8 +54,10 @@ from socios.models import (
     PostulacionSocio,
     SocioComunitario,
 )
+from usuarios import entra
+from usuarios import services as identidades
 from usuarios.entra import get_conector
-from usuarios.models import Rol
+from usuarios.models import IdentidadInstitucional, Rol
 
 ARCHIVO_POR_DEFECTO = Path(__file__).resolve().parents[2] / "datos_demo" / "datos_demo_AS.xlsx"
 CLAVE_DOCENTE = "Docente1234"
@@ -205,6 +207,7 @@ class Command(BaseCommand):
                 correo_institucional="coordinador@uautonoma.cl", first_name="Coordinador", last_name="A+S",
             )
             coordinador.groups.add(Group.objects.get_or_create(name="Coordinador")[0])
+        identidades.asegurar_identidad_principal(coordinador)
         return coordinador
 
     def cargar_estructura_academica(self):
@@ -275,7 +278,23 @@ class Command(BaseCommand):
                     "correo_institucional": correo, "telefono": texto(fila["Teléfono"]), "activo": True,
                 },
             )
+            identidades.asegurar_identidad_principal(usuario)
         self.resumen.append(f"{len(self.datos['Docentes'])} docentes")
+        self.vincular_segunda_cuenta()
+
+    def vincular_segunda_cuenta(self):
+        """Un docente con sus dos cuentas (@uautonoma.cl y @cloud.uautonoma.cl) ya unidas."""
+        fila = self.datos["Docentes"][0]
+        correo = texto(fila["Correo institucional"]).lower()
+        usuario = get_user_model().objects.get(username=correo)
+        local, dominio = correo.split("@", 1)
+        otro = "cloud.uautonoma.cl" if dominio == "uautonoma.cl" else "uautonoma.cl"
+        try:
+            cuenta = entra.ConectorEntraSimulado().identificar(f"{local}@{otro}")
+            identidades.vincular_identidad(usuario, cuenta, IdentidadInstitucional.MANUAL_COORDINADOR)
+        except entra.EntraError:
+            return
+        self.resumen.append(f"Docente con dos cuentas vinculadas: {correo} y {cuenta.correo}")
 
     def cargar_socios(self):
         comunas = {}

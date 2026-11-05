@@ -5,7 +5,7 @@ from urllib import request
 import qrcode
 import uuid
 from django.db import transaction, IntegrityError
-from django.db.models import Max
+from django.db.models import Max, Q
 from django.contrib import messages
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
@@ -19,6 +19,7 @@ from socios.models import SocioComunitario
 from socios.services import asociar_socio_a_equipo, historial_socios_equipo
 
 from usuarios.decorators import coordinador_required, docente_required
+from usuarios.services import correo_de_sesion, correos_de_usuario, oid_de_sesion
 from core.validators import es_rut_valido, normalizar_rut
 
 from planificacion.models import PlanificacionEnlace
@@ -746,11 +747,14 @@ def acceso_registro_equipos(request, token):
                 )
 
         
-        correo_informante = (
-            request.user.correo_institucional
-            or request.user.email
-            or ""
-        ).strip().lower()
+        # La cuenta con que entró en esta sesión (puede tener dos: @uautonoma y @cloud).
+        correo_informante = correo_de_sesion(request) or ""
+
+        # Para no registrar dos equipos con cuentas distintas de la misma persona.
+        filtro_mis_equipos = Q(pk__in=[])
+        for correo_propio in correos_de_usuario(request.user) | {correo_informante}:
+            if correo_propio:
+                filtro_mis_equipos |= Q(informante_correo__iexact=correo_propio)
 
         if 1 <= cantidad_integrantes <= 6:
 
@@ -815,8 +819,8 @@ def acceso_registro_equipos(request, token):
             equipo_ya_registrado = (
                 Equipo.objects
                 .filter(
+                    filtro_mis_equipos,
                     seccion=enlace.seccion,
-                    informante_correo__iexact=correo_informante,
                 )
                 .first()
             )
@@ -863,8 +867,8 @@ def acceso_registro_equipos(request, token):
                         equipo_informante_existente = (
                             Equipo.objects
                             .filter(
+                                filtro_mis_equipos,
                                 seccion=seccion_bloqueada,
-                                informante_correo__iexact=correo_informante,
                             )
                             .first()
                         )
@@ -933,7 +937,7 @@ def acceso_registro_equipos(request, token):
                                 clave_idempotencia=clave_uuid,
                                 informante_nombre=nombre_informante,
                                 informante_correo=correo_informante,
-                                informante_entra_id=request.user.entra_oid or None,
+                                informante_entra_id=oid_de_sesion(request),
                                 estado="Registrado",
                             )
 
@@ -1011,6 +1015,7 @@ def acceso_registro_equipos(request, token):
             "enlace": enlace,
             "seccion": enlace.seccion,
             "informante": request.user,
+            "correo_informante": correo_de_sesion(request),
             "errores": errores,
             "datos_formulario": datos_formulario,
             "clave_idempotencia": clave_idempotencia,

@@ -81,10 +81,8 @@
 
                         <strong>Correo institucional:</strong>
 
-                        {% if informante.correo_institucional %}
-                            {{ informante.correo_institucional }}
-                        {% elif informante.email %}
-                            {{ informante.email }}
+                        {% if correo_informante %}
+                            {{ correo_informante }}
                         {% else %}
                             No registrado
                         {% endif %}
@@ -363,7 +361,7 @@
 <script>
 
 const correoInformante =
-    "{{ informante.correo_institucional|default:informante.email|escapejs }}";
+    "{{ correo_informante|default:''|escapejs }}";
 
 const nombresInformante =
     "{{ informante.first_name|default:''|escapejs }}";
