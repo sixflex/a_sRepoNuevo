@@ -15,11 +15,13 @@
     .cuenta-datos { flex: 1; min-width: 220px; }
     .cuenta-correo { font-weight: 600; color: #111827; word-break: break-all; }
     .cuenta-detalle { font-size: .82rem; color: #6B7280; }
+    /* Sin azul de Bootstrap: «Principal» en rojo suave */
+    .cuenta-principal { background: var(--ua-red-soft, #FDEDEE); color: var(--ua-red-hover, #A71C23); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-2" style="max-width: 860px;">
+<div class="container-fluid py-2">
 
     <div class="coord-header mb-3">
         <h1 class="coord-title mb-1">Mi cuenta</h1>
@@ -28,7 +30,9 @@
         </p>
     </div>
 
-    <section class="panel-card mb-3" aria-labelledby="titulo-cuentas">
+<div class="row g-3 align-items-start">
+    <div class="col-12{% if entra_activo %} col-xl-8{% endif %}">
+    <section class="panel-card" aria-labelledby="titulo-cuentas">
         <h2 id="titulo-cuentas" class="h6 fw-bold mb-1">Cuentas vinculadas</h2>
         <p class="small text-muted mb-2">
             Entres con la cuenta que entres, verás lo mismo: tus secciones, cartas, formularios y evidencias.
@@ -40,7 +44,7 @@
                 <div class="cuenta-datos">
                     <div class="cuenta-correo">
                         {{ identidad.correo }}
-                        {% if identidad.es_principal %}<span class="badge rounded-pill text-bg-primary ms-1">Principal</span>{% endif %}
+                        {% if identidad.es_principal %}<span class="badge rounded-pill cuenta-principal ms-1">Principal</span>{% endif %}
                         {% if identidad_actual and identidad.pk == identidad_actual.pk %}<span class="badge rounded-pill text-bg-success ms-1">En uso ahora</span>{% endif %}
                     </div>
                     <div class="cuenta-detalle">
@@ -72,8 +76,10 @@
             </p>
         {% endfor %}
     </section>
+    </div>
 
     {% if entra_activo %}
+    <div class="col-12 col-xl-4">
         <section class="panel-card" aria-labelledby="titulo-vincular">
             <h2 id="titulo-vincular" class="h6 fw-bold mb-1">¿Tienes otra cuenta institucional?</h2>
             <p class="small text-muted mb-3">
@@ -88,6 +94,8 @@
                 </button>
             </form>
         </section>
+    </div>
     {% endif %}
+    </div>
 </div>
 {% endblock %}

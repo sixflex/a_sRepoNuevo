@@ -45,6 +45,11 @@
                         </li>
                         {% if user.is_authenticated %}
                             <li class="nav-item">
+                                <a class="nav-link{% if request.resolver_match.url_name == 'cuenta' %} fw-semibold text-decoration-underline{% endif %}" href="{% url 'usuarios:cuenta' %}"{% if request.resolver_match.url_name == 'cuenta' %} aria-current="page"{% endif %}>
+                                    <i class="bi bi-person-gear me-1" aria-hidden="true"></i>Mi cuenta
+                                </a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link fw-semibold" href="{% url 'usuarios:cuenta' %}" title="Mi cuenta: tus cuentas institucionales">
                                     <i class="bi bi-person-circle me-1"></i>{{ user.username }}
                                 </a>

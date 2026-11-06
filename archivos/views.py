@@ -197,3 +197,21 @@ def descargar_recurso_publico(request, pk):
     if not recurso.archivo_id:
         raise Http404
     return _respuesta_archivo(recurso.archivo)
+
+# Gestión de Noticias Manuales (CDE-611 / CDE-612)
+from core.models import Noticia
+from .forms import NoticiaForm
+
+@coordinador_required
+def crear_noticia(request):
+    """
+    Permite a la coordinación publicar noticias manualmente por enlace (CDE-612).
+    Aplica la validación de NoticiaForm para no duplicar por URL.
+    """
+    form = NoticiaForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        noticia = form.save()
+        messages.success(request, f"La noticia «{noticia.titulo}» ha sido publicada.")
+        return redirect("core:inicio")
+
+    return render(request, "archivos/noticia_form.html", {"form": form})

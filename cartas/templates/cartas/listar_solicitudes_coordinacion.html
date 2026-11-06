@@ -3,138 +3,193 @@
 
 {% block title %}Cartas de presentación | Portal A+S{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Filtro por estado: chips con la cantidad de cada uno */
+    .filtro-estados { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .filtro-chip {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 6px 14px; border: 1px solid var(--ua-border-strong, #D1D5DB); border-radius: 999px;
+        background: var(--ua-bg-card, #fff); color: var(--ua-text-secondary, #374151);
+        font-size: .88rem; font-weight: 600; text-decoration: none;
+        transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+    }
+    .filtro-chip:hover { border-color: var(--ua-red, #C8232C); color: var(--ua-red, #C8232C); }
+    .filtro-chip.activo { background: var(--ua-red-soft, #FDEDEE); border-color: var(--ua-red, #C8232C); color: var(--ua-red-hover, #A71C23); }
+    .filtro-chip:focus-visible { outline: 3px solid rgba(var(--ua-red-rgb, 200, 35, 44), .35); outline-offset: 2px; }
+    .filtro-chip-n { min-width: 22px; padding: 1px 7px; border-radius: 999px; background: var(--ua-bg-subtle, #F3F4F6); color: var(--ua-text-secondary, #374151); font-size: .75rem; text-align: center; }
+    .filtro-chip.activo .filtro-chip-n { background: #fff; color: var(--ua-red-hover, #A71C23); }
+
+    /* Encabezado «Fecha» que ordena al hacer clic */
+    .th-orden { display: inline-flex; align-items: center; gap: 6px; color: inherit; text-decoration: none; }
+    .th-orden:hover { color: var(--ua-red, #C8232C); }
+    .th-orden:focus-visible { outline: 3px solid rgba(var(--ua-red-rgb, 200, 35, 44), .35); outline-offset: 2px; border-radius: 4px; }
+</style>
+{% endblock %}
+
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
-    <div>
-        <h2>Solicitudes de Cartas de Presentación</h2>
-        <p class="text-muted mb-0">
-            Revisa las solicitudes realizadas para las secciones A+S.
-        </p>
-    </div>
-    {% if prioridad_pendientes %}
-    <div class="d-flex align-items-center gap-2">
-        <span class="text-muted small">
-            Más antiguas primero
-        </span>
-    </div>
-    {% elif solicitudes %}
-        {% include "includes/orden_listado.html" with opciones=opciones_orden %}
-    {% endif %}
+<div class="mb-3">
+    <h1 class="h2">Solicitudes de Cartas de Presentación</h1>
+    <p class="text-muted mb-0">
+        Revisa las solicitudes realizadas para las secciones A+S.
+    </p>
 </div>
 
-    <div class="card shadow-sm">
+{# Filtro por estado. Conserva el orden elegido; «Pendientes» queda activo también al llegar desde el aviso del Inicio. #}
+<nav class="filtro-estados" aria-label="Filtrar por estado">
+    <a href="?{% if orden == 'antiguos' %}orden=antiguos{% endif %}"
+       class="filtro-chip{% if not estado and not prioridad_pendientes %} activo{% endif %}"
+       {% if not estado and not prioridad_pendientes %}aria-current="true"{% endif %}>
+        Todas <span class="filtro-chip-n">{{ total }}</span>
+    </a>
+    {% for valor, etiqueta, cantidad in estados_filtro %}
+        <a href="?estado={{ valor }}{% if orden == 'antiguos' %}&orden=antiguos{% endif %}"
+           class="filtro-chip{% if estado == valor or prioridad_pendientes and valor == 'PENDIENTE' %} activo{% endif %}"
+           {% if estado == valor or prioridad_pendientes and valor == 'PENDIENTE' %}aria-current="true"{% endif %}>
+            {{ etiqueta }} <span class="filtro-chip-n">{{ cantidad }}</span>
+        </a>
+    {% endfor %}
+</nav>
 
-        <div class="card-body">
+<div class="card shadow-sm">
 
-            {% if solicitudes %}
+    <div class="card-body">
 
-                <div class="table-responsive">
+        {% if solicitudes %}
 
-                    <table class="table align-middle">
+            <div class="table-responsive">
 
-                        <thead>
+                <table class="table align-middle">
+
+                    <thead>
+                        <tr>
+                            {% if prioridad_pendientes %}
+                                <th aria-sort="ascending">Fecha <i class="bi bi-arrow-up" aria-hidden="true"></i></th>
+                            {% else %}
+                                <th aria-sort="{% if orden == 'antiguos' %}ascending{% else %}descending{% endif %}">
+                                    <a class="th-orden"
+                                       href="?{% if estado %}estado={{ estado }}&{% endif %}orden={% if orden == 'antiguos' %}recientes{% else %}antiguos{% endif %}"
+                                       title="Ordenar por fecha: {% if orden == 'antiguos' %}más recientes primero{% else %}más antiguas primero{% endif %}">
+                                        Fecha <i class="bi bi-arrow-{% if orden == 'antiguos' %}up{% else %}down{% endif %}" aria-hidden="true"></i>
+                                    </a>
+                                </th>
+                            {% endif %}
+                            <th>Asignatura</th>
+                            <th>Solicitante</th>
+                            <th>Institución</th>
+                            <th>Estado</th>
+                            <th><span class="visually-hidden">Acciones</span></th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for solicitud in solicitudes %}
+
                             <tr>
-                                <th>Fecha</th>
-                                <th>Asignatura</th>
-                                <th>Solicitante</th>
-                                <th>Institución</th>
-                                <th>Estado</th>
-                                <th></th>
-                            </tr>
-                        </thead>
 
-                        <tbody>
+                                <td>
+                                    {{ solicitud.fecha_solicitud|date:"d/m/Y H:i" }}
+                                </td>
 
-                            {% for solicitud in solicitudes %}
+                                <td>
+                                    {{ solicitud.seccion.asignatura.nombre }}
+                                    <div class="small text-muted">
+                                        NRC {{ solicitud.seccion.nrc }}
+                                    </div>
+                                </td>
 
-                                <tr>
+                                <td>
+                                    {{ solicitud.solicitante_nombre }}
+                                </td>
 
-                                    <td>
-                                        {{ solicitud.fecha_solicitud|date:"d/m/Y H:i" }}
-                                    </td>
+                                <td>
+                                    {{ solicitud.institucion_receptora }}
+                                </td>
 
-                                    <td>
-                                        {{ solicitud.seccion.asignatura.nombre }}
-                                        <div class="small text-muted">
-                                            NRC {{ solicitud.seccion.nrc }}
-                                        </div>
-                                    </td>
+                                <td>
 
-                                    <td>
-                                        {{ solicitud.solicitante_nombre }}
-                                    </td>
+                                    {% if solicitud.estado == "PENDIENTE" %}
 
-                                    <td>
-                                        {{ solicitud.institucion_receptora }}
-                                    </td>
+                                        <span class="badge bg-warning text-dark">
+                                            Pendiente
+                                        </span>
 
-                                    <td>
+                                    {% elif solicitud.estado == "APROBADA" %}
 
-                                        {% if solicitud.estado == "PENDIENTE" %}
+                                        <span class="badge bg-success">
+                                            Aprobada
+                                        </span>
 
-                                            <span class="badge bg-warning text-dark">
-                                                Pendiente
-                                            </span>
+                                    {% elif solicitud.estado == "OBSERVADA" %}
 
-                                        {% elif solicitud.estado == "APROBADA" %}
+                                        <span class="badge bg-danger">
+                                            Observada
+                                        </span>
 
-                                            <span class="badge bg-success">
-                                                Aprobada
-                                            </span>
+                                    {% elif solicitud.estado == "BORRADOR" %}
 
-                                        {% elif solicitud.estado == "OBSERVADA" %}
+                                        <span class="badge bg-secondary">
+                                            Borrador
+                                        </span>
 
-                                            <span class="badge bg-danger">
-                                                Observada
-                                            </span>
+                                    {% else %}
 
-                                        {% elif solicitud.estado == "BORRADOR" %}
+                                        <span class="badge bg-secondary">
+                                            {{ solicitud.estado|estado_legible }}
+                                        </span>
 
-                                            <span class="badge bg-secondary">
-                                                Borrador
-                                            </span>
+                                    {% endif %}
 
-                                        {% else %}
+                                </td>
 
-                                            <span class="badge bg-secondary">
-                                                {{ solicitud.estado|estado_legible }}
-                                            </span>
+                                <td class="text-end">
 
-                                        {% endif %}
-
-                                    </td>
-
-                                    <td class="text-end">
-
+                                    {# Se puede aprobar o corregir una solicitud pendiente o en borrador: ahí es «Revisar»; en las demás, solo «Ver». #}
+                                    {% if solicitud.estado == "PENDIENTE" or solicitud.estado == "BORRADOR" %}
                                         <a
                                             href="{% url 'cartas:detalle_solicitud_coordinacion' solicitud.id %}"
                                             class="btn btn-sm btn-outline-primary"
+                                            aria-label="Revisar la solicitud de {{ solicitud.solicitante_nombre }}"
                                         >
                                             Revisar
                                         </a>
+                                    {% else %}
+                                        <a
+                                            href="{% url 'cartas:detalle_solicitud_coordinacion' solicitud.id %}"
+                                            class="btn btn-sm btn-outline-secondary"
+                                            aria-label="Ver la solicitud de {{ solicitud.solicitante_nombre }}"
+                                        >
+                                            Ver
+                                        </a>
+                                    {% endif %}
 
-                                    </td>
+                                </td>
 
-                                </tr>
+                            </tr>
 
-                            {% endfor %}
+                        {% endfor %}
 
-                        </tbody>
+                    </tbody>
 
-                    </table>
+                </table>
 
-                </div>
+            </div>
 
-            {% else %}
+        {% else %}
 
-                <div class="alert alert-info mb-0">
-                    No existen solicitudes de cartas.
-                </div>
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-inbox fs-2 d-block mb-2" aria-hidden="true"></i>
+                {% if estado or prioridad_pendientes %}
+                    <p class="fw-semibold mb-1">No hay solicitudes con ese estado.</p>
+                    <a href="?" class="small">Ver todas las solicitudes</a>
+                {% else %}
+                    <p class="mb-0">No existen solicitudes de cartas.</p>
+                {% endif %}
+            </div>
 
-            {% endif %}
-
-        </div>
+        {% endif %}
 
     </div>
 

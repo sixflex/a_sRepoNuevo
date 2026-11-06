@@ -8,6 +8,13 @@ from academico.models import Docente, Seccion
 from core.ordenamiento import OPCIONES_ORDEN, orden_pedido, ordenar_por_fecha
 from usuarios.permissions import es_coordinador, es_docente
 from usuarios.services import correo_de_sesion, oid_de_sesion
+from django.db.models import Count
+
+ESTADOS_FILTRO = [
+    ("PENDIENTE", "Pendientes"),
+    ("OBSERVADA", "Observadas"),
+    ("APROBADA", "Aprobadas"),
+]
 
 from .models import (
     CartaEstudiante,
@@ -252,19 +259,30 @@ def listar_solicitudes_coordinacion(request):
             "socio",
         )
     )
+
+    # Cantidad por estado, para los chips (sobre todas las solicitudes).
+    conteos = {
+        fila["estado"]: fila["n"]
+        for fila in SolicitudCarta.objects.values("estado").annotate(n=Count("id"))
+    }
+
     prioridad_pendientes = request.GET.get("prioridad") == "pendientes"
+    estado = request.GET.get("estado", "")
+    if estado not in dict(ESTADOS_FILTRO):
+        estado = ""
 
     if prioridad_pendientes:
-        solicitudes = solicitudes.order_by(
+        # Llegada desde el aviso del Inicio: solo pendientes, las más antiguas primero.
+        estado = ""
+        solicitudes = solicitudes.filter(estado="PENDIENTE").order_by(
             "fecha_solicitud", "id"
-        ).filter(estado="PENDIENTE")
-    else:
-        orden = orden_pedido(request)
-        solicitudes = ordenar_por_fecha(
-            solicitudes, "fecha_solicitud", orden
         )
-    if prioridad_pendientes:
         orden = "asc"
+    else:
+        if estado:
+            solicitudes = solicitudes.filter(estado=estado)
+        orden = orden_pedido(request)
+        solicitudes = ordenar_por_fecha(solicitudes, "fecha_solicitud", orden)
 
     return render(
         request,
@@ -274,9 +292,14 @@ def listar_solicitudes_coordinacion(request):
             "orden": orden,
             "opciones_orden": OPCIONES_ORDEN,
             "prioridad_pendientes": prioridad_pendientes,
+            "estado": estado,
+            "estados_filtro": [
+                (valor, etiqueta, conteos.get(valor, 0))
+                for valor, etiqueta in ESTADOS_FILTRO
+            ],
+            "total": sum(conteos.values()),
         },
     )
-
 
 @login_required
 def detalle_solicitud_coordinacion(request, solicitud_id):
