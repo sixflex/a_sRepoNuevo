@@ -594,12 +594,21 @@ def reintentar_envio_carta(request, documento_id):
     )
 
 
+
 @login_required
 def descargar_carta_pdf(request, documento_id):
     documento = get_object_or_404(
         CartaDocumento.objects.select_related("archivo", "solicitud"),
         id=documento_id,
     )
+    if (
+        not es_coordinador(request.user)
+        and (
+            documento.solicitud.estado != "APROBADA"
+            or documento.tipo != "PDF"
+        )
+    ):
+        raise PermissionDenied
 
     docente = getattr(request.user, "perfil_docente", None)
     es_su_docente = (
@@ -619,9 +628,9 @@ def descargar_carta_pdf(request, documento_id):
     return FileResponse(
         contenido,
         content_type="application/pdf",
+        as_attachment=request.GET.get("descargar") == "1",
         filename=documento.archivo.nombre_original,
     )
-
 
 def solicitar_carta_estudiante(request, token):
     """SP6-T08: el estudiante informante pide la carta desde un enlace.
@@ -758,5 +767,59 @@ def solicitar_carta_estudiante(request, token):
             "enlace": enlace,
             "seccion": seccion,
             "solicitudes": solicitudes,
+        },
+    )
+@login_required
+def listar_cartas_seccion_docente(request, seccion_id):
+    if not es_docente(request.user):
+        raise PermissionDenied
+
+    docente = getattr(request.user, "perfil_docente", None)
+
+    if docente is None:
+        raise PermissionDenied
+
+    seccion = get_object_or_404(
+        Seccion.objects.select_related("asignatura"),
+        id=seccion_id,
+    )
+
+    if not seccion.docentes.filter(id=docente.id).exists():
+        raise PermissionDenied
+
+    solicitudes = (
+        SolicitudCarta.objects
+        .filter(
+            seccion=seccion,
+            docente_derivador=docente,
+        )
+        .select_related("equipo")
+        .prefetch_related("estudiantes", "documentos")
+        .order_by("-fecha_solicitud")
+    )
+
+    cartas = []
+
+    for solicitud in solicitudes:
+        documento = (
+            solicitud.documentos.filter(tipo="PDF")
+            .order_by("-numero_version")
+            .first()
+            if solicitud.estado == "APROBADA"
+            else None
+        )
+
+        cartas.append({
+            "solicitud": solicitud,
+            "documento": documento,
+            "cantidad_estudiantes": solicitud.estudiantes.count(),
+        })
+
+    return render(
+        request,
+        "cartas/listar_cartas_seccion_docente.html",
+        {
+            "seccion": seccion,
+            "cartas": cartas,
         },
     )

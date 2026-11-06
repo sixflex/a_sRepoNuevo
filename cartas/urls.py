@@ -59,4 +59,9 @@ urlpatterns = [
         views.descargar_carta_pdf,
         name="descargar_carta_pdf",
     ),
+    path(
+    "docente/seccion/<int:seccion_id>/cartas/",
+    views.listar_cartas_seccion_docente,
+    name="listar_cartas_seccion_docente",
+    ),
 ]
