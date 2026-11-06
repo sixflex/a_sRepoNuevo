@@ -17,6 +17,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-4">
+                    <i class="bi bi-journal-text docente-kpi-icon" aria-hidden="true"></i>
                     <h3 class="fw-bold">{{ total_secciones }}</h3>
                     <span class="text-muted">Mis secciones</span>
                 </div>
@@ -26,6 +27,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-4">
+                    <i class="bi bi-check2-circle docente-kpi-icon" aria-hidden="true"></i>
                     <h3 class="fw-bold">{{ rutas_completadas }}</h3>
                     <span class="text-muted">Rutas completadas</span>
                 </div>
@@ -35,6 +37,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-4">
+                    <i class="bi bi-exclamation-circle docente-kpi-icon" aria-hidden="true"></i>
                     <h3 class="fw-bold">{{ total_pendientes }}</h3>
                     <span class="text-muted">Actividades pendientes</span>
                 </div>
@@ -44,6 +47,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-4">
+                    <i class="bi bi-graph-up-arrow docente-kpi-icon" aria-hidden="true"></i>
                     <h3 class="fw-bold">{{ avance_general }}%</h3>
                     <span class="text-muted">Avance general</span>
                 </div>
@@ -57,6 +61,18 @@
 
             {% for ruta in rutas %}
                 <div class="border rounded-3 p-3 mb-3">
+                    {% if ruta.estado == "COMPLETADA" %}
+                        <span class="badge docente-estado docente-estado-completada">
+                            <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
+                            Ruta completada
+                        </span>
+                    {% else %}
+                        <span class="badge docente-estado docente-estado-progreso">
+                            <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>
+                            En progreso
+                        </span>
+                    {% endif %}
+
                     <h6 class="fw-bold">
                         {{ ruta.seccion.asignatura.nombre }}
                     </h6>
@@ -118,4 +134,134 @@
         </div>
     </div>
 </div>
+<style>
+    .container-fluid.py-2 > .row.g-3.mb-4 > .col-md-3 .card {
+        height: 100%;
+        overflow: hidden;
+        border-radius: 1rem;
+        border-top: 4px solid #a90000 !important;
+        transition: transform 160ms ease, box-shadow 160ms ease;
+    }
+
+    .container-fluid.py-2 > .row.g-3.mb-4 > .col-md-3 .card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 0.75rem 1.5rem rgba(33, 37, 41, 0.12) !important;
+    }
+
+    .container-fluid.py-2 > .row.g-3.mb-4 > .col-md-3 .card-body {
+        min-height: 150px;
+    }
+
+    .docente-kpi-icon {
+        display: inline-flex;
+        width: 42px;
+        height: 42px;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.75rem;
+        border-radius: 12px;
+        background: #f8e5e5;
+        color: #a90000;
+        font-size: 1.25rem;
+    }
+
+    .container-fluid.py-2 > .row.g-3.mb-4 > .col-md-3 h3 {
+        margin-bottom: 0.2rem;
+        color: #242424;
+        font-size: clamp(1.6rem, 2.5vw, 2rem);
+    }
+
+    .container-fluid.py-2 > .card.border-0.shadow-sm {
+        border-radius: 1rem;
+    }
+
+    .container-fluid.py-2 > .card.border-0.shadow-sm
+    > .card-body > .border.rounded-3.p-3.mb-3 {
+        position: relative;
+        padding: 1.25rem !important;
+        border-color: #e5e7eb !important;
+        border-radius: 0.9rem !important;
+        background: #fff;
+        transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .container-fluid.py-2 > .card.border-0.shadow-sm
+    > .card-body > .border.rounded-3.p-3.mb-3:hover {
+        border-color: #d7a3a3 !important;
+        box-shadow: 0 0.4rem 1rem rgba(33, 37, 41, 0.07);
+    }
+
+    .docente-estado {
+        margin-bottom: 0.65rem;
+        padding: 0.4rem 0.65rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .docente-estado-completada {
+        background: #e8f5ec;
+        color: #216e39;
+    }
+
+    .docente-estado-progreso {
+        background: #fff4df;
+        color: #805b00;
+    }
+
+    .container-fluid.py-2 .progress {
+        overflow: hidden;
+        height: 12px !important;
+        border-radius: 999px;
+        background: #f0e8e8;
+    }
+
+    .container-fluid.py-2 .progress-bar {
+        border-radius: 999px;
+        background: linear-gradient(90deg, #a90000, #d34a4a) !important;
+    }
+
+    .container-fluid.py-2 ul.small li {
+        margin-bottom: 0.35rem;
+        padding-left: 0.15rem;
+        line-height: 1.5;
+    }
+
+    .container-fluid.py-2 ul.small li:first-child {
+        color: #7d1717;
+        font-weight: 600;
+    }
+
+    .container-fluid.py-2 .btn-rojo.btn-sm {
+        min-height: 38px;
+        padding: 0.5rem 1rem;
+        border-radius: 0.6rem;
+        font-weight: 600;
+    }
+
+    @media (max-width: 767.98px) {
+        .container-fluid.py-2 > .row.g-3.mb-4 > .col-md-3 {
+            flex: 0 0 50%;
+            max-width: 50%;
+        }
+
+        .container-fluid.py-2 > .card.border-0.shadow-sm > .card-body {
+            padding: 1rem !important;
+        }
+    }
+
+    @media (max-width: 380px) {
+        .container-fluid.py-2 > .row.g-3.mb-4 > .col-md-3 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .container-fluid.py-2 > .row.g-3.mb-4 > .col-md-3 .card,
+        .container-fluid.py-2 > .card.border-0.shadow-sm
+        > .card-body > .border.rounded-3.p-3.mb-3 {
+            transition: none;
+        }
+    }
+</style>
 {% endblock %}
