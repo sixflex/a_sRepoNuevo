@@ -190,7 +190,7 @@ def detalle_ruta_docente(request, seccion_ruta_id):
 
         if (
             seccion_ruta.ruta_version.numero_version == 2
-            and actividad.ruta_actividad.orden in (5, 13)
+            and actividad.ruta_actividad.orden in (5, 11, 13)
             and actividad.ruta_actividad.formulario_version_id
         ):
             from rutas.services import obtener_o_crear_enlace_seccion
@@ -211,7 +211,7 @@ def detalle_ruta_docente(request, seccion_ruta_id):
                     )
                 )
 
-                if actividad.ruta_actividad.orden == 5:
+                if actividad.ruta_actividad.orden in (5, 11):
                     actividad.formulario_directo = url_formulario
 
                 elif actividad.ruta_actividad.orden == 13:
