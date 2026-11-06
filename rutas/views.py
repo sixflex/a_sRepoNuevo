@@ -149,35 +149,25 @@ def detalle_ruta_docente(request, seccion_ruta_id):
         for actividad in actividades
         if actividad.ruta_actividad.formulario_version_id
     })
-    
-    plantillas_encuestas = FormularioPlantilla.objects.filter(
-        versiones__id__in=[3, 4, 5],
-        versiones__estado="PUBLICADA",
-        activo=True,
-    ).distinct().order_by("titulo")
-
-    enlaces_encuestas = enlaces_abiertos_por_plantilla(
-        list(plantillas_encuestas.values_list("id", flat=True))
+    plantillas_resumen = list(
+        FormularioPlantilla.objects.filter(
+            titulo__icontains="Resumen de Implementación A+S por docente",
+            versiones__estado="PUBLICADA",
+            activo=True,
+        ).distinct()
     )
 
-    encuestas_as = [
-        {
-            "titulo": plantilla.titulo,
-            "token": enlaces_encuestas[plantilla.id].token,
-        }
-        for plantilla in plantillas_encuestas
-        if plantilla.id in enlaces_encuestas
-    ]
+    enlace_resumen = None
 
-
+    if len(plantillas_resumen) == 1:
+        enlaces_resumen = enlaces_abiertos_por_plantilla(
+            [plantillas_resumen[0].id]
+        )
+        enlace_resumen = enlaces_resumen.get(
+            plantillas_resumen[0].id
+        )
     for actividad in actividades:
         actividad.url_recurso = url_recurso(actividad)
-        actividad.encuestas_as = (
-            encuestas_as
-            if seccion_ruta.ruta_version.numero_version == 2
-            and actividad.ruta_actividad.orden == 19
-            else []
-        )
         actividad.enlace_formulario = (
             enlaces_por_plantilla.get(
                 actividad.ruta_actividad.formulario_version.plantilla_id
@@ -185,12 +175,16 @@ def detalle_ruta_docente(request, seccion_ruta_id):
             if actividad.ruta_actividad.formulario_version_id
             else None
         )
+        # Actividad 23: mostrar el Formulario Resumen.
+        if actividad.ruta_actividad.orden == 23:
+            actividad.enlace_formulario = (
+                actividad.enlace_formulario or enlace_resumen
+    )
         actividad.formulario_compartible = None
         actividad.formulario_directo = None
 
         if (
-            seccion_ruta.ruta_version.numero_version == 2
-            and actividad.ruta_actividad.orden in (5, 11, 13)
+            actividad.ruta_actividad.orden in (5, 11, 13)
             and actividad.ruta_actividad.formulario_version_id
         ):
             from rutas.services import obtener_o_crear_enlace_seccion

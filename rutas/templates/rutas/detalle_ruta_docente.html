@@ -247,8 +247,7 @@
                                                     </div>
                                                 {% endif %}
 
-                                                {% if actividad.ruta_actividad.orden == 10 and actividad.ruta_actividad.nombre == "Solicitar Carta Formal de Presentación" %}
-
+                                                {% if actividad.ruta_actividad.orden == 10 %}
                                                 <a href="{% url 'cartas:listar_cartas_seccion_docente' seccion.id %}"
                                                 class="btn btn-outline-primary btn-sm">
                                                     <i class="bi bi-folder2-open me-1"></i>
@@ -276,29 +275,6 @@
                                                 {% endif %}
                                         {% endif %}
                                         </div>
-                                        {% if actividad.encuestas_as %}
-                                            <div class="mt-3">
-                                                <h6 class="fw-semibold mb-2">
-                                                    <i class="bi bi-ui-checks me-1"></i>
-                                                    Encuestas de evaluación A+S
-                                                </h6>
-
-                                                <div class="d-flex flex-wrap gap-2">
-                                                    {% for encuesta in actividad.encuestas_as %}
-                                                        <a
-                                                            href="{% url 'encuestas:responder' encuesta.token %}"
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            class="btn btn-outline-primary btn-sm"
-                                                        >
-                                                            <i class="bi bi-box-arrow-up-right me-1"></i>
-                                                            {{ encuesta.titulo }}
-                                                        </a>
-                                                    {% endfor %}
-                                                </div>
-                                            </div>
-                                        {% endif %}
-
 
                                         {% if actividad.es_cierre %}
                                             {% include "rutas/includes/cierre_docente.html" %}
