@@ -327,7 +327,7 @@ class RutaDocenteTestCase(TestCase):
         Verifica que no hay órdenes fijados en código (11, 16, 20, 21): según
         RF-EVI-02, el Docente puede subir evidencias en cualquier actividad de
         la Ruta, sea la orden 5 o la 11.
-        """
+      """
         seccion = self.crear_seccion("RUTA_EVI_1")
         seccion_ruta = asignar_ruta_as_si_corresponde(seccion)
 
@@ -793,7 +793,7 @@ class CargarRutaDocenteTestCase(TestCase):
         self.assertIn("proceso=EVALUACION_AS", actividades[19].recurso_url)
 
 
-class CierreYExpedienteTestCase(TestCase):
+class CierreYExpedienteOriginalTestCase(TestCase):
     """CDE-518 (cierre e invitación), CDE-515 (pendientes) y CDE-522 (ZIP)."""
 
     def setUp(self):
@@ -802,9 +802,19 @@ class CierreYExpedienteTestCase(TestCase):
         from socios.models import ContactoSocio, ParticipacionSocio, SocioComunitario
 
         ruta_cierre = self.actividad_obligatoria.ruta_actividad
+        version = ruta_cierre.ruta_version
+
+        version.estado = "BORRADOR"
+        version.save(update_fields=["estado"])
+
         ruta_cierre.nombre = "Organizar el evento de cierre"
-        ruta_cierre.config_recordatorio_json = {"recordatorio": "invitacion_cierre"}
+        ruta_cierre.config_recordatorio_json = {
+            "recordatorio": "invitacion_cierre"
+        }
         ruta_cierre.save()
+
+        version.estado = "ACTIVA"
+        version.save(update_fields=["estado"])
         self.actividad_cierre = self.actividad_obligatoria
 
         self.socio = SocioComunitario.objects.create(
@@ -844,6 +854,27 @@ class CierreYExpedienteTestCase(TestCase):
         self.assertEqual(self.actividad_cierre.estado, "COMPLETADA")
         self.assertEqual(self.actividad_cierre.observacion, "No habrá actividad de cierre.")
         self.assertEqual(self.ruta.porcentaje_final, 100)
+    def test_desmarcar_sin_cierre_limpia_observacion(self):
+        self.client.force_login(self.usuario_docente)
+
+        self.client.post(
+            reverse("rutas:indicar_sin_cierre", args=[self.actividad_cierre.id])
+        )
+
+        self.actividad_cierre.refresh_from_db()
+        self.assertEqual(
+            self.actividad_cierre.observacion,
+            "No habrá actividad de cierre."
+        )
+
+        self.client.post(
+            reverse("rutas:completar_actividad", args=[self.actividad_cierre.id])
+        )
+
+        self.actividad_cierre.refresh_from_db()
+        self.assertEqual(self.actividad_cierre.estado, "PENDIENTE")
+        self.assertIsNone(self.actividad_cierre.completada_por_docente)
+        self.assertEqual(self.actividad_cierre.observacion, "")
 
     def test_sin_cierre_solo_en_la_actividad_de_cierre(self):
         self.client.force_login(self.usuario_docente)
@@ -964,8 +995,16 @@ class CierreYExpedienteTestCase(TestCase):
 
     def test_recurso_url_reemplaza_seccion_y_actividad(self):
         ruta_actividad = self.actividad_obligatoria.ruta_actividad
+        version = ruta_actividad.ruta_version
+
+        version.estado = "BORRADOR"
+        version.save(update_fields=["estado"])
+
         ruta_actividad.recurso_url = "/a/{seccion}/b/{actividad}/"
         ruta_actividad.save()
+
+        version.estado = "ACTIVA"
+        version.save(update_fields=["estado"])
 
         self.assertEqual(
             url_recurso(self.actividad_obligatoria),

@@ -296,6 +296,9 @@ def completar_actividad(request, actividad_id):
         actividad.estado = "PENDIENTE"
         actividad.fecha_completada = None
 
+        if actividad.observacion == servicios.OBSERVACION_SIN_CIERRE:
+            actividad.observacion = ""
+
     actividad.save(
         update_fields=[
             "completada_por_docente",
