@@ -1,0 +1,146 @@
+{% comment %}
+Una actividad de la Ruta paso a paso: qué hacer en una línea, un botón
+principal y "¿Cómo se hace?" con el detalle, los recursos y la evidencia.
+Los datos los arma rutas/paso_a_paso.py.
+{% endcomment %}
+{% with ra=actividad.ruta_actividad hecha=actividad.completada_por_docente_id %}
+<div class="ruta-act{% if hecha %} ok{% endif %}" id="actividad-{{ actividad.id }}">
+    <div class="ruta-num" aria-hidden="true">{% if hecha %}<i class="bi bi-check-lg"></i>{% else %}{{ ra.orden }}{% endif %}</div>
+
+    <div class="ruta-act-cuerpo">
+        <div class="ruta-act-nombre">
+            {% if hecha %}{{ ra.orden }} · {% endif %}{{ ra.nombre }}
+            {% if not ra.es_obligatoria %}<span class="ruta-opcional">Opcional</span>{% endif %}
+        </div>
+        <div class="ruta-que">{{ actividad.que_hacer|default:ra.descripcion }}</div>
+
+        {% if actividad.nota_precarga and actividad.accion and not hecha %}
+            <div class="ruta-nota"><i class="bi bi-magic me-1" aria-hidden="true"></i>{{ actividad.nota_precarga }}</div>
+        {% endif %}
+
+        <div class="ruta-links">
+            <button type="button" class="ruta-ayuda" data-bs-toggle="collapse" data-bs-target="#como-{{ actividad.id }}"
+                    aria-expanded="false" aria-controls="como-{{ actividad.id }}">
+                {% if actividad.dinamicas %}
+                    <i class="bi bi-lightbulb me-1" aria-hidden="true"></i>Ver dinámicas sugeridas
+                {% else %}
+                    <i class="bi bi-question-circle me-1" aria-hidden="true"></i>¿Cómo se hace?
+                {% endif %}
+            </button>
+            {% with n=actividad.evidencias.all|length %}{% if n %}
+                <span class="ruta-archivos"><i class="bi bi-paperclip" aria-hidden="true"></i>{{ n }} archivo{{ n|pluralize }}</span>
+            {% endif %}{% endwith %}
+        </div>
+
+        {% if actividad.qr %}
+            <div class="collapse" id="qr-{{ actividad.id }}">
+                <div class="ruta-detalle d-flex flex-wrap align-items-center gap-3">
+                    <img src="data:image/png;base64,{{ actividad.qr.qr_base64 }}" alt="Código QR del formulario" width="150" height="150" class="border rounded bg-white p-2">
+                    <div class="flex-grow-1">
+                        <p class="small text-muted mb-2">Proyecta este QR o comparte el enlace con un estudiante por grupo.</p>
+                        <input type="text" class="form-control form-control-sm mb-2" value="{{ actividad.qr.url }}" readonly onclick="this.select()" aria-label="Enlace del formulario">
+                        <a href="{{ actividad.qr.url }}" target="_blank" rel="noopener" class="btn btn-light-ua btn-sm"><i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Abrir formulario</a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="collapse" id="como-{{ actividad.id }}">
+            <div class="ruta-detalle">
+                {% if ra.descripcion %}<p class="mb-2">{{ ra.descripcion }}</p>{% endif %}
+
+                {% if actividad.dinamicas %}
+                    <p class="fw-semibold small mb-1">Dinámicas sugeridas para este momento</p>
+                    <ul class="small mb-2">{% for dinamica in actividad.dinamicas %}<li>{{ dinamica }}</li>{% endfor %}</ul>
+                    <p class="small text-muted mb-2">También puedes hacer otra; al registrarla eliges «Otra dinámica».</p>
+                {% endif %}
+
+                {% if ra.archivo_recurso or actividad.recurso_extra %}
+                    <div class="d-flex flex-wrap gap-2 mb-2">
+                        {% if ra.archivo_recurso %}
+                            <a href="{% url 'archivos:descargar' ra.archivo_recurso.id %}" class="btn btn-light-ua btn-sm"><i class="bi bi-download me-1" aria-hidden="true"></i>{% if actividad.dinamicas %}Guía de dinámicas (PDF){% else %}Descargar formato{% endif %}</a>
+                        {% endif %}
+                        {% if actividad.recurso_extra %}
+                            <a href="{{ actividad.recurso_extra }}" target="_blank" rel="noopener" class="btn btn-light-ua btn-sm"><i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Más ideas</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                {% if ruta_abierta and not hecha %}
+                    <form method="post" enctype="multipart/form-data" action="{% url 'rutas:subir_evidencia' actividad.id %}" class="ruta-subir">
+                        {% csrf_token %}
+                        <label class="form-label small fw-semibold mb-1" for="archivo-{{ actividad.id }}">
+                            {{ actividad.evidencia_pedida|default:"¿Tienes un respaldo? Súbelo aquí (opcional)." }}
+                        </label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <input type="file" name="archivo" id="archivo-{{ actividad.id }}" class="form-control form-control-sm ruta-archivo"
+                                   accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" required>
+                            <input type="text" name="descripcion" class="form-control form-control-sm ruta-desc" placeholder="{{ actividad.ejemplo_evidencia }}" aria-label="Descripción del archivo">
+                            <button type="submit" class="btn btn-ua btn-sm"><i class="bi bi-upload me-1" aria-hidden="true"></i>Subir</button>
+                        </div>
+                        <div class="form-text">PDF, Word, Excel, JPG o PNG.</div>
+                    </form>
+                {% endif %}
+
+                {% if actividad.evidencias.all %}
+                    <ul class="ruta-evidencias">
+                        {% for evidencia in actividad.evidencias.all %}
+                            <li>
+                                <i class="bi bi-file-earmark" aria-hidden="true"></i>
+                                <a href="{% url 'archivos:descargar' evidencia.archivo.id %}">{{ evidencia.archivo.nombre_original }}</a>
+                                {% if evidencia.descripcion %}<span class="text-muted">· {{ evidencia.descripcion }}</span>{% endif %}
+                                {% if ruta_abierta and not hecha %}
+                                    <form method="post" action="{% url 'rutas:eliminar_evidencia' evidencia.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-link btn-sm text-danger p-0 ms-1" aria-label="Quitar {{ evidencia.archivo.nombre_original }}"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+                                    </form>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if actividad.es_cierre %}
+            {% include "rutas/includes/cierre_docente.html" %}
+        {% endif %}
+    </div>
+
+    <div class="ruta-acc">
+        {% if hecha %}
+            <span class="ruta-pill ok"><i class="bi bi-check-lg" aria-hidden="true"></i>Hecha</span>
+            {% if ruta_abierta %}
+                <form method="post" action="{% url 'rutas:completar_actividad' actividad.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="ruta-marcar">Deshacer</button>
+                </form>
+            {% endif %}
+        {% elif ruta_abierta %}
+            {% if actividad.accion %}
+                {% if actividad.accion.url %}
+                    <a href="{{ actividad.accion.url }}" class="btn btn-ua btn-sm"{% if actividad.accion.nueva_pestana %} target="_blank" rel="noopener"{% endif %}>
+                        <i class="bi {{ actividad.accion.icono }} me-1" aria-hidden="true"></i>{{ actividad.accion.texto }}
+                    </a>
+                {% else %}
+                    <button type="button" class="btn btn-ua btn-sm" data-bs-toggle="collapse" data-bs-target="#{{ actividad.accion.colapsa }}" aria-controls="{{ actividad.accion.colapsa }}">
+                        <i class="bi {{ actividad.accion.icono }} me-1" aria-hidden="true"></i>{{ actividad.accion.texto }}
+                    </button>
+                {% endif %}
+                {% if actividad.progreso %}<div class="ruta-progreso">{{ actividad.progreso }}</div>{% endif %}
+                <form method="post" action="{% url 'rutas:completar_actividad' actividad.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="ruta-marcar"><i class="bi bi-check2 me-1" aria-hidden="true"></i>Marcar como hecha</button>
+                </form>
+            {% else %}
+                <form method="post" action="{% url 'rutas:completar_actividad' actividad.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-light-ua btn-sm"><i class="bi bi-check2 me-1" aria-hidden="true"></i>Marcar como hecha</button>
+                </form>
+            {% endif %}
+        {% else %}
+            <span class="ruta-pill pend">Pendiente</span>
+        {% endif %}
+    </div>
+</div>
+{% endwith %}

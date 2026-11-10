@@ -980,7 +980,7 @@ class CierreYExpedienteOriginalTestCase(TestCase):
         )
 
         contenido = zipfile.ZipFile(io.BytesIO(b"".join(respuesta.streaming_content)))
-        self.assertEqual(contenido.namelist(), ["01 - Organizar el evento de cierre/acuerdo.pdf"])
+        self.assertEqual(contenido.namelist(), ["Ficha del proyecto.pdf", "1 - Etapa de prueba/01 - Organizar el evento de cierre/acuerdo.pdf"])
 
     @patch("archivos.services.obtener_storage_privado", return_value=InMemoryStorage())
     def test_cualquier_actividad_acepta_evidencia(self, _storage):
@@ -1205,7 +1205,7 @@ class CierreYExpedienteTestCase(TestCase):
         )
 
         contenido = zipfile.ZipFile(io.BytesIO(b"".join(respuesta.streaming_content)))
-        self.assertEqual(contenido.namelist(), ["01 - Organizar el evento de cierre/acuerdo.pdf"])
+        self.assertEqual(contenido.namelist(), ["Ficha del proyecto.pdf", "1 - Etapa de prueba/01 - Organizar el evento de cierre/acuerdo.pdf"])
 
 class VersionadoRutaTestCase(TestCase):
     def setUp(self):

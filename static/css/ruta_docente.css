@@ -1,0 +1,67 @@
+/* Ruta del Docente paso a paso (ficha única del proyecto A+S). */
+.ruta-stepper { display: flex; list-style: none; padding: 0; margin: 18px 0 8px; }
+.ruta-paso { flex: 1; position: relative; text-align: center; }
+.ruta-paso::before { content: ""; position: absolute; z-index: 0; top: 17px; left: -50%; width: 100%; height: 3px; background: var(--ua-border); }
+.ruta-paso:first-child::before { display: none; }
+.ruta-paso.hecho::before, .ruta-paso.actual::before { background: var(--ua-red); }
+.ruta-paso-btn { position: relative; background: none; border: 0; padding: 0 4px; font-size: .8rem; color: var(--ua-text-muted); cursor: pointer; width: 100%; }
+.ruta-bola { position: relative; z-index: 1; width: 36px; height: 36px; border-radius: 50%; margin: 0 auto 6px; display: flex; align-items: center; justify-content: center; background: #fff; border: 3px solid var(--ua-border); font-weight: 700; transition: transform .15s ease; }
+.ruta-paso-btn:hover .ruta-bola, .ruta-paso-btn:focus-visible .ruta-bola { transform: scale(1.08); }
+.ruta-paso.hecho .ruta-bola { background: var(--ua-red); border-color: var(--ua-red); color: #fff; }
+.ruta-paso.actual .ruta-bola { border-color: var(--ua-red); color: var(--ua-red); }
+.ruta-paso.actual .ruta-paso-btn { color: var(--ua-text-dark); font-weight: 700; }
+.ruta-paso-nombre { display: block; line-height: 1.2; }
+
+.ruta-etapa { scroll-margin-top: 80px; }
+.ruta-etapa-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px 10px; }
+.ruta-etapa-kicker { font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--ua-text-muted); }
+.ruta-otras-titulo { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--ua-text-muted); margin: 8px 0; }
+.ruta-otras > .ruta-etapa + .ruta-etapa { border-top: 1px solid var(--ua-border); }
+.ruta-etapa-fila { display: flex; align-items: center; gap: 10px; width: 100%; padding: 13px 18px; background: none; border: 0; font-size: .92rem; text-align: left; }
+.ruta-etapa-fila:hover { background: var(--ua-bg-subtle); }
+.ruta-chevron { transition: transform .2s ease; }
+.ruta-etapa-fila:not(.collapsed) .ruta-chevron { transform: rotate(180deg); }
+
+.ruta-act { display: flex; gap: 14px; align-items: flex-start; padding: 16px 20px; border-top: 1px solid var(--ua-border); }
+.ruta-num { width: 28px; height: 28px; border-radius: 50%; background: var(--ua-bg-subtle); display: flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 700; flex: none; }
+.ruta-act.ok .ruta-num { background: var(--ua-success-soft); color: var(--ua-success); }
+.ruta-act-cuerpo { flex: 1; min-width: 0; }
+.ruta-act-nombre { font-weight: 600; }
+.ruta-act.ok .ruta-act-nombre { color: var(--ua-text-secondary); }
+.ruta-opcional { font-size: .7rem; font-weight: 700; background: var(--ua-bg-subtle); color: var(--ua-text-muted); border-radius: 999px; padding: 1px 8px; margin-left: 6px; vertical-align: middle; }
+.ruta-que { font-size: .88rem; color: var(--ua-text-secondary); }
+.ruta-nota { font-size: .8rem; color: var(--ua-info); margin-top: 4px; }
+.ruta-links { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 4px; }
+.ruta-ayuda { background: none; border: 0; padding: 0; font-size: .82rem; color: var(--ua-red); }
+.ruta-ayuda:hover { text-decoration: underline; }
+.ruta-archivos { font-size: .8rem; color: var(--ua-text-muted); }
+.ruta-detalle { margin-top: 10px; padding: 12px 14px; background: var(--ua-bg-subtle); border-radius: 10px; font-size: .88rem; }
+.ruta-subir .ruta-archivo { max-width: 280px; }
+.ruta-subir .ruta-desc { max-width: 200px; }
+.ruta-evidencias { list-style: none; padding: 0; margin: 10px 0 0; font-size: .85rem; }
+.ruta-evidencias li { padding: 3px 0; }
+.ruta-acc { flex: none; text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 150px; }
+.ruta-progreso { font-size: .78rem; color: var(--ua-text-muted); }
+.ruta-marcar { background: none; border: 0; padding: 0; font-size: .8rem; color: var(--ua-text-secondary); }
+.ruta-marcar:hover { color: var(--ua-success); text-decoration: underline; }
+.ruta-pill { display: inline-flex; align-items: center; gap: 4px; font-size: .74rem; font-weight: 700; border-radius: 999px; padding: 3px 10px; }
+.ruta-pill.ok { background: var(--ua-success-soft); color: var(--ua-success); }
+.ruta-pill.pend { background: var(--ua-warning-soft); color: var(--ua-warning); }
+
+@media (max-width: 640px) {
+    .ruta-paso-nombre { font-size: .7rem; }
+    .ruta-bola { width: 30px; height: 30px; }
+    .ruta-paso::before { top: 14px; }
+    .ruta-act { flex-wrap: wrap; }
+    .ruta-acc { width: 100%; align-items: flex-start; text-align: left; padding-left: 42px; }
+}
+
+/* Vista simple del Coordinador */
+.ruta-coord-pct { font-size: 2rem; font-weight: 700; color: var(--ua-text-dark); line-height: 1; }
+.ruta-coord-barra { height: 8px; border-radius: 99px; background: var(--ua-bg-subtle); overflow: hidden; }
+.ruta-coord-barra span { display: block; height: 100%; background: var(--ua-red); border-radius: 99px; transition: width .4s ease; }
+.ruta-coord-etapa { min-width: 0; }
+.ruta-chip { display: inline-block; font-size: .76rem; border-radius: 999px; padding: 2px 10px; background: var(--ua-warning-soft); color: var(--ua-warning); margin: 4px 4px 0 0; }
+.ruta-chip-neutro { background: var(--ua-bg-subtle); color: var(--ua-text-secondary); }
+.ruta-coord-lista { list-style: none; margin: 0; padding: 4px 18px 14px 46px; font-size: .88rem; }
+.ruta-coord-lista li { display: flex; gap: 8px; padding: 4px 0; }

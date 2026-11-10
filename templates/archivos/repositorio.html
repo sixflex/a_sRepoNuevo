@@ -1,28 +1,28 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Repositorio público | Portal A+S{% endblock %}
+{% block title %}Portal público | Portal A+S{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
+{% include "publico/includes/pestanas.html" with activa="documentos" %}
 
-<div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
-    <div>
-        <h1 class="page-title">Repositorio de documentos</h1>
-        <p class="page-subtitle mb-0">
-            Sube formatos, guías y documentos. Los marcados como <strong>Públicos</strong> se pueden descargar
-            desde el portal público; los <strong>Privados</strong> solo los ve Coordinación.
-        </p>
-    </div>
-    <div class="d-flex flex-wrap gap-2">
-        <a href="{% url 'archivos:repositorio_publico' %}" class="btn btn-light-ua" target="_blank" rel="noopener">
-            <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Ver como visitante
-        </a>
-        <a href="{% url 'archivos:crear_recurso' %}" class="btn btn-ua">
-            <i class="bi bi-cloud-arrow-up me-1" aria-hidden="true"></i>Subir documento
-        </a>
-    </div>
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+    <p class="page-subtitle mb-0">
+        Sube formatos, guías y documentos. Los marcados como <strong>Públicos</strong> se pueden descargar
+        desde el portal público; los <strong>Privados</strong> solo los ve Coordinación.
+    </p>
+    <a href="{% url 'archivos:crear_recurso' %}" class="btn btn-ua">
+        <i class="bi bi-cloud-arrow-up me-1" aria-hidden="true"></i>Subir documento
+    </a>
 </div>
+
+{% if not repositorio_visible %}
+    <div class="alert alert-warning d-flex align-items-center gap-2" role="status">
+        <i class="bi bi-eye-slash" aria-hidden="true"></i>
+        <span>El repositorio está oculto en el portal público: los visitantes no ven estos documentos aunque estén marcados como Públicos.
+        Puedes mostrarlo en <a href="{% url 'publico:configurar_portal' %}" class="alert-link">Qué se muestra</a>.</span>
+    </div>
+{% endif %}
 
 <p class="small text-muted mb-3">
     {{ total }} documento{{ total|pluralize }} · {{ publicos }} visible{{ publicos|pluralize }} en el portal público

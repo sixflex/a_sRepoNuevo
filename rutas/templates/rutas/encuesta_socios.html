@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Encuesta a socios | Portal A+S{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b"><link rel="stylesheet" href="{% static 'css/ruta_docente.css' %}?v=2026-11-10">{% endblock %}
+
+{% block content %}
+{% comment %}
+El Coordinador envía la encuesta de satisfacción a todos los Socios
+Comunitarios del período de una vez. Cada socio recibe su propio enlace.
+{% endcomment %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+        <div>
+            <h1 class="page-title mb-1">Encuesta de satisfacción a socios</h1>
+            <p class="page-subtitle mb-0">Envíala una vez al final del período a todos los Socios Comunitarios que trabajaron con alguna sección.</p>
+        </div>
+        <a href="{% url 'rutas:seguimiento_coordinacion' %}" class="btn btn-light-ua"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver</a>
+    </div>
+
+    <form method="get" class="d-flex align-items-end gap-2 mb-3 flex-wrap">
+        <div>
+            <label for="periodo" class="form-label small fw-semibold mb-1">Período</label>
+            <select name="periodo" id="periodo" class="form-select form-select-sm" onchange="this.form.submit()">
+                {% for p in periodos %}<option value="{{ p.id }}"{% if p.id == periodo.id %} selected{% endif %}>{{ p.nombre }}</option>{% endfor %}
+            </select>
+        </div>
+        <noscript><button type="submit" class="btn btn-light-ua btn-sm">Ver</button></noscript>
+    </form>
+
+    {% if not version %}
+        <div class="alert alert-warning">La encuesta de socios (EVALUACION_AS_SOCIOS) no está publicada. Publícala en <a href="{% url 'encuestas:lista' %}">Formularios y encuestas</a> para poder enviarla.</div>
+    {% elif not filas %}
+        <div class="alert alert-secondary">Ningún Socio Comunitario trabajó con secciones de {{ periodo.nombre }}.</div>
+    {% else %}
+        <div class="card-ua p-4 mb-3">
+            <div class="d-flex flex-wrap gap-4 mb-3">
+                <div><div class="ruta-coord-pct">{{ filas|length }}</div><div class="small text-muted">socios del período</div></div>
+                <div><div class="ruta-coord-pct">{{ enviados }}</div><div class="small text-muted">ya la recibieron</div></div>
+                <div><div class="ruta-coord-pct">{{ respondieron }}</div><div class="small text-muted">respondieron</div></div>
+            </div>
+            <form method="post" class="d-flex flex-wrap align-items-center gap-3" data-confirmar-envio>
+                {% csrf_token %}
+                <input type="hidden" name="periodo" value="{{ periodo.id }}">
+                <button type="submit" class="btn btn-ua"{% if not por_enviar and not enviados %} disabled{% endif %}>
+                    <i class="bi bi-send me-1" aria-hidden="true"></i>{% if por_enviar %}Enviar a {{ por_enviar }} socio{{ por_enviar|pluralize }}{% else %}Enviar encuesta{% endif %}
+                </button>
+                {% if enviados %}
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" name="reenviar" value="1" id="reenviar">
+                        <label class="form-check-label small" for="reenviar">Volver a enviar a quienes aún no responden (recordatorio)</label>
+                    </div>
+                {% endif %}
+            </form>
+            {% if sin_correo %}<p class="small text-muted mt-2 mb-0"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>{{ sin_correo }} socio{{ sin_correo|pluralize }} sin correo de contacto principal: agrégalo en su ficha para poder enviarle.</p>{% endif %}
+        </div>
+
+        <div class="card-ua">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead><tr><th>Socio Comunitario</th><th>Correo</th><th>Estado</th></tr></thead>
+                    <tbody>
+                        {% for fila in filas %}
+                            <tr>
+                                <td>{{ fila.socio.nombre_organizacion }}</td>
+                                <td class="small">{{ fila.correo|default:"—" }}</td>
+                                <td>
+                                    {% if fila.respondio %}<span class="ruta-pill ok">Respondió</span>
+                                    {% elif fila.enviado %}<span class="ruta-pill pend">Enviada, sin respuesta</span>
+                                    {% elif not fila.correo %}<span class="ruta-chip ruta-chip-neutro m-0">Sin correo</span>
+                                    {% else %}<span class="ruta-chip ruta-chip-neutro m-0">Por enviar</span>{% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+</div>
+<script>
+document.querySelectorAll("[data-confirmar-envio]").forEach(function (form) {
+    form.addEventListener("submit", function (evento) {
+        if (!confirm("Se enviará un correo a cada socio con su enlace a la encuesta. ¿Continuar?")) evento.preventDefault();
+    });
+});
+</script>
+{% endblock %}

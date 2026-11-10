@@ -1,279 +1,111 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Ruta A+S · NRC {{ seccion.nrc }} | Portal A+S{% endblock %}
 
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b"><link rel="stylesheet" href="{% static 'css/ruta_docente.css' %}?v=2026-11-10">{% endblock %}
+
 {% block content %}
+{% comment %}
+Vista simple del Coordinador: cuánto lleva la sección, en qué etapa va y,
+por etapa, qué falta. El detalle de cada etapa se abre con un clic. El ZIP
+trae la «Ficha del proyecto.pdf» y una carpeta por etapa.
+{% endcomment %}
 <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
         <div>
-            <h2 class="mb-1">Seguimiento de Ruta A+S</h2>
-            <p class="text-muted mb-0">
-                {{ seccion.asignatura.nombre }} · NRC {{ seccion.nrc }} · Sección {{ seccion.seccion }}
+            <h1 class="page-title mb-1">{{ seccion.asignatura.nombre }}</h1>
+            <p class="page-subtitle mb-0">
+                NRC {{ seccion.nrc }} · Sección {{ seccion.seccion }}{% if docentes %} · {{ docentes }}{% endif %} · {{ seccion.campus.nombre }} · {{ seccion.periodo }}
             </p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <a
-                href="{% url 'rutas:descargar_expediente' seccion_ruta.id %}"
-                class="btn btn-primary"
-            >
-                <i class="bi bi-file-earmark-zip me-1"></i>
-                Descargar expediente (ZIP)
+            <a href="{% url 'rutas:seguimiento_coordinacion' %}" class="btn btn-light-ua">
+                <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver
             </a>
-            <a
-                href="{% url 'rutas:seguimiento_coordinacion' %}"
-                class="btn btn-outline-secondary"
-            >
-                ← Volver al seguimiento
+            <a href="{% url 'rutas:descargar_expediente' seccion_ruta.id %}" class="btn btn-ua">
+                <i class="bi bi-file-earmark-zip me-1" aria-hidden="true"></i>Descargar evidencias (ZIP)
             </a>
         </div>
     </div>
 
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card shadow-sm h-100">
-                <div class="card-body">
-                    <div class="text-muted small">Avance</div>
-                    <div class="fs-3 fw-bold">
-                        {{ seccion_ruta.porcentaje_final|default:0|floatformat:0 }}%
-                    </div>
-                </div>
-            </div>
+    <div class="card-ua p-4 mb-3">
+        <div class="d-flex align-items-baseline gap-3 flex-wrap">
+            <span class="ruta-coord-pct">{{ seccion_ruta.porcentaje_final|default_if_none:0|floatformat:0 }} %</span>
+            <span class="text-muted">
+                {% if seccion_ruta.estado == "COMPLETADA" %}
+                    Ruta completada{% if seccion_ruta.fecha_cierre %} el {{ seccion_ruta.fecha_cierre|date:"d/m/Y" }}{% endif %}
+                {% elif etapa_actual %}
+                    Va en <strong>{{ etapa_actual.nombre }}</strong> (etapa {{ etapa_actual.numero }} de {{ etapas|length }})
+                {% endif %}
+                · {{ total_completadas }} de {{ total_actividades }} actividades
+            </span>
         </div>
-
-        <div class="col-md-3">
-            <div class="card shadow-sm h-100">
-                <div class="card-body">
-                    <div class="text-muted small">Actividades</div>
-                    <div class="fs-3 fw-bold">
-                        {{ total_actividades }}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card shadow-sm h-100">
-                <div class="card-body">
-                    <div class="text-muted small">Completadas</div>
-                    <div class="fs-3 fw-bold text-success">
-                        {{ total_completadas }}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card shadow-sm h-100">
-                <div class="card-body">
-                    <div class="text-muted small">Pendientes</div>
-                    <div class="fs-3 fw-bold">
-                        {{ total_pendientes }}
-                    </div>
-                </div>
-            </div>
+        <div class="ruta-coord-barra mt-2" role="progressbar" aria-label="Avance de la Ruta"
+             aria-valuenow="{{ seccion_ruta.porcentaje_final|default_if_none:0|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100">
+            <span style="width: {{ seccion_ruta.porcentaje_final|default_if_none:0|floatformat:0 }}%"></span>
         </div>
     </div>
 
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <div class="text-muted small">Campus</div>
-                    <strong>{{ seccion.campus.nombre }}</strong>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="text-muted small">Período</div>
-                    <strong>{{ seccion.periodo }}</strong>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="text-muted small">Estado</div>
-
-                    {% if seccion_ruta.estado == "COMPLETADA" %}
-                        <span class="badge bg-success">Completada</span>
+    <div class="card-ua mb-3 ruta-otras">
+        {% for etapa in etapas %}
+            <section class="ruta-etapa">
+                <button type="button" class="ruta-etapa-fila collapsed" data-bs-toggle="collapse"
+                        data-bs-target="#coord-etapa-{{ etapa.numero }}" aria-expanded="false" aria-controls="coord-etapa-{{ etapa.numero }}">
+                    {% if etapa.completa %}
+                        <i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i>
+                    {% elif etapa.actual %}
+                        <i class="bi bi-record-circle text-danger" aria-hidden="true"></i>
                     {% else %}
-                        <span class="badge bg-primary">En progreso</span>
+                        <i class="bi bi-circle text-muted" aria-hidden="true"></i>
                     {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <h5 class="mb-3">Actividad de cierre con Socios Comunitarios</h5>
-
-            {% if invitaciones_cierre %}
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th>Socio Comunitario</th>
-                                <th>Contacto</th>
-                                <th>Asistencia</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for invitacion in invitaciones_cierre %}
-                                <tr>
-                                    <td>{{ invitacion.socio.nombre_organizacion }}</td>
-                                    <td class="small">
-                                        {% if invitacion.modo_contacto == "PLATAFORMA" %}Invitación por la plataforma{% else %}Contacto del Docente{% endif %}
-                                    </td>
-                                    <td>
-                                        {% if invitacion.respuesta == "ASISTIRA" %}
-                                            <span class="badge bg-success">Asistirá</span>
-                                        {% elif invitacion.respuesta == "NO" %}
-                                            <span class="badge bg-secondary">No asistirá</span>
-                                        {% else %}
-                                            <span class="badge bg-warning text-dark">Sin respuesta</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% elif sin_cierre %}
-                <p class="text-muted mb-0">El Docente indicó que no habrá actividad de cierre.</p>
-            {% else %}
-                <p class="text-muted mb-0">El Docente aún no indica si habrá actividad de cierre.</p>
-            {% endif %}
-        </div>
-    </div>
-
-    {% for etapa, actividades in etapas.items %}
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white">
-                <h4 class="mb-0">{{ etapa }}</h4>
-            </div>
-
-            <div class="card-body p-0">
-                {% for actividad in actividades %}
-                    <div class="p-4 {% if not forloop.last %}border-bottom{% endif %}">
-                        <div class="row g-3">
-                            <div class="col-lg-9">
-                                <div class="d-flex gap-2">
-                                    <span class="badge bg-light text-dark border">
-                                        {{ actividad.ruta_actividad.orden }}
-                                    </span>
-
-                                    <div class="flex-grow-1">
-                                        <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
-                                            <h5 class="mb-0">
-                                                {{ actividad.ruta_actividad.nombre }}
-                                            </h5>
-                                            {% if actividad.ruta_actividad.es_obligatoria %}
-                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle small">
-                                                    Obligatoria
-                                                </span>
-                                            {% else %}
-                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle small">
-                                                    Opcional · no afecta el avance
-                                                </span>
-                                            {% endif %}
-                                        </div>
-
-                                        {% if actividad.ruta_actividad.descripcion %}
-                                            <p class="text-muted mb-2">
-                                                {{ actividad.ruta_actividad.descripcion }}
-                                            </p>
-                                        {% endif %}
-
-                                        <!-- RECURSO ASOCIADO -->
-                                        {% if actividad.ruta_actividad.archivo_recurso %}
-                                            <div class="mt-2 mb-2">
-                                                <a
-                                                    href="{% url 'archivos:descargar' actividad.ruta_actividad.archivo_recurso.id %}"
-                                                    class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1"
-                                                >
-                                                    <i class="bi bi-file-earmark-arrow-down"></i>
-                                                    Recurso: {{ actividad.ruta_actividad.archivo_recurso.nombre_original }}
-                                                </a>
-                                            </div>
-                                        {% endif %}
-
-                                        {% if actividad.ruta_actividad.recurso_url %}
-                                            <div class="mt-2 mb-2">
-                                                <a
-                                                    href="{{ actividad.ruta_actividad.recurso_url }}"
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
-                                                >
-                                                    <i class="bi bi-box-arrow-up-right"></i>
-                                                    Ver recurso asociado
-                                                </a>
-                                            </div>
-                                        {% endif %}
-
-                                        {% if actividad.ruta_actividad.formulario_version %}
-                                            <div class="mt-2 mb-2">
-                                                <span class="badge bg-light text-secondary border">
-                                                    <i class="bi bi-ui-checks me-1"></i>Formulario: {{ actividad.ruta_actividad.formulario_version.plantilla.titulo }}
-                                                </span>
-                                            </div>
-                                        {% endif %}
-
-                                        {% if actividad.evidencias.all %}
-                                            <div class="mt-3">
-                                                <div class="fw-semibold mb-2">
-                                                    Evidencias
-                                                </div>
-
-                                                {% for evidencia in actividad.evidencias.all %}
-                                                    <div class="border rounded p-2 mb-2">
-                                                        <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
-                                                            <div>
-                                                                <div class="fw-semibold">
-                                                                    {{ evidencia.archivo.nombre_original }}
-                                                                </div>
-
-                                                                {% if evidencia.descripcion %}
-                                                                    <div class="small text-muted">
-                                                                        {{ evidencia.descripcion }}
-                                                                    </div>
-                                                                {% endif %}
-                                                            </div>
-
-                                                            <a
-                                                                href="{% url 'archivos:descargar' evidencia.archivo.id %}"
-                                                                class="btn btn-sm btn-outline-primary"
-                                                            >
-                                                                Descargar
-                                                            </a>
-                                                        </div>
-                                                    </div>
-                                                {% endfor %}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-lg-3 text-lg-end">
-                                {% if actividad.completada_por_docente %}
-                                    <span class="badge bg-success">
-                                        Completada
-                                    </span>
-
-                                    {% if actividad.fecha_completada %}
-                                        <div class="small text-muted mt-2">
-                                            {{ actividad.fecha_completada|date:"d/m/Y H:i" }}
-                                        </div>
-                                    {% endif %}
+                    <span class="ruta-coord-etapa">
+                        <span class="fw-semibold">{{ etapa.numero }}. {{ etapa.nombre }}</span>
+                        {% if etapa.pendientes %}
+                            <span class="d-block">
+                                {% for actividad in etapa.pendientes %}<span class="ruta-chip">{{ actividad.ruta_actividad.nombre }}</span>{% endfor %}
+                            </span>
+                        {% endif %}
+                    </span>
+                    <span class="ms-auto small text-muted text-nowrap">{{ etapa.hechas }} de {{ etapa.total }} · {{ etapa.archivos }} archivo{{ etapa.archivos|pluralize }}</span>
+                    <i class="bi bi-chevron-down ruta-chevron text-muted" aria-hidden="true"></i>
+                </button>
+                <div class="collapse" id="coord-etapa-{{ etapa.numero }}">
+                    <ul class="ruta-coord-lista">
+                        {% for actividad in etapa.actividades %}
+                            <li>
+                                {% if actividad.completada_por_docente_id %}
+                                    <i class="bi bi-check-lg text-success" aria-hidden="true"></i>
                                 {% else %}
-                                    <span class="badge bg-warning text-dark">
-                                        Pendiente
-                                    </span>
+                                    <i class="bi bi-dash text-muted" aria-hidden="true"></i>
                                 {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
+                                <span>{{ actividad.ruta_actividad.orden }}. {{ actividad.ruta_actividad.nombre }}{% if not actividad.ruta_actividad.es_obligatoria %} <span class="ruta-opcional">Opcional</span>{% endif %}
+                                    {% if actividad.completada_por_docente_id and actividad.fecha_completada %}<span class="text-muted small"> · {{ actividad.fecha_completada|date:"d/m/Y" }}</span>{% endif %}
+                                    {% for evidencia in actividad.evidencias.all %}
+                                        <a class="d-block small" href="{% url 'archivos:descargar' evidencia.archivo.id %}"><i class="bi bi-paperclip" aria-hidden="true"></i>{{ evidencia.archivo.nombre_original }}{% if evidencia.descripcion %} · {{ evidencia.descripcion }}{% endif %}</a>
+                                    {% endfor %}
+                                    {% if actividad.observacion == observacion_sin_cierre %}<span class="d-block small text-muted">El docente indicó que no habrá actividad de cierre.</span>{% endif %}
+                                </span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </section>
+        {% endfor %}
+    </div>
+
+    {% if invitaciones_cierre %}
+        <div class="card-ua p-3 mb-3">
+            <div class="fw-semibold small mb-2"><i class="bi bi-people me-1" aria-hidden="true"></i>Socios invitados al cierre</div>
+            {% for invitacion in invitaciones_cierre %}
+                <span class="ruta-chip ruta-chip-neutro">
+                    {{ invitacion.socio.nombre_organizacion }}:
+                    {% if invitacion.respuesta == "ASISTIRA" %}asistirá{% elif invitacion.respuesta == "NO" %}no asistirá{% else %}sin respuesta{% endif %}
+                </span>
+            {% endfor %}
         </div>
-    {% endfor %}
+    {% endif %}
+
+    <p class="small text-muted"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>El ZIP trae la «Ficha del proyecto.pdf» (datos de la sección, grupos, socios, formularios y avance) y una carpeta por etapa con sus archivos.</p>
 </div>
 {% endblock %}

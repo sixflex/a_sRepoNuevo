@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.files.storage import InMemoryStorage
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from auditoria.models import AuditoriaCambio
@@ -54,6 +54,18 @@ class RepositorioTests(TestCase):
         self.subir(nombre="foto.png")
 
         self.assertFalse(RecursoRepositorio.objects.exists())
+
+    @override_settings(PRIVATE_STORAGE_MAX_FILE_SIZE_MB=1, REPOSITORIO_MAX_FILE_SIZE_MB=2)
+    def test_usa_su_propio_limite_de_tamano_y_no_el_de_evidencias(self):
+        mb = 1024 * 1024
+        pdf = lambda nombre, tamano: SimpleUploadedFile(nombre, b"x" * tamano, content_type="application/pdf")
+
+        self.subir("Sobre el límite de evidencias", nombre=None, archivo_subido=pdf("mediano.pdf", int(1.5 * mb)))
+        response = self.subir("Sobre el límite del repositorio", nombre=None, archivo_subido=pdf("pesado.pdf", 2 * mb + 1))
+
+        self.assertTrue(RecursoRepositorio.objects.filter(titulo="Sobre el límite de evidencias").exists())
+        self.assertFalse(RecursoRepositorio.objects.filter(titulo="Sobre el límite del repositorio").exists())
+        self.assertContains(response, "supera el límite configurado de 2 MB")
 
     def test_portal_publico_muestra_solo_publicos_y_publicados(self):
         self.subir("Público")
