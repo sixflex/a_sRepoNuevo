@@ -1,5 +1,6 @@
 from itertools import groupby
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -10,6 +11,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from auditoria.services import registrar_auditoria
+from publico.portal import configuracion_portal
 from usuarios.decorators import coordinador_required
 
 from .forms import CATEGORIAS, RecursoRepositorioForm
@@ -78,6 +80,7 @@ def repositorio(request):
         "grupos": _por_categoria(recursos),
         "total": recursos.count(),
         "publicos": recursos.filter(visibilidad="PUBLICO", estado=PUBLICADO).count(),
+        "repositorio_visible": configuracion_portal()["repositorio"]["activo"],
     })
 
 
@@ -103,7 +106,9 @@ def _guardar_recurso(request, recurso):
                 subido = form.cleaned_data.get("archivo_subido")
                 if subido:
                     # Reemplazar no borra el archivo anterior: queda en el almacenamiento.
-                    recurso.archivo = guardar_archivo(subido, autor=request.user)
+                    recurso.archivo = guardar_archivo(
+                        subido, autor=request.user, limite_mb=settings.REPOSITORIO_MAX_FILE_SIZE_MB
+                    )
                 if nuevo:
                     recurso.estado = PUBLICADO
                     recurso.publicado_por_usuario = request.user
@@ -185,7 +190,14 @@ def recursos_publicos():
     ).select_related("archivo")
 
 
+def _exigir_repositorio_visible():
+    """El Coordinador puede ocultar el repositorio del portal (Portal público > Qué se muestra)."""
+    if not configuracion_portal()["repositorio"]["activo"]:
+        raise Http404("El repositorio público no está disponible.")
+
+
 def repositorio_publico(request):
+    _exigir_repositorio_visible()
     return render(request, "archivos/repositorio_publico.html", {
         "grupos": _por_categoria(recursos_publicos()),
         "hide_sidebar": True,
@@ -193,6 +205,7 @@ def repositorio_publico(request):
 
 
 def descargar_recurso_publico(request, pk):
+    _exigir_repositorio_visible()
     recurso = get_object_or_404(recursos_publicos(), pk=pk)
     if not recurso.archivo_id:
         raise Http404

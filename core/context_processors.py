@@ -23,6 +23,7 @@ MENU_POR_APP = {
     "encuestas": "encuestas",
     "historicos": "historicos",
     "archivos": "repositorio",
+    "publico": "repositorio",
     "reportes": "reportes",
 }
 

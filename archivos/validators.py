@@ -9,8 +9,9 @@ def get_extensiones_permitidas():
         ["pdf", "doc", "docx", "xls", "xlsx", "jpg", "jpeg", "png"],
     )
 
-def validar_tamano_archivo(archivo):
-    limite_mb = settings.PRIVATE_STORAGE_MAX_FILE_SIZE_MB
+def validar_tamano_archivo(archivo, limite_mb=None):
+    if limite_mb is None:
+        limite_mb = settings.PRIVATE_STORAGE_MAX_FILE_SIZE_MB
     limite_bytes = limite_mb * 1024 * 1024
 
     if archivo.size > limite_bytes:

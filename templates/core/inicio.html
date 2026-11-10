@@ -322,10 +322,8 @@
         </a>
 
         <div class="d-flex align-items-center flex-wrap gap-3 gap-md-4">
-            <a href="{% url 'core:inicio' %}" class="ua-nav-link active">Portal Público</a>
             <a href="{% url 'usuarios:login' %}" class="ua-nav-link">Inicio de Sesión</a>
-            <a href="#participa" class="ua-nav-link">Participa</a>
-            <a href="{% url 'archivos:repositorio_publico' %}" class="ua-nav-link">Repositorio</a>
+            {% if portal.repositorio.activo %}<a href="{% url 'archivos:repositorio_publico' %}" class="ua-nav-link">Repositorio</a>{% endif %}
         </div>
     </div>
 </nav>
@@ -337,9 +335,11 @@
         <h1 class="ua-hero-title">Aprendizaje + Servicio</h1>
         <div class="ua-hero-subtitle">Vicerrectoría Académica · Universidad Autónoma de Chile</div>
         <p class="ua-hero-desc">Conectando la academia con las comunidades de Chile</p>
-        <a href="#proyectos" class="btn btn-ua-hero shadow-sm">
-            EXPLORAR PROYECTOS
-        </a>
+        {% if portal.mapa.activo or portal.catalogo.activo %}
+            <a href="#proyectos" class="btn btn-ua-hero shadow-sm">
+                EXPLORAR PROYECTOS
+            </a>
+        {% endif %}
     </div>
 </section>
 
@@ -400,57 +400,66 @@
 </section>
 
 
+{# Mapa y catálogo: el Coordinador decide si se muestran y con qué datos (publico/portal.py). #}
+{% if portal.mapa.activo or portal.catalogo.activo %}
 <section id="proyectos" class="container pb-5">
     <div class="mb-3">
-        <h3 class="fw-bold mb-1" style="font-size: 1.4rem;">Nuestro Impacto Territorial</h3>
-        <p class="text-muted small mb-0">Socios comunitarios y proyectos A+S agrupados por comuna. Solo se muestran métricas agregadas: el mapa no expone direcciones ni datos personales.</p>
+        <h3 class="fw-bold mb-1" style="font-size: 1.4rem;">{% if portal.mapa.activo %}Nuestro Impacto Territorial{% else %}Proyectos A+S{% endif %}</h3>
+        <p class="text-muted small mb-0">Socios comunitarios y proyectos A+S{% if portal.mapa.activo %} agrupados por comuna{% endif %}. Solo se muestran métricas agregadas: nunca direcciones ni datos personales.</p>
     </div>
 
-    {# Filtros públicos (RF-PUB-01, RF-IND-03): sede, campus, año, facultad, carrera y comuna #}
-    <form method="get" action="{% url 'core:inicio' %}#proyectos" class="row g-2 align-items-end mb-3" aria-label="Filtros del mapa">
-        <div class="col-6 col-md-4 col-lg-2">
+    {# Filtros públicos (RF-PUB-01, RF-IND-03): sede, campus, año, facultad, carrera, comuna y tipo de socio #}
+    <form method="get" action="{% url 'core:inicio' %}#proyectos" class="row g-2 align-items-end mb-3" aria-label="Filtros del portal">
+        <div class="col-6 col-md-3">
             <label for="filtro-sede" class="form-label small fw-semibold mb-1">Sede</label>
             <select id="filtro-sede" name="sede" class="form-select form-select-sm">
                 <option value="">Todas</option>
                 {% for sede in opciones.sedes %}<option value="{{ sede.id }}" {% if filtros.sede == sede.id %}selected{% endif %}>{{ sede.nombre }}</option>{% endfor %}
             </select>
         </div>
-        <div class="col-6 col-md-4 col-lg-2">
+        <div class="col-6 col-md-3">
             <label for="filtro-campus" class="form-label small fw-semibold mb-1">Campus</label>
             <select id="filtro-campus" name="campus" class="form-select form-select-sm">
                 <option value="">Todos</option>
                 {% for campus in opciones.campus %}<option value="{{ campus.id }}" {% if filtros.campus == campus.id %}selected{% endif %}>{{ campus.nombre }}</option>{% endfor %}
             </select>
         </div>
-        <div class="col-6 col-md-4 col-lg-2">
+        <div class="col-6 col-md-3">
             <label for="filtro-anio" class="form-label small fw-semibold mb-1">Año</label>
             <select id="filtro-anio" name="anio" class="form-select form-select-sm">
                 <option value="">Todos</option>
                 {% for anio in opciones.anios %}<option value="{{ anio }}" {% if filtros.anio == anio %}selected{% endif %}>{{ anio }}</option>{% endfor %}
             </select>
         </div>
-        <div class="col-6 col-md-4 col-lg-2">
+        <div class="col-6 col-md-3">
             <label for="filtro-facultad" class="form-label small fw-semibold mb-1">Facultad</label>
             <select id="filtro-facultad" name="facultad" class="form-select form-select-sm">
                 <option value="">Todas</option>
                 {% for facultad in opciones.facultades %}<option value="{{ facultad.id }}" {% if filtros.facultad == facultad.id %}selected{% endif %}>{{ facultad.nombre }}</option>{% endfor %}
             </select>
         </div>
-        <div class="col-6 col-md-4 col-lg-2">
+        <div class="col-6 col-md-3">
             <label for="filtro-carrera" class="form-label small fw-semibold mb-1">Carrera</label>
             <select id="filtro-carrera" name="carrera" class="form-select form-select-sm">
                 <option value="">Todas</option>
                 {% for carrera in opciones.carreras %}<option value="{{ carrera.id }}" {% if filtros.carrera == carrera.id %}selected{% endif %}>{{ carrera.nombre }}</option>{% endfor %}
             </select>
         </div>
-        <div class="col-6 col-md-4 col-lg-2">
+        <div class="col-6 col-md-3">
             <label for="filtro-comuna" class="form-label small fw-semibold mb-1">Comuna</label>
             <select id="filtro-comuna" name="comuna" class="form-select form-select-sm">
                 <option value="">Todas</option>
                 {% for comuna in opciones.comunas %}<option value="{{ comuna.id }}" {% if filtros.comuna == comuna.id %}selected{% endif %}>{{ comuna.nombre }}</option>{% endfor %}
             </select>
         </div>
-        <div class="col-12 col-md-4 col-lg-3 ms-lg-auto d-flex gap-2">
+        <div class="col-6 col-md-3">
+            <label for="filtro-clasificacion" class="form-label small fw-semibold mb-1">Tipo de socio</label>
+            <select id="filtro-clasificacion" name="clasificacion" class="form-select form-select-sm">
+                <option value="">Todos</option>
+                {% for clasificacion in opciones.clasificaciones %}<option value="{{ clasificacion.id }}" {% if filtros.clasificacion == clasificacion.id %}selected{% endif %}>{{ clasificacion.nombre }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-6 col-md-3 d-flex gap-2">
             <button type="submit" class="btn btn-sm btn-danger flex-grow-1" style="background: var(--ua-red); border-color: var(--ua-red);">Filtrar</button>
             {% if hay_filtros %}
                 <a href="{% url 'core:inicio' %}#proyectos" class="btn btn-sm btn-outline-secondary">Limpiar</a>
@@ -458,62 +467,80 @@
         </div>
     </form>
 
+    {% if portal.mapa.activo %}
     <div class="mockup-card overflow-hidden mb-3 p-2">
         {% if mapa.puntos %}
-            <div class="d-flex justify-content-end mb-2">
-                <div class="btn-group btn-group-sm" role="group" aria-label="Qué mostrar en el mapa">
-                    <button type="button" class="btn btn-outline-secondary active" aria-pressed="true" data-mapa-modo="proyectos">Proyectos</button>
-                    <button type="button" class="btn btn-outline-secondary" aria-pressed="false" data-mapa-modo="socios">Socios comunitarios</button>
+            {% if portal.mapa.proyectos and portal.mapa.socios %}
+                <div class="d-flex justify-content-end mb-2">
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Qué mostrar en el mapa">
+                        <button type="button" class="btn btn-outline-secondary active" aria-pressed="true" data-mapa-modo="proyectos">Proyectos</button>
+                        <button type="button" class="btn btn-outline-secondary" aria-pressed="false" data-mapa-modo="socios">Socios comunitarios</button>
+                    </div>
                 </div>
-            </div>
-            <div id="mapaTerritorial" class="mapa-territorial" role="region" aria-label="Mapa de comunas con socios y proyectos A+S"></div>
+            {% endif %}
+            <div id="mapaTerritorial" class="mapa-territorial" role="region" aria-label="Mapa de comunas con socios y proyectos A+S"
+                 data-mapa-modo-inicial="{% if portal.mapa.proyectos %}proyectos{% else %}socios{% endif %}"></div>
             {{ mapa.puntos|json_script:"mapa-puntos" }}
         {% else %}
             <p class="text-muted text-center my-5">Aún no hay datos territoriales para estos filtros.</p>
         {% endif %}
     </div>
 
+    {% if portal.mapa.cifra_socios or portal.mapa.cifra_participaciones or portal.mapa.cifra_comunas or portal.mapa.cifra_estudiantes %}
     <div class="row g-3">
-        <div class="col-6 col-md-3">
+        {% if portal.mapa.cifra_socios %}
+        <div class="col-6 col-md">
             <div class="mockup-card p-3 text-center h-100">
                 <div class="metric-bubble"><i class="bi bi-people-fill" aria-hidden="true"></i></div>
                 <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">{{ cifras.socios }}</div>
                 <div class="text-muted small">Socios Comunitarios</div>
             </div>
         </div>
-        <div class="col-6 col-md-3">
+        {% endif %}
+        {% if portal.mapa.cifra_participaciones %}
+        <div class="col-6 col-md">
             <div class="mockup-card p-3 text-center h-100">
                 <div class="metric-bubble"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></div>
                 <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">{{ cifras.participaciones }}</div>
                 <div class="text-muted small">Participaciones</div>
             </div>
         </div>
-        <div class="col-6 col-md-3">
+        {% endif %}
+        {% if portal.mapa.cifra_comunas %}
+        <div class="col-6 col-md">
             <div class="mockup-card p-3 text-center h-100">
                 <div class="metric-bubble"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i></div>
                 <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">{{ mapa.puntos|length }}</div>
                 <div class="text-muted small">Comunas Alcanzadas</div>
             </div>
         </div>
-        <div class="col-6 col-md-3">
+        {% endif %}
+        {% if portal.mapa.cifra_estudiantes %}
+        <div class="col-6 col-md">
             <div class="mockup-card p-3 text-center h-100">
                 <div class="metric-bubble"><i class="bi bi-mortarboard-fill" aria-hidden="true"></i></div>
                 <div class="fw-bold" style="font-size: 1.55rem; color: #111827;">{{ cifras.estudiantes }}</div>
                 <div class="text-muted small">Estudiantes Participantes</div>
             </div>
         </div>
+        {% endif %}
     </div>
+    {% if portal.mapa.cifra_socios and portal.mapa.cifra_participaciones %}
     <p class="text-muted small mt-2 mb-0">
         Un socio que participa en varios proyectos cuenta una vez como socio y una vez por cada participación.
     </p>
+    {% endif %}
+    {% endif %}
+    {% endif %}{# portal.mapa.activo #}
 
-    {# Catálogo de proyectos (RF-PUB-01): los mismos datos del mapa, ordenados; sin nombres de socios ni personas.
-       Se desliza de lado sin recargar la página, y el año se filtra aquí mismo. #}
-    <div id="catalogo" class="mt-5" data-catalogo>
+    {% comment %}Catálogo de proyectos (RF-PUB-01): los mismos datos del mapa, ordenados; sin nombres de socios ni personas.
+       Se desliza de lado sin recargar la página, y el año se filtra aquí mismo.{% endcomment %}
+    {% if portal.catalogo.activo %}
+    <div id="catalogo" class="{% if portal.mapa.activo %}mt-5{% endif %}" data-catalogo>
         <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
             <div>
                 <h3 class="fw-bold mb-1" style="font-size: 1.25rem;">Catálogo de Proyectos A+S</h3>
-                <p class="text-muted small mb-0">Asignaturas que trabajaron con socios comunitarios, con los filtros del mapa.</p>
+                <p class="text-muted small mb-0">Asignaturas que trabajaron con socios comunitarios, con los filtros de arriba.</p>
             </div>
             {% if catalogo %}
                 <div class="d-flex flex-wrap align-items-center gap-2">
@@ -541,18 +568,24 @@
                         <div class="mockup-card p-3 h-100">
                             <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
                                 <span class="ua-badge-model mb-0">{{ proyecto.anio|default:"Sin año" }}</span>
-                                <span class="text-muted small text-end">{{ proyecto.socios }} socio{{ proyecto.socios|pluralize }}</span>
+                                {% if portal.catalogo.socios %}<span class="text-muted small text-end">{{ proyecto.socios }} socio{{ proyecto.socios|pluralize }}</span>{% endif %}
                             </div>
                             {# Título: lo que se hizo (servicio realizado); si no se informó, la carrera. #}
-                            <div class="fw-bold" style="color: #111827;">{{ proyecto.servicio|default:proyecto.carrera|default:"Proyecto A+S" }}</div>
-                            <div class="text-muted small">
-                                {% if proyecto.servicio %}{{ proyecto.carrera|default:"Carrera sin informar" }}{% if proyecto.asignatura %} · {% endif %}{% endif %}{{ proyecto.asignatura }}
-                            </div>
+                            {% if portal.catalogo.carrera %}
+                                <div class="fw-bold" style="color: #111827;">{{ proyecto.servicio|default:proyecto.carrera|default:"Proyecto A+S" }}</div>
+                            {% else %}
+                                <div class="fw-bold" style="color: #111827;">{{ proyecto.servicio|default:"Proyecto A+S" }}</div>
+                            {% endif %}
+                            {% if portal.catalogo.carrera or portal.catalogo.asignatura %}
+                                <div class="text-muted small">
+                                    {% if portal.catalogo.carrera and proyecto.servicio %}{{ proyecto.carrera|default:"Carrera sin informar" }}{% if portal.catalogo.asignatura and proyecto.asignatura %} · {% endif %}{% endif %}{% if portal.catalogo.asignatura %}{{ proyecto.asignatura }}{% endif %}
+                                </div>
+                            {% endif %}
                             {# Solo un resumen: hasta 3 comunas y 3 tipos de socio, el resto como "y N más". #}
-                            {% if proyecto.comunas %}
+                            {% if portal.catalogo.comunas and proyecto.comunas %}
                                 <div class="small mt-2"><i class="bi bi-geo-alt text-danger me-1" aria-hidden="true"></i>{{ proyecto.comunas|slice:":3"|join:", " }}{% if proyecto.comunas|length > 3 %} y {{ proyecto.comunas|length|add:"-3" }} más{% endif %}</div>
                             {% endif %}
-                            {% if proyecto.tipos %}
+                            {% if portal.catalogo.tipos and proyecto.tipos %}
                                 <div class="small text-muted"><i class="bi bi-tag me-1" aria-hidden="true"></i>{{ proyecto.tipos|slice:":3"|join:", " }}{% if proyecto.tipos|length > 3 %} y {{ proyecto.tipos|length|add:"-3" }} más{% endif %}</div>
                             {% endif %}
                         </div>
@@ -564,13 +597,17 @@
             <p class="text-muted small">No hay proyectos para estos filtros.</p>
         {% endif %}
     </div>
+    {% endif %}{# portal.catalogo.activo #}
 </section>
+{% endif %}
 
 
+{% if portal.cifras.asignaturas or portal.cifras.carreras or portal.cifras.facultades or portal.cifras.socios %}
 <section class="container pb-5">
     <h3 class="fw-bold mb-3" style="font-size: 1.35rem;">Cifras Macro del Programa A+S</h3>
     <div class="row g-3">
-        <div class="col-6 col-md-3">
+        {% if portal.cifras.asignaturas %}
+        <div class="col-6 col-md">
             <div class="mockup-card p-4 d-flex justify-content-between align-items-center h-100">
                 <div>
                     <div class="macro-number">{{ cifras.asignaturas }}</div>
@@ -579,7 +616,9 @@
                 <i class="bi bi-book fs-3 text-muted opacity-50" aria-hidden="true"></i>
             </div>
         </div>
-        <div class="col-6 col-md-3">
+        {% endif %}
+        {% if portal.cifras.carreras %}
+        <div class="col-6 col-md">
             <div class="mockup-card p-4 d-flex justify-content-between align-items-center h-100">
                 <div>
                     <div class="macro-number">{{ cifras.carreras }}</div>
@@ -588,7 +627,9 @@
                 <i class="bi bi-award fs-3 text-muted opacity-50" aria-hidden="true"></i>
             </div>
         </div>
-        <div class="col-6 col-md-3">
+        {% endif %}
+        {% if portal.cifras.facultades %}
+        <div class="col-6 col-md">
             <div class="mockup-card p-4 d-flex justify-content-between align-items-center h-100">
                 <div>
                     <div class="macro-number">{{ cifras.facultades }}</div>
@@ -597,7 +638,9 @@
                 <i class="bi bi-shield fs-3 text-muted opacity-50" aria-hidden="true"></i>
             </div>
         </div>
-        <div class="col-6 col-md-3">
+        {% endif %}
+        {% if portal.cifras.socios %}
+        <div class="col-6 col-md">
             <div class="mockup-card p-4 d-flex justify-content-between align-items-center h-100">
                 <div>
                     <div class="macro-number">{{ cifras.socios }}</div>
@@ -606,14 +649,16 @@
                 <i class="bi bi-briefcase fs-3 text-muted opacity-50" aria-hidden="true"></i>
             </div>
         </div>
+        {% endif %}
     </div>
 </section>
+{% endif %}
 
 
 <section id="participa" class="container pb-5">
     <h3 class="fw-bold mb-4" style="font-size: 1.4rem;">Participa en A+S</h3>
     <div class="row g-4">
-        <div class="col-12 col-md-6">
+        <div class="col-12{% if portal.repositorio.activo %} col-md-6{% endif %}">
             <div class="mockup-card p-4 h-100 d-flex flex-column justify-content-between">
                 <div>
                     <div class="d-flex align-items-center gap-3 mb-3">
@@ -629,16 +674,24 @@
                         <a href="{% url 'socios:postular_publico_fijo' %}" class="list-action-item">
                             <i class="bi bi-chevron-right" aria-hidden="true"></i> Postular como Socio Comunitario
                         </a>
+                        {% if portal.catalogo.activo %}
                         <a href="#catalogo" class="list-action-item">
                             <i class="bi bi-chevron-right" aria-hidden="true"></i> Catálogo de Proyectos A+S
                         </a>
+                        {% endif %}
+                        {% if portal.mapa.activo %}
                         <a href="#proyectos" class="list-action-item">
                             <i class="bi bi-chevron-right" aria-hidden="true"></i> Mapa de Impacto Territorial
                         </a>
+                        {% endif %}
                     </div>
                 </div>
+                {% if not portal.repositorio.activo %}
+                    {% include "core/partials/_aviso_estudiantes.html" %}
+                {% endif %}
             </div>
         </div>
+        {% if portal.repositorio.activo %}
         <div class="col-12 col-md-6">
             <div class="mockup-card p-4 h-100 d-flex flex-column justify-content-between">
                 <div>
@@ -655,17 +708,15 @@
                         ACCEDER AL REPOSITORIO PÚBLICO A+S
                     </a>
                 </div>
-                <p class="text-muted small mb-0 mt-4 pt-3 border-top">
-                    <i class="bi bi-mortarboard me-1" aria-hidden="true"></i>
-                    <strong>¿Eres estudiante?</strong> El registro de tu equipo, la solicitud de carta y las encuestas
-                    se abren con el enlace o código QR que te comparte tu docente.
-                </p>
+                {% include "core/partials/_aviso_estudiantes.html" %}
             </div>
         </div>
+        {% endif %}
     </div>
 </section>
 
 
+{% if portal.noticias.activo %}
 <section class="container pb-5">
     <h3 class="fw-bold mb-3" style="font-size: 1.35rem;">Noticias y Recursos</h3>
     <div class="row g-4">
@@ -728,6 +779,7 @@
         {% endif %}
     </div>
 </section>
+{% endif %}
 
 
 <footer class="ua-footer">
@@ -747,14 +799,14 @@
             <div class="col-6 col-md-2">
                 <div class="ua-footer-title">PORTAL</div>
                 <a href="{% url 'core:inicio' %}" class="ua-footer-link">Inicio</a>
-                <a href="#proyectos" class="ua-footer-link">Mapa de impacto</a>
-                <a href="#catalogo" class="ua-footer-link">Proyectos</a>
+                {% if portal.mapa.activo %}<a href="#proyectos" class="ua-footer-link">Mapa de impacto</a>{% endif %}
+                {% if portal.catalogo.activo %}<a href="#catalogo" class="ua-footer-link">Proyectos</a>{% endif %}
             </div>
 
             <div class="col-6 col-md-2">
                 <div class="ua-footer-title">ACCESOS</div>
                 <a href="{% url 'socios:postular_publico_fijo' %}" class="ua-footer-link">Postular como socio</a>
-                <a href="{% url 'archivos:repositorio_publico' %}" class="ua-footer-link">Repositorio público</a>
+                {% if portal.repositorio.activo %}<a href="{% url 'archivos:repositorio_publico' %}" class="ua-footer-link">Repositorio público</a>{% endif %}
                 <a href="{% url 'usuarios:login' %}" class="ua-footer-link">Docentes y Coordinación</a>
             </div>
 
@@ -794,7 +846,7 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="{% static 'js/mapa_territorial.js' %}?v=2026-11-03"></script>
+<script src="{% static 'js/mapa_territorial.js' %}?v=2026-11-10"></script>
 <script>
     // Catálogo: anterior/siguiente deslizan la fila sin recargar; el año se filtra aquí mismo.
     (function () {

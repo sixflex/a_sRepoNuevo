@@ -13,7 +13,6 @@ from usuarios.services import aviso_vincular_cuenta
 from academico.models import (PeriodoAcademico, Seccion)
 
 from core.models import Noticia
-from archivos.models import RecursoRepositorio
 
 def inicio(request):
     if request.user.is_authenticated:
@@ -22,28 +21,37 @@ def inicio(request):
         if es_docente(request.user):
             return redirect("core:inicio_docente")
 
+    from publico.portal import configuracion_portal
+
     from . import indicadores
 
+    # Qué eligió mostrar el Coordinador (RF-PUB-01); lo apagado ni se calcula.
+    portal = configuracion_portal()
     filtros = indicadores.filtros_publicos(request.GET)
-    catalogo = indicadores.catalogo_publico(filtros)
 
-    noticias = Noticia.objects.filter(estado="PUBLICADA").order_by("-fecha_publicacion")[:3]
+    mapa = None
+    if portal["mapa"]["activo"]:
+        mapa = indicadores.mapa_publico(filtros, campos=portal["mapa"]["opciones"])
 
-    documentos_publicos = RecursoRepositorio.objects.filter(
-        visibilidad="PUBLICO",
-        estado="ACTIVO"
-    ).order_by("-id")[:4]
+    catalogo = indicadores.catalogo_publico(filtros) if portal["catalogo"]["activo"] else []
+    cifras = None
+    if portal["cifras"]["activo"] or portal["mapa"]["activo"]:
+        cifras = indicadores.cifras_publicas(filtros)
+
+    noticias = []
+    if portal["noticias"]["activo"]:
+        noticias = Noticia.objects.filter(estado="PUBLICADA").order_by("-fecha_publicacion")[:3]
 
     return render(request, "core/inicio.html", {
+        "portal": portal,
         "filtros": filtros,
         "hay_filtros": any(filtros.get(nombre) for nombre in indicadores.FILTROS_PUBLICOS),
         "opciones": indicadores.opciones_publicas(),
-        "mapa": indicadores.mapa_publico(filtros),
-        "cifras": indicadores.cifras_publicas(filtros),
+        "mapa": mapa,
+        "cifras": cifras,
         "catalogo": catalogo,
         "catalogo_anios": sorted({p["anio"] for p in catalogo if p["anio"]}, reverse=True),
         "noticias": noticias,
-        "documentos_publicos": documentos_publicos,
     })
 
 

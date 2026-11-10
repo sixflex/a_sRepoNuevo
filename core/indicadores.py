@@ -28,14 +28,16 @@ from academico.models import (
 from proyectos.models import IntegranteEquipo
 from rutas.models import SeccionRuta
 from rutas.services import con_avance, porcentaje_avance
-from socios.models import Comuna, ParticipacionSocio, SocioComunitario
+from socios.models import ClasificacionSocio, Comuna, ParticipacionSocio, SocioComunitario
 
 
 # Parámetros GET del panel de filtros, en el orden en que se muestran los chips.
 FILTROS = ["sede", "campus", "anio", "periodo", "facultad", "carrera", "asignatura", "comuna"]
 
 # Filtros del mapa del portal público (RF-PUB-01 y RF-IND-03): sin período ni asignatura.
-FILTROS_PUBLICOS = ["sede", "campus", "anio", "facultad", "carrera", "comuna"]
+# "clasificacion" es el tipo de socio: el dato normalizado más cercano al "tipo de
+# actividad" de RF-PUB-01, que no existe en el modelo (CDE-109).
+FILTROS_PUBLICOS = ["sede", "campus", "anio", "facultad", "carrera", "comuna", "clasificacion"]
 
 # Marca que indica que el usuario ya eligió filtros (aunque los haya quitado
 # todos): sin ella el panel parte en el período vigente.
@@ -133,7 +135,7 @@ def rutas_bajo_umbral(avance):
 
 def filtros_publicos(get):
     """Filtros del mapa público: parte con todos los años (sin período vigente)."""
-    filtros = {nombre: None for nombre in FILTROS}
+    filtros = {nombre: None for nombre in FILTROS + FILTROS_PUBLICOS}
     for nombre in FILTROS_PUBLICOS:
         filtros[nombre] = _entero(get.get(nombre))
     return filtros
@@ -154,6 +156,8 @@ def opciones_publicas():
         .distinct().order_by("nombre"),
         "carreras": Carrera.objects.filter(participaciones_socios__in=participaciones).distinct().order_by("nombre"),
         "comunas": Comuna.objects.filter(socios__participaciones__in=participaciones).distinct().order_by("nombre"),
+        "clasificaciones": ClasificacionSocio.objects.filter(socios__participaciones__in=participaciones)
+        .distinct().order_by("nombre"),
     }
 
 
@@ -236,6 +240,10 @@ def _secciones(filtros, periodo=None, anio=None):
         secciones = secciones.filter(
             participaciones_socios__socio__comuna_id=filtros["comuna"],
         )
+    if filtros.get("clasificacion"):
+        secciones = secciones.filter(
+            participaciones_socios__socio__clasificacion_id=filtros["clasificacion"],
+        )
     return secciones.distinct()
 
 
@@ -274,6 +282,8 @@ def _participaciones(filtros, periodo=None, anio=None):
         participaciones = participaciones.filter(asignatura_id=filtros["asignatura"])
     if filtros.get("comuna"):
         participaciones = participaciones.filter(socio__comuna_id=filtros["comuna"])
+    if filtros.get("clasificacion"):
+        participaciones = participaciones.filter(socio__clasificacion_id=filtros["clasificacion"])
     return participaciones
 
 
@@ -688,12 +698,19 @@ def mapa(filtros, detalle=False):
     }
 
 
-def mapa_publico(filtros):
-    """Payload público con una lista blanca de coordenadas y métricas agregadas."""
+# Campos que el portal público puede mostrar de cada comuna; el Coordinador elige
+# cuáles (publico/portal.py). Nunca incluye el detalle de los socios.
+CAMPOS_MAPA_PUBLICO = ["socios", "participaciones", "proyectos", "carreras", "anios"]
+
+
+def mapa_publico(filtros, campos=None):
+    """
+    Payload público con una lista blanca de coordenadas y métricas agregadas.
+    `campos` limita las métricas a las que eligió el Coordinador.
+    """
     datos = mapa(filtros)
-    campos_punto = {
-        "comuna", "lat", "lon", "socios", "participaciones", "proyectos", "carreras", "anios",
-    }
+    elegidos = CAMPOS_MAPA_PUBLICO if campos is None else [c for c in CAMPOS_MAPA_PUBLICO if c in campos]
+    campos_punto = {"comuna", "lat", "lon", *elegidos}
     puntos = [
         {campo: punto[campo] for campo in campos_punto if campo in punto}
         for punto in datos["puntos"]

@@ -172,6 +172,12 @@ PRIVATE_STORAGE_MAX_FILE_SIZE_MB = int(
     os.getenv("PRIVATE_STORAGE_MAX_FILE_SIZE_MB", "20")
 )
 
+# El límite de 20 MB de RNF-ARC-01 es para evidencias. Los documentos que
+# Coordinación sube al repositorio público pueden pesar más.
+REPOSITORIO_MAX_FILE_SIZE_MB = int(
+    os.getenv("REPOSITORIO_MAX_FILE_SIZE_MB", "50")
+)
+
 PRIVATE_STORAGE_MAX_FILES_PER_ACTIVITY = int(
     os.getenv("PRIVATE_STORAGE_MAX_FILES_PER_ACTIVITY", "10")
 )
