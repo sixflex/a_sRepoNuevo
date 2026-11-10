@@ -1339,9 +1339,10 @@ class AuditoriaYPruebasAvanzadasRutaTestCase(SeguimientoRutaTestCase):
         self.client.force_login(self.usuario_docente)
         url = reverse("rutas:completar_actividad", args=[self.actividad_obligatoria.id])
 
-        # Marcar y luego desmarcar: un solo registro por cambio (BUG-03, sin duplicados).
+        # Marcar y luego desmarcar: un registro por cada cambio.
         self.client.post(url)
         self.client.post(url)
+
         registros = list(
             AuditoriaCambio.objects.filter(
                 entidad="SeccionActividad",
@@ -1349,13 +1350,39 @@ class AuditoriaYPruebasAvanzadasRutaTestCase(SeguimientoRutaTestCase):
             ).order_by("id")
         )
 
-        self.assertEqual([r.accion for r in registros], ["CAMBIAR_ESTADO_ACTIVIDAD"] * 2)
+        self.assertEqual(
+            [r.accion for r in registros],
+            ["CAMBIAR_ESTADO_ACTIVIDAD"] * 2,
+        )
+
         marcar, desmarcar = registros
+
+
         self.assertEqual(marcar.valores_anteriores_json.get("estado"), "PENDIENTE")
         self.assertEqual(marcar.valores_nuevos_json.get("estado"), "COMPLETADA")
         self.assertEqual(desmarcar.valores_anteriores_json.get("estado"), "COMPLETADA")
         self.assertEqual(desmarcar.valores_nuevos_json.get("estado"), "PENDIENTE")
 
+        fecha_marcada = marcar.valores_nuevos_json.get("fecha_completada")
+
+        self.assertIsNone(
+            marcar.valores_anteriores_json.get("fecha_completada")
+        )
+        self.assertIsNotNone(fecha_marcada)
+
+        self.assertEqual(
+            desmarcar.valores_anteriores_json.get("fecha_completada"),
+            fecha_marcada,
+        )
+
+        self.assertIsNone(
+            desmarcar.valores_nuevos_json.get("fecha_completada")
+        )
+
+        # Verificar las fechas de auditoría.
+        self.assertIsNotNone(marcar.fecha)
+        self.assertIsNotNone(desmarcar.fecha)
+        self.assertGreaterEqual(desmarcar.fecha, marcar.fecha)
     @patch("archivos.services.obtener_storage_privado", return_value=InMemoryStorage())
     def test_auditoria_al_subir_y_eliminar_evidencia(self, _storage):
         self.client.force_login(self.usuario_docente)
@@ -1383,6 +1410,15 @@ class AuditoriaYPruebasAvanzadasRutaTestCase(SeguimientoRutaTestCase):
             accion="ELIMINAR_EVIDENCIA",
         ).first()
         self.assertIsNotNone(auditoria_eliminar)
+        #verificar que exista una sola auditoria por eliminacion.
+        self.assertEqual(
+            AuditoriaCambio.objects.filter(
+                entidad="Evidencia",
+                entidad_id=evidencia.pk,
+                accion="ELIMINAR_EVIDENCIA",
+            ).count(),
+            1,
+        )
 
     def test_auditoria_al_completar_ruta(self):
         self.client.force_login(self.usuario_docente)

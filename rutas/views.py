@@ -312,11 +312,19 @@ def completar_actividad(request, actividad_id):
         accion="CAMBIAR_ESTADO_ACTIVIDAD",
         valores_anteriores={
             "estado": estado_anterior,
-            "fecha_completada": fecha_completada_anterior.isoformat() if fecha_completada_anterior else None,
+            "fecha_completada": (
+                fecha_completada_anterior.isoformat()
+                if fecha_completada_anterior
+                else None
+            ),
         },
         valores_nuevos={
             "estado": actividad.estado,
-            "fecha_completada": str(actividad.fecha_completada) if actividad.fecha_completada else None,
+            "fecha_completada": (
+                actividad.fecha_completada.isoformat()
+                if actividad.fecha_completada
+                else None
+            ),
         },
     )
 
