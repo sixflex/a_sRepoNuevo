@@ -132,9 +132,17 @@
                                             <span class="badge bg-success">
                                                 Completada
                                             </span>
-                                        {% else %}
+                                        {% elif ruta.estado == "CERRADA" %}
+                                            <span class="badge bg-secondary">
+                                                Cerrada
+                                            </span>
+                                        {% elif ruta.estado == "EN_PROGRESO" %}
                                             <span class="badge bg-primary">
                                                 En progreso
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                {{ ruta.estado }}
                                             </span>
                                         {% endif %}
                                     </td>
