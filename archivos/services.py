@@ -56,8 +56,8 @@ def _generar_storage_key(nombre):
     )
 
 
-def guardar_archivo(archivo_subido, autor=None, storage=None):
-    validar_tamano_archivo(archivo_subido)
+def guardar_archivo(archivo_subido, autor=None, storage=None, limite_mb=None):
+    validar_tamano_archivo(archivo_subido, limite_mb)
     validar_extension_archivo(archivo_subido)
 
     storage = storage or obtener_storage_privado()

@@ -23,7 +23,8 @@
     }).addTo(mapa);
 
     const capa = L.layerGroup().addTo(mapa);
-    let modo = "proyectos";
+    // El portal público puede traer solo una vista (el Coordinador elige cuáles).
+    let modo = contenedor.dataset.mapaModoInicial || "proyectos";
 
     function texto(valor) {
         const span = document.createElement("span");
@@ -113,7 +114,7 @@
 
     function dibujar() {
         capa.clearLayers();
-        const maximo = Math.max(1, ...puntos.map(function (p) { return p[modo]; }));
+        const maximo = Math.max(1, ...puntos.map(function (p) { return p[modo] || 0; }));
         puntos.forEach(function (punto) {
             const valor = punto[modo];
             if (!valor) {
@@ -127,13 +128,24 @@
                 weight: 1,
             }).bindTooltip(String(valor), { permanent: true, direction: "center", className: "mapa-etiqueta" });
 
+            // Solo los datos que vienen: el portal público trae los que eligió el Coordinador.
+            const totales = [];
+            if (punto.socios !== undefined) {
+                totales.push(plural(punto.socios, "socio", "socios") +
+                    (punto.participaciones ? " (" + plural(punto.participaciones, "participación", "participaciones") + ")" : ""));
+            } else if (punto.participaciones) {
+                totales.push(plural(punto.participaciones, "participación", "participaciones"));
+            }
+            if (punto.proyectos !== undefined) {
+                totales.push(plural(punto.proyectos, "proyecto", "proyectos"));
+            }
+            const carreras = punto.carreras || [];
+            const anios = punto.anios || [];
             const popup =
-                "<strong>" + texto(punto.comuna) + "</strong><br>" +
-                plural(punto.socios, "socio", "socios") +
-                (punto.participaciones ? " (" + plural(punto.participaciones, "participación", "participaciones") + ")" : "") +
-                " · " + plural(punto.proyectos, "proyecto", "proyectos") +
-                (punto.carreras.length ? "<br>Carreras: " + texto(punto.carreras.join(", ")) : "") +
-                (punto.anios.length ? "<br>Años: " + punto.anios.join(", ") : "");
+                "<strong>" + texto(punto.comuna) + "</strong>" +
+                (totales.length ? "<br>" + totales.join(" · ") : "") +
+                (carreras.length ? "<br>Carreras: " + texto(carreras.join(", ")) : "") +
+                (anios.length ? "<br>Años: " + anios.join(", ") : "");
             marcador.bindPopup(popup);
             if (detalle && punto.detalle) {
                 marcador.on("click", function () { mostrarSocios(punto); });

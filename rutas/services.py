@@ -760,21 +760,47 @@ def nombre_zip_expediente(seccion):
     return "_".join(slugify(parte) for parte in partes if parte) + ".zip"
 
 
-def generar_zip_expediente(expediente, destino):
+def _carpetas_por_etapa(seccion_ruta):
+    """{nombre de etapa: "N - Etapa"} en el orden de la Ruta."""
+    etapas = []
+    for etapa in (
+        seccion_ruta.actividades
+        .order_by("ruta_actividad__orden")
+        .values_list("ruta_actividad__etapa", flat=True)
+    ):
+        if etapa not in etapas:
+            etapas.append(etapa)
+    return {etapa: f"{numero} - {etapa}".replace("/", "-") for numero, etapa in enumerate(etapas, start=1)}
 
+
+def generar_zip_expediente(expediente, destino, seccion_ruta=None):
+    """
+    ZIP del expediente. Con seccion_ruta (vista del Coordinador) lleva
+    primero la «Ficha del proyecto.pdf» y una carpeta por etapa de la Ruta,
+    con una subcarpeta por actividad.
+    """
     evidencias = (
         expediente.evidencias
         .select_related("archivo", "seccion_actividad__ruta_actividad")
         .order_by("seccion_actividad__ruta_actividad__orden", "id")
+        if expediente is not None else []
     )
+    carpetas_etapa = _carpetas_por_etapa(seccion_ruta) if seccion_ruta is not None else {}
 
     usados = set()
     faltantes = []
 
     with zipfile.ZipFile(destino, "w", zipfile.ZIP_DEFLATED) as zip_expediente:
+        if seccion_ruta is not None:
+            from .ficha import NOMBRE_PDF, generar_ficha_pdf
+
+            zip_expediente.writestr(NOMBRE_PDF, generar_ficha_pdf(seccion_ruta))
+
         for evidencia in evidencias:
             actividad = evidencia.seccion_actividad.ruta_actividad
             carpeta = f"{actividad.orden:02d} - {actividad.nombre}".replace("/", "-")
+            if actividad.etapa in carpetas_etapa:
+                carpeta = f"{carpetas_etapa[actividad.etapa]}/{carpeta}"
             nombre = Path(evidencia.archivo.nombre_original).name
             ruta = f"{carpeta}/{nombre}"
 

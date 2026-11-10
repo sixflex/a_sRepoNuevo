@@ -1,0 +1,32 @@
+{% comment %}
+Una etapa de la Ruta paso a paso. abierta=True es la etapa en curso (tarjeta
+abierta); las demás son una fila que se despliega. Ninguna se bloquea (RN-13).
+{% endcomment %}
+<section id="etapa-{{ etapa.numero }}" class="ruta-etapa{% if abierta %} card-ua mb-3{% endif %}">
+    {% if abierta %}
+        <header class="ruta-etapa-cab">
+            <div>
+                <div class="ruta-etapa-kicker">Etapa {{ etapa.numero }} de {{ etapas|length }}</div>
+                <h2 class="h5 fw-bold mb-0">{{ etapa.nombre }}</h2>
+            </div>
+            <span class="small text-muted">{{ etapa.hechas }} de {{ etapa.total }} hechas</span>
+        </header>
+    {% else %}
+        <button type="button" class="ruta-etapa-fila collapsed" data-bs-toggle="collapse"
+                data-bs-target="#etapa-cuerpo-{{ etapa.numero }}" aria-expanded="false"
+                aria-controls="etapa-cuerpo-{{ etapa.numero }}">
+            {% if etapa.completa %}
+                <i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i><span>{{ etapa.nombre }}</span>
+            {% else %}
+                <i class="bi bi-circle text-muted" aria-hidden="true"></i><span class="text-muted">{{ etapa.nombre }}</span>
+            {% endif %}
+            <span class="ms-auto small text-muted">{{ etapa.hechas }} de {{ etapa.total }}</span>
+            <i class="bi bi-chevron-down ruta-chevron text-muted" aria-hidden="true"></i>
+        </button>
+    {% endif %}
+    <div class="collapse{% if abierta %} show{% endif %}" id="etapa-cuerpo-{{ etapa.numero }}">
+        {% for actividad in etapa.actividades %}
+            {% include "rutas/includes/actividad_docente.html" %}
+        {% endfor %}
+    </div>
+</section>

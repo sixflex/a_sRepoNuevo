@@ -1,4 +1,5 @@
 from django import forms
+from django.conf import settings
 from django.core.exceptions import ValidationError
 
 from core.models import Noticia
@@ -25,7 +26,6 @@ class RecursoRepositorioForm(forms.ModelForm):
     archivo_subido = forms.FileField(
         label="Archivo",
         required=False,
-        help_text="PDF, Word o Excel. Al editar, sube uno nuevo solo si quieres reemplazarlo.",
     )
 
     categoria = forms.ChoiceField(label="Categoría", choices=CATEGORIAS)
@@ -54,6 +54,10 @@ class RecursoRepositorioForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["archivo_subido"].help_text = (
+            f"PDF, Word o Excel, hasta {settings.REPOSITORIO_MAX_FILE_SIZE_MB} MB. "
+            "Al editar, sube uno nuevo solo si quieres reemplazarlo."
+        )
         self.fields["archivo_subido"].widget.attrs["accept"] = ",".join(
             f".{ext}" for ext in EXTENSIONES_REPOSITORIO
         )

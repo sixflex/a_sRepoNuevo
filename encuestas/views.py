@@ -18,7 +18,7 @@ from core.qr import qr_base64
 from usuarios.decorators import coordinador_only_required, coordinador_required
 
 from . import constantes as c
-from . import services
+from . import precarga, services
 from .forms import (
     FormularioDatosForm,
     PreguntaForm,
@@ -770,7 +770,12 @@ def responder(request, token):
         return render(request, "encuestas/cerrado.html", contexto)
 
     bloques, preguntas = services.cargar_estructura(version)
-    form = RespuestaFormularioForm(version, bloques, preguntas, request.POST or None, request.FILES or None)
+    # Ficha única: lo que el sistema ya sabe de la sección viene escrito.
+    inicial, precargadas = precarga.precargar(version, preguntas, enlace.seccion, request.user)
+    form = RespuestaFormularioForm(
+        version, bloques, preguntas, request.POST or None, request.FILES or None,
+        initial=inicial, precargadas=precargadas,
+    )
 
     if request.method == "POST":
         clave = request.POST.get("clave_envio", "")

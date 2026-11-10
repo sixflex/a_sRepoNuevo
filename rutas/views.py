@@ -17,6 +17,7 @@ from academico.models import Campus, PeriodoAcademico, Sede
 from auditoria.services import registrar_auditoria
 from usuarios.permissions import es_coordinador, es_docente
 from usuarios.decorators import coordinador_required
+from . import paso_a_paso
 from . import services as servicios
 from .models import Evidencia, ExpedienteSeccion, SeccionActividad, SeccionRuta
 from django.urls import reverse
@@ -121,18 +122,6 @@ def detalle_ruta_docente(request, seccion_ruta_id):
         )
     )
 
-    etapas = {}
-
-    for actividad in actividades:
-        etapa = actividad.ruta_actividad.etapa
-
-        if etapa not in etapas:
-            etapas[etapa] = []
-
-        etapas[etapa].append(
-            actividad
-        )
-
     obligatorias = actividades.filter(
         ruta_actividad__es_obligatoria=True,
     )
@@ -144,75 +133,15 @@ def detalle_ruta_docente(request, seccion_ruta_id):
         ).exists()
         and seccion_ruta.estado != "COMPLETADA"
     )
-    enlaces_por_plantilla = enlaces_abiertos_por_plantilla({
-        actividad.ruta_actividad.formulario_version.plantilla_id
-        for actividad in actividades
-        if actividad.ruta_actividad.formulario_version_id
-    })
-    plantillas_resumen = list(
-        FormularioPlantilla.objects.filter(
-            titulo__icontains="Resumen de Implementación A+S por docente",
-            versiones__estado="PUBLICADA",
-            activo=True,
-        ).distinct()
-    )
 
-    enlace_resumen = None
+    # Paso a paso: una acción por actividad, formularios por sección y
+    # precargados (ficha única), y solo la etapa en curso abierta.
+    actividades = paso_a_paso.preparar_actividades(request, seccion_ruta, list(actividades))
+    etapas, etapa_actual = paso_a_paso.armar_etapas(actividades)
+    total_actividades = len(actividades)
+    hechas = sum(1 for actividad in actividades if actividad.completada_por_docente_id)
 
-    if len(plantillas_resumen) == 1:
-        enlaces_resumen = enlaces_abiertos_por_plantilla(
-            [plantillas_resumen[0].id]
-        )
-        enlace_resumen = enlaces_resumen.get(
-            plantillas_resumen[0].id
-        )
     for actividad in actividades:
-        actividad.url_recurso = url_recurso(actividad)
-        actividad.enlace_formulario = (
-            enlaces_por_plantilla.get(
-                actividad.ruta_actividad.formulario_version.plantilla_id
-            )
-            if actividad.ruta_actividad.formulario_version_id
-            else None
-        )
-        # Actividad 23: mostrar el Formulario Resumen.
-        if actividad.ruta_actividad.orden == 23:
-            actividad.enlace_formulario = (
-                actividad.enlace_formulario or enlace_resumen
-    )
-        actividad.formulario_compartible = None
-        actividad.formulario_directo = None
-
-        if (
-            actividad.ruta_actividad.orden in (5, 11, 13)
-            and actividad.ruta_actividad.formulario_version_id
-        ):
-            from rutas.services import obtener_o_crear_enlace_seccion
-
-            enlace_seccion = obtener_o_crear_enlace_seccion(
-                version_formulario=actividad.ruta_actividad.formulario_version,
-                seccion=seccion_ruta.seccion,
-                usuario=request.user,
-            )
-
-            actividad.enlace_formulario = enlace_seccion
-
-            if enlace_seccion is not None:
-                url_formulario = request.build_absolute_uri(
-                    reverse(
-                        "encuestas:responder",
-                        args=[enlace_seccion.token],
-                    )
-                )
-
-                if actividad.ruta_actividad.orden in (5, 11):
-                    actividad.formulario_directo = url_formulario
-
-                elif actividad.ruta_actividad.orden == 13:
-                    actividad.formulario_compartible = {
-                        "url": url_formulario,
-                        "qr_base64": qr_base64(url_formulario),
-                    }
         actividad.es_cierre = servicios.es_actividad_cierre(
             actividad.ruta_actividad
         )
@@ -235,6 +164,10 @@ def detalle_ruta_docente(request, seccion_ruta_id):
             "seccion_ruta": seccion_ruta,
             "seccion": seccion_ruta.seccion,
             "etapas": etapas,
+            "etapa_actual": etapa_actual,
+            "ruta_abierta": seccion_ruta.estado != "COMPLETADA",
+            "total_actividades": total_actividades,
+            "actividades_hechas": hechas,
             "puede_completar_ruta": puede_completar_ruta,
             "observacion_sin_cierre": servicios.OBSERVACION_SIN_CIERRE,
         },
@@ -757,26 +690,12 @@ def detalle_ruta_coordinacion(request, seccion_ruta_id):
         )
     )
 
-    etapas = {}
-
-    for actividad in actividades:
-        etapa = actividad.ruta_actividad.etapa
-
-        if etapa not in etapas:
-            etapas[etapa] = []
-
-        etapas[etapa].append(actividad)
-
-    total_actividades = actividades.count()
-
-    total_completadas = actividades.filter(
-        completada_por_docente__isnull=False,
-    ).count()
-
-    total_pendientes = (
-        total_actividades
-        - total_completadas
-    )
+    # Vista simple: avance, etapa en curso y una fila por etapa con lo pendiente.
+    lista = list(actividades)
+    etapas, etapa_actual = paso_a_paso.armar_etapas(lista)
+    total_actividades = len(lista)
+    total_completadas = sum(1 for actividad in lista if actividad.completada_por_docente_id)
+    total_pendientes = total_actividades - total_completadas
 
     return render(
         request,
@@ -785,6 +704,9 @@ def detalle_ruta_coordinacion(request, seccion_ruta_id):
             "seccion_ruta": seccion_ruta,
             "seccion": seccion_ruta.seccion,
             "etapas": etapas,
+            "etapa_actual": etapa_actual,
+            "docentes": ", ".join(str(d) for d in seccion_ruta.seccion.docentes.all()),
+            "observacion_sin_cierre": servicios.OBSERVACION_SIN_CIERRE,
             "total_actividades": total_actividades,
             "total_completadas": total_completadas,
             "total_pendientes": total_pendientes,
@@ -803,6 +725,65 @@ def detalle_ruta_coordinacion(request, seccion_ruta_id):
 
 
 @login_required
+def encuesta_socios(request):
+    """
+    Envío masivo de la encuesta de satisfacción a los Socios Comunitarios del
+    período (lo hace el Coordinador una vez, al final del semestre).
+    """
+    if not es_coordinador(request.user):
+        raise PermissionDenied
+
+    from core.indicadores import filtros_inicio
+
+    from . import encuesta_socios as encuesta
+
+    periodos = PeriodoAcademico.objects.order_by("-anio", "-id")
+    elegido = request.POST.get("periodo") or request.GET.get("periodo") or filtros_inicio({}).get("periodo")
+    periodo = periodos.filter(pk=elegido).first() if str(elegido or "").isdigit() else None
+    periodo = periodo or periodos.first()
+
+    if request.method == "POST" and periodo is not None:
+        resumen = encuesta.enviar(periodo, request, reenviar=request.POST.get("reenviar") == "1")
+        if resumen is None:
+            messages.error(request, "La encuesta de socios no está publicada. Publícala en Formularios y encuestas.")
+        else:
+            if resumen["enviados"]:
+                messages.success(request, f"Encuesta enviada a {resumen['enviados']} socio{'s' if resumen['enviados'] != 1 else ''}.")
+            elif not resumen["errores"]:
+                messages.info(request, "No había socios por enviar: ya la recibieron o respondieron.")
+            if resumen["errores"]:
+                messages.error(request, "No se pudo enviar a: " + ", ".join(resumen["errores"]) + ". Puedes intentarlo de nuevo.")
+            registrar_auditoria(
+                request=request,
+                entidad="PeriodoAcademico",
+                entidad_id=periodo.pk,
+                accion="ENVIAR_ENCUESTA_SOCIOS",
+                valores_nuevos={
+                    "enviados": resumen["enviados"],
+                    "errores": resumen["errores"],
+                    "sin_correo": resumen["sin_correo"],
+                },
+            )
+        return redirect(f"{reverse('rutas:encuesta_socios')}?periodo={periodo.pk}")
+
+    version, filas = encuesta.estado_envio(periodo) if periodo else (None, [])
+    return render(
+        request,
+        "rutas/encuesta_socios.html",
+        {
+            "periodos": periodos,
+            "periodo": periodo,
+            "version": version,
+            "filas": filas,
+            "por_enviar": sum(1 for f in filas if f["correo"] and not f["enviado"] and not f["respondio"]),
+            "enviados": sum(1 for f in filas if f["enviado"]),
+            "respondieron": sum(1 for f in filas if f["respondio"]),
+            "sin_correo": sum(1 for f in filas if not f["correo"]),
+        },
+    )
+
+
+@login_required
 def formularios_qr(request):
     if not (es_docente(request.user) or es_coordinador(request.user)):
         raise PermissionDenied
@@ -813,6 +794,13 @@ def formularios_qr(request):
         proceso=proceso,
         activo=True,
     ).order_by("titulo")
+
+    if not es_coordinador(request.user):
+        # La encuesta de socios la envía el Coordinador a fin de período
+        # (rutas:encuesta_socios); el docente proyecta solo estudiantes y docentes.
+        from .encuesta_socios import CODIGO_ENCUESTA
+
+        plantillas = plantillas.exclude(codigo=CODIGO_ENCUESTA)
 
     enlaces = enlaces_abiertos_por_plantilla(
         plantillas.values_list("id", flat=True)
@@ -1080,22 +1068,16 @@ def descargar_expediente(request, seccion_ruta_id):
     seccion = seccion_ruta.seccion
     expediente = ExpedienteSeccion.objects.filter(seccion=seccion).first()
 
-    if expediente is None or not expediente.evidencias.exists():
-        messages.info(request, "Esta sección todavía no tiene evidencias cargadas.")
-        return redirect(
-            "rutas:detalle_ruta_coordinacion",
-            seccion_ruta_id=seccion_ruta.id,
-        )
-
+    # Aunque aún no haya evidencias, el ZIP trae la ficha del proyecto.
     nombre = servicios.nombre_zip_expediente(seccion)
     destino = tempfile.SpooledTemporaryFile(max_size=50 * 1024 * 1024)
-    faltantes = servicios.generar_zip_expediente(expediente, destino)
+    faltantes = servicios.generar_zip_expediente(expediente, destino, seccion_ruta=seccion_ruta)
     destino.seek(0)
 
     registrar_auditoria(
         request=request,
-        entidad="ExpedienteSeccion",
-        entidad_id=expediente.pk,
+        entidad="ExpedienteSeccion" if expediente else "SeccionRuta",
+        entidad_id=expediente.pk if expediente else seccion_ruta.pk,
         accion="DESCARGAR_EXPEDIENTE",
         valores_nuevos={
             "archivo_zip": nombre,

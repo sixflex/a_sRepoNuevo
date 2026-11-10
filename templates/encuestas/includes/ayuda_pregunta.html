@@ -1,4 +1,5 @@
 {% comment %}Ayuda escrita por el Coordinador y mensaje automático del formato esperado (forms.indicacion).{% endcomment %}
+{% if item.precarga %}<p class="enc-precarga mb-2"><i class="bi bi-magic" aria-hidden="true"></i> {{ item.precarga }} · revísalo y cámbialo si no corresponde</p>{% endif %}
 {% if item.config.ayuda or item.indicacion %}
 <div class="enc-ayuda" id="ayuda-{{ item.campo.html_name }}">
     {% if item.config.ayuda %}<p class="mb-1">{{ item.config.ayuda }}</p>{% endif %}

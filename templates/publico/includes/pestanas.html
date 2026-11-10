@@ -1,0 +1,28 @@
+{% load static %}
+{# Cabecera común de "Portal público": Documentos (repositorio, RF-PUB-02) y Qué se muestra (RF-PUB-01). #}
+<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
+<link rel="stylesheet" href="{% static 'css/portal_publico.css' %}?v=2026-11-10b">
+
+<div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+    <div>
+        <h1 class="page-title">Portal público</h1>
+        <p class="page-subtitle mb-0">
+            Decide qué ve un visitante sin sesión. Todo lo que se muestra es agregado: nunca RUT, correos, teléfonos ni direcciones.
+        </p>
+    </div>
+    <a href="{% if activa == 'documentos' %}{% url 'archivos:repositorio_publico' %}{% else %}{% url 'core:inicio' %}{% endif %}"
+       class="btn btn-light-ua" target="_blank" rel="noopener">
+        <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Ver como visitante
+    </a>
+</div>
+
+<nav class="portal-pestanas mb-4" aria-label="Secciones del portal público">
+    <a href="{% url 'archivos:repositorio' %}" class="portal-pestana{% if activa == 'documentos' %} active{% endif %}"
+       {% if activa == 'documentos' %}aria-current="page"{% endif %}>
+        <i class="bi bi-folder2-open me-1" aria-hidden="true"></i>Documentos
+    </a>
+    <a href="{% url 'publico:configurar_portal' %}" class="portal-pestana{% if activa == 'que_se_muestra' %} active{% endif %}"
+       {% if activa == 'que_se_muestra' %}aria-current="page"{% endif %}>
+        <i class="bi bi-toggles me-1" aria-hidden="true"></i>Qué se muestra
+    </a>
+</nav>

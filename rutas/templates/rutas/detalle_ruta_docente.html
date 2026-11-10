@@ -1,440 +1,95 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block title %}Ruta del Docente A+S | Portal A+S{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b"><link rel="stylesheet" href="{% static 'css/ruta_docente.css' %}?v=2026-11-10">{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+{% comment %}
+Ruta paso a paso: las etapas de la Ruta como pasos, solo la etapa en curso
+abierta y una acción por actividad. Las demás etapas se abren con un clic;
+nada se bloquea (RN-13). La "ficha" del proyecto queda por detrás: los
+formularios vienen precargados y el Coordinador la descarga en el ZIP.
+{% endcomment %}
+<div class="container py-4 ruta-pasos">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-2">
         <div>
-            <h2 class="mb-1">Ruta del Docente A+S</h2>
-            <p class="text-muted mb-0">
-                {{ seccion.asignatura.nombre }} · NRC {{ seccion.nrc }} · Sección {{ seccion.seccion }}
-            </p>
+            <h1 class="page-title mb-1">Ruta del Docente A+S</h1>
+            <p class="page-subtitle mb-0">{{ seccion.asignatura.nombre }} · NRC {{ seccion.nrc }} · Sección {{ seccion.seccion }}</p>
         </div>
-        <a href="{% url 'core:detalle_seccion' seccion.id %}" class="btn btn-outline-secondary">
-            ← Volver a la sección
+        <a href="{% url 'core:detalle_seccion' seccion.id %}" class="btn btn-light-ua">
+            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver a la sección
         </a>
     </div>
 
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                <div>
-                    <h5 class="mb-1">Estado de la Ruta</h5>
-                    {% if seccion_ruta.estado == "COMPLETADA" %}
-                        <span class="badge bg-success">COMPLETADA</span>
-                    {% else %}
-                        <span class="badge bg-primary">EN PROGRESO</span>
-                    {% endif %}
-                </div>
-                <div class="text-end">
-                    <div class="text-muted small">Avance</div>
-                    <div class="fw-bold fs-4">
-                        {{ seccion_ruta.porcentaje_final|floatformat:0 }}%
-                    </div>
-                </div>
-            </div>
+    <ol class="ruta-stepper" aria-label="Etapas de la Ruta">
+        {% for etapa in etapas %}
+            <li class="ruta-paso{% if etapa.completa %} hecho{% elif etapa.actual %} actual{% endif %}">
+                <button type="button" class="ruta-paso-btn" data-ir-etapa="etapa-{{ etapa.numero }}"
+                        aria-label="Etapa {{ etapa.numero }}: {{ etapa.nombre }} ({{ etapa.hechas }} de {{ etapa.total }})">
+                    <span class="ruta-bola">{% if etapa.completa %}<i class="bi bi-check-lg" aria-hidden="true"></i>{% else %}{{ etapa.numero }}{% endif %}</span>
+                    <span class="ruta-paso-nombre">{{ etapa.nombre }}</span>
+                </button>
+            </li>
+        {% endfor %}
+    </ol>
 
-            <div class="progress mt-3" style="height: 12px;">
-                <div
-                    class="progress-bar"
-                    role="progressbar"
-                    style="--avance-ruta: {{ seccion_ruta.porcentaje_final|default_if_none:0|floatformat:0 }}%; width: var(--avance-ruta);"
-                    aria-valuenow="{{ seccion_ruta.porcentaje_final|default_if_none:0|floatformat:0 }}"
-                    aria-valuemin="0"
-                    aria-valuemax="100"
-                ></div>
-            </div>
-
-            {% if seccion_ruta.estado == "COMPLETADA" %}
-                <div class="alert alert-success mt-3 mb-0">
-                    <strong>Ruta completada.</strong>
-                    {% if seccion_ruta.fecha_cierre %}
-                        Cerrada el {{ seccion_ruta.fecha_cierre|date:"d/m/Y H:i" }}.
-                    {% endif %}
-                    {% if seccion_ruta.cerrada_por_docente %}
-                        Docente: {{ seccion_ruta.cerrada_por_docente }}.
-                    {% endif %}
-                </div>
-            {% endif %}
-        </div>
-    </div>
-
-    {% for etapa, actividades in etapas.items %}
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white">
-                <h4 class="mb-0">{{ etapa }}</h4>
-            </div>
-
-            <div class="card-body p-0">
-                {% for actividad in actividades %}
-                    <div class="p-4 {% if not forloop.last %}border-bottom{% endif %}">
-                        <div class="row g-3">
-                            <div class="col-lg-9">
-                                <div class="d-flex align-items-start gap-2">
-                                    <span class="badge bg-light text-dark border">
-                                        {{ actividad.ruta_actividad.orden }}
-                                    </span>
-
-                                    <div class="flex-grow-1">
-                                        <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
-                                            <h5 class="mb-0">
-                                                {{ actividad.ruta_actividad.nombre }}
-                                            </h5>
-                                            {% if actividad.ruta_actividad.es_obligatoria %}
-                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle small">
-                                                    Obligatoria
-                                                </span>
-                                            {% else %}
-                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle small">
-                                                    Opcional · no afecta el avance
-                                                </span>
-                                            {% endif %}
-                                        </div>
-
-                                        {% if actividad.ruta_actividad.descripcion %}
-                                            <p class="text-muted mb-2">
-                                                {{ actividad.ruta_actividad.descripcion }}
-                                            </p>
-                                        {% endif %}
-                                        {% if actividad.ruta_actividad.formulario_version and not actividad.formulario_compartible %}
-                                            {% if seccion_ruta.ruta_version.numero_version != 2 or actividad.ruta_actividad.orden != 5 and actividad.ruta_actividad.orden != 23 %}
-                                                <div class="mt-2 mb-2">
-                                                </div>
-                                            {% endif %}
-                                        {% endif %}
-                                        <div class="mt-3 d-flex flex-wrap align-items-center gap-2">
-                                        {% if seccion_ruta.estado != "COMPLETADA" %}
-                                            {% if not actividad.completada_por_docente and not actividad.formulario_compartible %}
-                                                {% if seccion_ruta.ruta_version.numero_version != 2 or actividad.ruta_actividad.orden != 5 and actividad.ruta_actividad.orden != 10 and actividad.ruta_actividad.orden != 19 and actividad.ruta_actividad.orden != 23 %}
-                                                <button
-                                                    type="button"
-                                                    class="btn btn-outline-primary btn-sm"
-                                                    data-bs-toggle="collapse"
-                                                    data-bs-target="#evidencia-{{ actividad.id }}"
-                                                    aria-expanded="false"
-                                                    aria-controls="evidencia-{{ actividad.id }}"
-                                                    title="Evidencia"
-                                                    aria-label="Evidencia"
-                                                >
-                                                    <i class="bi bi-paperclip"></i>
-                                                </button>
-
-                                                <div class="collapse mt-2 border rounded p-3 w-100" id="evidencia-{{ actividad.id }}">
-                                                    <form
-                                                        method="post"
-                                                        enctype="multipart/form-data"
-                                                        action="{% url 'rutas:subir_evidencia' actividad.id %}"
-                                                    >
-                                                        {% csrf_token %}
-
-                                                        <div class="mb-2">
-                                                            <input
-                                                                type="file"
-                                                                name="archivo"
-                                                                id="archivo-{{ actividad.id }}"
-                                                                class="form-control"
-                                                                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
-                                                                required
-                                                            >
-                                                        </div>
-
-                                                        <div class="small text-muted mb-2">
-                                                            Formatos permitidos: PDF, DOC, DOCX, XLS, XLSX, JPG y PNG.
-                                                        </div>
-
-                                                        <div class="mb-2">
-                                                            <input
-                                                                type="text"
-                                                                name="descripcion"
-                                                                class="form-control"
-                                                                placeholder="Descripción de la evidencia"
-                                                            >
-                                                        </div>
-
-                                                        <div class="d-flex gap-2">
-                                                            <button
-                                                                type="submit"
-                                                                class="btn btn-primary btn-sm"
-                                                            >
-                                                                Subir
-                                                            </button>
-
-                                                            <button
-                                                                type="button"
-                                                                class="btn btn-outline-secondary btn-sm"
-                                                                data-bs-toggle="collapse"
-                                                                data-bs-target="#evidencia-{{ actividad.id }}"
-                                                                onclick="limpiarArchivo('{{ actividad.id }}')"
-                                                            >
-                                                                Cancelar
-                                                            </button>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                                {% endif %}
-                                            {% endif %}
-                                        {% endif %}
-                                        {% if actividad.formulario_directo or actividad.enlace_formulario or actividad.formulario_compartible or actividad.ruta_actividad.archivo_recurso or actividad.url_recurso %}
-               
-                                                {% if actividad.formulario_directo %}
-                                                    <a
-                                                        href="{{ actividad.formulario_directo }}"
-                                                        class="btn btn-primary btn-sm"
-                                                    >
-                                                        <i class="bi bi-file-earmark-text me-1"></i>
-                                                        {% if seccion_ruta.ruta_version.numero_version == 2 and actividad.ruta_actividad.orden == 11 %}
-                                                            Completar Formalización de Acuerdos
-                                                        {% else %}
-                                                            Completar formulario
-                                                        {% endif %}
-                                                    </a>
-                                                {% elif actividad.enlace_formulario and not actividad.formulario_compartible %}
-                                                    <a
-                                                        href="{% url 'encuestas:responder' actividad.enlace_formulario.token %}"
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        class="btn btn-outline-primary btn-sm"
-                                                    >
-                                                        <i class="bi bi-file-earmark-text me-1"></i>
-                                                        {{ actividad.enlace_formulario.version.plantilla.titulo }}
-                                                    </a>
-                                                {% endif %}
-
-                                                {% if actividad.formulario_compartible %}
-                                                    <div class="mt-3 p-3 border rounded bg-light w-100">
-                                                        <h6 class="fw-semibold mb-2">
-                                                            <i class="bi bi-qr-code me-2"></i>
-                                                            Compartir registro de Socio Comunitario
-                                                        </h6>
-
-                                                        <p class="small text-muted mb-3">
-                                                            Comparte este formulario con el estudiante encargado
-                                                            de registrar los datos del Socio Comunitario.
-                                                        </p>
-
-                                                        <div class="d-flex flex-wrap align-items-center gap-3">
-                                                            <img
-                                                                src="data:image/png;base64,{{ actividad.formulario_compartible.qr_base64 }}"
-                                                                alt="Código QR del formulario de registro"
-                                                                width="150"
-                                                                height="150"
-                                                                class="border rounded bg-white p-2"
-                                                            >
-
-                                                            <div class="flex-grow-1">
-                                                                <label class="form-label small fw-semibold">
-                                                                    Enlace del formulario
-                                                                </label>
-
-                                                                <input
-                                                                    type="text"
-                                                                    class="form-control form-control-sm mb-2"
-                                                                    value="{{ actividad.formulario_compartible.url }}"
-                                                                    readonly
-                                                                    onclick="this.select()"
-                                                                >
-
-                                                                <a
-                                                                    href="{{ actividad.formulario_compartible.url }}"
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    class="btn btn-outline-primary btn-sm"
-                                                                >
-                                                                    <i class="bi bi-box-arrow-up-right me-1"></i>
-                                                                    Abrir formulario
-                                                                </a>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                {% endif %}
-
-                                                {% if actividad.ruta_actividad.orden == 10 %}
-                                                <a href="{% url 'cartas:listar_cartas_seccion_docente' seccion.id %}"
-                                                class="btn btn-outline-primary btn-sm">
-                                                    <i class="bi bi-folder2-open me-1"></i>
-                                                    Cartas de Presentación
-                                                </a>
-
-                                            {% elif actividad.url_recurso and not actividad.completada_por_docente and seccion_ruta.estado != "COMPLETADA" %}
-
-                                                <a href="{{ actividad.url_recurso }}"
-                                                class="btn btn-outline-primary btn-sm">
-                                                    <i class="bi bi-box-arrow-up-right me-1"></i>
-                                                    {{ actividad.ruta_actividad.nombre }}
-                                                </a>
-
-                                            {% endif %}
-
-                                                {% if actividad.ruta_actividad.archivo_recurso %}
-                                                    <a
-                                                        href="{% url 'archivos:descargar' actividad.ruta_actividad.archivo_recurso.id %}"
-                                                        class="btn btn-outline-secondary btn-sm"
-                                                    >
-                                                        <i class="bi bi-download me-1"></i>
-                                                        Descargar formato
-                                                    </a>
-                                                {% endif %}
-                                        {% endif %}
-                                        </div>
-
-                                        {% if actividad.es_cierre %}
-                                            {% include "rutas/includes/cierre_docente.html" %}
-                                        {% endif %}
-
-                                        {% if actividad.evidencias.all %}
-                                            <div class="mt-3">
-                                                <div class="fw-semibold mb-2">Evidencias</div>
-
-                                                {% for evidencia in actividad.evidencias.all %}
-                                                    <div class="border rounded p-2 mb-2">
-                                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                                            <div>
-                                                                <div class="fw-semibold">
-                                                                    {{ evidencia.archivo.nombre_original }}
-                                                                </div>
-
-                                                                {% if evidencia.descripcion %}
-                                                                    <div class="small text-muted">
-                                                                        {{ evidencia.descripcion }}
-                                                                    </div>
-                                                                {% endif %}
-                                                            </div>
-
-                                                            <div class="d-flex gap-2">
-                                                                <a
-                                                                    href="{% url 'archivos:descargar' evidencia.archivo.id %}"
-                                                                    class="btn btn-sm btn-outline-primary"
-                                                                >
-                                                                    Descargar
-                                                                </a>
-
-                                                                {% if seccion_ruta.estado != "COMPLETADA" and not actividad.completada_por_docente %}
-                                                                    <form
-                                                                        method="post"
-                                                                        action="{% url 'rutas:eliminar_evidencia' evidencia.id %}"
-                                                                    >
-                                                                        {% csrf_token %}
-                                                                        <button
-                                                                            type="submit"
-                                                                            class="btn btn-sm btn-outline-danger"
-                                                                        >
-                                                                            Eliminar
-                                                                        </button>
-                                                                    </form>
-                                                                {% endif %}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                {% endfor %}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-lg-3 text-lg-end">
-                                {% if actividad.completada_por_docente %}
-                                    <span class="badge bg-success mb-2">
-                                        Completada
-                                    </span>
-
-                                    {% if actividad.fecha_completada %}
-                                        <div class="small text-muted mb-2">
-                                            {{ actividad.fecha_completada|date:"d/m/Y H:i" }}
-                                        </div>
-                                    {% endif %}
-
-                                    {% if seccion_ruta.estado != "COMPLETADA" %}
-                                        <form
-                                            method="post"
-                                            action="{% url 'rutas:completar_actividad' actividad.id %}"
-                                        >
-                                            {% csrf_token %}
-                                            <button
-                                                type="submit"
-                                                class="btn btn-sm btn-outline-secondary"
-                                            >
-                                                Volver a pendiente
-                                            </button>
-                                        </form>
-                                    {% endif %}
-                                {% else %}
-                                    {% if seccion_ruta.estado != "COMPLETADA" %}
-                                        <form
-                                            method="post"
-                                            action="{% url 'rutas:completar_actividad' actividad.id %}"
-                                        >
-                                            {% csrf_token %}
-                                            <button
-                                                type="submit"
-                                                class="btn btn-sm btn-success"
-                                            >
-                                                Marcar como completada
-                                            </button>
-                                        </form>
-                                    {% endif %}
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
-    {% endfor %}
+    <p class="small text-muted mb-3">
+        {{ actividades_hechas }} de {{ total_actividades }} actividades hechas · avance {{ seccion_ruta.porcentaje_final|default_if_none:0|floatformat:0 }} %
+    </p>
 
     {% if seccion_ruta.estado == "COMPLETADA" %}
-        <div class="alert alert-success">
-            <h5 class="mb-2">Ruta A+S completada</h5>
-            <div>La Ruta fue completada correctamente y ya no puede modificarse.</div>
-
-            {% if seccion_ruta.fecha_cierre %}
-                <div class="small mt-2">
-                    Fecha de cierre: {{ seccion_ruta.fecha_cierre|date:"d/m/Y H:i" }}
-                </div>
-            {% endif %}
-
-            {% if seccion_ruta.cerrada_por_docente %}
-                <div class="small">
-                    Docente: {{ seccion_ruta.cerrada_por_docente }}
-                </div>
-            {% endif %}
-        </div>
-
-    {% elif puede_completar_ruta %}
-        <div class="card shadow-sm border-success mb-4">
-            <div class="card-body">
-                <h5 class="mb-2">Ruta lista para completar</h5>
-                <p class="text-muted mb-3">
-                    Todas las actividades obligatorias se encuentran completadas.
-                </p>
-
-                <form
-                    method="post"
-                    action="{% url 'rutas:completar_ruta' seccion_ruta.id %}"
-                >
-                    {% csrf_token %}
-                    <button
-                        type="submit"
-                        class="btn btn-success"
-                    >
-                        Completar Ruta
-                    </button>
-                </form>
+        <div class="alert alert-success d-flex gap-2 align-items-start">
+            <i class="bi bi-check-circle-fill mt-1" aria-hidden="true"></i>
+            <div>
+                <strong>Ruta completada.</strong>
+                {% if seccion_ruta.fecha_cierre %}Cerrada el {{ seccion_ruta.fecha_cierre|date:"d/m/Y H:i" }}.{% endif %}
+                {% if seccion_ruta.cerrada_por_docente %}Docente: {{ seccion_ruta.cerrada_por_docente }}.{% endif %}
+                Ya no puede modificarse.
             </div>
         </div>
-
-    {% else %}
-        <div class="alert alert-secondary mb-4">
-            Completa todas las actividades obligatorias para finalizar la Ruta A+S.
-        </div>
     {% endif %}
+
+    {% for etapa in etapas %}
+        {% if etapa.actual %}
+            {% include "rutas/includes/etapa_docente.html" with abierta=True %}
+        {% endif %}
+    {% endfor %}
+
+    {% if seccion_ruta.estado != "COMPLETADA" %}
+        {% if puede_completar_ruta %}
+            <div class="card-ua ruta-final p-4 mb-3">
+                <h2 class="h6 fw-bold mb-1"><i class="bi bi-flag me-1" aria-hidden="true"></i>Todo listo</h2>
+                <p class="text-muted small mb-3">Hiciste todas las actividades obligatorias. Al completar la Ruta ya no podrás cambiarla.</p>
+                <form method="post" action="{% url 'rutas:completar_ruta' seccion_ruta.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-ua">Completar Ruta</button>
+                </form>
+            </div>
+        {% endif %}
+    {% endif %}
+
+    <h2 class="ruta-otras-titulo">Otras etapas</h2>
+    <div class="card-ua ruta-otras mb-4">
+        {% for etapa in etapas %}
+            {% if not etapa.actual %}
+                {% include "rutas/includes/etapa_docente.html" with abierta=False %}
+            {% endif %}
+        {% endfor %}
+    </div>
 </div>
 
 <script>
-function limpiarArchivo(actividadId) {
-    const input = document.getElementById("archivo-" + actividadId);
-    if (input) {
-        input.value = "";
-    }
-}
+// Tocar un paso abre esa etapa y la lleva a la vista.
+document.querySelectorAll("[data-ir-etapa]").forEach(function (boton) {
+    boton.addEventListener("click", function () {
+        var etapa = document.getElementById(boton.dataset.irEtapa);
+        if (!etapa) return;
+        var cuerpo = etapa.querySelector(".collapse");
+        if (cuerpo && window.bootstrap) bootstrap.Collapse.getOrCreateInstance(cuerpo, {toggle: false}).show();
+        etapa.scrollIntoView({behavior: "smooth", block: "start"});
+    });
+});
 </script>
 {% endblock %}

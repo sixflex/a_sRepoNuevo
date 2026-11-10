@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Portal público | Portal A+S{% endblock %}
+
+{% block content %}
+{% include "publico/includes/pestanas.html" with activa="que_se_muestra" %}
+
+{% if errores %}
+    <div class="alert alert-danger" role="alert">
+        <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>No se guardó:
+        <ul class="mb-0 mt-1">{% for error in errores %}<li>{{ error }}</li>{% endfor %}</ul>
+    </div>
+{% endif %}
+
+<form method="post" data-portal-config>
+    {% csrf_token %}
+    <div class="card-ua mb-3">
+        {% for bloque in bloques %}
+            <div class="portal-bloque{% if not bloque.activo %} apagado{% endif %}" data-portal-bloque>
+                <div class="portal-bloque-fila">
+                    <div class="portal-bloque-icono"><i class="bi {{ bloque.icono }}" aria-hidden="true"></i></div>
+                    <div class="portal-bloque-texto">
+                        <div class="fw-semibold">
+                            {{ bloque.titulo }}
+                            <span class="badge text-bg-secondary ms-1{% if bloque.activo %} d-none{% endif %}" data-portal-oculto>Oculto</span>
+                        </div>
+                        <div class="small text-muted">{{ bloque.descripcion }}</div>
+                    </div>
+                    <div class="portal-bloque-acciones">
+                        {% if bloque.grupos %}
+                            <span class="portal-resumen" data-portal-resumen data-total="{{ bloque.total }}">{{ bloque.marcadas }} de {{ bloque.total }} datos</span>
+                            <button type="button" class="btn btn-sm btn-link text-decoration-none portal-detalle-btn"
+                                    data-bs-toggle="collapse" data-bs-target="#detalle-{{ bloque.clave }}"
+                                    aria-expanded="false" aria-controls="detalle-{{ bloque.clave }}">
+                                <i class="bi bi-chevron-down me-1" aria-hidden="true"></i>Detalle
+                            </button>
+                        {% endif %}
+                        <div class="form-check form-switch m-0 portal-switch">
+                            <input class="form-check-input" type="checkbox" role="switch"
+                                   id="{{ bloque.clave }}__activo" name="{{ bloque.clave }}__activo"
+                                   {% if bloque.activo %}checked{% endif %} data-portal-activo>
+                            <label class="visually-hidden" for="{{ bloque.clave }}__activo">Mostrar {{ bloque.titulo }} en el portal</label>
+                        </div>
+                    </div>
+                </div>
+                {% if bloque.grupos %}
+                    <div class="collapse" id="detalle-{{ bloque.clave }}">
+                        <div class="portal-detalle">
+                            {% for grupo in bloque.grupos %}
+                                <fieldset class="portal-grupo">
+                                    <legend>{{ grupo.titulo }}</legend>
+                                    {% if grupo.minimo_una %}<div class="form-text">Marca al menos una.</div>{% endif %}
+                                    <div class="portal-opciones">
+                                        {% for opcion in grupo.opciones %}
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox"
+                                                       id="{{ bloque.clave }}__{{ opcion.clave }}" name="{{ bloque.clave }}__{{ opcion.clave }}"
+                                                       {% if opcion.marcada %}checked{% endif %} data-portal-opcion>
+                                                <label class="form-check-label" for="{{ bloque.clave }}__{{ opcion.clave }}">{{ opcion.etiqueta }}</label>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </fieldset>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <span class="small text-muted">
+            {% if configuracion.fecha_actualizacion %}
+                <i class="bi bi-clock-history me-1" aria-hidden="true"></i>Último cambio:
+                {{ configuracion.actualizado_por.get_full_name|default:configuracion.actualizado_por.username|default:"Coordinación" }}
+                · {{ configuracion.fecha_actualizacion|date:"d/m/Y H:i" }} (queda en auditoría)
+            {% else %}
+                <i class="bi bi-info-circle me-1" aria-hidden="true"></i>Aún no hay cambios: el portal muestra todo.
+            {% endif %}
+        </span>
+        <button type="submit" class="btn btn-ua px-4"><i class="bi bi-check2 me-1" aria-hidden="true"></i>Guardar cambios</button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Atenúa el bloque apagado y actualiza "N de M datos" al marcar (solo visual; el servidor valida).
+    document.querySelectorAll("[data-portal-bloque]").forEach(function (bloque) {
+        const activo = bloque.querySelector("[data-portal-activo]");
+        const oculto = bloque.querySelector("[data-portal-oculto]");
+        const resumen = bloque.querySelector("[data-portal-resumen]");
+        const opciones = bloque.querySelectorAll("[data-portal-opcion]");
+
+        function actualizar() {
+            bloque.classList.toggle("apagado", !activo.checked);
+            oculto.classList.toggle("d-none", activo.checked);
+            if (resumen) {
+                const marcadas = Array.from(opciones).filter(function (o) { return o.checked; }).length;
+                resumen.textContent = marcadas + " de " + resumen.dataset.total + " datos";
+            }
+        }
+
+        activo.addEventListener("change", actualizar);
+        opciones.forEach(function (opcion) { opcion.addEventListener("change", actualizar); });
+    });
+</script>
+{% endblock %}
