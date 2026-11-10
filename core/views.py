@@ -14,6 +14,25 @@ from academico.models import (PeriodoAcademico, Seccion)
 
 from core.models import Noticia
 
+# Formulario unificado de los centros de negocio (Investigación de Mercados,
+# Consultoría Empresas, Gestión de Procesos): la convocatoria a emprendedores.
+CODIGO_CONVOCATORIA_CENTROS = "FICHA_EMPRENDEDORES"
+
+
+def _enlace_convocatoria_centros():
+    """Enlace público abierto de la Ficha de emprendedores, o None si no está publicada."""
+    from django.urls import reverse
+
+    from encuestas.models import FormularioPlantilla
+    from rutas.services import enlaces_abiertos_por_plantilla
+
+    plantilla = FormularioPlantilla.objects.filter(codigo=CODIGO_CONVOCATORIA_CENTROS, activo=True).first()
+    if plantilla is None:
+        return None
+    enlace = enlaces_abiertos_por_plantilla([plantilla.id]).get(plantilla.id)
+    return reverse("encuestas:responder", args=[enlace.token]) if enlace else None
+
+
 def inicio(request):
     if request.user.is_authenticated:
         if es_coordinador(request.user):
@@ -43,6 +62,7 @@ def inicio(request):
         noticias = Noticia.objects.filter(estado="PUBLICADA").order_by("-fecha_publicacion")[:3]
 
     return render(request, "core/inicio.html", {
+        "convocatoria_centros": _enlace_convocatoria_centros(),
         "portal": portal,
         "filtros": filtros,
         "hay_filtros": any(filtros.get(nombre) for nombre in indicadores.FILTROS_PUBLICOS),

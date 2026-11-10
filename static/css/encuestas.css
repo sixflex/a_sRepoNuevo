@@ -84,6 +84,9 @@
 .enc-obligatoria { color: var(--ua-red); margin-left: 2px; }
 
 .enc-ayuda { font-size: 0.85rem; color: var(--ua-text-muted); margin-bottom: 8px; }
+/* Ficha única: respuestas que vienen escritas desde la sección. */
+.enc-precarga { display: inline-block; font-size: 0.78rem; font-weight: 600; color: #1d5fa8; background: #eaf2fc; border-radius: 999px; padding: 2px 10px; }
+.enc-aviso-precarga { font-size: 0.88rem; color: #1d5fa8; background: #eaf2fc; border-radius: 10px; padding: 10px 14px; }
 .enc-indicacion { color: var(--ua-info); }
 
 .enc-error { color: var(--ua-red-hover); font-size: 0.85rem; margin-top: 4px; animation: enc-aparecer 0.2s ease-out; }

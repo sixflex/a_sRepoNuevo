@@ -94,8 +94,10 @@ class RespuestaFormularioForm(forms.Form):
     visible según el programa u opción elegida (RF-FOR-03).
     """
 
-    def __init__(self, version, bloques, preguntas, *args, **kwargs):
+    def __init__(self, version, bloques, preguntas, *args, precargadas=None, **kwargs):
         super().__init__(*args, **kwargs)
+        # {nombre_campo: origen} de lo que vino precargado desde la sección (encuestas.precarga).
+        self.precargadas = precargadas or {}
         self.version = version
         self.bloques = bloques
         self.preguntas = preguntas
@@ -255,6 +257,7 @@ class RespuestaFormularioForm(forms.Form):
                     "escala": escala,
                     "escala_desc": list(reversed(escala)),
                     "valor": valor if isinstance(valor, list) else ("" if valor is None else str(valor)),
+                    "precarga": self.precargadas.get(services.nombre_campo(pregunta)),
                     "pregunta": pregunta,
                     "config": config,
                     "indicacion": indicacion(pregunta, config),

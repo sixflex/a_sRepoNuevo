@@ -671,6 +671,11 @@
                         Organizaciones, fundaciones y emprendedores que quieran trabajar con estudiantes de la Universidad.
                     </p>
                     <div class="py-2">
+                        {% if convocatoria_centros %}
+                        <a href="{{ convocatoria_centros }}" class="list-action-item">
+                            <i class="bi bi-chevron-right" aria-hidden="true"></i> Convocatoria a los centros de negocio
+                        </a>
+                        {% endif %}
                         <a href="{% url 'socios:postular_publico_fijo' %}" class="list-action-item">
                             <i class="bi bi-chevron-right" aria-hidden="true"></i> Postular como Socio Comunitario
                         </a>
@@ -805,6 +810,7 @@
 
             <div class="col-6 col-md-2">
                 <div class="ua-footer-title">ACCESOS</div>
+                {% if convocatoria_centros %}<a href="{{ convocatoria_centros }}" class="ua-footer-link">Convocatoria centros de negocio</a>{% endif %}
                 <a href="{% url 'socios:postular_publico_fijo' %}" class="ua-footer-link">Postular como socio</a>
                 {% if portal.repositorio.activo %}<a href="{% url 'archivos:repositorio_publico' %}" class="ua-footer-link">Repositorio público</a>{% endif %}
                 <a href="{% url 'usuarios:login' %}" class="ua-footer-link">Docentes y Coordinación</a>
