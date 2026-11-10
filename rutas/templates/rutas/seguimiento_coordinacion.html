@@ -90,6 +90,7 @@
                                 <th>Campus</th>
                                 <th>Docente</th>
                                 <th>Avance</th>
+                                <th>Pendientes</th>
                                 <th>Estado</th>
                                 <th></th>
                             </tr>
@@ -120,6 +121,11 @@
                                                 data-progress="{{ ruta.porcentaje_final|default:0|floatformat:0 }}"
                                             ></div>
                                         </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-warning text-dark">
+                                            {{ ruta.actividades_pendientes }}
+                                        </span>
                                     </td>
                                     <td>
                                         {% if ruta.estado == "COMPLETADA" %}

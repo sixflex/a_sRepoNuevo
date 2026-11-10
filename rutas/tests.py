@@ -612,8 +612,63 @@ class SeguimientoRutaTestCase(TestCase):
         respuesta = self.client.get(
             reverse("rutas:seguimiento_coordinacion")
         )
+        self.assertEqual(respuesta.status_code, 200)
+
+
+    def test_coordinador_muestra_actividades_pendientes(self):
+        self.client.force_login(self.usuario_coordinador)
+
+        respuesta = self.client.get(
+            reverse("rutas:seguimiento_coordinacion")
+        )
 
         self.assertEqual(respuesta.status_code, 200)
+
+        rutas = respuesta.context["rutas"]
+        ruta = next(r for r in rutas if r.id == self.ruta.id)
+
+        self.assertEqual(ruta.total_actividades, 2)
+        self.assertEqual(ruta.total_completadas, 0)
+        self.assertEqual(ruta.actividades_pendientes, 2)
+
+        self.assertContains(respuesta, "<th>Pendientes</th>", html=True)
+        self.assertContains(respuesta, "{{ ruta.actividades_pendientes }}", count=0)
+        self.assertContains(
+            respuesta,
+            '<span class="badge bg-warning text-dark">2</span>',
+            html=True
+        )
+
+    def test_coordinador_filtra_rutas_por_sede_campus_periodo_estado(self):
+        self.client.force_login(self.usuario_coordinador)
+
+        filtros = {
+            "sede": str(self.seccion.campus.sede_id),
+            "campus": str(self.seccion.campus_id),
+            "periodo": str(self.seccion.periodo_id),
+            "estado": "EN_PROGRESO",
+        }
+
+        respuesta = self.client.get(
+            reverse("rutas:seguimiento_coordinacion"),
+            filtros
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+
+        self.assertEqual(
+            respuesta.context["filtros_seleccionados"],
+            filtros
+        )
+
+        rutas = list(respuesta.context["rutas"])
+
+        self.assertEqual(len(rutas), 1)
+        self.assertEqual(rutas[0].id, self.ruta.id)
+        self.assertEqual(rutas[0].actividades_pendientes, 2)
+
+        self.assertContains(respuesta, 'value="EN_PROGRESO" selected')
+
 
     def test_coordinador_puede_ver_detalle(self):
         self.client.force_login(self.usuario_coordinador)
