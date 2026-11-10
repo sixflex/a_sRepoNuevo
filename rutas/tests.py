@@ -327,7 +327,7 @@ class RutaDocenteTestCase(TestCase):
         Verifica que no hay órdenes fijados en código (11, 16, 20, 21): según
         RF-EVI-02, el Docente puede subir evidencias en cualquier actividad de
         la Ruta, sea la orden 5 o la 11.
-        """
+      """
         seccion = self.crear_seccion("RUTA_EVI_1")
         seccion_ruta = asignar_ruta_as_si_corresponde(seccion)
 
@@ -612,8 +612,63 @@ class SeguimientoRutaTestCase(TestCase):
         respuesta = self.client.get(
             reverse("rutas:seguimiento_coordinacion")
         )
+        self.assertEqual(respuesta.status_code, 200)
+
+
+    def test_coordinador_muestra_actividades_pendientes(self):
+        self.client.force_login(self.usuario_coordinador)
+
+        respuesta = self.client.get(
+            reverse("rutas:seguimiento_coordinacion")
+        )
 
         self.assertEqual(respuesta.status_code, 200)
+
+        rutas = respuesta.context["rutas"]
+        ruta = next(r for r in rutas if r.id == self.ruta.id)
+
+        self.assertEqual(ruta.total_actividades, 2)
+        self.assertEqual(ruta.total_completadas, 0)
+        self.assertEqual(ruta.actividades_pendientes, 2)
+
+        self.assertContains(respuesta, "<th>Pendientes</th>", html=True)
+        self.assertContains(respuesta, "{{ ruta.actividades_pendientes }}", count=0)
+        self.assertContains(
+            respuesta,
+            '<span class="badge bg-warning text-dark">2</span>',
+            html=True
+        )
+
+    def test_coordinador_filtra_rutas_por_sede_campus_periodo_estado(self):
+        self.client.force_login(self.usuario_coordinador)
+
+        filtros = {
+            "sede": str(self.seccion.campus.sede_id),
+            "campus": str(self.seccion.campus_id),
+            "periodo": str(self.seccion.periodo_id),
+            "estado": "EN_PROGRESO",
+        }
+
+        respuesta = self.client.get(
+            reverse("rutas:seguimiento_coordinacion"),
+            filtros
+        )
+
+        self.assertEqual(respuesta.status_code, 200)
+
+        self.assertEqual(
+            respuesta.context["filtros_seleccionados"],
+            filtros
+        )
+
+        rutas = list(respuesta.context["rutas"])
+
+        self.assertEqual(len(rutas), 1)
+        self.assertEqual(rutas[0].id, self.ruta.id)
+        self.assertEqual(rutas[0].actividades_pendientes, 2)
+
+        self.assertContains(respuesta, 'value="EN_PROGRESO" selected')
+
 
     def test_coordinador_puede_ver_detalle(self):
         self.client.force_login(self.usuario_coordinador)
@@ -738,7 +793,7 @@ class CargarRutaDocenteTestCase(TestCase):
         self.assertIn("proceso=EVALUACION_AS", actividades[19].recurso_url)
 
 
-class CierreYExpedienteTestCase(TestCase):
+class CierreYExpedienteOriginalTestCase(TestCase):
     """CDE-518 (cierre e invitación), CDE-515 (pendientes) y CDE-522 (ZIP)."""
 
     def setUp(self):
@@ -747,9 +802,19 @@ class CierreYExpedienteTestCase(TestCase):
         from socios.models import ContactoSocio, ParticipacionSocio, SocioComunitario
 
         ruta_cierre = self.actividad_obligatoria.ruta_actividad
+        version = ruta_cierre.ruta_version
+
+        version.estado = "BORRADOR"
+        version.save(update_fields=["estado"])
+
         ruta_cierre.nombre = "Organizar el evento de cierre"
-        ruta_cierre.config_recordatorio_json = {"recordatorio": "invitacion_cierre"}
+        ruta_cierre.config_recordatorio_json = {
+            "recordatorio": "invitacion_cierre"
+        }
         ruta_cierre.save()
+
+        version.estado = "ACTIVA"
+        version.save(update_fields=["estado"])
         self.actividad_cierre = self.actividad_obligatoria
 
         self.socio = SocioComunitario.objects.create(
@@ -789,6 +854,27 @@ class CierreYExpedienteTestCase(TestCase):
         self.assertEqual(self.actividad_cierre.estado, "COMPLETADA")
         self.assertEqual(self.actividad_cierre.observacion, "No habrá actividad de cierre.")
         self.assertEqual(self.ruta.porcentaje_final, 100)
+    def test_desmarcar_sin_cierre_limpia_observacion(self):
+        self.client.force_login(self.usuario_docente)
+
+        self.client.post(
+            reverse("rutas:indicar_sin_cierre", args=[self.actividad_cierre.id])
+        )
+
+        self.actividad_cierre.refresh_from_db()
+        self.assertEqual(
+            self.actividad_cierre.observacion,
+            "No habrá actividad de cierre."
+        )
+
+        self.client.post(
+            reverse("rutas:completar_actividad", args=[self.actividad_cierre.id])
+        )
+
+        self.actividad_cierre.refresh_from_db()
+        self.assertEqual(self.actividad_cierre.estado, "PENDIENTE")
+        self.assertIsNone(self.actividad_cierre.completada_por_docente)
+        self.assertEqual(self.actividad_cierre.observacion, "")
 
     def test_sin_cierre_solo_en_la_actividad_de_cierre(self):
         self.client.force_login(self.usuario_docente)
@@ -909,8 +995,16 @@ class CierreYExpedienteTestCase(TestCase):
 
     def test_recurso_url_reemplaza_seccion_y_actividad(self):
         ruta_actividad = self.actividad_obligatoria.ruta_actividad
+        version = ruta_actividad.ruta_version
+
+        version.estado = "BORRADOR"
+        version.save(update_fields=["estado"])
+
         ruta_actividad.recurso_url = "/a/{seccion}/b/{actividad}/"
         ruta_actividad.save()
+
+        version.estado = "ACTIVA"
+        version.save(update_fields=["estado"])
 
         self.assertEqual(
             url_recurso(self.actividad_obligatoria),
@@ -1284,9 +1378,10 @@ class AuditoriaYPruebasAvanzadasRutaTestCase(SeguimientoRutaTestCase):
         self.client.force_login(self.usuario_docente)
         url = reverse("rutas:completar_actividad", args=[self.actividad_obligatoria.id])
 
-        # Marcar y luego desmarcar: un solo registro por cambio (BUG-03, sin duplicados).
+        # Marcar y luego desmarcar: un registro por cada cambio.
         self.client.post(url)
         self.client.post(url)
+
         registros = list(
             AuditoriaCambio.objects.filter(
                 entidad="SeccionActividad",
@@ -1294,13 +1389,39 @@ class AuditoriaYPruebasAvanzadasRutaTestCase(SeguimientoRutaTestCase):
             ).order_by("id")
         )
 
-        self.assertEqual([r.accion for r in registros], ["CAMBIAR_ESTADO_ACTIVIDAD"] * 2)
+        self.assertEqual(
+            [r.accion for r in registros],
+            ["CAMBIAR_ESTADO_ACTIVIDAD"] * 2,
+        )
+
         marcar, desmarcar = registros
+
+
         self.assertEqual(marcar.valores_anteriores_json.get("estado"), "PENDIENTE")
         self.assertEqual(marcar.valores_nuevos_json.get("estado"), "COMPLETADA")
         self.assertEqual(desmarcar.valores_anteriores_json.get("estado"), "COMPLETADA")
         self.assertEqual(desmarcar.valores_nuevos_json.get("estado"), "PENDIENTE")
 
+        fecha_marcada = marcar.valores_nuevos_json.get("fecha_completada")
+
+        self.assertIsNone(
+            marcar.valores_anteriores_json.get("fecha_completada")
+        )
+        self.assertIsNotNone(fecha_marcada)
+
+        self.assertEqual(
+            desmarcar.valores_anteriores_json.get("fecha_completada"),
+            fecha_marcada,
+        )
+
+        self.assertIsNone(
+            desmarcar.valores_nuevos_json.get("fecha_completada")
+        )
+
+        # Verificar las fechas de auditoría.
+        self.assertIsNotNone(marcar.fecha)
+        self.assertIsNotNone(desmarcar.fecha)
+        self.assertGreaterEqual(desmarcar.fecha, marcar.fecha)
     @patch("archivos.services.obtener_storage_privado", return_value=InMemoryStorage())
     def test_auditoria_al_subir_y_eliminar_evidencia(self, _storage):
         self.client.force_login(self.usuario_docente)
@@ -1328,6 +1449,15 @@ class AuditoriaYPruebasAvanzadasRutaTestCase(SeguimientoRutaTestCase):
             accion="ELIMINAR_EVIDENCIA",
         ).first()
         self.assertIsNotNone(auditoria_eliminar)
+        #verificar que exista una sola auditoria por eliminacion.
+        self.assertEqual(
+            AuditoriaCambio.objects.filter(
+                entidad="Evidencia",
+                entidad_id=evidencia.pk,
+                accion="ELIMINAR_EVIDENCIA",
+            ).count(),
+            1,
+        )
 
     def test_auditoria_al_completar_ruta(self):
         self.client.force_login(self.usuario_docente)

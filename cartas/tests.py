@@ -90,19 +90,22 @@ class CartasServicesTestCase(TestCase):
             fecha_aprobacion=ahora,
         )
 
-    def test_agrupacion_mas_de_seis_estudiantes(self):
+    def test_rechaza_solicitud_con_mas_de_seis_estudiantes(self):
         for i in range(10):
             CartaEstudiante.objects.create(
                 solicitud=self.solicitud,
                 nombre=f"Estudiante {i}",
                 rut=f"1234567{i}-K",
                 orden=i,
-            )
+           )
 
-        resultado = generar_cartas_agrupadas(self.solicitud, self.usuario)
+        with self.assertRaisesRegex(
+            ValueError,
+            "Una solicitud no puede contener más de 6 estudiantes",
+        ):
+            generar_cartas_agrupadas(self.solicitud, self.usuario)
 
-        self.assertEqual(resultado["total_cartas"], 2)
-        self.assertEqual(len(resultado["cartas"]), 2)
+        self.assertEqual(CartaDocumento.objects.count(), 0)
 
     def test_alerta_antiguedad_socio(self):
         self.assertTrue(verificar_alerta_antiguedad_socio(self.socio))

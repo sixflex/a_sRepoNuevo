@@ -229,6 +229,9 @@ def completar_actividad(request, actividad_id):
         actividad.estado = "PENDIENTE"
         actividad.fecha_completada = None
 
+        if actividad.observacion == servicios.OBSERVACION_SIN_CIERRE:
+            actividad.observacion = ""
+
     actividad.save(
         update_fields=[
             "completada_por_docente",
@@ -245,11 +248,19 @@ def completar_actividad(request, actividad_id):
         accion="CAMBIAR_ESTADO_ACTIVIDAD",
         valores_anteriores={
             "estado": estado_anterior,
-            "fecha_completada": fecha_completada_anterior.isoformat() if fecha_completada_anterior else None,
+            "fecha_completada": (
+                fecha_completada_anterior.isoformat()
+                if fecha_completada_anterior
+                else None
+            ),
         },
         valores_nuevos={
             "estado": actividad.estado,
-            "fecha_completada": str(actividad.fecha_completada) if actividad.fecha_completada else None,
+            "fecha_completada": (
+                actividad.fecha_completada.isoformat()
+                if actividad.fecha_completada
+                else None
+            ),
         },
     )
 

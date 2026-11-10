@@ -364,33 +364,33 @@ def generar_pdf_carta(solicitud, usuario, estudiantes=None):
 
 
 def generar_cartas_agrupadas(solicitud, usuario):
-  
+
     if solicitud.estado not in {"BORRADOR", "APROBADA"}:
         raise ValueError(
             "La solicitud debe estar en borrador o aprobada."
         )
 
     todos_estudiantes = list(solicitud.estudiantes.order_by("orden"))
+
     if not todos_estudiantes:
         raise ValueError("La solicitud no tiene estudiantes asociados.")
 
-    socio = getattr(solicitud, "socio", None)
-    alerta_antiguedad = verificar_alerta_antiguedad_socio(socio)
+    if len(todos_estudiantes) > MAX_ALUMNOS_POR_CARTA:
+        raise ValueError(
+            f"Una solicitud no puede contener más de "
+            f"{MAX_ALUMNOS_POR_CARTA} estudiantes. "
+            "Para un grupo mayor, se debe crear otra solicitud."
+        )
 
-    lotes = [
-        todos_estudiantes[i : i + MAX_ALUMNOS_POR_CARTA]
-        for i in range(0, len(todos_estudiantes), MAX_ALUMNOS_POR_CARTA)
-    ]
-
-    cartas_generadas = []
-    for lote in lotes:
-        carta_doc = generar_pdf_carta(solicitud, usuario, estudiantes=lote)
-        cartas_generadas.append(carta_doc)
+    carta_doc = generar_pdf_carta(
+        solicitud,
+        usuario,
+        estudiantes=todos_estudiantes,
+    )
 
     return {
-        "cartas": cartas_generadas,
-        "total_cartas": len(cartas_generadas),
-        "alerta_antiguedad": alerta_antiguedad,
+        "cartas": [carta_doc],
+        "total_cartas": 1,
     }
 
 

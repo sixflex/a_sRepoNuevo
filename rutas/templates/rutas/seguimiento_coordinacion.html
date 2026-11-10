@@ -93,6 +93,7 @@
                                 <th>Campus</th>
                                 <th>Docente</th>
                                 <th>Avance</th>
+                                <th>Pendientes</th>
                                 <th>Estado</th>
                                 <th></th>
                             </tr>
@@ -125,13 +126,26 @@
                                         </div>
                                     </td>
                                     <td>
+                                        <span class="badge bg-warning text-dark">
+                                            {{ ruta.actividades_pendientes }}
+                                        </span>
+                                    </td>
+                                    <td>
                                         {% if ruta.estado == "COMPLETADA" %}
                                             <span class="badge bg-success">
                                                 Completada
                                             </span>
-                                        {% else %}
+                                        {% elif ruta.estado == "CERRADA" %}
+                                            <span class="badge bg-secondary">
+                                                Cerrada
+                                            </span>
+                                        {% elif ruta.estado == "EN_PROGRESO" %}
                                             <span class="badge bg-primary">
                                                 En progreso
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                {{ ruta.estado }}
                                             </span>
                                         {% endif %}
                                     </td>
@@ -161,4 +175,4 @@
         bar.style.width = `${bar.dataset.progress}%`;
     });
 </script>
-{% endblock %}
+{% endblock %}
