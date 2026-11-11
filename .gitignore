@@ -28,3 +28,7 @@ private_uploads/
 # Firma de prueba (nunca al repositorio)
 firma_prueba*
 *.firma.png
+
+# Archivos de respaldo de BD y Media
+respaldo_portal_as.dump
+respaldo_media.zip
