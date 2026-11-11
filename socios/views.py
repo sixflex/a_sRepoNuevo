@@ -564,11 +564,18 @@ def postular_publico(request, convocatoria_id=None):
     """
     Formulario público para que un Socio Comunitario postule a una convocatoria A+S.
     Controla vigencia, validación de RUT, duplicados y generación de folio (CDE-49 a CDE-53).
+    Soluciona BUG-01 al validar que la convocatoria indicada por id esté en estado PUBLICADA y dentro del rango de fechas.
     """
     ahora = timezone.now()
     
     if convocatoria_id:
         convocatoria = get_object_or_404(Convocatoria, pk=convocatoria_id)
+        # BUG-01 Fix: Si se especifica un ID explícito, validar estado PUBLICADA y fecha de inicio.
+        if convocatoria.estado != "PUBLICADA" or convocatoria.fecha_inicio > ahora:
+            return render(request, "socios/postulacion_cerrada.html", {
+                "convocatoria": convocatoria,
+                "mensaje": "Esta convocatoria no se encuentra disponible actualmente."
+            })
     else:
         convocatoria = Convocatoria.objects.filter(
             estado="PUBLICADA",
@@ -675,7 +682,6 @@ def postular_publico(request, convocatoria_id=None):
         "clasificaciones": clasificaciones,
         "errores": errores,
     })
-
 
 def postulacion_exitosa(request, postulacion_id):
     """
