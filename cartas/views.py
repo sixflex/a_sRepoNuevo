@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from academico.models import Docente, Seccion
+from auditoria.services import registrar_auditoria
 from core.ordenamiento import OPCIONES_ORDEN, orden_pedido, ordenar_por_fecha
 from usuarios.permissions import es_coordinador, es_docente
 from usuarios.services import correo_de_sesion, oid_de_sesion
@@ -359,6 +360,8 @@ def aprobar_solicitud(request, solicitud_id):
             solicitud_id=solicitud.id,
         )
 
+    estado_anterior = solicitud.estado
+
     try:
         solicitud, envios = aprobar_y_enviar_carta(
             solicitud.id,
@@ -374,6 +377,18 @@ def aprobar_solicitud(request, solicitud_id):
             "cartas:detalle_solicitud_coordinacion",
             solicitud_id=solicitud.id,
         )
+
+    registrar_auditoria(
+        request=request,
+        entidad="SolicitudCarta",
+        entidad_id=solicitud.id,
+        accion="APROBAR_CARTA",
+        valores_anteriores={"estado": estado_anterior},
+        valores_nuevos={
+            "estado": solicitud.estado,
+            "fecha_aprobacion": str(solicitud.fecha_aprobacion),
+        },
+    )
 
     if all(envio.resultado == "OK" for envio in envios):
         messages.success(
@@ -432,6 +447,8 @@ def observar_solicitud(request, solicitud_id):
             solicitud_id=solicitud.id,
         )
 
+    estado_anterior = solicitud.estado
+
     solicitud.estado = "OBSERVADA"
     solicitud.motivo_observacion = motivo
     solicitud.fecha_aprobacion = None
@@ -444,6 +461,18 @@ def observar_solicitud(request, solicitud_id):
         ]
     )
 
+    registrar_auditoria(
+        request=request,
+        entidad="SolicitudCarta",
+        entidad_id=solicitud.id,
+        accion="OBSERVAR_CARTA",
+        valores_anteriores={"estado": estado_anterior},
+        valores_nuevos={
+            "estado": solicitud.estado,
+            "motivo": solicitud.motivo_observacion,
+        },
+    )
+
     messages.success(
         request,
         "La solicitud fue observada correctamente.",
@@ -453,6 +482,8 @@ def observar_solicitud(request, solicitud_id):
         "cartas:detalle_solicitud_coordinacion",
         solicitud_id=solicitud.id,
     )
+
+
 @login_required
 def vista_previa_carta_coordinacion(request, solicitud_id):
     """SP6-T04 (RF-CAR-04): vista previa de la carta, marcada como borrador."""
