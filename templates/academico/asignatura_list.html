@@ -83,13 +83,15 @@
                             <!-- ACCIONES -->
                             <td class="text-center text-nowrap">
                                 <a href="{% url 'asignatura_update' asignatura.id %}"
-                                   class="btn btn-sm btn-outline-secondary me-1">
-                                    Editar
+                                   class="btn btn-sm btn-outline-secondary me-1 px-2"
+                                   title="Editar" aria-label="Editar">
+                                    <i class="bi bi-pencil" aria-hidden="true"></i>
                                 </a>
 
                                 <a href="{% url 'asignatura_delete' asignatura.id %}"
-                                   class="btn btn-sm btn-outline-danger">
-                                    Eliminar
+                                   class="btn btn-sm btn-outline-danger px-2"
+                                   title="Eliminar" aria-label="Eliminar">
+                                    <i class="bi bi-trash" aria-hidden="true"></i>
                                 </a>
                             </td>
                         </tr>
