@@ -260,12 +260,13 @@
 .enc-estado-ARCHIVADA { background: var(--ua-bg-subtle); color: var(--ua-text-muted); }
 
 /* ---------- Lista de formularios ---------- */
-.enc-lista-formularios { display: grid; gap: 10px; }
+.enc-lista-formularios { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 
 .enc-fila-formulario {
     display: flex;
     align-items: center;
     gap: 14px;
+    min-width: 0;
     padding: 14px 18px;
     background: var(--ua-bg-card);
     border: 1px solid var(--ua-border);

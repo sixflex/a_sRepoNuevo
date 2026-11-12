@@ -30,7 +30,7 @@
 <div class="card-ua">
     <div class="card-header-ua">
         <span><i class="bi bi-inbox me-2" style="color: var(--ua-red);"></i>Postulaciones recibidas</span>
-        <div class="d-flex align-items-center gap-3">
+        <div class="d-flex flex-wrap align-items-center gap-3">
             <span class="socio-rut">{{ postulaciones|length }} {{ postulaciones|length|pluralize:"postulación,postulaciones" }}</span>
             {% if postulaciones %}{% include "includes/orden_listado.html" with opciones=opciones_orden %}{% endif %}
         </div>

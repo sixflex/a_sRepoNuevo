@@ -114,8 +114,9 @@
                             <!-- ACCIONES -->
                             <td class="text-center text-nowrap">
                                 <a href="{% url 'core:detalle_seccion' seccion.id %}"
-                                   class="btn btn-sm btn-outline-primary me-1">
-                                    Ver
+                                   class="btn btn-sm btn-outline-primary me-1 px-2"
+                                   title="Ver" aria-label="Ver">
+                                    <i class="bi bi-eye" aria-hidden="true"></i>
                                 </a>
                                 <!-- Botón agregado para solicitar carta de presentación -->
                                 <a href="{% url 'cartas:solicitar_carta_docente' seccion.id %}"
@@ -123,12 +124,14 @@
                                     Carta
                                 </a>
                                 <a href="{% url 'seccion_update' seccion.id %}"
-                                   class="btn btn-sm btn-outline-secondary me-1">
-                                    Editar
+                                   class="btn btn-sm btn-outline-secondary me-1 px-2"
+                                   title="Editar" aria-label="Editar">
+                                    <i class="bi bi-pencil" aria-hidden="true"></i>
                                 </a>
                                 <a href="{% url 'seccion_delete' seccion.id %}"
-                                   class="btn btn-sm btn-outline-danger">
-                                    Eliminar
+                                   class="btn btn-sm btn-outline-danger px-2"
+                                   title="Eliminar" aria-label="Eliminar">
+                                    <i class="bi bi-trash" aria-hidden="true"></i>
                                 </a>
                             </td>
                         </tr>

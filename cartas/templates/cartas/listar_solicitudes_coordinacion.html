@@ -150,18 +150,20 @@
                                     {% if solicitud.estado == "PENDIENTE" or solicitud.estado == "BORRADOR" %}
                                         <a
                                             href="{% url 'cartas:detalle_solicitud_coordinacion' solicitud.id %}"
-                                            class="btn btn-sm btn-outline-primary"
+                                            class="btn btn-sm btn-outline-primary px-2"
+                                            title="Revisar"
                                             aria-label="Revisar la solicitud de {{ solicitud.solicitante_nombre }}"
                                         >
-                                            Revisar
+                                            <i class="bi bi-clipboard-check" aria-hidden="true"></i>
                                         </a>
                                     {% else %}
                                         <a
                                             href="{% url 'cartas:detalle_solicitud_coordinacion' solicitud.id %}"
-                                            class="btn btn-sm btn-outline-secondary"
+                                            class="btn btn-sm btn-outline-secondary px-2"
+                                            title="Ver"
                                             aria-label="Ver la solicitud de {{ solicitud.solicitante_nombre }}"
                                         >
-                                            Ver
+                                            <i class="bi bi-eye" aria-hidden="true"></i>
                                         </a>
                                     {% endif %}
 
