@@ -284,6 +284,13 @@ main {
 }
 
 /* Selector de orden de los listados (includes/orden_listado.html) */
-.orden-listado { display: inline-flex; align-items: center; gap: 8px; margin: 0; }
+.orden-listado { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; max-width: 100%; }
 .orden-listado-etiqueta { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 0.85rem; font-weight: 600; color: var(--ua-text-secondary); white-space: nowrap; }
-.orden-listado .form-select { width: auto; min-width: 190px; }
+.orden-listado .form-select { width: auto; min-width: 190px; max-width: 100%; }
+@media (max-width: 575.98px) { .orden-listado .form-select { min-width: 0; flex: 1 1 160px; } }
+
+/* SP9-T05: los encabezados de tarjeta pasan a otra línea en vez de ensanchar la página */
+.card-header-ua { flex-wrap: wrap; gap: 8px; }
+
+/* SP9-T05: un hijo flex con tabla ancha no debe ensanchar el contenido (min-width: auto) */
+.app-main { min-width: 0; }

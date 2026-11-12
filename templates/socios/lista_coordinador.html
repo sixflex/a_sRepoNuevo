@@ -218,11 +218,11 @@
         <p class="page-subtitle mb-0">Busca, filtra y revisa los socios comunitarios registrados en el portal.</p>
     </div>
     <div class="d-flex flex-wrap gap-2">
-    <span class="badge rounded-pill text-bg-light border px-3 py-2" style="color: var(--ua-text-dark);">
+    <span class="badge rounded-pill text-bg-light border px-3 py-2 text-wrap text-start" style="color: var(--ua-text-dark);">
         <i class="bi bi-people me-1" style="color: var(--ua-red);"></i>
         {{ socios|length }} resultado{{ socios|length|pluralize }}
     </span>
-    <span class="badge rounded-pill text-bg-light border px-3 py-2" style="color: var(--ua-text-dark);"
+    <span class="badge rounded-pill text-bg-light border px-3 py-2 text-wrap text-start" style="color: var(--ua-text-dark);"
           title="Una organización que participa varias veces cuenta una vez como organización y una vez por cada participación (RF-IND-02).">
         <i class="bi bi-diagram-3 me-1" style="color: var(--ua-red);"></i>
         {{ total_organizaciones_con_participacion }} organizaci{{ total_organizaciones_con_participacion|pluralize:"ón,ones" }} con participación
