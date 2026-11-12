@@ -40,6 +40,7 @@
           <div><b>Diego Delgado</b><small>Responsable Frontend</small></div>
           <div><b>Samuel Aburto</b><small>Responsable Git + Integración y Configuración</small></div>
           <div><b>Sofía Díaz</b><small>QA</small></div>
+          <div><b>Mauricio Alvarez</b><small>Documentación técnica</small></div>
         </div>
       </div>
     </div>
