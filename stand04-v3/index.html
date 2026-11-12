@@ -1,0 +1,3 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Portal A+S · Universidad Autónoma de Chile</title></head><body><p>Cargando Portal A+S…</p><script>
+(async()=>{const base='https://raw.githubusercontent.com/sixflex/a_sRepoNuevo/stand04-public/stand04-v2/';const v='3a346472a9d9268a382b4575001a11a0535e3b69';const parts=['part0.txt','part1.txt','part2.txt','part3.txt','part4.txt','part5.txt','part6.txt','part7.txt'];const html=(await Promise.all(parts.map(p=>fetch(base+p+'?v='+v).then(r=>r.text())))).join('');document.open();document.write(html);document.close();})().catch(e=>{document.body.innerHTML='<p>No se pudo cargar la presentación.</p>';});
+</script></body></html>
