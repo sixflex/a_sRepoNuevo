@@ -518,7 +518,7 @@ def generar_zip_expediente(expediente, destino, seccion_ruta=None):
 
         for evidencia in evidencias:
             actividad = evidencia.seccion_actividad.ruta_actividad
-            carpeta = f"{actividad.orden:02d}_{actividad.nombre}".replace("/", "-")
+            carpeta = f"{actividad.orden:02d} - {actividad.nombre}".replace("/", "-")
             if actividad.etapa in carpetas_etapa:
                 carpeta = f"{carpetas_etapa[actividad.etapa]}/{carpeta}"
             nombre = Path(evidencia.archivo.nombre_original).name
