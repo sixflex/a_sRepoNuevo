@@ -25,6 +25,7 @@ from academico.models import (
     SeccionDocente,
     Sede,
 )
+from academico.models import Docente
 from proyectos.models import IntegranteEquipo
 from rutas.models import SeccionRuta
 from rutas.services import con_avance, porcentaje_avance
@@ -32,7 +33,10 @@ from socios.models import ClasificacionSocio, Comuna, ParticipacionSocio, SocioC
 
 
 # Parámetros GET del panel de filtros, en el orden en que se muestran los chips.
-FILTROS = ["sede", "campus", "anio", "periodo", "facultad", "carrera", "asignatura", "comuna"]
+FILTROS = [
+    "sede", "campus", "anio", "periodo", "facultad", "carrera", 
+    "asignatura", "docente", "socio", "comuna", "estado"
+]
 
 # Filtros del mapa del portal público (RF-PUB-01 y RF-IND-03): sin período ni asignatura.
 # "clasificacion" es el tipo de socio: el dato normalizado más cercano al "tipo de
@@ -213,6 +217,17 @@ def opciones_filtros():
             .distinct()
             .order_by("nombre")
         ),
+        # 1. Filtramos a los docentes activos y los ordenamos alfabéticamente
+        "docentes": Docente.objects.filter(activo=True).order_by("nombres", "apellidos"),
+        # 2. Traemos a todos los socios comunitarios
+        "socios": SocioComunitario.objects.all().order_by("nombre_organizacion"),
+        # 3. Agregamos los estados fijos (cartas o rutas)
+        "estados": [
+            {"id": "PENDIENTE", "nombre": "Pendiente"}, 
+            {"id": "APROBADA", "nombre": "Aprobada"},
+            {"id": "OBSERVADA", "nombre": "Observada"},
+            {"id": "COMPLETADA", "nombre": "Completada"}
+        ],
     }
 
 
