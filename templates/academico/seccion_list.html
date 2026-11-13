@@ -118,11 +118,17 @@
                                    title="Ver" aria-label="Ver">
                                     <i class="bi bi-eye" aria-hidden="true"></i>
                                 </a>
-                                <!-- Botón agregado para solicitar carta de presentación -->
-                                <a href="{% url 'cartas:solicitar_carta_docente' seccion.id %}"
-                                   class="btn btn-sm btn-success me-1" title="Solicitar Carta de Presentación">
-                                    Carta
-                                </a>
+                                <!-- Botón condicional para solicitar carta de presentación (Solo Docentes) -->
+                                {% if request.user.groups.all %}
+                                    {% for grupo in request.user.groups.all %}
+                                        {% if grupo.name == "Docente" %}
+                                            <a href="{% url 'cartas:solicitar_carta_docente' seccion.id %}"
+                                               class="btn btn-sm btn-success me-1" title="Solicitar Carta de Presentación">
+                                                Carta
+                                            </a>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
                                 <a href="{% url 'seccion_update' seccion.id %}"
                                    class="btn btn-sm btn-outline-secondary me-1 px-2"
                                    title="Editar" aria-label="Editar">

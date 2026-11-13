@@ -243,6 +243,17 @@
                     <option value="">Todas</option>
                     {% for sede in opciones.sedes %}<option value="{{ sede.id }}" {% if filtros.sede == sede.id %}selected{% endif %}>{{ sede.nombre }}</option>{% endfor %}
                 </select>
+                <label class="form-label fw-semibold small">Campus</label>
+                <select class="form-select mb-3" name="campus">
+                    <option value="">Todos</option>
+                    {% for campus in opciones.campus %}<option value="{{ campus.id }}" {% if filtros.campus == campus.id %}selected{% endif %}>{{ campus.nombre }}</option>{% endfor %}
+                </select>
+
+                <label class="form-label fw-semibold small">Comuna</label>
+                <select class="form-select mb-3" name="comuna">
+                    <option value="">Todas</option>
+                    {% for comuna in opciones.comunas %}<option value="{{ comuna.id }}" {% if filtros.comuna == comuna.id %}selected{% endif %}>{{ comuna.nombre }}</option>{% endfor %}
+                </select>
             </div>
 
             {% include "core/partials/_grupo_filtro.html" with id="filtroAcademico" titulo="Académico" abierto=True %}
@@ -256,6 +267,31 @@
                 <select class="form-select" name="carrera">
                     <option value="">Todas</option>
                     {% for carrera in opciones.carreras %}<option value="{{ carrera.id }}" {% if filtros.carrera == carrera.id %}selected{% endif %}>{{ carrera.nombre }}</option>{% endfor %}
+                </select>
+                <label class="form-label fw-semibold small mt-3">Asignatura</label>
+                <select class="form-select mb-3" name="asignatura">
+                    <option value="">Todas</option>
+                    {% for asignatura in opciones.asignaturas %}<option value="{{ asignatura.id }}" {% if filtros.asignatura == asignatura.id %}selected{% endif %}>{{ asignatura.nombre }}</option>{% endfor %}
+                </select>
+            </div>
+            {% include "core/partials/_grupo_filtro.html" with id="filtroActores" titulo="Actores y Estado" abierto=True %}
+            <div class="collapse show filtro-grupo-cuerpo" id="filtroActores">
+                <label class="form-label fw-semibold small">Docente</label>
+                <select class="form-select mb-3" name="docente">
+                    <option value="">Todos</option>
+                    {% for docente in opciones.docentes %}<option value="{{ docente.id }}" {% if filtros.docente == docente.id %}selected{% endif %}>{{ docente.nombres }} {{ docente.apellidos }}</option>{% endfor %}
+                </select>
+
+                <label class="form-label fw-semibold small">Socio Comunitario</label>
+                <select class="form-select mb-3" name="socio">
+                    <option value="">Todos</option>
+                    {% for socio in opciones.socios %}<option value="{{ socio.id }}" {% if filtros.socio == socio.id %}selected{% endif %}>{{ socio.nombre_organizacion }}</option>{% endfor %}
+                </select>
+
+                <label class="form-label fw-semibold small">Estado</label>
+                <select class="form-select mb-3" name="estado">
+                    <option value="">Todos</option>
+                    {% for estado in opciones.estados %}<option value="{{ estado.id }}" {% if filtros.estado == estado.id %}selected{% endif %}>{{ estado.nombre }}</option>{% endfor %}
                 </select>
             </div>
         </div>
