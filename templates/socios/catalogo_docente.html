@@ -5,17 +5,53 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/select_buscable.css' %}?v=2026-10-27b">
-<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
+<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-11-14">
 
 <div class="mb-4">
+    {% if seccion %}{% url 'core:detalle_seccion' seccion.id as url_volver %}{% volver url_volver "Volver a la sección" %}{% endif %}
     <h1 class="page-title">Catálogo de Socios Comunitarios</h1>
-    <p class="page-subtitle mb-0">Socios aprobados y disponibles para vincular con tus asignaturas.</p>
+    <p class="page-subtitle mb-0">Elige los socios con que pueden trabajar los equipos de tu sección. Al registrar su equipo, los estudiantes solo verán los que elijas.</p>
 </div>
+
+<!-- SECCIÓN PARA LA QUE SE ELIGEN SOCIOS (RF-SC-03) -->
+{% if secciones_docente %}
+<div class="card-ua mb-3 socio-eleccion{% if seccion %} activa{% endif %}">
+    <div class="p-3 p-md-4 d-flex flex-wrap align-items-end gap-3">
+        <form method="get" action="{% url 'socios:catalogo_docente' %}" class="flex-grow-1" data-elegir-seccion>
+            <label for="seccion" class="form-label-ua">Elegir socios para la sección</label>
+            <select id="seccion" name="seccion" class="form-select" onchange="this.form.submit()">
+                <option value="">Selecciona una de tus secciones</option>
+                {% for s in secciones_docente %}
+                    <option value="{{ s.id }}" {% if seccion and seccion.id == s.id %}selected{% endif %}>{{ s.asignatura.nombre }} · Sección {{ s.seccion }} · NRC {{ s.nrc }} · {{ s.periodo }}</option>
+                {% endfor %}
+            </select>
+            <noscript><button type="submit" class="btn btn-light-ua mt-2">Elegir</button></noscript>
+        </form>
+        {% if seccion %}
+            <div class="socio-eleccion-resumen">
+                <strong>{{ total_elegidos }}</strong> socio{{ total_elegidos|pluralize }} elegido{{ total_elegidos|pluralize }}
+                {% if total_elegidos %}
+                    {% if solo_elegidos %}
+                        <a href="?seccion={{ seccion.id }}" class="ms-2">Ver todo el catálogo</a>
+                    {% else %}
+                        <a href="?seccion={{ seccion.id }}&amp;elegidos=1" class="ms-2">Ver solo los elegidos</a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+    {% if seccion and not total_elegidos %}
+        <p class="socio-eleccion-nota mb-0"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Mientras no elijas ninguno, los estudiantes verán el catálogo completo.</p>
+    {% endif %}
+</div>
+{% endif %}
 
 <!-- FILTROS -->
 <div class="card-ua mb-4">
     <div class="p-3 p-md-4">
         <form method="get" action="{% url 'socios:catalogo_docente' %}">
+            {% if seccion %}<input type="hidden" name="seccion" value="{{ seccion.id }}">{% endif %}
+            {% if solo_elegidos %}<input type="hidden" name="elegidos" value="1">{% endif %}
             <div class="row g-3">
                 <div class="col-12 col-lg-4">
                     <label for="q" class="form-label-ua">Buscar</label>
@@ -54,7 +90,7 @@
                 </div>
                 <div class="col-6 col-lg-2 d-flex align-items-end gap-2">
                     <button type="submit" class="btn btn-ua flex-grow-1"><i class="bi bi-search me-1" aria-hidden="true"></i>Buscar</button>
-                    <a href="{% url 'socios:catalogo_docente' %}" class="btn btn-light-ua" title="Limpiar" aria-label="Limpiar"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i></a>
+                    <a href="{% url 'socios:catalogo_docente' %}{% if seccion %}?seccion={{ seccion.id }}{% endif %}" class="btn btn-light-ua" title="Limpiar" aria-label="Limpiar"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i></a>
                 </div>
             </div>
         </form>
@@ -66,7 +102,7 @@
     <div class="row g-3">
         {% for socio in socios %}
             <div class="col-12 col-md-6 col-xl-4">
-                <div class="card-ua socio-card p-3">
+                <div class="card-ua socio-card p-3{% if socio.elegido %} socio-card-elegido{% endif %}">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
                             <div class="socio-nombre">{{ socio.nombre_organizacion }}</div>
@@ -96,6 +132,19 @@
                             <span class="text-muted">Sin descripción registrada</span>
                         {% endif %}
                     </div>
+                    {% if seccion %}
+                        <form method="post" action="{% url 'socios:elegir_socio_seccion' seccion.id %}" class="socio-card-accion">
+                            {% csrf_token %}
+                            <input type="hidden" name="socio" value="{{ socio.id }}">
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            {% if socio.elegido %}
+                                <span class="socio-elegido-marca"><i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i>En tu sección</span>
+                                <button type="submit" name="accion" value="quitar" class="btn btn-sm btn-light-ua">Quitar</button>
+                            {% else %}
+                                <button type="submit" name="accion" value="elegir" class="btn btn-sm btn-ua-outline"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Agregar a la sección</button>
+                            {% endif %}
+                        </form>
+                    {% endif %}
                 </div>
             </div>
         {% endfor %}

@@ -1094,3 +1094,28 @@ class IndicadoresUnicosTests(TestCase):
             valores["socios"], 1, 
             "El total de socios únicos debe ser 1 (uso correcto de distinct)."
         )
+
+
+class EnlaceVolverTests(TestCase):
+    """Tag {% volver %}: vuelve a la página de origen si viene en ?volver=, solo del mismo sitio."""
+
+    def render(self, url):
+        from django.template import Context, Template
+        from django.test import RequestFactory
+
+        request = RequestFactory().get(url)
+        plantilla = Template('{% load core_extras %}{% volver "/socios/coordinacion/" "Volver a Socios comunitarios" %}')
+        return plantilla.render(Context({"request": request}))
+
+    def test_sin_origen_usa_el_destino_por_defecto(self):
+        html = self.render("/socios/coordinacion/5/historial/")
+        self.assertIn('href="/socios/coordinacion/"', html)
+        self.assertIn("Volver a Socios comunitarios", html)
+
+    def test_vuelve_a_la_pagina_de_origen(self):
+        html = self.render("/socios/coordinacion/5/historial/?volver=/proyectos/%3Festado%3Dcerrados")
+        self.assertIn('href="/proyectos/?estado=cerrados"', html)
+
+    def test_no_sale_del_sitio(self):
+        for origen in ("https://malo.com/", "//malo.com/x", "javascript:alert(1)"):
+            self.assertIn('href="/socios/coordinacion/"', self.render("/x/?volver=" + origen))

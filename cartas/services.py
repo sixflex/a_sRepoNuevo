@@ -89,7 +89,7 @@ def verificar_alerta_antiguedad_socio(socio):
         return False
 
     hace_un_ano = timezone.now().date() - timedelta(days=365)
-    ultima_participacion = socio.participaciones.order_by("-fecha_inicio").first()
+    ultima_participacion = socio.participaciones.trabajadas().order_by("-fecha_inicio").first()
 
     if not ultima_participacion or not ultima_participacion.fecha_inicio:
         return True
@@ -558,4 +558,4 @@ def enviar_carta_docente(documento):
             "persona_receptora": solicitud.persona_receptora,
         },
         carta_documento=documento,
-    )
+    )

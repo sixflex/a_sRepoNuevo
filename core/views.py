@@ -12,7 +12,7 @@ from usuarios.services import aviso_vincular_cuenta
 
 from academico.models import (PeriodoAcademico, Seccion)
 
-from core.models import Noticia
+from publico.models import Noticia
 
 # Formulario unificado de los centros de negocio (Investigación de Mercados,
 # Consultoría Empresas, Gestión de Procesos): la convocatoria a emprendedores.
@@ -404,8 +404,6 @@ def inicio_docente(request):
         )
     )
 
-    total_obligatorias = 0
-    total_completadas = 0
     total_pendientes = 0
 
     for ruta in rutas:
@@ -444,15 +442,17 @@ def inicio_docente(request):
             else 0
         )
 
-        total_obligatorias += ruta.total_obligatorias
-        total_completadas += ruta.completadas_obligatorias
         total_pendientes += ruta.pendientes_obligatorias
 
-    avance_general = (
-        round(total_completadas * 100 / total_obligatorias)
-        if total_obligatorias
-        else 0
-    )
+    # Promedio de sus Rutas (pedido del cliente): cada sección pesa lo mismo.
+    # Se mide en el período vigente para que las Rutas de semestres ya
+    # cerrados no inflen el número; si no tiene Rutas en él, usa todas.
+    from rutas.services import promedio_rutas
+
+    vigente = PeriodoAcademico.objects.filter(estado="Activo").order_by("-anio", "-id").first()
+    rutas_promedio = [ruta for ruta in rutas if vigente and ruta.seccion.periodo_id == vigente.id] or rutas
+    promedio = promedio_rutas(rutas_promedio)
+    periodo_promedio = vigente if vigente and rutas_promedio is not rutas else None
 
     return render(
         request,
@@ -464,7 +464,9 @@ def inicio_docente(request):
                 for ruta in rutas
             ),
             "total_pendientes": total_pendientes,
-            "avance_general": avance_general,
+            "promedio_rutas": promedio,
+            "rutas_en_promedio": len(rutas_promedio),
+            "periodo_promedio": periodo_promedio,
             "rutas": rutas,
             "aviso_vincular": aviso_vincular_cuenta(request),
         },
@@ -520,6 +522,11 @@ def detalle_seccion(request, seccion_id):
             .order_by("numero_grupo")
         )
 
+    socios_elegidos = None
+    if not vista_coordinador:
+        from socios.services import socios_elegidos_seccion
+        socios_elegidos = list(socios_elegidos_seccion(seccion))
+
     return render(
         request,
         "core/detalle_seccion.html",
@@ -527,6 +534,7 @@ def detalle_seccion(request, seccion_id):
             "seccion": seccion,
             "vista_coordinador": vista_coordinador,
             "equipos": equipos,
+            "socios_elegidos": socios_elegidos,
         },
     )
 
@@ -587,4 +595,4 @@ def panel_indicadores_coordinacion(request):
         "satisfaccion": indicadores.satisfaccion(filtros),
     }
 
-    return render(request, "core/indicadores_coordinacion.html", contexto)
+    return render(request, "core/indicadores_coordinacion.html", contexto)

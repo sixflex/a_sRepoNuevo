@@ -1,16 +1,12 @@
 {% extends "base.html" %}
+{% load core_extras %}
 
 {% block content %}
 
 <div class="container py-4">
 
     <div class="mb-4">
-        <a href="{% url 'core:detalle_seccion' seccion.id %}" class="btn btn-outline-secondary">
-            ← Volver a la sección
-        </a>
-    </div>
-
-    <div class="mb-4">
+        {% url 'core:detalle_seccion' seccion.id as url_volver %}{% volver url_volver "Volver a la sección" %}
         <h2>Solicitar Carta de Presentación</h2>
 
         <p class="text-muted mb-1">
@@ -59,6 +55,7 @@
                     </label>
 
                     {{ form.institucion_receptora }}
+                    <div class="form-text">{{ form.institucion_receptora.help_text }}</div>
 
                     {% for error in form.institucion_receptora.errors %}
                         <div class="text-danger small mt-1">
@@ -117,6 +114,7 @@
                 </button>
 
             </form>
+            {% include "cartas/includes/sugerencias_receptor.html" %}
 
         </div>
     </div>
@@ -213,4 +211,4 @@
 
 </div>
 
-{% endblock %}
+{% endblock %}

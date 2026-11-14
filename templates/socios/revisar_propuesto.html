@@ -6,9 +6,7 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
 
-<a href="{% url 'socios:lista_postulaciones' %}?origen=equipos" class="enlace-volver">
-    <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Propuestos por equipos
-</a>
+{% url 'socios:lista_postulaciones' as url_volver %}{% volver url_volver|add:"?origen=equipos" "Volver a Propuestos por equipos" %}
 
 <div class="d-flex flex-wrap justify-content-between align-items-start mb-4 gap-3">
     <div>
@@ -110,7 +108,7 @@
                     {% endfor %}
                 </div>
 
-                <a href="{% url 'socios:detalle_historial' socio.id %}" class="btn btn-light-ua w-100">
+                <a href="{% url 'socios:detalle_historial' socio.id %}?volver={{ request.get_full_path|urlencode }}" class="btn btn-light-ua w-100">
                     <i class="bi bi-clock-history me-1" aria-hidden="true"></i>Ver ficha e historial del socio
                 </a>
             </div>

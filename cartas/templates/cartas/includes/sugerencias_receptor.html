@@ -1,0 +1,62 @@
+{% comment %}
+Opciones para la institución receptora: los socios de la sección. Al elegir
+uno se completan persona y cargo con su contacto principal. Al cambiar de
+equipo se pone el socio de ese equipo. Solo se reemplaza lo que estaba vacío o
+lo que llenó una opción; lo escrito a mano se respeta.
+{% endcomment %}
+<datalist id="sugerencias-institucion">
+    {% for s in form.sugerencias %}<option value="{{ s.institucion }}"></option>{% endfor %}
+</datalist>
+{{ form.sugerencias|json_script:"sugerencias-receptor" }}
+{{ form.socio_por_equipo|json_script:"socio-por-equipo" }}
+<script>
+(function () {
+    function leer(id) { var el = document.getElementById(id); try { return el ? JSON.parse(el.textContent) : null; } catch (e) { return null; } }
+    var sugerencias = leer("sugerencias-receptor") || [];
+    var socioPorEquipo = leer("socio-por-equipo") || {};
+    var institucion = document.querySelector('[name="institucion_receptora"]');
+    var persona = document.querySelector('[name="persona_receptora"]');
+    var cargo = document.querySelector('[name="cargo_receptor"]');
+    var equipo = document.querySelector('[name="equipo"]');
+    if (!institucion) return;
+
+    // Lo que llenó una opción (no la persona). Si el campo trae un valor
+    // inicial que coincide con una opción, también se considera reemplazable.
+    var puestos = {institucion: "", persona: "", cargo: ""};
+    var actual = sugerencias.find(function (s) { return s.institucion === institucion.value.trim(); });
+    if (actual) {
+        puestos.institucion = actual.institucion;
+        if (persona && persona.value === actual.persona) puestos.persona = actual.persona;
+        if (cargo && cargo.value === actual.cargo) puestos.cargo = actual.cargo;
+    }
+
+    function reemplazable(campo, clave) {
+        return campo && (!campo.value.trim() || campo.value === puestos[clave]);
+    }
+    function poner(campo, clave, valor) {
+        if (reemplazable(campo, clave)) campo.value = puestos[clave] = valor || "";
+    }
+
+    function completar() {
+        var elegida = sugerencias.find(function (s) { return s.institucion === institucion.value.trim(); });
+        if (elegida) {
+            puestos.institucion = elegida.institucion;
+            poner(persona, "persona", elegida.persona);
+            poner(cargo, "cargo", elegida.cargo);
+        }
+    }
+    institucion.addEventListener("change", completar);
+    institucion.addEventListener("input", completar);
+
+    if (equipo) {
+        equipo.addEventListener("change", function () {
+            if (!reemplazable(institucion, "institucion")) return;
+            var socio = socioPorEquipo[equipo.value] || "";
+            institucion.value = puestos.institucion = socio;
+            var elegida = sugerencias.find(function (s) { return s.institucion === socio; });
+            poner(persona, "persona", elegida ? elegida.persona : "");
+            poner(cargo, "cargo", elegida ? elegida.cargo : "");
+        });
+    }
+})();
+</script>

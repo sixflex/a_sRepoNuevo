@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% load core_extras %}
 {% load static %}
 
 {% block title %}Encuesta a socios | Portal A+S{% endblock %}
 
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b"><link rel="stylesheet" href="{% static 'css/ruta_docente.css' %}?v=2026-11-10">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b"><link rel="stylesheet" href="{% static 'css/ruta_docente.css' %}?v=2026-11-14">{% endblock %}
 
 {% block content %}
 {% comment %}
@@ -13,10 +14,11 @@ Comunitarios del período de una vez. Cada socio recibe su propio enlace.
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
         <div>
+            {% url 'rutas:seguimiento_coordinacion' as url_volver %}{% volver url_volver "Volver a Rutas A+S" %}
             <h1 class="page-title mb-1">Encuesta de satisfacción a socios</h1>
             <p class="page-subtitle mb-0">Envíala una vez al final del período a todos los Socios Comunitarios que trabajaron con alguna sección.</p>
         </div>
-        <a href="{% url 'rutas:seguimiento_coordinacion' %}" class="btn btn-light-ua"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver</a>
+
     </div>
 
     <form method="get" class="d-flex align-items-end gap-2 mb-3 flex-wrap">

@@ -93,15 +93,6 @@
 .badge-provisional { display: inline-flex; align-items: center; white-space: nowrap; background-color: var(--ua-warning-soft); color: var(--ua-warning); font-size: 0.72rem; font-weight: 600; padding: 5px 10px; border-radius: 999px; }
 
 /* Revisión de una postulación: ficha por sección y panel de decisión */
-.enlace-volver {
-    display: inline-block;
-    margin-bottom: 12px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--ua-text-secondary);
-    text-decoration: none;
-}
-.enlace-volver:hover { color: var(--ua-red); }
 .badge-estado-lg { font-size: 0.8rem; padding: 7px 14px; }
 .ficha-respuestas { padding: 4px 20px; }
 .ficha-respuesta {
@@ -250,3 +241,13 @@
 }
 .opciones-decision-columna { grid-template-columns: 1fr; }
 .btn-check:checked + .opcion-neutra { border-color: var(--ua-text-secondary); background: var(--ua-bg-subtle); color: var(--ua-text-dark); }
+
+/* Socios elegidos por el docente para su sección (RF-SC-03). */
+.socio-eleccion.activa { border-left: 4px solid var(--ua-red); }
+.socio-eleccion-resumen { font-size: .9rem; color: var(--ua-text-secondary); padding-bottom: 8px; }
+.socio-eleccion-nota { font-size: .85rem; color: var(--ua-text-muted); padding: 0 1.5rem 1rem; }
+.socio-card { display: flex; flex-direction: column; }
+.socio-card-elegido { border-color: var(--ua-success); background: #fbfefc; }
+.socio-card-accion { margin-top: auto; padding-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.socio-card-accion .btn-ua-outline { margin-left: auto; }
+.socio-elegido-marca { font-size: .85rem; font-weight: 600; color: var(--ua-success); }

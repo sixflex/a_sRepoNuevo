@@ -10,6 +10,7 @@ Detalle de Planificación | Portal A+S
 <div class="container-fluid">
 
     <div class="mb-4">
+        {% url 'core:planificacion_coordinacion' as url_volver %}{% volver url_volver "Volver a Planificaciones recibidas" %}
         <h1 class="h3 fw-bold">Detalle de Planificación</h1>
         <p class="text-muted">
             Información recibida mediante el enlace de planificación A+S.
@@ -186,14 +187,6 @@ Detalle de Planificación | Portal A+S
                 </div>
             {% endif %}
 
-            <div class="mt-4">
-                <a
-                    href="{% url 'core:planificacion_coordinacion' %}"
-                    class="btn btn-outline-secondary"
-                >
-                    Volver a planificaciones
-                </a>
-            </div>
         </div>
     </div>
 </div>

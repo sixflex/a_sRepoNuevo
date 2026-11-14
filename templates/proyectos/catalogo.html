@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Proyectos A+S | Portal A+S{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
+<link rel="stylesheet" href="{% static 'css/portal_publico.css' %}?v=2026-11-14">
+<link rel="stylesheet" href="{% static 'css/proyectos.css' %}?v=2026-11-14">
+{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <h1 class="page-title">Proyectos A+S</h1>
+    <p class="page-subtitle mb-0">Cada proyecto es un socio comunitario trabajando con un grupo o una sección. Incluye los históricos cargados desde Excel.</p>
+</div>
+
+<nav class="portal-pestanas mb-3" aria-label="Estado de los proyectos">
+    <a href="?{{ qs_en_curso }}" class="portal-pestana{% if filtros.estado != CERRADOS %} active{% endif %}"
+       {% if filtros.estado != CERRADOS %}aria-current="page"{% endif %}>
+        <i class="bi bi-play-circle me-1" aria-hidden="true"></i>En curso <span class="proy-contador">{{ totales.en_curso }}</span>
+    </a>
+    <a href="?{{ qs_cerrados }}" class="portal-pestana{% if filtros.estado == CERRADOS %} active{% endif %}"
+       {% if filtros.estado == CERRADOS %}aria-current="page"{% endif %}>
+        <i class="bi bi-archive me-1" aria-hidden="true"></i>Cerrados <span class="proy-contador">{{ totales.cerrados }}</span>
+    </a>
+</nav>
+<p class="small text-muted mb-3">
+    {% if filtros.estado == CERRADOS %}
+        Cerrados: la Ruta de la sección está completada, su período ya terminó o vienen del histórico.
+    {% else %}
+        En curso: proyectos de este semestre que todavía no se cierran.
+    {% endif %}
+</p>
+
+<form method="get" class="proy-filtros mb-4" role="search">
+    <input type="hidden" name="estado" value="{{ filtros.estado }}">
+    <div class="proy-buscar">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <label class="visually-hidden" for="q">Buscar</label>
+        <input type="search" id="q" name="q" class="form-control" value="{{ filtros.q }}" placeholder="Buscar por servicio, socio, asignatura o NRC">
+    </div>
+    <label class="visually-hidden" for="anio">Año</label>
+    <select id="anio" name="anio" class="form-select" onchange="this.form.submit()">
+        <option value="">Todos los años</option>
+        {% for anio in anios %}<option value="{{ anio }}"{% if filtros.anio == anio %} selected{% endif %}>{{ anio }}</option>{% endfor %}
+    </select>
+    <label class="visually-hidden" for="sede">Sede</label>
+    <select id="sede" name="sede" class="form-select" onchange="this.form.submit()">
+        <option value="">Todas las sedes</option>
+        {% for sede in sedes %}<option value="{{ sede.id }}"{% if filtros.sede == sede.id %} selected{% endif %}>{{ sede.nombre }}</option>{% endfor %}
+    </select>
+    <label class="visually-hidden" for="carrera">Carrera</label>
+    <select id="carrera" name="carrera" class="form-select" onchange="this.form.submit()">
+        <option value="">Todas las carreras</option>
+        {% for carrera in carreras %}<option value="{{ carrera.id }}"{% if filtros.carrera == carrera.id %} selected{% endif %}>{{ carrera.nombre }}</option>{% endfor %}
+    </select>
+    <button type="submit" class="btn btn-ua">Buscar</button>
+    {% if hay_filtros %}<a href="?estado={{ filtros.estado }}" class="btn btn-link text-decoration-none">Limpiar</a>{% endif %}
+</form>
+
+{% if tarjetas %}
+    <div class="proy-grid">
+        {% for p in tarjetas %}
+            <article class="proy-card">
+                <div class="proy-card-cab">
+                    <span class="proy-periodo">{{ p.periodo|default:"Sin período" }}</span>
+                    {% if p.historico %}
+                        <span class="proy-estado historico">Histórico</span>
+                    {% elif p.ruta %}
+                        {% if p.ruta.estado == "COMPLETADA" %}
+                            <span class="proy-estado ok"><i class="bi bi-check-lg" aria-hidden="true"></i>Ruta completada</span>
+                        {% else %}
+                            <span class="proy-estado curso">Ruta {{ p.ruta.porcentaje_final|default_if_none:0|floatformat:0 }} %</span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                {% if p.servicio %}
+                    <h2 class="proy-titulo">{{ p.servicio }}</h2>
+                    <div class="proy-socio"><i class="bi bi-people me-1" aria-hidden="true"></i>{{ p.socio }}{% if p.comuna %} <span class="text-muted">· {{ p.comuna }}</span>{% endif %}</div>
+                {% else %}
+                    {# El servicio realizado se registra al cerrar; mientras tanto el título es el socio. #}
+                    <h2 class="proy-titulo">{{ p.socio }}</h2>
+                    <div class="proy-socio text-muted">{% if p.comuna %}{{ p.comuna }} · {% endif %}Servicio aún sin registrar</div>
+                {% endif %}
+                <dl class="proy-datos">
+                    {% if p.carrera %}<dt>Carrera</dt><dd>{{ p.carrera }}</dd>{% endif %}
+                    {% if p.asignatura %}<dt>Asignatura</dt><dd>{{ p.asignatura }}{% if p.nrc %} · NRC {{ p.nrc }}{% endif %}{% if p.grupo %} · Grupo {{ p.grupo }}{% endif %}</dd>{% endif %}
+                    {% if p.docentes %}<dt>Docente</dt><dd>{{ p.docentes|join:", " }}</dd>{% endif %}
+                    {% if p.sede %}<dt>Sede</dt><dd>{{ p.sede }}</dd>{% endif %}
+                    {% if p.beneficiarios %}<dt>Beneficiarios</dt><dd>{{ p.beneficiarios }} aprox.</dd>{% endif %}
+                </dl>
+                <div class="proy-acciones">
+                    <a href="{% url 'socios:detalle_historial' p.socio_id %}?volver={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-light-ua">Ver socio</a>
+                    {% if p.ruta %}<a href="{% url 'rutas:detalle_ruta_coordinacion' p.ruta.id %}?volver={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-light-ua">Ver Ruta</a>{% endif %}
+                </div>
+            </article>
+        {% endfor %}
+    </div>
+
+    {% if pagina.paginator.num_pages > 1 %}
+        <nav class="d-flex justify-content-center align-items-center gap-3 mt-4" aria-label="Páginas">
+            {% if pagina.has_previous %}<a class="btn btn-light-ua btn-sm" href="?{{ qs_pagina }}&pagina={{ pagina.previous_page_number }}"><i class="bi bi-chevron-left" aria-hidden="true"></i> Anterior</a>{% endif %}
+            <span class="small text-muted">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+            {% if pagina.has_next %}<a class="btn btn-light-ua btn-sm" href="?{{ qs_pagina }}&pagina={{ pagina.next_page_number }}">Siguiente <i class="bi bi-chevron-right" aria-hidden="true"></i></a>{% endif %}
+        </nav>
+    {% endif %}
+{% else %}
+    <div class="card-ua text-center text-muted py-5">
+        <i class="bi bi-folder2-open fs-2 d-block mb-2" aria-hidden="true"></i>
+        {% if hay_filtros %}No hay proyectos con esos filtros.{% elif filtros.estado == CERRADOS %}Todavía no hay proyectos cerrados.{% else %}No hay proyectos en curso. Aparecen cuando un socio queda asociado a un grupo o sección.{% endif %}
+    </div>
+{% endif %}
+{% endblock %}

@@ -800,6 +800,7 @@ class CierreYExpedienteOriginalTestCase(TestCase):
         SeguimientoRutaTestCase.setUp(self)
 
         from socios.models import ContactoSocio, ParticipacionSocio, SocioComunitario
+        from proyectos.models import Equipo
 
         ruta_cierre = self.actividad_obligatoria.ruta_actividad
         version = ruta_cierre.ruta_version
@@ -831,9 +832,15 @@ class CierreYExpedienteOriginalTestCase(TestCase):
             es_principal=True,
             activo=True,
         )
+        # El socio trabaja con un equipo de la sección (una participación
+        # sin equipo es solo un socio elegido por el docente, RF-SC-03).
         ParticipacionSocio.objects.create(
             socio=self.socio,
             seccion=self.seccion,
+            equipo=Equipo.objects.create(
+                seccion=self.seccion, numero_grupo=1, informante_nombre="Estudiante",
+                informante_correo="estudiante@cloud.uautonoma.cl", estado="Registrado",
+            ),
             origen="OPERATIVO",
         )
 
@@ -980,7 +987,8 @@ class CierreYExpedienteOriginalTestCase(TestCase):
         )
 
         contenido = zipfile.ZipFile(io.BytesIO(b"".join(respuesta.streaming_content)))
-        self.assertEqual(contenido.namelist(), ["Ficha del proyecto.pdf", "1 - Etapa de prueba/01 - Organizar el evento de cierre/acuerdo.pdf"])
+        # La Ruta sigue abierta: el ZIP trae las evidencias, todavía sin la ficha.
+        self.assertEqual(contenido.namelist(), ["1 - Etapa de prueba/01 - Organizar el evento de cierre/acuerdo.pdf"])
 
     @patch("archivos.services.obtener_storage_privado", return_value=InMemoryStorage())
     def test_cualquier_actividad_acepta_evidencia(self, _storage):
@@ -1048,6 +1056,7 @@ class CierreYExpedienteTestCase(TestCase):
         SeguimientoRutaTestCase.setUp(self)
 
         from socios.models import ContactoSocio, ParticipacionSocio, SocioComunitario
+        from proyectos.models import Equipo
 
         ruta_cierre = self.actividad_obligatoria.ruta_actividad
         version = ruta_cierre.ruta_version
@@ -1077,9 +1086,15 @@ class CierreYExpedienteTestCase(TestCase):
             es_principal=True,
             activo=True,
         )
+        # El socio trabaja con un equipo de la sección (una participación
+        # sin equipo es solo un socio elegido por el docente, RF-SC-03).
         ParticipacionSocio.objects.create(
             socio=self.socio,
             seccion=self.seccion,
+            equipo=Equipo.objects.create(
+                seccion=self.seccion, numero_grupo=1, informante_nombre="Estudiante",
+                informante_correo="estudiante@cloud.uautonoma.cl", estado="Registrado",
+            ),
             origen="OPERATIVO",
         )
 
@@ -1205,7 +1220,8 @@ class CierreYExpedienteTestCase(TestCase):
         )
 
         contenido = zipfile.ZipFile(io.BytesIO(b"".join(respuesta.streaming_content)))
-        self.assertEqual(contenido.namelist(), ["Ficha del proyecto.pdf", "1 - Etapa de prueba/01 - Organizar el evento de cierre/acuerdo.pdf"])
+        # La Ruta sigue abierta: el ZIP trae las evidencias, todavía sin la ficha.
+        self.assertEqual(contenido.namelist(), ["1 - Etapa de prueba/01 - Organizar el evento de cierre/acuerdo.pdf"])
 
 class VersionadoRutaTestCase(TestCase):
     def setUp(self):

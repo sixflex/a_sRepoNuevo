@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load core_extras %}
 {% load static %}
 
 {% block title %}{{ nombre_tipo }} · Importar históricos | Portal A+S{% endblock %}
@@ -7,10 +8,9 @@
 <link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
 <link rel="stylesheet" href="{% static 'css/historicos.css' %}?v=2026-10-19">
 
-<a href="{% url 'historicos:cargas' %}" class="enlace-volver"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Importar históricos</a>
-
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
     <div>
+        {% url 'historicos:cargas' as url_volver %}{% volver url_volver "Volver a Importar históricos" %}
         <h1 class="page-title">{{ nombre_tipo }}</h1>
         <p class="page-subtitle mb-0">
             {{ carga.archivo.nombre_original }}{% if carga.hoja %} · hoja «{{ carga.hoja }}»{% endif %}

@@ -1,7 +1,7 @@
 {% load static %}
-{# Cabecera común de "Portal público": Documentos (repositorio, RF-PUB-02) y Qué se muestra (RF-PUB-01). #}
+{# Cabecera común de "Portal público": Documentos (RF-PUB-02), Noticias (RF-PUB-03/04) y Qué se muestra (RF-PUB-01). #}
 <link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
-<link rel="stylesheet" href="{% static 'css/portal_publico.css' %}?v=2026-11-10b">
+<link rel="stylesheet" href="{% static 'css/portal_publico.css' %}?v=2026-11-14">
 
 <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
     <div>
@@ -20,6 +20,10 @@
     <a href="{% url 'archivos:repositorio' %}" class="portal-pestana{% if activa == 'documentos' %} active{% endif %}"
        {% if activa == 'documentos' %}aria-current="page"{% endif %}>
         <i class="bi bi-folder2-open me-1" aria-hidden="true"></i>Documentos
+    </a>
+    <a href="{% url 'publico:noticias' %}" class="portal-pestana{% if activa == 'noticias' %} active{% endif %}"
+       {% if activa == 'noticias' %}aria-current="page"{% endif %}>
+        <i class="bi bi-newspaper me-1" aria-hidden="true"></i>Noticias
     </a>
     <a href="{% url 'publico:configurar_portal' %}" class="portal-pestana{% if activa == 'que_se_muestra' %} active{% endif %}"
        {% if activa == 'que_se_muestra' %}aria-current="page"{% endif %}>

@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Noticias | Portal público | Portal A+S{% endblock %}
+
+{% block content %}
+{% include "publico/includes/pestanas.html" with activa="noticias" %}
+
+{% if not noticias_activas %}
+    <div class="alert alert-warning d-flex align-items-center gap-2" role="status">
+        <i class="bi bi-eye-slash" aria-hidden="true"></i>
+        <div>El bloque de noticias está oculto en el portal. Actívalo en <a href="{% url 'publico:configurar_portal' %}">Qué se muestra</a>.</div>
+    </div>
+{% endif %}
+
+<div class="card-ua mb-4">
+    <div class="noticia-agregar">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-2">
+            <div>
+                <h2 class="h6 fw-bold mb-1">Agregar una noticia</h2>
+                <p class="small text-muted mb-0">Copia el enlace de una noticia A+S del sitio de la Universidad y pégalo aquí. Leemos el título, la imagen, la fecha y el resumen por ti.</p>
+            </div>
+            <a href="{{ busqueda_ua }}" target="_blank" rel="noopener" class="btn btn-sm btn-light-ua">
+                <i class="bi bi-search me-1" aria-hidden="true"></i>Buscar noticias A+S en uautonoma.cl
+            </a>
+        </div>
+
+        <form method="post" class="noticia-pegar" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="leer">
+            <label class="visually-hidden" for="url-noticia">Enlace de la noticia</label>
+            <input type="url" id="url-noticia" name="url" class="form-control" required
+                   placeholder="https://www.uautonoma.cl/noticias/..."
+                   value="{% if form %}{{ form.url_fuente.value|default:'' }}{% endif %}">
+            <button type="submit" class="btn btn-ua">
+                <i class="bi bi-magic me-1" aria-hidden="true"></i>Leer noticia
+            </button>
+        </form>
+
+        {% if aviso_lectura %}
+            <div class="alert alert-warning small mt-3 mb-0" role="alert">
+                <i class="bi bi-info-circle me-1" aria-hidden="true"></i>{{ aviso_lectura }}
+            </div>
+        {% endif %}
+    </div>
+
+    {% if form %}
+        <form method="post" class="noticia-revisar" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="leida" value="{% if leida %}1{% endif %}">
+            <div class="noticia-revisar-grid">
+                <div>
+                    <h3 class="h6 fw-bold mb-3">
+                        {% if leida %}Revisa los datos y publica{% else %}Completa los datos{% endif %}
+                    </h3>
+                    {% if form.non_field_errors %}<div class="alert alert-danger small">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+                    {% for campo in form %}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small" for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+                            {{ campo }}
+                            {% if campo.help_text %}<div class="form-text">{{ campo.help_text }}</div>{% endif %}
+                            {% for error in campo.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endfor %}
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-ua"><i class="bi bi-send me-1" aria-hidden="true"></i>Publicar en el portal</button>
+                        <a href="{% url 'publico:noticias' %}" class="btn btn-outline-secondary">Cancelar</a>
+                    </div>
+                </div>
+                <div>
+                    <div class="small text-muted fw-semibold mb-2">Así se verá en el portal</div>
+                    <article class="noticia-tarjeta" data-vista-previa>
+                        <img src="{{ form.imagen_url.value|default:'' }}" alt="" class="noticia-tarjeta-img{% if not form.imagen_url.value %} d-none{% endif %}" data-vp-imagen>
+                        <div class="p-3">
+                            <div class="noticia-fecha" data-vp-fecha>{{ form.fecha_publicacion.value|default:'' }}</div>
+                            <div class="fw-bold mb-1" data-vp-titulo>{{ form.titulo.value|default:'Título de la noticia' }}</div>
+                            <p class="small text-muted mb-0" data-vp-resumen>{{ form.resumen.value|default:''|truncatewords:20 }}</p>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </form>
+    {% endif %}
+</div>
+
+<div class="card-ua">
+    <div class="card-header-ua d-flex justify-content-between align-items-center">
+        <h2 class="h6 fw-bold mb-0">Noticias agregadas</h2>
+        <span class="small text-muted">{{ noticias|length }} en total · el portal muestra las 3 más recientes visibles</span>
+    </div>
+    {% if noticias %}
+        <ul class="list-unstyled mb-0">
+            {% for noticia in noticias %}
+                <li class="noticia-fila{% if noticia.estado != 'PUBLICADA' %} oculta{% endif %}">
+                    {% if noticia.imagen_url %}
+                        <img src="{{ noticia.imagen_url }}" alt="" class="noticia-fila-img" loading="lazy">
+                    {% else %}
+                        <div class="noticia-fila-img noticia-sin-img"><i class="bi bi-newspaper" aria-hidden="true"></i></div>
+                    {% endif %}
+                    <div class="flex-grow-1 min-w-0">
+                        <a href="{{ noticia.url_fuente }}" target="_blank" rel="noopener" class="fw-semibold text-body text-decoration-none">{{ noticia.titulo }}</a>
+                        <div class="small text-muted">
+                            {{ noticia.fecha_publicacion|date:"d M Y" }}{% if noticia.fuente %} · {{ noticia.fuente }}{% endif %}
+                            {% if noticia.fecha_sincronizacion %} · leída el {{ noticia.fecha_sincronizacion|date:"d/m/Y H:i" }}{% else %} · ingresada a mano{% endif %}
+                        </div>
+                    </div>
+                    {% if noticia.estado == 'PUBLICADA' %}
+                        <span class="badge text-bg-success">Visible</span>
+                    {% else %}
+                        <span class="badge text-bg-secondary">Oculta</span>
+                    {% endif %}
+                    <div class="d-flex gap-1">
+                        <form method="post" action="{% url 'publico:cambiar_estado_noticia' noticia.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-light-ua" title="{% if noticia.estado == 'PUBLICADA' %}Ocultar del portal{% else %}Mostrar en el portal{% endif %}">
+                                <i class="bi {% if noticia.estado == 'PUBLICADA' %}bi-eye-slash{% else %}bi-eye{% endif %}" aria-hidden="true"></i>
+                                <span class="visually-hidden">{% if noticia.estado == 'PUBLICADA' %}Ocultar{% else %}Mostrar{% endif %}</span>
+                            </button>
+                        </form>
+                        <form method="post" action="{% url 'publico:eliminar_noticia' noticia.id %}" onsubmit="return confirm('¿Eliminar «{{ noticia.titulo|escapejs }}» de las noticias?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-light-ua text-danger" title="Eliminar">
+                                <i class="bi bi-trash" aria-hidden="true"></i><span class="visually-hidden">Eliminar</span>
+                            </button>
+                        </form>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-newspaper fs-2 d-block mb-2" aria-hidden="true"></i>
+            Aún no hay noticias. Pega arriba el enlace de la primera.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    // Vista previa en vivo mientras se revisan los datos.
+    var vp = document.querySelector("[data-vista-previa]");
+    if (vp) {
+        var enlazar = function (nombre, destino, aplicar) {
+            var campo = document.querySelector('.noticia-revisar [name="' + nombre + '"]');
+            if (campo) campo.addEventListener("input", function () { aplicar(vp.querySelector(destino), campo.value); });
+        };
+        enlazar("titulo", "[data-vp-titulo]", function (el, v) { el.textContent = v || "Título de la noticia"; });
+        enlazar("resumen", "[data-vp-resumen]", function (el, v) { el.textContent = v.split(/\s+/).slice(0, 20).join(" "); });
+        enlazar("fecha_publicacion", "[data-vp-fecha]", function (el, v) { el.textContent = v; });
+        enlazar("imagen_url", "[data-vp-imagen]", function (el, v) { el.src = v; el.classList.toggle("d-none", !v); });
+    }
+})();
+</script>
+{% endblock %}
