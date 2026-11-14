@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load core_extras %}
 
 {% block title %}NRC {{ seccion.nrc }} · {{ seccion.asignatura.nombre }} | Portal A+S{% endblock %}
 
@@ -9,6 +10,7 @@
 
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
         <div>
+            {% if vista_coordinador %}{% url 'seccion_list' as url_volver %}{% volver url_volver "Volver a Secciones / NRC" %}{% else %}{% url 'core:docente' as url_volver %}{% volver url_volver "Volver a mis secciones" %}{% endif %}
             <h1 class="h2 fw-bold text-dark mb-1">
                 {{ seccion.asignatura.nombre }}
             </h1>
@@ -167,7 +169,7 @@
                     </div>
                     <div class="accion-card-pie">
                         {% if vista_coordinador %}
-                            <a href="{% url 'rutas:detalle_ruta_coordinacion' seccion.ruta_asignada.id %}" class="btn btn-rojo btn-sm">
+                            <a href="{% url 'rutas:detalle_ruta_coordinacion' seccion.ruta_asignada.id %}?volver={{ request.get_full_path|urlencode }}" class="btn btn-rojo btn-sm">
                                 Ver Ruta y evidencias
                             </a>
                         {% else %}
@@ -178,18 +180,6 @@
                     </div>
                 </div>
             </div>
-        {% endif %}
-    </div>
-
-    <div class="mt-4">
-        {% if vista_coordinador %}
-            <a href="{% url 'seccion_list' %}" class="btn btn-outline-secondary">
-                ← Volver a Secciones / NRC
-            </a>
-        {% else %}
-            <a href="{% url 'core:docente' %}" class="btn btn-outline-secondary">
-                ← Volver a mis secciones
-            </a>
         {% endif %}
     </div>
 

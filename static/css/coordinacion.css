@@ -525,11 +525,3 @@
 .kpi-etiqueta { font-size: 0.85rem; font-weight: 600; color: var(--ua-text-secondary); }
 .kpi-detalle { font-size: 0.72rem; line-height: 1.3; color: var(--ua-text-muted); }
 
-/* Panel de indicadores: enlace de vuelta al Inicio */
-.enlace-volver {
-    display: inline-block;
-    margin-bottom: 0.25rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    text-decoration: none;
-}

@@ -241,6 +241,45 @@ def porcentaje_avance(completadas, total):
     return round(completadas * 100 / total) if total else 0
 
 
+def promedio_rutas(rutas):
+    """
+    Promedio simple del avance de varias Rutas (cada sección pesa lo mismo).
+    Las rutas deben venir de con_avance(). None si no hay ninguna.
+    """
+    porcentajes = [
+        porcentaje_avance(ruta.completadas_obligatorias, ruta.total_obligatorias)
+        for ruta in rutas
+    ]
+    return round(sum(porcentajes) / len(porcentajes)) if porcentajes else None
+
+
+def promedio_por_docente(rutas):
+    """
+    Una fila por docente con el promedio de todas sus Rutas (pedido del
+    cliente, reunión 2026-11): cuántas tiene, cuántas completó y cuántas
+    actividades obligatorias le faltan. Primero los de menor avance, que son
+    los que hay que acompañar.
+    """
+    rutas = con_avance(rutas).prefetch_related("seccion__docentes")
+    por_docente = {}
+    for ruta in rutas:
+        for docente in ruta.seccion.docentes.all():
+            por_docente.setdefault(docente, []).append(ruta)
+
+    filas = [
+        {
+            "docente": docente,
+            "rutas": len(suyas),
+            "promedio": promedio_rutas(suyas),
+            "completadas": sum(ruta.estado == "COMPLETADA" for ruta in suyas),
+            "pendientes": sum(ruta.total_obligatorias - ruta.completadas_obligatorias for ruta in suyas),
+        }
+        for docente, suyas in por_docente.items()
+    ]
+    filas.sort(key=lambda fila: (fila["promedio"], fila["docente"].nombres, fila["docente"].apellidos))
+    return filas
+
+
 def url_recurso(seccion_actividad):
     url = seccion_actividad.ruta_actividad.recurso_url
 
@@ -493,11 +532,17 @@ def _carpetas_por_etapa(seccion_ruta):
     return {etapa: f"{numero} - {etapa}".replace("/", "-") for numero, etapa in enumerate(etapas, start=1)}
 
 
+def ficha_disponible(seccion_ruta):
+    """El Coordinador ve la ficha completa solo con la Ruta completada."""
+    return seccion_ruta.estado == "COMPLETADA"
+
+
 def generar_zip_expediente(expediente, destino, seccion_ruta=None):
     """
-    ZIP del expediente. Con seccion_ruta (vista del Coordinador) lleva
-    primero la «Ficha del proyecto.pdf» y una carpeta por etapa de la Ruta,
-    con una subcarpeta por actividad.
+    ZIP del expediente. Con seccion_ruta (vista del Coordinador) lleva una
+    carpeta por etapa de la Ruta, con una subcarpeta por actividad, y la
+    «Ficha del proyecto.pdf» solo cuando el docente ya completó la Ruta
+    (reunión con el cliente 14-11-2026: antes del cierre solo el avance).
     """
     evidencias = (
         expediente.evidencias
@@ -511,14 +556,14 @@ def generar_zip_expediente(expediente, destino, seccion_ruta=None):
     faltantes = []
 
     with zipfile.ZipFile(destino, "w", zipfile.ZIP_DEFLATED) as zip_expediente:
-        if seccion_ruta is not None:
+        if seccion_ruta is not None and ficha_disponible(seccion_ruta):
             from .ficha import NOMBRE_PDF, generar_ficha_pdf
 
             zip_expediente.writestr(NOMBRE_PDF, generar_ficha_pdf(seccion_ruta))
 
         for evidencia in evidencias:
             actividad = evidencia.seccion_actividad.ruta_actividad
-            carpeta = f"{actividad.orden:02d}_{actividad.nombre}".replace("/", "-")
+            carpeta = f"{actividad.orden:02d} - {actividad.nombre}".replace("/", "-")
             if actividad.etapa in carpetas_etapa:
                 carpeta = f"{carpetas_etapa[actividad.etapa]}/{carpeta}"
             nombre = Path(evidencia.archivo.nombre_original).name
@@ -589,4 +634,4 @@ def crear_nueva_version_ruta(ruta_version_origen, usuario=None):
 
     RutaActividad.objects.bulk_create(nuevas_actividades)
 
-    return nueva_version
+    return nueva_version

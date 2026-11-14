@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load core_extras %}
 
 {% block title %}Gestionar equipo{% endblock %}
 
@@ -8,6 +9,7 @@
     <!-- ENCABEZADO -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
+            {% url 'proyectos:gestionar_equipos_seccion' equipo.seccion.id as url_volver %}{% volver url_volver "Volver a los equipos" %}
             <h2 class="mb-1">
                 Gestionar Grupo {{ equipo.numero_grupo }}
             </h2>
@@ -19,13 +21,7 @@
             </p>
         </div>
 
-        <a href="{% url 'proyectos:gestionar_equipos_seccion' equipo.seccion.id %}"
-           class="btn btn-outline-secondary">
-            Volver a equipos
-        </a>
     </div>
-
-
 
     <!-- DATOS GENERALES -->
     <div class="card shadow-sm mb-4">
@@ -71,7 +67,6 @@
 
         </div>
     </div>
-
 
     <!-- INTEGRANTES -->
     <div class="card shadow-sm mb-4">
@@ -129,7 +124,6 @@
 
                     </div>
 
-
                     <div class="mt-3">
 
                         <!-- BOTÓN CORREGIR INTEGRANTE -->
@@ -142,7 +136,6 @@
                             Corregir integrante
                         </button>
 
-
                         <!-- BOTÓN GESTIONAR ETIQUETAS -->
                         <button type="button"
                                 class="btn btn-sm btn-outline-secondary"
@@ -152,7 +145,6 @@
                                 aria-controls="etiquetas-integrante-{{ integrante.id }}">
                             Gestionar etiquetas
                         </button>
-
 
                         <!-- FORMULARIO DE ETIQUETAS -->
                         <div class="collapse mt-3"
@@ -226,7 +218,6 @@
 
                         </div>
 
-
                         <!-- FORMULARIO DE CORRECCIÓN -->
                         <div class="collapse mt-3"
                              id="corregir-integrante-{{ integrante.id }}">
@@ -262,7 +253,6 @@
 
                                     </div>
 
-
                                     <!-- APELLIDOS -->
                                     <div class="col-md-6 mb-3">
 
@@ -278,7 +268,6 @@
                                                required>
 
                                     </div>
-
 
                                     <!-- RUT -->
                                     <div class="col-md-6 mb-3">
@@ -297,7 +286,6 @@
                                         </div>
 
                                     </div>
-
 
                                     <!-- CORREO -->
                                     <div class="col-md-6 mb-3">
@@ -329,7 +317,6 @@
 
                                 </div>
 
-
                                 <button type="submit"
                                         class="btn text-white"
                                         style="background-color: #A90000;">
@@ -354,7 +341,6 @@
 
         </div>
     </div>
-
 
     <!-- SOCIO COMUNITARIO -->
     <div class="card shadow-sm mb-4">
@@ -392,7 +378,6 @@
                 </div>
 
             </div>
-
 
             <!-- CAMBIAR SOCIO -->
             <form method="post"
@@ -434,7 +419,6 @@
 
                 </select>
 
-
                 <label for="motivo"
                        class="form-label fw-bold">
                     Motivo del cambio
@@ -448,7 +432,6 @@
                           required
                           placeholder="Ingrese el motivo de la corrección"></textarea>
 
-
                 <button type="submit"
                         class="btn text-white"
                         style="background-color: #A90000;">
@@ -459,7 +442,6 @@
 
         </div>
     </div>
-
 
     <!-- PERÍODOS DE ASOCIACIÓN (ParticipacionSocio) -->
     <div class="card shadow-sm mb-4">
@@ -510,7 +492,6 @@
 
         </div>
     </div>
-
 
     <!-- HISTORIAL SOCIO COMUNITARIO -->
     <div class="card shadow-sm">

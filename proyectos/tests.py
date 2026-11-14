@@ -498,3 +498,56 @@ class RegistroEquiposCDE48Tests(TestCase):
             ).count(),
             2,
         )
+
+# ---------------------------------------------------------------------------
+# Catálogo de proyectos (menú "Proyectos" del Coordinador)
+# ---------------------------------------------------------------------------
+
+from datetime import date as _date
+
+from django.contrib.auth import get_user_model as _get_user_model
+from django.contrib.auth.models import Group as _Group
+from django.test import TestCase as _TestCase
+from django.urls import reverse as _reverse
+
+from publico.tests import DatosPortalMixin
+
+
+class CatalogoProyectosTests(DatosPortalMixin, _TestCase):
+    def setUp(self):
+        self.crear_datos()
+        usuario = _get_user_model().objects.create_user("coord_proy", password="x")
+        usuario.groups.add(_Group.objects.get_or_create(name="Coordinador")[0])
+        self.client.force_login(usuario)
+        self.url = _reverse("proyectos:catalogo")
+
+    def test_separa_en_curso_y_cerrados(self):
+        respuesta = self.client.get(self.url)
+        self.assertEqual(respuesta.context["totales"], {"en_curso": 2, "cerrados": 1})
+        self.assertContains(respuesta, "Plan de reciclaje")
+        self.assertContains(respuesta, "Panadería Doña Ana")  # interno: muestra el socio
+        self.assertNotContains(respuesta, "Huerto comunitario")
+
+        respuesta = self.client.get(self.url, {"estado": "cerrados"})
+        self.assertContains(respuesta, "Huerto comunitario")
+        self.assertContains(respuesta, "Histórico")
+        self.assertNotContains(respuesta, "Plan de reciclaje")
+
+    def test_periodo_terminado_pasa_a_cerrados(self):
+        self.periodo.fecha_fin = _date(2000, 1, 1)
+        self.periodo.save()
+        respuesta = self.client.get(self.url)
+        self.assertEqual(respuesta.context["totales"], {"en_curso": 0, "cerrados": 3})
+
+    def test_buscar_y_filtrar_por_anio(self):
+        respuesta = self.client.get(self.url, {"estado": "cerrados", "anio": "2024", "q": "huerto"})
+        self.assertContains(respuesta, "Huerto comunitario")
+        respuesta = self.client.get(self.url, {"q": "marketing"})
+        self.assertEqual(respuesta.context["totales"]["en_curso"], 1)
+
+    def test_solo_coordinacion(self):
+        self.client.logout()
+        self.assertNotEqual(self.client.get(self.url).status_code, 200)
+
+    def test_menu_habilitado(self):
+        self.assertContains(self.client.get(self.url), 'href="/proyectos/"')

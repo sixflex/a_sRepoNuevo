@@ -6,7 +6,7 @@
 
 {% block content %}
 {# Página de respaldo: el editor normal es la tarjeta dentro del constructor. #}
-<a class="small text-muted text-decoration-none" href="{% url 'encuestas:editor' version.id %}{% if pregunta %}#pregunta-{{ pregunta.id }}{% endif %}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Volver al editor</a>
+<a class="enlace-volver" href="{% url 'encuestas:editor' version.id %}{% if pregunta %}#pregunta-{{ pregunta.id }}{% endif %}"><i class="bi bi-arrow-left" aria-hidden="true"></i>Volver al editor</a>
 <h1 class="page-title mt-2">{% if pregunta %}Editar pregunta{% else %}Nueva pregunta{% endif %}</h1>
 <p class="page-subtitle">{{ version.plantilla.titulo }} · versión {{ version.numero_version }}</p>
 

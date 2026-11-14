@@ -883,3 +883,18 @@
     .enc-cuadricula-tabla tbody td { min-width: 0; border: 0; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.25rem 0; }
     .enc-cuadricula-tabla tbody td::before { content: attr(data-valor); font-size: 0.8rem; font-weight: 600; }
 }
+
+/* Lista de formularios: pestañas Ruta Docente / Otros y buscador. */
+.enc-lista-barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.enc-lista-tabs { display: flex; gap: 4px; background: var(--ua-bg-subtle); padding: 4px; border-radius: 10px; }
+.enc-lista-tab { border: 0; background: none; padding: 6px 14px; border-radius: 8px; font-weight: 500; color: var(--ua-text-secondary); transition: background .15s ease, color .15s ease; }
+.enc-lista-tab span { font-size: .78rem; color: var(--ua-text-muted); margin-left: 4px; }
+.enc-lista-tab:hover { color: var(--ua-red); }
+.enc-lista-tab.active { background: var(--ua-bg-card, #fff); color: var(--ua-red); box-shadow: 0 1px 3px rgba(0, 0, 0, .08); }
+.enc-lista-buscar { position: relative; flex: 0 1 320px; }
+.enc-lista-buscar .bi { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ua-text-muted); }
+.enc-lista-buscar .form-control { padding-left: 36px; }
+.enc-chip-ruta { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; font-size: .72rem; font-weight: 600; color: var(--ua-red); background: var(--ua-red-soft); border-radius: 999px; padding: 1px 8px; vertical-align: middle; }
+.enc-fila-formulario[hidden] { display: none; }
+@media (max-width: 575.98px) { .enc-lista-buscar { flex: 1 1 100%; } }
+@media (prefers-reduced-motion: reduce) { .enc-lista-tab { transition: none; } }

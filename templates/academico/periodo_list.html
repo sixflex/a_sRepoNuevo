@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load core_extras %}
 
 {% block title %}Gestión de Periodos | Portal A+S{% endblock %}
 
@@ -8,6 +9,7 @@
     <!-- TÍTULO Y BOTÓN -->
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
         <div>
+            {% url 'home' as url_volver %}{% volver url_volver "Volver a Gestión académica" %}
             <h2 class="fw-bold mb-1">Gestión de Periodos</h2>
             <p class="text-muted mb-0">
                 Administra los periodos académicos registrados en el sistema.
@@ -124,12 +126,5 @@
         </div>
     </div>
 
-    <!-- VOLVER -->
-    <div class="mt-4">
-        <a href="{% url 'home' %}" class="btn btn-outline-secondary">
-            ← Volver a Gestión Académica
-        </a>
-    </div>
-
 </div>
-{% endblock %}
+{% endblock %}

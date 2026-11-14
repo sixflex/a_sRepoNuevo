@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load core_extras %}
 
 {% block title %}Vista previa carta #{{ solicitud.id }} | Portal A+S{% endblock %}
 
@@ -6,17 +7,9 @@
 
 <div class="container py-4">
 
-    <div class="mb-4">
-        <a
-            href="{% url 'cartas:detalle_solicitud_coordinacion' solicitud.id %}"
-            class="btn btn-outline-secondary btn-sm"
-        >
-            ← Volver a la solicitud
-        </a>
-    </div>
-
     <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-3">
         <div>
+            {% url 'cartas:detalle_solicitud_coordinacion' solicitud.id as url_volver %}{% volver url_volver "Volver a la solicitud" %}
             <h2 class="mb-1">Vista previa de la carta</h2>
 
             <p class="text-muted mb-0">

@@ -17,10 +17,27 @@
         </a>
     </div>
 
+    <!-- Pestañas: por sección (cada Ruta) o por docente (promedio de todas sus Rutas) -->
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <a class="nav-link{% if vista != 'docentes' %} active{% endif %}"{% if vista != 'docentes' %} aria-current="page"{% endif %}
+               href="?sede={{ filtros_seleccionados.sede }}&campus={{ filtros_seleccionados.campus }}&periodo={{ filtros_seleccionados.periodo }}&estado={{ filtros_seleccionados.estado }}">
+                <i class="bi bi-list-ul me-1" aria-hidden="true"></i>Por sección
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link{% if vista == 'docentes' %} active{% endif %}"{% if vista == 'docentes' %} aria-current="page"{% endif %}
+               href="?vista=docentes&sede={{ filtros_seleccionados.sede }}&campus={{ filtros_seleccionados.campus }}&periodo={{ filtros_seleccionados.periodo }}&estado={{ filtros_seleccionados.estado }}">
+                <i class="bi bi-person-lines-fill me-1" aria-hidden="true"></i>Por docente
+            </a>
+        </li>
+    </ul>
+
  <!-- Formulario de Filtros Combinables CDE-525 -->
 <form method="get" action="" class="card p-3 mb-4 shadow-sm bg-light">
+    {% if vista == 'docentes' %}<input type="hidden" name="vista" value="docentes">{% endif %}
     <div class="row g-2 align-items-end">
-        
+
         <!-- 1. Filtro Sede -->
         <div class="col-12 col-md-2">
             <label for="sede" class="form-label fw-semibold text-secondary small mb-1">Sede</label>
@@ -79,6 +96,61 @@
 
     </div>
 </form>
+    {% if vista == 'docentes' %}
+    <!-- PROMEDIO POR DOCENTE -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <p class="text-muted small mb-3">
+                Promedio del avance de todas las Rutas de cada docente con los filtros elegidos.
+                Primero los de menor avance. Toca un docente para ver sus secciones.
+            </p>
+            {% if por_docente %}
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Docente</th>
+                                <th class="text-center">Rutas</th>
+                                <th>Promedio</th>
+                                <th class="text-center">Completadas</th>
+                                <th class="text-center">Actividades pendientes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fila in por_docente %}
+                                <tr>
+                                    <td>
+                                        <a href="?docente={{ fila.docente.id }}&sede={{ filtros_seleccionados.sede }}&campus={{ filtros_seleccionados.campus }}&periodo={{ filtros_seleccionados.periodo }}&estado={{ filtros_seleccionados.estado }}"
+                                           class="fw-semibold text-decoration-none">{{ fila.docente.nombres }} {{ fila.docente.apellidos }}</a>
+                                    </td>
+                                    <td class="text-center">{{ fila.rutas }}</td>
+                                    <td style="min-width: 180px;">
+                                        <div class="fw-semibold mb-1">{{ fila.promedio }}%</div>
+                                        <div class="progress" style="height: 7px;">
+                                            <div class="progress-bar{% if fila.promedio < 40 %} bg-danger{% elif fila.promedio < 80 %} bg-warning{% else %} bg-success{% endif %}"
+                                                 role="progressbar" data-progress="{{ fila.promedio }}"></div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">{{ fila.completadas }} de {{ fila.rutas }}</td>
+                                    <td class="text-center"><span class="badge bg-warning text-dark">{{ fila.pendientes }}</span></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center text-muted py-4">No hay Rutas con docentes que coincidan con los filtros.</div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    {% if docente_filtrado %}
+        <div class="alert alert-light border d-flex align-items-center gap-2 py-2">
+            <i class="bi bi-person" aria-hidden="true"></i>
+            <span>Rutas de <strong>{{ docente_filtrado.nombres }} {{ docente_filtrado.apellidos }}</strong></span>
+            <a href="?sede={{ filtros_seleccionados.sede }}&campus={{ filtros_seleccionados.campus }}&periodo={{ filtros_seleccionados.periodo }}&estado={{ filtros_seleccionados.estado }}" class="ms-auto small">Ver todos los docentes</a>
+        </div>
+    {% endif %}
     <!-- TABLA DE RUTAS -->
     <div class="card shadow-sm">
         <div class="card-body">
@@ -169,10 +241,11 @@
             {% endif %}
         </div>
     </div>
+    {% endif %}
 </div>
 <script>
     document.querySelectorAll(".progress-bar[data-progress]").forEach((bar) => {
         bar.style.width = `${bar.dataset.progress}%`;
     });
 </script>
-{% endblock %}
+{% endblock %}

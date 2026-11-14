@@ -93,15 +93,6 @@
 .badge-provisional { display: inline-flex; align-items: center; white-space: nowrap; background-color: var(--ua-warning-soft); color: var(--ua-warning); font-size: 0.72rem; font-weight: 600; padding: 5px 10px; border-radius: 999px; }
 
 /* Revisión de una postulación: ficha por sección y panel de decisión */
-.enlace-volver {
-    display: inline-block;
-    margin-bottom: 12px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--ua-text-secondary);
-    text-decoration: none;
-}
-.enlace-volver:hover { color: var(--ua-red); }
 .badge-estado-lg { font-size: 0.8rem; padding: 7px 14px; }
 .ficha-respuestas { padding: 4px 20px; }
 .ficha-respuesta {

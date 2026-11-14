@@ -1478,3 +1478,45 @@ def gestionar_equipo(request, equipo_id):
             "participaciones_socio": participaciones_socio,
         },
     )
+
+# ---------------------------------------------------------------------------
+# Catálogo de proyectos A+S (menú "Proyectos" del Coordinador)
+# ---------------------------------------------------------------------------
+
+@coordinador_required
+def catalogo_proyectos(request):
+    """Proyectos A+S en curso este semestre y cerrados, con filtros. Ver proyectos/catalogo.py."""
+    from urllib.parse import urlencode
+
+    from django.core.paginator import Paginator
+
+    from academico.models import Carrera, PeriodoAcademico, Sede
+    from socios.models import ParticipacionSocio
+
+    from . import catalogo
+
+    filtros = catalogo.leer_filtros(request.GET)
+    elegidos, totales = catalogo.proyectos(filtros)
+    pagina = Paginator(elegidos, 24).get_page(request.GET.get("pagina"))
+
+    # Parámetros para cambiar de pestaña o de página sin perder los filtros.
+    otros = {k: v for k, v in filtros.items() if v and k != "estado"}
+    anios = sorted(
+        set(PeriodoAcademico.objects.values_list("anio", flat=True))
+        | {f.year for f in ParticipacionSocio.objects.filter(periodo__isnull=True).exclude(fecha_inicio=None).values_list("fecha_inicio", flat=True)},
+        reverse=True,
+    )
+    return render(request, "proyectos/catalogo.html", {
+        "filtros": filtros,
+        "totales": totales,
+        "pagina": pagina,
+        "tarjetas": [catalogo.tarjeta(p) for p in pagina.object_list],
+        "hay_filtros": bool(otros),
+        "qs_en_curso": urlencode(otros),
+        "qs_cerrados": urlencode({**otros, "estado": catalogo.CERRADOS}),
+        "qs_pagina": urlencode({**otros, "estado": filtros["estado"]}),
+        "anios": anios,
+        "sedes": Sede.objects.order_by("nombre"),
+        "carreras": Carrera.objects.filter(participaciones_socios__isnull=False).distinct().order_by("nombre"),
+        "CERRADOS": catalogo.CERRADOS,
+    })

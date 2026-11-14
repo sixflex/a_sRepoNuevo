@@ -131,7 +131,7 @@
                             <td class="text-end text-nowrap">
                                 {% if sugerido.socio_id %}
                                     <span class="badge-estado estado-APROBADO">Ya registrado</span>
-                                    <a href="{% url 'socios:detalle_historial' sugerido.socio_id %}" class="btn-accion text-decoration-none ms-1">
+                                    <a href="{% url 'socios:detalle_historial' sugerido.socio_id %}?volver={{ request.get_full_path|urlencode }}" class="btn-accion text-decoration-none ms-1">
                                         <i class="bi bi-file-text me-1" aria-hidden="true"></i>Ver ficha
                                     </a>
                                 {% elif sugerido.correo %}

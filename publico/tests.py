@@ -17,7 +17,7 @@ from django.utils import timezone
 
 from academico.models import Campus, Carrera, Facultad, PeriodoAcademico, Sede
 from auditoria.models import AuditoriaCambio
-from core.models import Noticia
+from publico.models import Noticia
 from socios.models import ClasificacionSocio, Comuna, ContactoSocio, ParticipacionSocio, SocioComunitario
 
 from .models import ConfiguracionPortal
@@ -193,6 +193,11 @@ class PortalRespetaConfiguracionTests(DatosPortalMixin, TestCase):
         ConfiguracionPortal.objects.update_or_create(pk=1, defaults={"opciones_json": _normalizar(opciones)})
 
     def test_por_defecto_muestra_todos_los_bloques(self):
+        # Las noticias salen solo si hay alguna real (ya no hay tarjetas de relleno).
+        Noticia.objects.create(
+            titulo="Noticia A+S", url_fuente="https://uautonoma.cl/n/0", fuente="UA",
+            fecha_publicacion=timezone.now(), estado="PUBLICADA",
+        )
         respuesta = self.inicio()
         self.assertContains(respuesta, 'id="mapaTerritorial"')
         self.assertContains(respuesta, "Cifras Macro del Programa A+S")
@@ -259,7 +264,10 @@ class PortalRespetaConfiguracionTests(DatosPortalMixin, TestCase):
         self.assertNotContains(respuesta, 'href="#catalogo"')
 
     def test_noticias_apagadas(self):
-        Noticia.objects.create(titulo="Noticia visible", url_fuente="https://uautonoma.cl/n/1", estado="PUBLICADA")
+        Noticia.objects.create(
+            titulo="Noticia visible", url_fuente="https://uautonoma.cl/n/1", fuente="UA",
+            fecha_publicacion=timezone.now(), estado="PUBLICADA",
+        )
         self.assertContains(self.inicio(), "Noticia visible")
         self.configurar(**{"noticias__activo": None})
         self.assertNotContains(self.inicio(), "Noticias y Recursos")

@@ -48,8 +48,11 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-4">
                     <i class="bi bi-graph-up-arrow docente-kpi-icon" aria-hidden="true"></i>
-                    <h3 class="fw-bold">{{ avance_general }}%</h3>
-                    <span class="text-muted">Avance general</span>
+                    <h3 class="fw-bold">{% if promedio_rutas is None %}—{% else %}{{ promedio_rutas }}%{% endif %}</h3>
+                    <span class="text-muted">Promedio de tus Rutas</span>
+                    {% if rutas_en_promedio %}
+                        <div class="small text-muted mt-1">{{ rutas_en_promedio }} Ruta{{ rutas_en_promedio|pluralize }}{% if periodo_promedio %} de {{ periodo_promedio }}{% endif %}</div>
+                    {% endif %}
                 </div>
             </div>
         </div>

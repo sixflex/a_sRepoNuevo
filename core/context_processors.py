@@ -46,6 +46,9 @@ def _menu_activo(match):
     if namespace == "proyectos" and nombre == "gestionar_enlaces":
         return "enlaces"
 
+    if namespace == "proyectos" and nombre == "catalogo":
+        return "proyectos"
+
     # Las URLs de academico no tienen espacio de nombres.
     if match.route.startswith("academico/"):
         if nombre.startswith("seccion_"):

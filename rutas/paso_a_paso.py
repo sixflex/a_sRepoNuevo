@@ -226,3 +226,24 @@ def armar_etapas(actividades):
         etapa["completa"] = etapa["obligatorias_pendientes"] == 0
         etapa["actual"] = etapa is actual
     return etapas, actual
+
+
+def plantillas_de_la_ruta():
+    """
+    Ids de los formularios que se usan en la Ruta Docente: los que se llenan
+    en una actividad, los vinculados a una actividad y las tres encuestas de
+    evaluación A+S (actividad 19). La lista de Formularios los separa de los
+    demás.
+    """
+    from core.indicadores import ENCUESTAS_SATISFACCION
+    from encuestas.models import FormularioPlantilla
+
+    from .models import RutaActividad
+
+    codigos = set(FORMULARIO_POR_ORDEN.values()) | {codigo for codigo, _ in ENCUESTAS_SATISFACCION}
+    ids = set(FormularioPlantilla.objects.filter(codigo__in=codigos).values_list("id", flat=True))
+    ids |= set(
+        RutaActividad.objects.exclude(formulario_version=None)
+        .values_list("formulario_version__plantilla_id", flat=True)
+    )
+    return ids

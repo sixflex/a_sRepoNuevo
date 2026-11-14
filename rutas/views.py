@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -13,7 +13,7 @@ from django.views.decorators.http import require_POST
 from archivos.services import guardar_archivo, obtener_storage_privado
 from archivos.validators import validar_cantidad_archivos
 from auditoria.services import registrar_auditoria
-from academico.models import Campus, PeriodoAcademico, Sede
+from academico.models import Campus, Docente, PeriodoAcademico, Sede
 from auditoria.services import registrar_auditoria
 from usuarios.permissions import es_coordinador, es_docente
 from usuarios.decorators import coordinador_required
@@ -594,6 +594,8 @@ def seguimiento_rutas_coordinacion(request):
     sede_id = request.GET.get("sede", "").strip()
     periodo_id = request.GET.get("periodo", "").strip()
     estado_filtro = request.GET.get("estado", "").strip()
+    docente_id = request.GET.get("docente", "").strip()
+    vista = "docentes" if request.GET.get("vista") == "docentes" else "secciones"
 
     rutas = (
         SeccionRuta.objects
@@ -628,6 +630,15 @@ def seguimiento_rutas_coordinacion(request):
     if estado_filtro:
         rutas = rutas.filter(estado=estado_filtro)
 
+    # Pestaña "Por docente": promedio de todas las Rutas de cada docente con
+    # los mismos filtros. Al tocar un docente se ven sus secciones.
+    por_docente = servicios.promedio_por_docente(rutas.order_by()) if vista == "docentes" else []
+
+    docente_filtrado = None
+    if docente_id.isdigit():
+        docente_filtrado = Docente.objects.filter(pk=docente_id).first()
+        rutas = rutas.filter(seccion__docentes__id=docente_id)
+
     for ruta in rutas:
         acts = list(ruta.actividades.all())
         total_acts = len(acts)
@@ -645,6 +656,9 @@ def seguimiento_rutas_coordinacion(request):
         "rutas/seguimiento_coordinacion.html",
         {
             "rutas": rutas,
+            "vista": vista,
+            "por_docente": por_docente,
+            "docente_filtrado": docente_filtrado,
             "sedes": sedes_list,
             "campus_list": campus_list,
             "periodos": periodos_list,
@@ -729,6 +743,7 @@ def detalle_ruta_coordinacion(request, seccion_ruta_id):
             "sin_cierre": actividades.filter(
                 observacion=servicios.OBSERVACION_SIN_CIERRE,
             ).exists(),
+            "ficha_disponible": servicios.ficha_disponible(seccion_ruta),
         },
     )
 
@@ -1060,6 +1075,43 @@ def responder_invitacion_cierre(request, token, respuesta):
             "hide_sidebar": True,
         },
     )
+
+
+@login_required
+def ver_ficha_coordinacion(request, seccion_ruta_id):
+    """
+    Ficha del proyecto en el navegador, con todo lo que llenó el docente.
+    Solo cuando la Ruta está completada; antes el Coordinador ve el avance.
+    """
+    if not es_coordinador(request.user):
+        raise PermissionDenied
+
+    seccion_ruta = get_object_or_404(
+        SeccionRuta.objects.select_related(
+            "seccion__asignatura",
+            "seccion__periodo",
+            "seccion__campus__sede",
+        ),
+        id=seccion_ruta_id,
+    )
+
+    if not servicios.ficha_disponible(seccion_ruta):
+        raise PermissionDenied("La ficha se puede ver cuando el docente complete la Ruta.")
+
+    from .ficha import generar_ficha_pdf
+
+    registrar_auditoria(
+        request=request,
+        entidad="SeccionRuta",
+        entidad_id=seccion_ruta.pk,
+        accion="VER_FICHA_PROYECTO",
+        valores_nuevos={},
+    )
+
+    nombre = f"Ficha del proyecto - NRC {seccion_ruta.seccion.nrc}.pdf"
+    respuesta = HttpResponse(generar_ficha_pdf(seccion_ruta), content_type="application/pdf")
+    respuesta["Content-Disposition"] = f'inline; filename="{nombre}"'
+    return respuesta
 
 
 @login_required

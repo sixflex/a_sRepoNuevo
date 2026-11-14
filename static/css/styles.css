@@ -294,3 +294,18 @@ main {
 
 /* SP9-T05: un hijo flex con tabla ancha no debe ensanchar el contenido (min-width: auto) */
 .app-main { min-width: 0; }
+
+/* Enlace "Volver" único del portal (tag {% volver %}): arriba a la izquierda, sobre el título. */
+.enlace-volver {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--ua-text-secondary);
+    text-decoration: none;
+    transition: color 0.15s ease, gap 0.15s ease;
+}
+.enlace-volver:hover, .enlace-volver:focus-visible { color: var(--ua-red); gap: 8px; }
+@media (prefers-reduced-motion: reduce) { .enlace-volver { transition: none; } }

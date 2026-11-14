@@ -141,7 +141,12 @@ class RutaPasoAPasoTests(FichaUnicaBase):
 
 
 class CoordinadorFichaTests(FichaUnicaBase):
-    def test_zip_trae_la_ficha_aunque_no_haya_evidencias(self):
+    def completar_ruta(self):
+        self.ruta.estado = "COMPLETADA"
+        self.ruta.save(update_fields=["estado"])
+
+    def test_zip_trae_la_ficha_cuando_la_ruta_esta_completada(self):
+        self.completar_ruta()
         self.client.force_login(self.usuario_coordinador)
         respuesta = self.client.get(reverse("rutas:descargar_expediente", args=[self.ruta.id]))
 
@@ -149,6 +154,37 @@ class CoordinadorFichaTests(FichaUnicaBase):
         contenido = zipfile.ZipFile(io.BytesIO(b"".join(respuesta.streaming_content)))
         self.assertEqual(contenido.namelist(), ["Ficha del proyecto.pdf"])
         self.assertTrue(contenido.read("Ficha del proyecto.pdf").startswith(b"%PDF"))
+
+    def test_zip_sin_ficha_mientras_la_ruta_sigue_abierta(self):
+        self.client.force_login(self.usuario_coordinador)
+        respuesta = self.client.get(reverse("rutas:descargar_expediente", args=[self.ruta.id]))
+
+        self.assertEqual(respuesta.status_code, 200)
+        contenido = zipfile.ZipFile(io.BytesIO(b"".join(respuesta.streaming_content)))
+        self.assertNotIn("Ficha del proyecto.pdf", contenido.namelist())
+
+    def test_ficha_en_el_navegador_solo_con_la_ruta_completada(self):
+        url = reverse("rutas:ver_ficha_coordinacion", args=[self.ruta.id])
+        self.client.force_login(self.usuario_coordinador)
+
+        self.assertEqual(self.client.get(url).status_code, 403)
+        detalle = self.client.get(reverse("rutas:detalle_ruta_coordinacion", args=[self.ruta.id]))
+        self.assertContains(detalle, "Disponible cuando el docente complete la Ruta")
+        self.assertNotContains(detalle, url)
+
+        self.completar_ruta()
+        respuesta = self.client.get(url)
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta["Content-Type"], "application/pdf")
+        self.assertTrue(respuesta["Content-Disposition"].startswith("inline"))
+        self.assertTrue(respuesta.content.startswith(b"%PDF"))
+        self.assertContains(self.client.get(reverse("rutas:detalle_ruta_coordinacion", args=[self.ruta.id])), url)
+
+    def test_el_docente_no_abre_la_ficha_del_coordinador(self):
+        self.completar_ruta()
+        self.client.force_login(self.usuario_docente)
+        respuesta = self.client.get(reverse("rutas:ver_ficha_coordinacion", args=[self.ruta.id]))
+        self.assertEqual(respuesta.status_code, 403)
 
     def test_vista_simple_muestra_en_que_etapa_va(self):
         self.client.force_login(self.usuario_coordinador)
@@ -208,3 +244,20 @@ class PortalConvocatoriaTests(TestCase):
         respuesta = self.client.get(reverse("core:inicio"))
         self.assertContains(respuesta, "Convocatoria a los centros de negocio")
         self.assertContains(respuesta, reverse("encuestas:responder", args=[enlace.token]))
+
+
+class PromedioPorDocenteTests(TestCase):
+    """Promedio de todas las Rutas de un docente (reunión con el cliente, 2026-11)."""
+
+    def test_promedio_simple_de_las_rutas(self):
+        from types import SimpleNamespace
+
+        from .services import promedio_rutas
+
+        rutas = [
+            SimpleNamespace(completadas_obligatorias=10, total_obligatorias=20),  # 50 %
+            SimpleNamespace(completadas_obligatorias=20, total_obligatorias=20),  # 100 %
+            SimpleNamespace(completadas_obligatorias=0, total_obligatorias=0),    # 0 %
+        ]
+        self.assertEqual(promedio_rutas(rutas), 50)
+        self.assertIsNone(promedio_rutas([]))

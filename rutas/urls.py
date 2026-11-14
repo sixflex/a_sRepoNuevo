@@ -19,5 +19,6 @@ urlpatterns = [
     path("formularios-qr/",views.formularios_qr,name="formularios_qr",),
     path('coordinacion/',views.seguimiento_rutas_coordinacion, name='seguimiento_coordinacion'),
     path("coordinacion/<int:seccion_ruta_id>/",views.detalle_ruta_coordinacion,name="detalle_ruta_coordinacion",),
+    path("coordinacion/<int:seccion_ruta_id>/ficha.pdf",views.ver_ficha_coordinacion,name="ver_ficha_coordinacion",),
     path("coordinacion/<int:seccion_ruta_id>/expediente.zip",views.descargar_expediente,name="descargar_expediente",),
-]
+]

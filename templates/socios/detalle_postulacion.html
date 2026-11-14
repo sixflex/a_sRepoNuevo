@@ -6,12 +6,9 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
 
-<a href="{% url 'socios:lista_postulaciones' %}" class="enlace-volver">
-    <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Postulaciones
-</a>
-
 <div class="d-flex flex-wrap justify-content-between align-items-start mb-4 gap-3">
     <div>
+        {% url 'socios:lista_postulaciones' as url_volver %}{% volver url_volver "Volver a Postulaciones" %}
         <h1 class="page-title mb-1">{{ postulacion.socio|default:"Postulación sin socio asociado" }}</h1>
         <p class="page-subtitle mb-0">
             {{ postulacion.convocatoria }} · recibida el {{ postulacion.fecha_recepcion|date:"d/m/Y \a \l\a\s H:i" }}
@@ -90,7 +87,7 @@
 
             {% if postulacion.socio %}
                 {# Los datos del socio ya están en la ficha; aquí solo el acceso a su historial. #}
-                <a href="{% url 'socios:detalle_historial' postulacion.socio.id %}" class="btn btn-light-ua w-100">
+                <a href="{% url 'socios:detalle_historial' postulacion.socio.id %}?volver={{ request.get_full_path|urlencode }}" class="btn btn-light-ua w-100">
                     <i class="bi bi-clock-history me-1" aria-hidden="true"></i>Ver ficha e historial del socio
                 </a>
             {% endif %}

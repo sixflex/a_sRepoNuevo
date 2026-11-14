@@ -1,6 +1,41 @@
 {% extends "base.html" %}
 
 {% block title %}Formularios y encuestas | Portal A+S{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var lista = document.querySelector("[data-lista-formularios]");
+    if (!lista) return;
+    var filas = Array.prototype.slice.call(lista.querySelectorAll(".enc-fila-formulario"));
+    var buscar = document.getElementById("buscar-formulario");
+    var vacio = document.querySelector("[data-sin-resultados]");
+    var tabs = document.querySelectorAll(".enc-lista-tab");
+    var grupo = "";
+    var sinTildes = function (t) { return t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); };
+
+    function filtrar() {
+        var texto = sinTildes(buscar.value.trim());
+        var visibles = 0;
+        filas.forEach(function (fila) {
+            var ok = (!grupo || fila.dataset.grupo === grupo) && (!texto || sinTildes(fila.dataset.titulo).indexOf(texto) !== -1);
+            fila.hidden = !ok;
+            if (ok) visibles++;
+        });
+        vacio.classList.toggle("d-none", visibles > 0);
+    }
+    tabs.forEach(function (tab) {
+        tab.addEventListener("click", function () {
+            tabs.forEach(function (t) { t.classList.remove("active"); t.setAttribute("aria-selected", "false"); });
+            tab.classList.add("active"); tab.setAttribute("aria-selected", "true");
+            grupo = tab.dataset.grupo;
+            filtrar();
+        });
+    });
+    buscar.addEventListener("input", filtrar);
+})();
+</script>
+{% endblock %}
 {% block extra_css %}{% include "encuestas/includes/css.html" %}{% endblock %}
 
 {% block content %}
@@ -15,12 +50,27 @@
 </div>
 
 {% if filas %}
-    <div class="enc-lista-formularios">
+    {# Pestañas y buscador: se filtra en el navegador, la lista es corta. #}
+    <div class="enc-lista-barra mb-3">
+        <div class="enc-lista-tabs" role="tablist" aria-label="Tipo de formulario">
+            <button type="button" class="enc-lista-tab active" role="tab" aria-selected="true" data-grupo="">Todos <span>{{ filas|length }}</span></button>
+            <button type="button" class="enc-lista-tab" role="tab" aria-selected="false" data-grupo="ruta"><i class="bi bi-signpost-split me-1" aria-hidden="true"></i>Ruta Docente <span>{{ total_ruta }}</span></button>
+            <button type="button" class="enc-lista-tab" role="tab" aria-selected="false" data-grupo="otros">Otros <span>{{ total_otros }}</span></button>
+        </div>
+        <div class="enc-lista-buscar">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <label class="visually-hidden" for="buscar-formulario">Buscar formulario</label>
+            <input type="search" id="buscar-formulario" class="form-control" placeholder="Buscar formulario" autocomplete="off">
+        </div>
+    </div>
+    <div class="enc-lista-formularios" data-lista-formularios>
         {% for fila in filas %}
-            <a class="enc-fila-formulario" href="{% url 'encuestas:editor' fila.vigente.id %}">
+            <a class="enc-fila-formulario" href="{% url 'encuestas:editor' fila.vigente.id %}"
+               data-grupo="{% if fila.en_ruta %}ruta{% else %}otros{% endif %}" data-titulo="{{ fila.plantilla.titulo|lower }}">
                 <span class="enc-fila-icono" aria-hidden="true"><i class="bi bi-ui-checks"></i></span>
                 <span class="flex-grow-1 min-w-0">
                     <span class="enc-fila-titulo">{{ fila.plantilla.titulo }}</span>
+                    {% if fila.en_ruta %}<span class="enc-chip-ruta"><i class="bi bi-signpost-split" aria-hidden="true"></i>Ruta Docente</span>{% endif %}
                     <span class="enc-nota d-block">Versión {{ fila.vigente.numero_version }} · {{ fila.vigente.total_respuestas }} respuesta{{ fila.vigente.total_respuestas|pluralize }}</span>
                 </span>
                 <span class="enc-badge-estado enc-estado-{{ fila.vigente.estado }}">{{ fila.estado_nombre }}</span>
@@ -28,6 +78,7 @@
             </a>
         {% endfor %}
     </div>
+    <p class="text-muted text-center py-4 d-none" data-sin-resultados>No hay formularios que coincidan.</p>
 {% else %}
     <div class="card-ua empty-state">
         <i class="bi bi-ui-checks" aria-hidden="true"></i>
