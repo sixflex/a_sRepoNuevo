@@ -236,7 +236,7 @@ class RegistroEquiposCDE48Tests(TestCase):
 
         self.assertContains(
             response,
-            "solo puede ser utilizado",
+            "solo para estudiantes",
             status_code=403,
         )
 
@@ -349,8 +349,10 @@ class RegistroEquiposCDE48Tests(TestCase):
 
         self.assertEqual(
             segunda_respuesta.status_code,
-            302,
+            200,
         )
+
+        self.assertContains(segunda_respuesta, "Se registró tu equipo")
 
         
         self.assertEqual(
@@ -417,7 +419,7 @@ class RegistroEquiposCDE48Tests(TestCase):
 
         self.assertContains(
             response_2,
-            "Ya registraste un equipo en esta sección",
+            "Se registró tu equipo",
         )
 
     

@@ -340,7 +340,7 @@ def es_actividad_cierre(ruta_actividad):
 
 def socios_de_seccion(seccion):
     """Socios con una participación vigente en la sección o en sus equipos."""
-    participaciones = ParticipacionSocio.objects.filter(
+    participaciones = ParticipacionSocio.objects.trabajadas().filter(
         Q(equipo__seccion=seccion) | Q(seccion=seccion),
         fecha_fin__isnull=True,
     )

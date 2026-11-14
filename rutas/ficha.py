@@ -1,10 +1,11 @@
 """
-Ficha del proyecto A+S (RF-EVI-01): todo lo de una sección en un PDF.
+Ficha del proyecto A+S (RF-EVI-01): todo lo de una sección.
 
 Junta lo que ya está en el sistema, sin pedir nada nuevo al docente: datos
 de la sección, grupos con su socio y proyecto, avance de la Ruta por etapa,
 las respuestas de los formularios llenados desde la Ruta y las evidencias.
-Va dentro del ZIP que descarga el Coordinador.
+El Coordinador la ve en el navegador y la exporta a Excel; el PDF va
+dentro del ZIP de evidencias.
 """
 
 from io import BytesIO
@@ -83,106 +84,186 @@ def actividades_de(seccion_ruta):
     )
 
 
-def generar_ficha_pdf(seccion_ruta):
-    """Bytes del PDF de la ficha del proyecto de la sección."""
+def datos_ficha(seccion_ruta):
+    """
+    Todo lo que muestra la ficha, una sola vez: lo usan la página del
+    Coordinador, el Excel y el PDF del ZIP.
+    """
     seccion = seccion_ruta.seccion
-    e = _estilos()
-    ancho = A4[0] - 3.6 * cm
-    historia = [
-        Paragraph("Ficha del proyecto A+S", e["titulo"]),
-        _p(f"{seccion.asignatura.nombre} · NRC {seccion.nrc} · Sección {seccion.seccion}", e["sub"]),
+    avance = f"{seccion_ruta.porcentaje_final or 0:.0f} % · {'Completada' if seccion_ruta.estado == 'COMPLETADA' else 'En progreso'}"
+    datos_seccion = [
+        ("Asignatura", seccion.asignatura.nombre),
+        ("NRC", seccion.nrc),
+        ("Sección", seccion.seccion),
+        ("Docente", ", ".join(f"{d.nombres} {d.apellidos}" for d in seccion.docentes.all())),
+        ("Carrera", ", ".join(c.nombre for c in seccion.carreras.all())),
+        ("Campus", f"{seccion.campus.nombre} ({seccion.campus.sede.nombre})"),
+        ("Período", seccion.periodo.nombre),
+        ("Avance de la Ruta", avance),
     ]
 
-    docentes = ", ".join(f"{d.nombres} {d.apellidos}" for d in seccion.docentes.all())
-    carreras = ", ".join(c.nombre for c in seccion.carreras.all())
-    historia += [
-        Paragraph("Datos de la sección", e["h2"]),
-        _tabla([
-            ["Asignatura", seccion.asignatura.nombre],
-            ["Docente", docentes],
-            ["Carrera", carreras],
-            ["Campus", f"{seccion.campus.nombre} ({seccion.campus.sede.nombre})"],
-            ["Período", seccion.periodo.nombre],
-            ["Avance de la Ruta", f"{seccion_ruta.porcentaje_final or 0:.0f} % · {'Completada' if seccion_ruta.estado == 'COMPLETADA' else 'En progreso'}"],
-        ], [4.2 * cm, ancho - 4.2 * cm], e, encabezado=False),
-    ]
-
-    equipos = (
+    grupos = []
+    for equipo in (
         Equipo.objects.filter(seccion=seccion)
         .select_related("proyecto")
         .con_socio_vigente()
         .prefetch_related("integrantes")
         .order_by("numero_grupo")
-    )
-    historia.append(Paragraph("Grupos", e["h2"]))
-    if equipos:
-        filas = [["Grupo", "Proyecto", "Socio comunitario", "Integrantes"]]
-        for equipo in equipos:
-            socio = equipo.socio_vigente
-            filas.append([
-                f"Grupo {equipo.numero_grupo}",
-                equipo.proyecto.nombre if equipo.proyecto_id else "",
-                socio.nombre_organizacion if socio else "Sin socio registrado",
-                str(len(equipo.integrantes.all())),
-            ])
-        historia.append(_tabla(filas, [2 * cm, 5.6 * cm, 6 * cm, ancho - 13.6 * cm], e))
-    else:
-        historia.append(_p("Aún no hay grupos registrados.", e["nota"]))
+    ):
+        socio = equipo.socio_vigente
+        grupos.append({
+            "grupo": f"Grupo {equipo.numero_grupo}",
+            "proyecto": equipo.proyecto.nombre if equipo.proyecto_id else "",
+            "socio": socio.nombre_organizacion if socio else "Sin socio registrado",
+            "integrantes": len(equipo.integrantes.all()),
+        })
 
     actividades = actividades_de(seccion_ruta)
     etapas, _ = armar_etapas(actividades)
-    historia.append(Paragraph("Avance por etapa", e["h2"]))
-    filas = [["Etapa", "Hechas", "Archivos", "Pendientes"]]
-    for etapa in etapas:
-        filas.append([
-            f"{etapa['numero']}. {etapa['nombre']}",
-            f"{etapa['hechas']} de {etapa['total']}",
-            str(etapa["archivos"]),
-            "\n".join(f"{a.ruta_actividad.orden}. {a.ruta_actividad.nombre}" for a in etapa["pendientes"]) or "Nada pendiente",
-        ])
-    historia.append(_tabla(filas, [5 * cm, 2 * cm, 2 * cm, ancho - 9 * cm], e))
+    avance_etapas = [
+        {
+            "etapa": f"{etapa['numero']}. {etapa['nombre']}",
+            "hechas": f"{etapa['hechas']} de {etapa['total']}",
+            "archivos": etapa["archivos"],
+            "pendientes": [f"{a.ruta_actividad.orden}. {a.ruta_actividad.nombre}" for a in etapa["pendientes"]],
+        }
+        for etapa in etapas
+    ]
 
-    # Solo los formularios de la Ruta; las encuestas de satisfacción van como conteo
-    # (las de estudiantes son anónimas).
-    respuestas = (
+    # Solo los formularios de la Ruta; las encuestas de satisfacción van como
+    # conteo (las de estudiantes son anónimas).
+    formularios = []
+    for respuesta in (
         RespuestaFormulario.objects
         .filter(seccion=seccion, version__plantilla__codigo__in=set(FORMULARIO_POR_ORDEN.values()))
         .select_related("version__plantilla", "equipo")
         .order_by("fecha_envio", "id")
-    )
-    historia.append(Paragraph("Formularios llenados", e["h2"]))
-    if not respuestas:
-        historia.append(_p("Todavía no se ha llenado ningún formulario desde la Ruta.", e["nota"]))
-    for respuesta in respuestas:
-        titulo = respuesta.version.plantilla.titulo
-        if respuesta.equipo_id:
-            titulo += f" · Grupo {respuesta.equipo.numero_grupo}"
-        fecha = timezone.localtime(respuesta.fecha_envio).strftime("%d/%m/%Y")
-        historia.append(_p(f"{titulo} ({fecha})", e["h3"]))
-        filas = [[pregunta.texto, texto] for pregunta, texto in resumen_respuesta(respuesta) if texto]
-        if filas:
-            historia.append(_tabla(filas, [6.5 * cm, ancho - 6.5 * cm], e, encabezado=False))
+    ):
+        formularios.append({
+            "titulo": respuesta.version.plantilla.titulo,
+            "grupo": f"Grupo {respuesta.equipo.numero_grupo}" if respuesta.equipo_id else "",
+            "fecha": timezone.localtime(respuesta.fecha_envio),
+            "filas": [(pregunta.texto, texto) for pregunta, texto in resumen_respuesta(respuesta) if texto],
+        })
 
-    conteo = {
-        codigo: RespuestaFormulario.objects.filter(seccion=seccion, version__plantilla__codigo=codigo).count()
-        for codigo in ENCUESTAS
+    encuestas = [
+        (f"Encuesta {nombre}", RespuestaFormulario.objects.filter(seccion=seccion, version__plantilla__codigo=codigo).count())
+        for codigo, nombre in ENCUESTAS.items()
+    ]
+
+    evidencias = [
+        {
+            "actividad": f"{actividad.ruta_actividad.orden}. {actividad.ruta_actividad.nombre}",
+            "archivo": evidencia.archivo.nombre_original,
+            "descripcion": evidencia.descripcion or "",
+        }
+        for actividad in actividades
+        for evidencia in actividad.evidencias.all()
+    ]
+
+    return {
+        "seccion": seccion,
+        "datos_seccion": datos_seccion,
+        "grupos": grupos,
+        "etapas": avance_etapas,
+        "formularios": formularios,
+        "encuestas": encuestas,
+        "evidencias": evidencias,
     }
+
+
+def generar_ficha_excel(seccion_ruta):
+    """
+    La ficha en Excel: una hoja por bloque y los formularios en una sola
+    tabla (formulario, grupo, fecha, pregunta, respuesta) para filtrarla.
+    """
+    from core import excel
+
+    datos = datos_ficha(seccion_ruta)
+    seccion = datos["seccion"]
+    libro, hoja = excel.nuevo_libro("Ficha", {
+        "Documento": "Ficha del proyecto A+S",
+        "Generado": timezone.localtime().strftime("%d/%m/%Y %H:%M"),
+    })
+    hoja.append(["Dato", "Valor"])
+    for dato, valor in datos["datos_seccion"]:
+        hoja.append([dato, valor])
+    excel.celda_texto(hoja.cell(hoja.max_row - 6, 2), seccion.nrc)
+
+    formularios = libro.create_sheet("Formularios")
+    formularios.append(["Formulario", "Grupo", "Fecha", "Pregunta", "Respuesta"])
+    for formulario in datos["formularios"]:
+        for pregunta, texto in formulario["filas"]:
+            formularios.append([formulario["titulo"], formulario["grupo"], formulario["fecha"].replace(tzinfo=None), pregunta, texto])
+
+    grupos = libro.create_sheet("Grupos")
+    grupos.append(["Grupo", "Proyecto", "Socio comunitario", "Integrantes"])
+    for grupo in datos["grupos"]:
+        grupos.append([grupo["grupo"], grupo["proyecto"], grupo["socio"], grupo["integrantes"]])
+
+    avance = libro.create_sheet("Avance por etapa")
+    avance.append(["Etapa", "Hechas", "Archivos", "Pendientes"])
+    for etapa in datos["etapas"]:
+        avance.append([etapa["etapa"], etapa["hechas"], etapa["archivos"], "; ".join(etapa["pendientes"]) or "Nada pendiente"])
+    avance.append([])
+    avance.append(["Encuesta de satisfacción", "Respuestas"])
+    for nombre, total in datos["encuestas"]:
+        avance.append([nombre, total])
+
+    evidencias = libro.create_sheet("Evidencias")
+    evidencias.append(["Actividad", "Archivo", "Descripción"])
+    for evidencia in datos["evidencias"]:
+        evidencias.append([evidencia["actividad"], evidencia["archivo"], evidencia["descripcion"]])
+    return libro
+
+
+def generar_ficha_pdf(seccion_ruta):
+    """Bytes del PDF de la ficha del proyecto de la sección (va en el ZIP)."""
+    datos = datos_ficha(seccion_ruta)
+    seccion = datos["seccion"]
+    e = _estilos()
+    ancho = A4[0] - 3.6 * cm
+    historia = [
+        Paragraph("Ficha del proyecto A+S", e["titulo"]),
+        _p(f"{seccion.asignatura.nombre} · NRC {seccion.nrc} · Sección {seccion.seccion}", e["sub"]),
+        Paragraph("Datos de la sección", e["h2"]),
+        _tabla([list(fila) for fila in datos["datos_seccion"]], [4.2 * cm, ancho - 4.2 * cm], e, encabezado=False),
+        Paragraph("Grupos", e["h2"]),
+    ]
+    if datos["grupos"]:
+        filas = [["Grupo", "Proyecto", "Socio comunitario", "Integrantes"]]
+        filas += [[g["grupo"], g["proyecto"], g["socio"], str(g["integrantes"])] for g in datos["grupos"]]
+        historia.append(_tabla(filas, [2 * cm, 5.6 * cm, 6 * cm, ancho - 13.6 * cm], e))
+    else:
+        historia.append(_p("Aún no hay grupos registrados.", e["nota"]))
+
+    historia.append(Paragraph("Avance por etapa", e["h2"]))
+    filas = [["Etapa", "Hechas", "Archivos", "Pendientes"]]
+    filas += [
+        [etapa["etapa"], etapa["hechas"], str(etapa["archivos"]), "\n".join(etapa["pendientes"]) or "Nada pendiente"]
+        for etapa in datos["etapas"]
+    ]
+    historia.append(_tabla(filas, [5 * cm, 2 * cm, 2 * cm, ancho - 9 * cm], e))
+
+    historia.append(Paragraph("Formularios llenados", e["h2"]))
+    if not datos["formularios"]:
+        historia.append(_p("Todavía no se ha llenado ningún formulario desde la Ruta.", e["nota"]))
+    for formulario in datos["formularios"]:
+        titulo = formulario["titulo"] + (f" · {formulario['grupo']}" if formulario["grupo"] else "")
+        historia.append(_p(f"{titulo} ({formulario['fecha'].strftime('%d/%m/%Y')})", e["h3"]))
+        if formulario["filas"]:
+            historia.append(_tabla([list(f) for f in formulario["filas"]], [6.5 * cm, ancho - 6.5 * cm], e, encabezado=False))
+
     historia.append(Paragraph("Encuestas de satisfacción", e["h2"]))
     historia.append(_tabla(
-        [["Encuesta", "Respuestas"]] + [[f"Encuesta {nombre}", str(conteo[codigo])] for codigo, nombre in ENCUESTAS.items()],
+        [["Encuesta", "Respuestas"]] + [[nombre, str(total)] for nombre, total in datos["encuestas"]],
         [8 * cm, 3 * cm], e,
     ))
 
     historia.append(Paragraph("Evidencias", e["h2"]))
-    filas = [["Actividad", "Archivo", "Descripción"]]
-    for actividad in actividades:
-        for evidencia in actividad.evidencias.all():
-            filas.append([
-                f"{actividad.ruta_actividad.orden}. {actividad.ruta_actividad.nombre}",
-                evidencia.archivo.nombre_original,
-                evidencia.descripcion or "",
-            ])
-    if len(filas) > 1:
+    if datos["evidencias"]:
+        filas = [["Actividad", "Archivo", "Descripción"]]
+        filas += [[ev["actividad"], ev["archivo"], ev["descripcion"]] for ev in datos["evidencias"]]
         historia.append(_tabla(filas, [6 * cm, 6 * cm, ancho - 12 * cm], e))
         historia.append(Spacer(1, 4))
         historia.append(_p("Los archivos están en las carpetas de cada etapa de este ZIP.", e["nota"]))

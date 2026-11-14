@@ -47,7 +47,7 @@ def version_encuesta():
 
 def socios_del_periodo(periodo):
     """Socios que trabajaron con alguna sección del período."""
-    participaciones = ParticipacionSocio.objects.filter(
+    participaciones = ParticipacionSocio.objects.trabajadas().filter(
         Q(periodo=periodo) | Q(equipo__seccion__periodo=periodo) | Q(seccion__periodo=periodo)
     )
     return (

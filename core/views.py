@@ -522,6 +522,11 @@ def detalle_seccion(request, seccion_id):
             .order_by("numero_grupo")
         )
 
+    socios_elegidos = None
+    if not vista_coordinador:
+        from socios.services import socios_elegidos_seccion
+        socios_elegidos = list(socios_elegidos_seccion(seccion))
+
     return render(
         request,
         "core/detalle_seccion.html",
@@ -529,6 +534,7 @@ def detalle_seccion(request, seccion_id):
             "seccion": seccion,
             "vista_coordinador": vista_coordinador,
             "equipos": equipos,
+            "socios_elegidos": socios_elegidos,
         },
     )
 

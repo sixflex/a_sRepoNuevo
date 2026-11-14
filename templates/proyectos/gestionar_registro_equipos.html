@@ -19,6 +19,21 @@
         </p>
     </div>
 
+    <!-- SOCIOS QUE VERÁN LOS ESTUDIANTES (RF-SC-03) -->
+    <div class="alert {% if total_socios_elegidos %}alert-light border{% else %}alert-warning{% endif %} d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <span>
+            <i class="bi bi-building me-1" aria-hidden="true"></i>
+            {% if total_socios_elegidos %}
+                Los estudiantes elegirán entre los <strong>{{ total_socios_elegidos }}</strong> socio{{ total_socios_elegidos|pluralize }} que definiste para esta sección, o registrarán uno nuevo.
+            {% else %}
+                Aún no eliges socios para esta sección: los estudiantes verán el catálogo completo.
+            {% endif %}
+        </span>
+        <a href="{% url 'socios:catalogo_docente' %}?seccion={{ seccion.id }}" class="btn btn-sm btn-ua-outline">
+            {% if total_socios_elegidos %}Ver o cambiar socios{% else %}Elegir socios{% endif %}
+        </a>
+    </div>
+
     <!-- ESTADO DEL FORMULARIO -->
     <div class="card shadow-sm border-0">
 

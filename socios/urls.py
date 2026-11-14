@@ -5,6 +5,7 @@ app_name = "socios"
 
 urlpatterns = [
     path("catalogo/", views.catalogo_socios_docente, name="catalogo_docente"),
+    path("catalogo/seccion/<int:seccion_id>/elegir/", views.elegir_socio_seccion, name="elegir_socio_seccion"),
     path("coordinacion/", views.lista_socios_coordinador, name="lista_coordinador"),
     path("coordinacion/<int:socio_id>/cambiar-estado/", views.cambiar_estado_socio, name="cambiar_estado"),
     path("coordinacion/<int:socio_id>/historial/", views.detalle_historial_socio, name="detalle_historial"),
@@ -22,4 +23,4 @@ urlpatterns = [
     path("postular-fijo/", views.postular_publico_fijo, name="postular_publico_fijo"),
     path("postular-fijo/exito/<uuid:identificador>/", views.postulacion_exitosa_fija, name="postulacion_exitosa_fija"),
     path("rechazar-fijo/<int:pk>/", views.rechazar_postulacion_fija, name="rechazar_postulacion_fija"),
-]
+]

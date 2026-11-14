@@ -24,7 +24,7 @@ trae la «Ficha del proyecto.pdf» y una carpeta por etapa.
         <div class="d-flex gap-2 flex-wrap">
 
             {% if ficha_disponible %}
-                <a href="{% url 'rutas:ver_ficha_coordinacion' seccion_ruta.id %}" class="btn btn-ua" target="_blank" rel="noopener">
+                <a href="{% url 'rutas:ver_ficha_coordinacion' seccion_ruta.id %}" class="btn btn-ua">
                     <i class="bi bi-file-earmark-text me-1" aria-hidden="true"></i>Ver ficha del proyecto
                 </a>
             {% else %}

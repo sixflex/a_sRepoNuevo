@@ -76,3 +76,27 @@
     .ruta-act { flex-wrap: wrap; padding: 16px; }
     .ruta-acc { width: 100%; min-width: 0; align-items: flex-start; text-align: left; padding-left: 48px; }
 }
+
+/* Ficha del proyecto (Coordinador). */
+.ficha-titulo { font-size: 1.05rem; font-weight: 700; margin-bottom: 12px; }
+/* Un solo tamaño de letra en toda la ficha (.95rem); las etiquetas solo cambian de color. */
+.ficha { font-size: .95rem; }
+.ficha .table { font-size: .95rem; }
+.fp-datos { display: grid; grid-template-columns: max-content 1fr; gap: 8px 20px; }
+.fp-datos dt { font-size: .95rem; font-weight: 500; color: var(--ua-text-muted); }
+.fp-datos dd { margin: 0; font-size: .95rem; font-weight: 600; color: var(--ua-text-dark); }
+.ficha-form > summary { list-style: none; cursor: pointer; padding: 14px 20px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }
+.ficha-form > summary::-webkit-details-marker { display: none; }
+.ficha-form > summary::after { content: "\F282"; font-family: "bootstrap-icons"; color: var(--ua-text-muted); transition: transform .15s ease; }
+.ficha-form[open] > summary::after { transform: rotate(180deg); }
+.ficha-form-nombre { font-weight: 600; flex: 1 1 auto; }
+.ficha-form-fecha { font-size: .9rem; color: var(--ua-text-muted); }
+.ficha-respuestas { border-top: 1px solid var(--ua-border); padding: 4px 20px 12px; }
+.ficha-respuestas > div { padding: 10px 0; border-bottom: 1px solid var(--ua-border); }
+.ficha-respuestas > div:last-child { border-bottom: 0; }
+.ficha-respuestas dt { font-weight: 600; font-size: .95rem; color: var(--ua-text-dark); }
+.ficha-respuestas dd { margin: 2px 0 0; font-size: .95rem; color: var(--ua-text-secondary); }
+.ficha-evidencias { list-style: none; padding: 0; }
+.ficha-evidencias li { padding: 6px 0; border-bottom: 1px solid var(--ua-border); display: flex; flex-direction: column; font-size: .95rem; }
+.ficha-evidencias li span { color: var(--ua-text-muted); font-size: .9rem; }
+@media (prefers-reduced-motion: reduce) { .ficha-form > summary::after { transition: none; } }

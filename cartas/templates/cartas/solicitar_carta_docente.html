@@ -55,6 +55,7 @@
                     </label>
 
                     {{ form.institucion_receptora }}
+                    <div class="form-text">{{ form.institucion_receptora.help_text }}</div>
 
                     {% for error in form.institucion_receptora.errors %}
                         <div class="text-danger small mt-1">
@@ -113,6 +114,7 @@
                 </button>
 
             </form>
+            {% include "cartas/includes/sugerencias_receptor.html" %}
 
         </div>
     </div>

@@ -76,7 +76,7 @@ def proyectos(filtros, hoy=None):
     pestaña.
     """
     hoy = hoy or timezone.localdate()
-    base = _filtrar(ParticipacionSocio.objects.all(), filtros)
+    base = _filtrar(ParticipacionSocio.objects.trabajadas(), filtros)
     cerrado = _cerrado(hoy)
     en_curso = base.exclude(cerrado)
     cerrados = base.filter(cerrado)

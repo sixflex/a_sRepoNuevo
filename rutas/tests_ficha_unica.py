@@ -37,6 +37,7 @@ class FichaUnicaBase(TestCase):
     def setUp(self):
         rutas_tests.SeguimientoRutaTestCase.setUp(self)
         from socios.models import ContactoSocio, ParticipacionSocio, SocioComunitario
+        from proyectos.models import Equipo
 
         self.socio = SocioComunitario.objects.create(
             nombre_organizacion="Junta de Vecinos",
@@ -49,7 +50,12 @@ class FichaUnicaBase(TestCase):
             socio=self.socio, nombre="Contacto", correo="socio@example.com",
             es_principal=True, activo=True,
         )
-        ParticipacionSocio.objects.create(socio=self.socio, seccion=self.seccion, origen="OPERATIVO")
+        # Trabaja con un equipo (sin equipo sería solo un socio elegido, RF-SC-03).
+        equipo = Equipo.objects.create(
+            seccion=self.seccion, numero_grupo=1, informante_nombre="Estudiante",
+            informante_correo="estudiante@cloud.uautonoma.cl", estado="Registrado",
+        )
+        ParticipacionSocio.objects.create(socio=self.socio, seccion=self.seccion, equipo=equipo, origen="OPERATIVO")
 
     def agregar_actividad(self, orden, nombre, etapa="Etapa de prueba"):
         version = self.ruta.ruta_version
@@ -135,7 +141,7 @@ class RutaPasoAPasoTests(FichaUnicaBase):
         self.client.force_login(self.usuario_docente)
         respuesta = self.client.get(reverse("rutas:detalle_ruta_docente", args=[self.ruta.id]))
 
-        self.assertContains(respuesta, "Otras etapas")
+        self.assertContains(respuesta, "Próximas etapas")
         self.assertContains(respuesta, "Completar evaluación")
         self.assertContains(respuesta, "Marcar como hecha")
 
@@ -172,13 +178,30 @@ class CoordinadorFichaTests(FichaUnicaBase):
         self.assertContains(detalle, "Disponible cuando el docente complete la Ruta")
         self.assertNotContains(detalle, url)
 
+        excel_url = reverse("rutas:exportar_ficha_excel", args=[self.ruta.id])
+        self.assertEqual(self.client.get(excel_url).status_code, 403)
+
         self.completar_ruta()
         respuesta = self.client.get(url)
         self.assertEqual(respuesta.status_code, 200)
-        self.assertEqual(respuesta["Content-Type"], "application/pdf")
-        self.assertTrue(respuesta["Content-Disposition"].startswith("inline"))
-        self.assertTrue(respuesta.content.startswith(b"%PDF"))
+        self.assertContains(respuesta, "Ficha del proyecto")
+        self.assertContains(respuesta, "Exportar a Excel")
         self.assertContains(self.client.get(reverse("rutas:detalle_ruta_coordinacion", args=[self.ruta.id])), url)
+
+    def test_ficha_se_exporta_a_excel_con_preguntas_y_respuestas(self):
+        from openpyxl import load_workbook
+
+        self.completar_ruta()
+        self.client.force_login(self.usuario_coordinador)
+        respuesta = self.client.get(reverse("rutas:exportar_ficha_excel", args=[self.ruta.id]))
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertIn(".xlsx", respuesta["Content-Disposition"])
+        libro = load_workbook(io.BytesIO(respuesta.content))
+        self.assertEqual(libro.sheetnames, ["Ficha", "Formularios", "Grupos", "Avance por etapa", "Evidencias"])
+        encabezado = [c.value for c in libro["Formularios"][1]]
+        self.assertEqual(encabezado, ["Formulario", "Grupo", "Fecha", "Pregunta", "Respuesta"])
+        valores = [c.value for fila in libro["Ficha"].iter_rows() for c in fila]
+        self.assertIn(self.seccion.nrc, valores)
 
     def test_el_docente_no_abre_la_ficha_del_coordinador(self):
         self.completar_ruta()

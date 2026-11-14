@@ -51,11 +51,24 @@ formularios vienen precargados y el Coordinador la descarga en el ZIP.
         </div>
     {% endif %}
 
-    {% for etapa in etapas %}
-        {% if etapa.actual %}
+    {# Orden de la Ruta: etapas anteriores cerradas arriba, la etapa en curso abierta y después las que vienen. #}
+    {% if etapa_actual.numero > 1 %}
+        <h2 class="ruta-otras-titulo">Etapas anteriores</h2>
+        <div class="card-ua ruta-otras mb-3">
+            {% for etapa in etapas %}
+                {% if etapa.numero < etapa_actual.numero %}
+                    {% include "rutas/includes/etapa_docente.html" with abierta=False %}
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if etapa_actual %}
+        <h2 class="ruta-otras-titulo">{% if seccion_ruta.estado == "COMPLETADA" %}Última etapa{% else %}Etapa en curso{% endif %}</h2>
+        {% with etapa=etapa_actual %}
             {% include "rutas/includes/etapa_docente.html" with abierta=True %}
-        {% endif %}
-    {% endfor %}
+        {% endwith %}
+    {% endif %}
 
     {% if seccion_ruta.estado != "COMPLETADA" %}
         {% if puede_completar_ruta %}
@@ -70,14 +83,16 @@ formularios vienen precargados y el Coordinador la descarga en el ZIP.
         {% endif %}
     {% endif %}
 
-    <h2 class="ruta-otras-titulo">Otras etapas</h2>
-    <div class="card-ua ruta-otras mb-4">
-        {% for etapa in etapas %}
-            {% if not etapa.actual %}
-                {% include "rutas/includes/etapa_docente.html" with abierta=False %}
-            {% endif %}
-        {% endfor %}
-    </div>
+    {% if etapa_actual.numero < etapas|length %}
+        <h2 class="ruta-otras-titulo">Próximas etapas</h2>
+        <div class="card-ua ruta-otras mb-4">
+            {% for etapa in etapas %}
+                {% if etapa.numero > etapa_actual.numero %}
+                    {% include "rutas/includes/etapa_docente.html" with abierta=False %}
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
 </div>
 
 <script>

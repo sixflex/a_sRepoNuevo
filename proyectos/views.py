@@ -16,7 +16,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from socios.constantes import ESTADOS_SOCIO_SELECCIONABLES
 from socios.models import SocioComunitario
-from socios.services import asociar_socio_a_equipo, historial_socios_equipo
+from socios.services import asociar_socio_a_equipo, historial_socios_equipo, socios_elegidos_seccion, socios_para_registro_equipos
 
 from usuarios.decorators import coordinador_required, docente_required
 from usuarios.services import correo_de_sesion, correos_de_usuario, oid_de_sesion
@@ -449,6 +449,7 @@ def gestionar_registro_equipos(request, seccion_id):
             "enlace": enlace,
             "url_registro": url_registro,
             "qr_base64": qr_base64,
+            "total_socios_elegidos": socios_elegidos_seccion(seccion).count(),
         },
     )
 
@@ -472,6 +473,7 @@ def acceso_registro_equipos(request, token):
             "proyectos/registro_equipos_no_disponible.html",
             {
                 "motivo": "El formulario de registro se encuentra cerrado.",
+                "hide_sidebar": True,
             },
             status=403,
         )
@@ -485,6 +487,7 @@ def acceso_registro_equipos(request, token):
             "proyectos/registro_equipos_no_disponible.html",
             {
                 "motivo": "El enlace de registro ha expirado.",
+                "hide_sidebar": True,
             },
             status=403,
         )
@@ -506,23 +509,56 @@ def acceso_registro_equipos(request, token):
             "proyectos/registro_equipos_no_disponible.html",
             {
                 "motivo": (
-                    "Este formulario solo puede ser utilizado "
-                    "por estudiantes autenticados."
+                    "Este formulario es solo para estudiantes. "
+                    "Ingresaste con una cuenta que no es de estudiante: "
+                    "cierra sesión e ingresa con tu correo "
+                    "@cloud.uautonoma.cl, o abre el enlace en una "
+                    "ventana de incógnito."
                 ),
+                "es_estudiante": False,
+                "hide_sidebar": True,
             },
             status=403,
         )
 
     
-    socios_disponibles = (
-        SocioComunitario.objects
-        .filter(
-            activo=True,
-            es_provisional=False,
-            estado_revision__in=ESTADOS_SOCIO_SELECCIONABLES,
+    # HU-03: el equipo se registra una sola vez. Si el estudiante ya lo
+    # registró (o lo inscribió un compañero), ve su registro y no el formulario.
+    mis_correos = {
+        correo.lower()
+        for correo in correos_de_usuario(request.user) | {correo_de_sesion(request) or ""}
+        if correo
+    }
+    equipo_registrado = None
+    if mis_correos:
+        filtro_registro = Q(pk__in=[])
+        for correo in mis_correos:
+            filtro_registro |= Q(informante_correo__iexact=correo)
+            filtro_registro |= Q(integrantes__correo_institucional__iexact=correo)
+        equipo_registrado = (
+            Equipo.objects
+            .filter(filtro_registro, seccion=enlace.seccion)
+            .con_socio_vigente()
+            .prefetch_related("integrantes")
+            .distinct()
+            .first()
         )
-        .select_related("clasificacion", "comuna")
-        .order_by("nombre_organizacion")
+    if equipo_registrado is not None:
+        return render(
+            request,
+            "proyectos/registro_equipos_listo.html",
+            {
+                "seccion": enlace.seccion,
+                "equipo": equipo_registrado,
+                "lo_registre_yo": equipo_registrado.informante_correo.lower() in mis_correos,
+                "hide_sidebar": True,
+            },
+        )
+
+    # RF-SC-03 / HU-03: solo los socios que eligió el docente para la
+    # sección; si no eligió ninguno, el catálogo completo.
+    socios_disponibles, socios_de_la_seccion = socios_para_registro_equipos(
+        enlace.seccion
     )
 
     errores = []
@@ -582,13 +618,8 @@ def acceso_registro_equipos(request, token):
             else:
                 try:
                     socio_seleccionado = (
-                        SocioComunitario.objects
-                        .filter(
-                            pk=socio_comunitario_id,
-                            activo=True,
-                            es_provisional=False,
-                            estado_revision__in=ESTADOS_SOCIO_SELECCIONABLES,
-                        )
+                        socios_disponibles
+                        .filter(pk=socio_comunitario_id)
                         .first()
                     )
 
@@ -1022,6 +1053,8 @@ def acceso_registro_equipos(request, token):
 
             # CDE-46
             "socios_disponibles": socios_disponibles,
+            "socios_de_la_seccion": socios_de_la_seccion,
+            "hide_sidebar": True,
         },
     )
 
@@ -1503,7 +1536,7 @@ def catalogo_proyectos(request):
     otros = {k: v for k, v in filtros.items() if v and k != "estado"}
     anios = sorted(
         set(PeriodoAcademico.objects.values_list("anio", flat=True))
-        | {f.year for f in ParticipacionSocio.objects.filter(periodo__isnull=True).exclude(fecha_inicio=None).values_list("fecha_inicio", flat=True)},
+        | {f.year for f in ParticipacionSocio.objects.trabajadas().filter(periodo__isnull=True).exclude(fecha_inicio=None).values_list("fecha_inicio", flat=True)},
         reverse=True,
     )
     return render(request, "proyectos/catalogo.html", {
@@ -1517,6 +1550,6 @@ def catalogo_proyectos(request):
         "qs_pagina": urlencode({**otros, "estado": filtros["estado"]}),
         "anios": anios,
         "sedes": Sede.objects.order_by("nombre"),
-        "carreras": Carrera.objects.filter(participaciones_socios__isnull=False).distinct().order_by("nombre"),
+        "carreras": Carrera.objects.filter(participaciones_socios__in=ParticipacionSocio.objects.trabajadas()).distinct().order_by("nombre"),
         "CERRADOS": catalogo.CERRADOS,
     })

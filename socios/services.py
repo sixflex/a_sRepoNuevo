@@ -20,6 +20,7 @@ from auditoria.services import registrar_auditoria
 from .constantes import (
     ESTADOS_POSTULACION,
     ESTADOS_SOCIO,
+    ESTADOS_SOCIO_SELECCIONABLES,
     ORIGEN_OPERATIVO,
     estados_siguientes,
     etiqueta,
@@ -311,16 +312,14 @@ def revisar_socio_propuesto(request, socio, form):
     return decision
 
 
-def contexto_academico_equipo(equipo):
+def contexto_academico_seccion(seccion):
     """
-    Contexto académico que realmente se conoce del equipo (RF-SC-06).
-    La sede sale del campus de la sección; la carrera solo se informa si la
-    sección pertenece a una única carrera.
+    Contexto académico que realmente se conoce de la sección (RF-SC-06).
+    La sede sale del campus; la carrera solo se informa si la sección
+    pertenece a una única carrera.
     """
-    seccion = equipo.seccion
     carreras = list(seccion.seccion_carreras.values_list("carrera_id", flat=True)[:2])
     return {
-        "proyecto_id": equipo.proyecto_id,
         "seccion_id": seccion.pk,
         "asignatura_id": seccion.asignatura_id,
         "periodo_id": seccion.periodo_id,
@@ -328,6 +327,108 @@ def contexto_academico_equipo(equipo):
         "sede_id": seccion.campus.sede_id,
         "carrera_id": carreras[0] if len(carreras) == 1 else None,
     }
+
+
+def contexto_academico_equipo(equipo):
+    """Contexto académico del equipo: el de su sección más su proyecto."""
+    return {"proyecto_id": equipo.proyecto_id, **contexto_academico_seccion(equipo.seccion)}
+
+
+# ---------------------------------------------------------------------------
+# Socios elegidos por el Docente para su sección (RF-SC-03)
+# ---------------------------------------------------------------------------
+ENTIDAD_SECCION = "Seccion"
+ACCION_ELEGIR_SOCIO_SECCION = "ELEGIR_SOCIO_SECCION"
+ACCION_QUITAR_SOCIO_SECCION = "QUITAR_SOCIO_SECCION"
+
+
+def socios_seleccionables():
+    """Socios que se pueden elegir: activos, no provisionales y aprobados o disponibles."""
+    return SocioComunitario.objects.filter(
+        activo=True,
+        es_provisional=False,
+        estado_revision__in=ESTADOS_SOCIO_SELECCIONABLES,
+    )
+
+
+def elecciones_vigentes(seccion):
+    return ParticipacionSocio.objects.elegidas_para_seccion().filter(
+        seccion=seccion, fecha_fin__isnull=True,
+    )
+
+
+def socios_elegidos_seccion(seccion):
+    """Socios que el Docente eligió para la sección y que siguen disponibles."""
+    return (
+        socios_seleccionables()
+        .filter(participaciones__in=elecciones_vigentes(seccion))
+        .distinct()
+        .order_by("nombre_organizacion")
+    )
+
+
+def socios_para_registro_equipos(seccion):
+    """
+    Lo que ve el estudiante al registrar su equipo (HU-03): los socios que
+    eligió su Docente; si no eligió ninguno, el catálogo completo, para que el
+    registro nunca quede bloqueado. Siempre puede agregar uno provisional.
+    """
+    elegidos = socios_elegidos_seccion(seccion)
+    if elegidos.exists():
+        return elegidos, True
+    return socios_seleccionables().order_by("nombre_organizacion"), False
+
+
+def elegir_socio_para_seccion(*, seccion, socio, docente=None, request=None):
+    """Deja al socio disponible para los equipos de la sección. Devuelve True si era nuevo."""
+    with transaction.atomic():
+        if elecciones_vigentes(seccion).filter(socio=socio).exists():
+            return False
+        participacion = ParticipacionSocio.objects.create(
+            socio=socio,
+            equipo=None,
+            fecha_inicio=timezone.localdate(),
+            fecha_fin=None,
+            origen=ORIGEN_OPERATIVO,
+            **contexto_academico_seccion(seccion),
+        )
+        registrar_auditoria(
+            request=request,
+            entidad=ENTIDAD_SECCION,
+            entidad_id=seccion.pk,
+            accion=ACCION_ELEGIR_SOCIO_SECCION,
+            valores_nuevos={
+                "socio_comunitario_id": socio.pk,
+                "socio_nombre": socio.nombre_organizacion,
+                "participacion_id": participacion.pk,
+                "docente_id": docente.pk if docente else None,
+                "docente_nombre": _nombre_docente(docente),
+            },
+        )
+    return True
+
+
+def quitar_socio_de_seccion(*, seccion, socio, docente=None, request=None):
+    """
+    El socio deja de ofrecerse a los estudiantes de la sección. La elección se
+    cierra (no se borra) y los equipos que ya lo eligieron lo conservan.
+    """
+    with transaction.atomic():
+        cerradas = elecciones_vigentes(seccion).filter(socio=socio).update(fecha_fin=timezone.localdate())
+        if cerradas:
+            registrar_auditoria(
+                request=request,
+                entidad=ENTIDAD_SECCION,
+                entidad_id=seccion.pk,
+                accion=ACCION_QUITAR_SOCIO_SECCION,
+                valores_anteriores={
+                    "socio_comunitario_id": socio.pk,
+                    "socio_nombre": socio.nombre_organizacion,
+                    "docente_id": docente.pk if docente else None,
+                    "docente_nombre": _nombre_docente(docente),
+                },
+            )
+    return bool(cerradas)
 
 
 def _nombre_docente(docente):

@@ -1077,12 +1077,8 @@ def responder_invitacion_cierre(request, token, respuesta):
     )
 
 
-@login_required
-def ver_ficha_coordinacion(request, seccion_ruta_id):
-    """
-    Ficha del proyecto en el navegador, con todo lo que llenó el docente.
-    Solo cuando la Ruta está completada; antes el Coordinador ve el avance.
-    """
+def _ficha_coordinacion_o_403(request, seccion_ruta_id):
+    """La ficha completa es solo del Coordinador y solo con la Ruta completada."""
     if not es_coordinador(request.user):
         raise PermissionDenied
 
@@ -1097,8 +1093,17 @@ def ver_ficha_coordinacion(request, seccion_ruta_id):
 
     if not servicios.ficha_disponible(seccion_ruta):
         raise PermissionDenied("La ficha se puede ver cuando el docente complete la Ruta.")
+    return seccion_ruta
 
-    from .ficha import generar_ficha_pdf
+
+@login_required
+def ver_ficha_coordinacion(request, seccion_ruta_id):
+    """
+    Ficha del proyecto en el navegador, con todo lo que llenó el docente:
+    cada formulario con sus preguntas y respuestas. Se exporta a Excel.
+    """
+    seccion_ruta = _ficha_coordinacion_o_403(request, seccion_ruta_id)
+    from .ficha import datos_ficha
 
     registrar_auditoria(
         request=request,
@@ -1107,11 +1112,27 @@ def ver_ficha_coordinacion(request, seccion_ruta_id):
         accion="VER_FICHA_PROYECTO",
         valores_nuevos={},
     )
+    return render(request, "rutas/ficha_coordinacion.html", {
+        "seccion_ruta": seccion_ruta,
+        **datos_ficha(seccion_ruta),
+    })
 
-    nombre = f"Ficha del proyecto - NRC {seccion_ruta.seccion.nrc}.pdf"
-    respuesta = HttpResponse(generar_ficha_pdf(seccion_ruta), content_type="application/pdf")
-    respuesta["Content-Disposition"] = f'inline; filename="{nombre}"'
-    return respuesta
+
+@login_required
+def exportar_ficha_excel(request, seccion_ruta_id):
+    seccion_ruta = _ficha_coordinacion_o_403(request, seccion_ruta_id)
+    from core import excel
+    from .ficha import generar_ficha_excel
+
+    registrar_auditoria(
+        request=request,
+        entidad="SeccionRuta",
+        entidad_id=seccion_ruta.pk,
+        accion="EXPORTAR_FICHA_PROYECTO",
+        valores_nuevos={},
+    )
+    nombre = f"Ficha del proyecto - NRC {seccion_ruta.seccion.nrc}.xlsx"
+    return excel.respuesta_excel(generar_ficha_excel(seccion_ruta), nombre)
 
 
 @login_required

@@ -147,7 +147,7 @@ def filtros_publicos(get):
 
 def opciones_publicas():
     """Listas de los filtros públicos: solo valores que tienen participaciones."""
-    participaciones = ParticipacionSocio.objects.all()
+    participaciones = ParticipacionSocio.objects.trabajadas()
     return {
         "sedes": Sede.objects.filter(
             Q(participaciones_socios__in=participaciones)
@@ -253,11 +253,13 @@ def _secciones(filtros, periodo=None, anio=None):
         secciones = secciones.filter(asignatura_id=filtros["asignatura"])
     if filtros.get("comuna"):
         secciones = secciones.filter(
-            participaciones_socios__socio__comuna_id=filtros["comuna"],
+            participaciones_socios__in=ParticipacionSocio.objects.trabajadas()
+            .filter(socio__comuna_id=filtros["comuna"]),
         )
     if filtros.get("clasificacion"):
         secciones = secciones.filter(
-            participaciones_socios__socio__clasificacion_id=filtros["clasificacion"],
+            participaciones_socios__in=ParticipacionSocio.objects.trabajadas()
+            .filter(socio__clasificacion_id=filtros["clasificacion"]),
         )
     return secciones.distinct()
 
@@ -273,7 +275,7 @@ def _participaciones(filtros, periodo=None, anio=None):
     propia participación, así también cuentan las históricas sin equipo
     (RF-MIG-02).
     """
-    participaciones = ParticipacionSocio.objects.all()
+    participaciones = ParticipacionSocio.objects.trabajadas()
     periodo = periodo if periodo is not None else filtros.get("periodo")
     anio = anio if anio is not None else filtros.get("anio")
 
@@ -859,7 +861,7 @@ def _anios_con_datos():
     return (
         set(PeriodoAcademico.objects.values_list("anio", flat=True))
         | {
-            anio for anio in ParticipacionSocio.objects
+            anio for anio in ParticipacionSocio.objects.trabajadas()
             .filter(periodo__isnull=True, fecha_inicio__isnull=False)
             .values_list("fecha_inicio__year", flat=True)
         }

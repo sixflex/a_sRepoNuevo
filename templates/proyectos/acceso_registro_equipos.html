@@ -1,359 +1,121 @@
 {% extends "base.html" %}
+{% load static %}
 
-{# Página pública: solo el formulario, sin la barra superior del portal. #}
+{# Página pública: solo el formulario, sin barra superior ni sidebar del portal. #}
 {% block main_navbar %}{% endblock %}
 
-{% block content %}
-
-<div class="container py-5">
-
-    <div
-        class="card shadow-sm border-0 mx-auto"
-        style="max-width: 850px;"
-    >
-        <div class="card-body p-4">
-
-            <h3 class="fw-bold mb-2">
-                Registro de equipos
-            </h3>
-
-            <p class="text-muted mb-4">
-                Completa la información de los integrantes de tu equipo.
-            </p>
-
-
-            
-
-            <h5 class="fw-bold mb-3">
-                Contexto académico
-            </h5>
-
-            <div class="bg-light rounded p-3 mb-4">
-
-                <div class="row">
-
-                    <div class="col-md-6 mb-2">
-                        <strong>Asignatura:</strong>
-                        {{ seccion.asignatura.nombre }}
-                    </div>
-
-                    <div class="col-md-6 mb-2">
-                        <strong>Sección:</strong>
-                        {{ seccion.seccion }}
-                    </div>
-
-                    <div class="col-md-6 mb-2">
-                        <strong>NRC:</strong>
-                        {{ seccion.nrc }}
-                    </div>
-
-                    <div class="col-md-6 mb-2">
-                        <strong>Período:</strong>
-                        {{ seccion.periodo }}
-                    </div>
-
-                    <div class="col-md-6">
-                        <strong>Campus:</strong>
-                        {{ seccion.campus.nombre }}
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            
-
-            <h5 class="fw-bold mb-3">
-                Estudiante informante
-            </h5>
-
-            <div class="border rounded p-3 mb-4">
-
-                <div class="row">
-
-                    <div class="col-md-6 mb-2">
-                        <strong>Usuario:</strong>
-                        {{ informante.username }}
-                    </div>
-
-                    <div class="col-md-6 mb-2">
-
-                        <strong>Correo institucional:</strong>
-
-                        {% if correo_informante %}
-                            {{ correo_informante }}
-                        {% else %}
-                            No registrado
-                        {% endif %}
-
-                    </div>
-
-                </div>
-
-                <small class="text-muted">
-                    El estudiante informante corresponde a la cuenta
-                    autenticada actualmente.
-                </small>
-
-            </div>
-
-
-            
-
-            {% if errores %}
-
-                <div class="alert alert-danger mb-4">
-
-                    <div class="fw-bold mb-2">
-                        Revisa los siguientes datos:
-                    </div>
-
-                    <ul class="mb-0">
-
-                        {% for error in errores %}
-                            <li>{{ error }}</li>
-                        {% endfor %}
-
-                    </ul>
-
-                </div>
-
-            {% endif %}
-
-
-            
-
-
-
-            
-
-            <form method="post" id="form-equipo">
-
-                {% csrf_token %}
-
-                <input
-                    type="hidden"
-                    name="clave_idempotencia"
-                    value="{{ clave_idempotencia }}"
-                >
-
-
-                
-
-                <h5 class="fw-bold mb-3">
-                    Socio Comunitario
-                </h5>
-
-                <div class="border rounded p-3 mb-4">
-
-                    <p class="text-muted mb-3">
-                        Selecciona el Socio Comunitario con el que trabajará
-                        tu equipo. Si la organización no aparece en el listado,
-                        puedes registrarla como provisional.
-                    </p>
-
-
-                    
-
-                    <div class="form-check mb-3">
-
-                        <input
-                            class="form-check-input"
-                            type="radio"
-                            name="tipo_socio"
-                            id="tipo_socio_existente"
-                            value="existente"
-                        >
-
-                        <label
-                            class="form-check-label fw-semibold"
-                            for="tipo_socio_existente"
-                        >
-                            Seleccionar Socio Comunitario disponible
-                        </label>
-
-                    </div>
-
-
-                    <div
-                        id="contenedor-socio-existente"
-                        class="ms-4 mb-4 d-none"
-                    >
-
-                        <label
-                            for="socio_comunitario"
-                            class="form-label"
-                        >
-                            Socio Comunitario
-                        </label>
-
-                        <select
-                            class="form-select"
-                            id="socio_comunitario"
-                            name="socio_comunitario"
-                        >
-
-                            <option value="">
-                                Selecciona un Socio Comunitario
-                            </option>
-
-                            {% for socio in socios_disponibles %}
-
-                                <option value="{{ socio.id }}">
-                                    {{ socio.nombre_organizacion }}
-                                </option>
-
-                            {% empty %}
-
-                                <option value="" disabled>
-                                    No hay Socios Comunitarios disponibles
-                                </option>
-
-                            {% endfor %}
-
-                        </select>
-
-                        <div class="form-text">
-                            Solo se muestran socios activos,
-                            aprobados o disponibles.
-                        </div>
-
-                    </div>
-
-
-                    
-
-                    <div class="form-check mb-3">
-
-                        <input
-                            class="form-check-input"
-                            type="radio"
-                            name="tipo_socio"
-                            id="tipo_socio_provisional"
-                            value="provisional"
-                        >
-
-                        <label
-                            class="form-check-label fw-semibold"
-                            for="tipo_socio_provisional"
-                        >
-                            Mi Socio Comunitario no aparece en la lista
-                        </label>
-
-                    </div>
-
-
-                    <div
-                        id="contenedor-socio-provisional"
-                        class="ms-4 d-none"
-                    >
-
-                        <label
-                            for="socio_provisional_nombre"
-                            class="form-label"
-                        >
-                            Nombre de la organización
-                        </label>
-
-                        <input
-                            type="text"
-                            class="form-control"
-                            id="socio_provisional_nombre"
-                            name="socio_provisional_nombre"
-                            maxlength="220"
-                            placeholder="Ej: Junta de Vecinos Los Aromos"
-                        >
-
-                        <div class="form-text">
-                            La organización quedará registrada como
-                            provisional y deberá ser revisada posteriormente.
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                
-
-                <h5 class="fw-bold mb-3">
-                    Integrantes del equipo
-                </h5>
-
-                <div class="mb-4">
-
-                    <label
-                        for="cantidad_integrantes"
-                        class="form-label fw-semibold"
-                    >
-                        Cantidad de integrantes
-                    </label>
-
-                    <select
-                        class="form-select"
-                        id="cantidad_integrantes"
-                        name="cantidad_integrantes"
-                        required
-                    >
-
-                        <option value="">
-                            Selecciona una cantidad
-                        </option>
-
-                        <option value="1">1 integrante</option>
-                        <option value="2">2 integrantes</option>
-                        <option value="3">3 integrantes</option>
-                        <option value="4">4 integrantes</option>
-                        <option value="5">5 integrantes</option>
-                        <option value="6">6 integrantes</option>
-
-                    </select>
-
-                    <div class="form-text">
-                        Selecciona la cantidad total de estudiantes
-                        que conforman el equipo.
-                    </div>
-
-                </div>
-
-
-                
-
-                <div id="contenedor-integrantes"></div>
-
-
-                
-
-                <div
-                    id="acciones-formulario"
-                    class="d-none mt-4"
-                >
-
-                    <hr>
-
-                    <div class="d-flex justify-content-end">
-
-                        <button
-                            type="submit"
-                            class="btn text-white px-4"
-                            style="background-color: #a90000;"
-                        >
-                            Registrar equipo
-                        </button>
-
-                    </div>
-
-                </div>
-
-            </form>
-
+{% block title %}Registro de equipo | Portal A+S{% endblock %}
+
+{% block extra_css %}
+{% include "encuestas/includes/css.html" %}
+<link rel="stylesheet" href="{% static 'css/proyectos.css' %}?v=2026-11-14-c">
+<link rel="stylesheet" href="{% static 'css/select_buscable.css' %}?v=2026-10-27b">
+{% endblock %}
+
+{% block content_public %}
+<div class="reg-fondo">
+<div class="container reg-contenedor py-4">
+
+    {% include "includes/messages.html" %}
+
+    <header class="card-ua enc-encabezado p-4 mb-3">
+        <h1 class="enc-titulo mb-1">Registro de equipo</h1>
+        <p class="enc-texto mb-3">Inscribe a tu grupo y al socio comunitario con el que trabajarán. Basta con que un integrante complete el formulario.</p>
+        <dl class="reg-contexto mb-0">
+            <div><dt>Asignatura</dt><dd>{{ seccion.asignatura.nombre }}</dd></div>
+            <div><dt>Sección</dt><dd>{{ seccion.seccion }}</dd></div>
+            <div><dt>NRC</dt><dd>{{ seccion.nrc }}</dd></div>
+            <div><dt>Período</dt><dd>{{ seccion.periodo }}</dd></div>
+            {% if seccion.campus %}<div><dt>Campus</dt><dd>{{ seccion.campus.nombre }}</dd></div>{% endif %}
+        </dl>
+    </header>
+
+    <p class="reg-sesion mb-3">
+        <i class="bi bi-person-circle" aria-hidden="true"></i>
+        <span>Registras como <strong>{{ correo_informante|default:informante.username }}</strong>. Quedarás como integrante 1 e informante del equipo.</span>
+    </p>
+
+    {% if errores %}
+        <div class="alert alert-danger" role="alert" tabindex="-1" data-resumen-errores>
+            <p class="fw-semibold mb-1">Revisa estos datos antes de enviar:</p>
+            <ul class="mb-0">
+                {% for error in errores %}<li>{{ error }}</li>{% endfor %}
+            </ul>
         </div>
+    {% endif %}
 
-    </div>
+    <form method="post" id="form-equipo" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="clave_idempotencia" value="{{ clave_idempotencia }}">
+
+        <section class="card-ua p-4 mb-3">
+            <h2 class="enc-seccion-titulo"><span class="reg-paso">1</span>Socio comunitario</h2>
+            <p class="enc-nota mb-3">¿Con qué organización trabajará tu equipo?</p>
+
+            <div class="reg-opciones" role="radiogroup" aria-label="Tipo de socio comunitario">
+                <label class="reg-opcion" for="tipo_socio_existente">
+                    <input class="form-check-input" type="radio" name="tipo_socio" id="tipo_socio_existente" value="existente">
+                    <span>
+                        <span class="reg-opcion-titulo">Está en el listado</span>
+                        <span class="reg-opcion-texto">{% if socios_de_la_seccion %}Elige uno de los socios que definió tu docente.{% else %}Elige un socio ya registrado por la universidad.{% endif %}</span>
+                    </span>
+                </label>
+                <label class="reg-opcion" for="tipo_socio_provisional">
+                    <input class="form-check-input" type="radio" name="tipo_socio" id="tipo_socio_provisional" value="provisional">
+                    <span>
+                        <span class="reg-opcion-titulo">No aparece en el listado</span>
+                        <span class="reg-opcion-texto">Escribe su nombre y coordinación lo revisará.</span>
+                    </span>
+                </label>
+            </div>
+
+            <div id="contenedor-socio-existente" class="reg-detalle d-none">
+                <label for="socio_comunitario" class="form-label fw-semibold">Socio comunitario</label>
+                <select class="form-select" id="socio_comunitario" name="socio_comunitario" data-buscable>
+                    <option value="">Selecciona un socio comunitario</option>
+                    {% for socio in socios_disponibles %}
+                        <option value="{{ socio.id }}" {% if datos_formulario.socio_comunitario == socio.id|stringformat:"s" %}selected{% endif %}>{{ socio.nombre_organizacion }}</option>
+                    {% empty %}
+                        <option value="" disabled>No hay socios disponibles</option>
+                    {% endfor %}
+                </select>
+                <div class="form-text">{% if socios_de_la_seccion %}Son los socios que tu docente eligió para esta sección.{% else %}Escribe para buscar por nombre.{% endif %}</div>
+            </div>
+
+            <div id="contenedor-socio-provisional" class="reg-detalle d-none">
+                <label for="socio_provisional_nombre" class="form-label fw-semibold">Nombre de la organización</label>
+                <input type="text" class="form-control" id="socio_provisional_nombre" name="socio_provisional_nombre"
+                       maxlength="220" placeholder="Ej: Junta de Vecinos Los Aromos">
+                <div class="form-text">Quedará como provisional hasta que coordinación lo revise.</div>
+            </div>
+        </section>
+
+        <section class="card-ua p-4 mb-3">
+            <h2 class="enc-seccion-titulo"><span class="reg-paso">2</span>Integrantes</h2>
+            <label for="cantidad_integrantes" class="form-label fw-semibold">¿Cuántos son en el equipo?</label>
+            <select class="form-select reg-cantidad" id="cantidad_integrantes" name="cantidad_integrantes" required>
+                <option value="">Selecciona</option>
+                <option value="1">1 integrante</option>
+                <option value="2">2 integrantes</option>
+                <option value="3">3 integrantes</option>
+                <option value="4">4 integrantes</option>
+                <option value="5">5 integrantes</option>
+                <option value="6">6 integrantes</option>
+            </select>
+            <div class="form-text">Cuéntate a ti también.</div>
+
+            <div id="contenedor-integrantes" class="mt-3"></div>
+        </section>
+
+        <div id="acciones-formulario" class="d-none d-flex justify-content-end mb-4">
+            <button type="submit" class="btn btn-ua px-4 py-2">
+                <i class="bi bi-send me-1" aria-hidden="true"></i>Registrar equipo
+            </button>
+        </div>
+    </form>
 
 </div>
-
+</div>
 
 {{ datos_formulario|json_script:"datos-formulario" }}
 
@@ -410,8 +172,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const contenedorSocioProvisional =
         document.getElementById("contenedor-socio-provisional");
 
+    // Por nombre: select_buscable.js le pasa el id al cuadro de búsqueda.
     const selectorSocio =
-        document.getElementById("socio_comunitario");
+        document.querySelector('select[name="socio_comunitario"]');
 
     const inputSocioProvisional =
         document.getElementById("socio_provisional_nombre");
@@ -468,8 +231,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const tipoSocioAnterior =
         datosFormulario["tipo_socio"] || "";
 
-    const socioAnterior =
-        datosFormulario["socio_comunitario"] || "";
 
     const socioProvisionalAnterior =
         datosFormulario["socio_provisional_nombre"] || "";
@@ -487,12 +248,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 
-    if (socioAnterior) {
-
-        selectorSocio.value =
-            String(socioAnterior);
-
-    }
+    // El socio elegido antes ya viene marcado desde el servidor.
 
 
     if (socioProvisionalAnterior) {
@@ -556,7 +312,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 document.createElement("div");
 
             integrante.className =
-                "card border mb-3 integrante-card";
+                "reg-integrante enc-entrando";
 
 
             const rutAnterior =
@@ -589,132 +345,36 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
             integrante.innerHTML = `
-
-                <div class="card-header bg-light">
-
-                    <strong>
-                        Integrante ${i}
-                    </strong>
-
-                    ${
-                        i === 1
-                        ? `
-                            <span
-                                class="badge ms-2"
-                                style="background-color: #a90000;"
-                            >
-                                Informante
-                            </span>
-                        `
-                        : ""
-                    }
-
+                <div class="reg-integrante-cab">
+                    <span class="reg-integrante-num">${i}</span>
+                    <strong>Integrante ${i}</strong>
+                    ${i === 1 ? `<span class="reg-chip">Tú · informante</span>` : ""}
                 </div>
-
-
-                <div class="card-body">
-
-                    <div class="row">
-
-
-                        <!-- RUT -->
-
-                        <div class="col-md-6 mb-3">
-
-                            <label
-                                class="form-label"
-                                for="rut_${i}"
-                            >
-                                RUT
-                            </label>
-
-                            <input
-                                type="text"
-                                class="form-control"
-                                id="rut_${i}"
-                                name="rut_${i}"
-                                placeholder="12.345.678-9"
-                                value="${escaparHTML(rutAnterior)}"
-                                required
-                            >
-
-                        </div>
-
-
-                        <!-- CORREO -->
-
-                        <div class="col-md-6 mb-3">
-
-                            <label
-                                class="form-label"
-                                for="correo_${i}"
-                            >
-                                Correo institucional
-                            </label>
-
-                            <input
-                                type="email"
-                                class="form-control"
-                                id="correo_${i}"
-                                name="correo_${i}"
-                                placeholder="estudiante@cloud.uautonoma.cl"
-                                value="${escaparHTML(correo)}"
-                                ${i === 1 ? "readonly" : ""}
-                                required
-                            >
-
-                        </div>
-
-
-                        <!-- NOMBRES -->
-
-                        <div class="col-md-6 mb-3">
-
-                            <label
-                                class="form-label"
-                                for="nombres_${i}"
-                            >
-                                Nombres
-                            </label>
-
-                            <input
-                                type="text"
-                                class="form-control"
-                                id="nombres_${i}"
-                                name="nombres_${i}"
-                                value="${escaparHTML(nombres)}"
-                                required
-                            >
-
-                        </div>
-
-
-                        <!-- APELLIDOS -->
-
-                        <div class="col-md-6 mb-3">
-
-                            <label
-                                class="form-label"
-                                for="apellidos_${i}"
-                            >
-                                Apellidos
-                            </label>
-
-                            <input
-                                type="text"
-                                class="form-control"
-                                id="apellidos_${i}"
-                                name="apellidos_${i}"
-                                value="${escaparHTML(apellidos)}"
-                                required
-                            >
-
-                        </div>
-
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="nombres_${i}">Nombres</label>
+                        <input type="text" class="form-control" id="nombres_${i}" name="nombres_${i}"
+                               value="${escaparHTML(nombres)}" required>
                     </div>
-
+                    <div class="col-md-6">
+                        <label class="form-label" for="apellidos_${i}">Apellidos</label>
+                        <input type="text" class="form-control" id="apellidos_${i}" name="apellidos_${i}"
+                               value="${escaparHTML(apellidos)}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="rut_${i}">RUT</label>
+                        <input type="text" class="form-control" id="rut_${i}" name="rut_${i}"
+                               placeholder="12.345.678-9" value="${escaparHTML(rutAnterior)}" required>
+                        <div class="form-text">Con guion y dígito verificador.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="correo_${i}">Correo institucional</label>
+                        <input type="email" class="form-control" id="correo_${i}" name="correo_${i}"
+                               placeholder="nombre@cloud.uautonoma.cl" value="${escaparHTML(correo)}"
+                               ${i === 1 ? "readonly" : ""} required>
+                        ${i === 1 ? `<div class="form-text">Viene de tu sesión.</div>` : ""}
+                    </div>
                 </div>
-
             `;
 
 
@@ -772,4 +432,8 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/select_buscable.js' %}?v=2026-10-27"></script>
 {% endblock %}

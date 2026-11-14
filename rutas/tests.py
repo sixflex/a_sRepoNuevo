@@ -800,6 +800,7 @@ class CierreYExpedienteOriginalTestCase(TestCase):
         SeguimientoRutaTestCase.setUp(self)
 
         from socios.models import ContactoSocio, ParticipacionSocio, SocioComunitario
+        from proyectos.models import Equipo
 
         ruta_cierre = self.actividad_obligatoria.ruta_actividad
         version = ruta_cierre.ruta_version
@@ -831,9 +832,15 @@ class CierreYExpedienteOriginalTestCase(TestCase):
             es_principal=True,
             activo=True,
         )
+        # El socio trabaja con un equipo de la sección (una participación
+        # sin equipo es solo un socio elegido por el docente, RF-SC-03).
         ParticipacionSocio.objects.create(
             socio=self.socio,
             seccion=self.seccion,
+            equipo=Equipo.objects.create(
+                seccion=self.seccion, numero_grupo=1, informante_nombre="Estudiante",
+                informante_correo="estudiante@cloud.uautonoma.cl", estado="Registrado",
+            ),
             origen="OPERATIVO",
         )
 
@@ -1049,6 +1056,7 @@ class CierreYExpedienteTestCase(TestCase):
         SeguimientoRutaTestCase.setUp(self)
 
         from socios.models import ContactoSocio, ParticipacionSocio, SocioComunitario
+        from proyectos.models import Equipo
 
         ruta_cierre = self.actividad_obligatoria.ruta_actividad
         version = ruta_cierre.ruta_version
@@ -1078,9 +1086,15 @@ class CierreYExpedienteTestCase(TestCase):
             es_principal=True,
             activo=True,
         )
+        # El socio trabaja con un equipo de la sección (una participación
+        # sin equipo es solo un socio elegido por el docente, RF-SC-03).
         ParticipacionSocio.objects.create(
             socio=self.socio,
             seccion=self.seccion,
+            equipo=Equipo.objects.create(
+                seccion=self.seccion, numero_grupo=1, informante_nombre="Estudiante",
+                informante_correo="estudiante@cloud.uautonoma.cl", estado="Registrado",
+            ),
             origen="OPERATIVO",
         )
 
