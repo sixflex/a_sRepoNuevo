@@ -29,6 +29,12 @@ from encuestas.models import FormularioVersion
 class Command(BaseCommand):
     help = "Carga en orden todo lo necesario para desarrollar y revisar el portal."
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--liviano", action="store_true",
+            help="Datos de demostración reducidos (para Render): Ruta, formularios y panel con pocas filas.",
+        )
+
     def paso(self, numero, texto):
         self.stdout.write(self.style.MIGRATE_HEADING(f"\n{numero}. {texto}"))
 
@@ -57,7 +63,7 @@ class Command(BaseCommand):
             ))
         else:
             try:
-                call_command("cargar_datos_demo", stdout=self.stdout)
+                call_command("cargar_datos_demo", liviano=options.get("liviano", False), stdout=self.stdout)
             except CommandError as error:
                 self.stdout.write(self.style.WARNING(f"No se cargaron los datos de demostración: {error}"))
 

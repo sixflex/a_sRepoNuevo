@@ -124,17 +124,89 @@ def leer_libro(ruta):
     return hojas
 
 
+SECCIONES_POR_DOCENTE_LIVIANO = 2
+EQUIPOS_POR_SECCION_LIVIANO = 3
+SOCIOS_EXTRA_LIVIANO = 20
+PARTICIPACIONES_HISTORICAS_LIVIANO = 40
+RESPUESTAS_ESTUDIANTES_LIVIANO = 25
+
+
+def reducir_dataset(datos):
+    """
+    Muestra pequeña del dataset para un servidor modesto (Render gratis): lo
+    justo para recorrer la Ruta (formularios, QR, encuestas, acuerdo, cartas)
+    y ver el panel del Coordinador con datos. Mantiene la coherencia entre
+    hojas: solo quedan equipos, cartas y respuestas de las secciones elegidas,
+    y los socios que esas filas nombran.
+    """
+    con_ruta = {texto(f["NRC"]) for f in datos["Avance_Ruta"]}
+
+    # Hasta 2 secciones por docente; primero las de una misma asignatura, así
+    # se ve cómo el Inicio agrupa las secciones de un ramo.
+    por_docente = {}
+    for fila in sorted(datos["Planificacion"], key=lambda f: (texto(f["RUT"]), texto(f["ASIGNATURA"]), texto(f["SECCIÓN"]))):
+        nrc = texto(fila["NRC"])
+        if nrc in con_ruta:
+            por_docente.setdefault(texto(fila["RUT"]), []).append(nrc)
+    nrcs = {nrc for lista in por_docente.values() for nrc in lista[:SECCIONES_POR_DOCENTE_LIVIANO]}
+
+    # Las filas sin Ruta son las observadas de la planilla: se dejan para mostrar la validación.
+    datos["Planificacion"] = [
+        f for f in datos["Planificacion"] if texto(f["NRC"]) in nrcs or texto(f["NRC"]) not in con_ruta
+    ]
+    unidades = {texto(f["Unidad"]) for f in datos["Planificacion"]}
+    datos["Unidades_Planificacion"] = [
+        f for f in datos["Unidades_Planificacion"]
+        if texto(f["Unidad"]) in unidades or texto(f["Estado planilla"]) != "FINAL"
+    ]
+    datos["Avance_Ruta"] = [f for f in datos["Avance_Ruta"] if texto(f["NRC"]) in nrcs]
+
+    datos["Equipos"] = [
+        f for f in datos["Equipos"]
+        if texto(f["NRC"]) in nrcs and int(f["Grupo"]) <= EQUIPOS_POR_SECCION_LIVIANO
+    ]
+    equipos = {(texto(f["NRC"]), int(f["Grupo"])) for f in datos["Equipos"]}
+    datos["Integrantes"] = [f for f in datos["Integrantes"] if (texto(f["NRC"]), int(f["Grupo"])) in equipos]
+    datos["Cartas"] = [f for f in datos["Cartas"] if (texto(f["NRC"]), int(f["Grupo"])) in equipos]
+
+    for hoja in HOJAS_RESPUESTAS:
+        filas = [
+            f for f in datos.get(hoja, [])
+            if texto(f["[Contexto] NRC"]) in nrcs
+            and (not f.get("[Contexto] Grupo") or (texto(f["[Contexto] NRC"]), int(f["[Contexto] Grupo"])) in equipos)
+        ]
+        if hoja == "Resp_Eval_Estudiantes":
+            filas = filas[:RESPUESTAS_ESTUDIANTES_LIVIANO]
+        datos[hoja] = filas
+
+    datos["Participaciones_Historicas"] = datos["Participaciones_Historicas"][:PARTICIPACIONES_HISTORICAS_LIVIANO]
+    nombrados = (
+        {texto(f["Socio"]) for f in datos["Equipos"]}
+        | {texto(f["Socio"]) for f in datos["Participaciones_Historicas"]}
+        | {texto(f["Organización"]) for f in datos["Postulaciones"]}
+    )
+    extra = [f for f in datos["Socios"] if texto(f["Organización"]) not in nombrados][:SOCIOS_EXTRA_LIVIANO]
+    datos["Socios"] = [f for f in datos["Socios"] if texto(f["Organización"]) in nombrados] + extra
+    return datos
+
+
 class Command(BaseCommand):
     help = "Carga datos de demostración (docentes, secciones, equipos, socios, Ruta y respuestas) desde el Excel."
 
     def add_arguments(self, parser):
         parser.add_argument("--archivo", default=str(ARCHIVO_POR_DEFECTO), help="Ruta del Excel del dataset.")
+        parser.add_argument(
+            "--liviano", action="store_true",
+            help="Carga una muestra pequeña (2 secciones por docente, pocos equipos y socios). Pensado para Render.",
+        )
 
     def handle(self, *args, **options):
         ruta = Path(options["archivo"])
         if not ruta.exists():
             raise CommandError(f"No se encontró el archivo {ruta}.")
         self.datos = leer_libro(ruta)
+        if options.get("liviano"):
+            self.datos = reducir_dataset(self.datos)
         self.validar_requisitos()
 
         # Nada sale por correo: las notificaciones quedan registradas en EnvioCorreo.

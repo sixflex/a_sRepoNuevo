@@ -120,3 +120,17 @@ class PrepararDatosDesarrolloTests(TestCase):
         vinculadas = RutaActividad.objects.filter(ruta_version=borrador, orden__in=[5, 13])
         self.assertTrue(all(actividad.formulario_version_id for actividad in vinculadas))
 
+
+
+class DatosDemoLivianoTests(TestCase):
+    def test_liviano_carga_pocas_secciones_con_ruta_y_equipos(self):
+        salida = StringIO()
+        call_command("cargar_formularios", stdout=salida)
+        call_command("cargar_ruta_docente", stdout=salida)
+        call_command("cargar_datos_demo", liviano=True, stdout=salida)
+
+        secciones = Seccion.objects.filter(periodo__anio=2026)
+        self.assertLessEqual(secciones.count(), 6)
+        self.assertEqual(SeccionRuta.objects.filter(seccion__in=secciones).count(), secciones.count())
+        self.assertTrue(Equipo.objects.exists())
+        self.assertLessEqual(Equipo.objects.count(), secciones.count() * 3)
