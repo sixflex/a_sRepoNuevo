@@ -100,3 +100,34 @@ class PestanaNoticiasTests(TestCase):
     def test_solo_coordinacion(self):
         self.client.logout()
         self.assertNotEqual(self.client.get(self.url).status_code, 200)
+
+
+class CargarNoticiasTests(TestCase):
+    def test_carga_tres_sin_repetir(self):
+        from django.core.management import call_command
+
+        call_command("cargar_noticias", stdout=mock.MagicMock())
+        call_command("cargar_noticias", stdout=mock.MagicMock())
+        self.assertEqual(Noticia.objects.filter(estado="PUBLICADA").count(), 3)
+
+    def test_respeta_la_noticia_existente(self):
+        from django.core.management import call_command
+
+        Noticia.objects.create(
+            titulo="Editada", fuente="UA", estado="OCULTA", fecha_publicacion=timezone.now(),
+            url_fuente="https://www.uautonoma.cl/noticias/asesorias-a-emprendedores-de-sercotec/",
+        )
+        call_command("cargar_noticias", stdout=mock.MagicMock())
+        self.assertEqual(Noticia.objects.count(), 3)
+        self.assertEqual(Noticia.objects.get(titulo="Editada").estado, "OCULTA")
+
+    def test_oculta_relleno_sin_borrar(self):
+        from django.core.management import call_command
+
+        Noticia.objects.create(
+            titulo="Relleno", fuente="UA", estado="PUBLICADA", fecha_publicacion=timezone.now(),
+            url_fuente="/noticias/comunidad",
+        )
+        call_command("cargar_noticias", ocultar_relleno=True, stdout=mock.MagicMock())
+        self.assertEqual(Noticia.objects.get(titulo="Relleno").estado, "OCULTA")
+        self.assertEqual(Noticia.objects.filter(estado="PUBLICADA").count(), 3)

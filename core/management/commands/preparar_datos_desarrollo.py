@@ -7,6 +7,7 @@ Deja una base de desarrollo lista para revisar el portal, en el orden correcto:
     4. Plantillas de correo.
     5. Datos de demostración (docentes, secciones, equipos, socios, respuestas...).
     6. Vínculo de los dos formularios nuevos a la Ruta (queda una versión en borrador).
+    7. Noticias A+S del portal público.
 
 Cada paso se puede repetir: lo que ya existe no se duplica. Para partir de cero:
 
@@ -69,6 +70,9 @@ class Command(BaseCommand):
 
         self.paso(6, "Formularios nuevos en la Ruta (versión en borrador)")
         call_command("vincular_formularios_ruta", stdout=self.stdout)
+
+        self.paso(7, "Noticias del portal público")
+        call_command("cargar_noticias", ocultar_relleno=True, stdout=self.stdout)
 
         self.stdout.write(self.style.SUCCESS(
             "\nBase de desarrollo lista. Coordinador: usuario «coordinador». "
