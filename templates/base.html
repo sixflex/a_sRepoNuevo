@@ -1,4 +1,5 @@
 {% load static %}
+{% load core_extras %}
 <!DOCTYPE html>
 <html lang="es">
 
@@ -16,7 +17,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
     <link rel="stylesheet" href="{% static 'css/styles.css' %}?v=2026-11-14">
-    <link rel="stylesheet" href="{% static 'css/ux.css' %}?v=2026-10-30">
+    <link rel="stylesheet" href="{% static 'css/ux.css' %}?v=2026-11-17g">
     {% block extra_css %}{% endblock %}
 </head>
 
@@ -45,13 +46,9 @@
                         </li>
                         {% if user.is_authenticated %}
                             <li class="nav-item">
-                                <a class="nav-link{% if request.resolver_match.url_name == 'cuenta' %} fw-semibold text-decoration-underline{% endif %}" href="{% url 'usuarios:cuenta' %}"{% if request.resolver_match.url_name == 'cuenta' %} aria-current="page"{% endif %}>
-                                    <i class="bi bi-person-gear me-1" aria-hidden="true"></i>Mi cuenta
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link fw-semibold" href="{% url 'usuarios:cuenta' %}" title="Mi cuenta: tus cuentas institucionales">
-                                    <i class="bi bi-person-circle me-1"></i>{{ user.username }}
+                                {# Un solo enlace a "Mi cuenta": el nombre de quien inició sesión. #}
+                                <a class="nav-link fw-semibold{% if request.resolver_match.url_name == 'cuenta' %} text-decoration-underline{% endif %}" href="{% url 'usuarios:cuenta' %}" title="Mi cuenta: tus cuentas institucionales"{% if request.resolver_match.url_name == 'cuenta' %} aria-current="page"{% endif %}>
+                                    <i class="bi bi-person-circle me-1" aria-hidden="true"></i>{{ user|nombre_visible }}
                                 </a>
                             </li>
                             <li class="nav-item">
@@ -115,4 +112,4 @@
     <script src="{% static 'js/app.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
-</html>
+</html>

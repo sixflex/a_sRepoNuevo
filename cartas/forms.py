@@ -117,3 +117,55 @@ def sugerencias_receptor(seccion):
         }
         for socio in SocioComunitario.objects.filter(pk__in=ids).order_by("nombre_organizacion")
     ]
+
+
+class PlantillaCartaForm(forms.Form):
+    """Word oficial de la carta (Configuración → Carta oficial)."""
+
+    LIMITE_MB = 10
+
+    archivo = forms.FileField(
+        label="Carta oficial en Word (.docx)",
+        help_text=(
+            "La misma planilla que usas para combinar correspondencia, con tu firma, el logo "
+            f"en el encabezado y tu tarjeta. Hasta {LIMITE_MB} MB."
+        ),
+        widget=forms.ClearableFileInput(attrs={"accept": ".docx", "class": "form-control"}),
+    )
+    observacion = forms.CharField(
+        label="Nota (opcional)",
+        required=False,
+        max_length=255,
+        help_text="Ej.: firma actualizada 2027.",
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+
+    def clean_archivo(self):
+        from .plantilla_oficial import leer_imagenes_planilla
+
+        archivo = self.cleaned_data["archivo"]
+        if not (archivo.name or "").lower().endswith(".docx"):
+            raise ValidationError("Sube el archivo de Word en formato .docx.")
+        if archivo.size > self.LIMITE_MB * 1024 * 1024:
+            raise ValidationError(f"El archivo supera los {self.LIMITE_MB} MB.")
+        try:
+            imagenes = leer_imagenes_planilla(archivo.read())
+        except Exception:
+            raise ValidationError("No se pudo abrir el archivo. ¿Es un Word (.docx) válido?")
+        finally:
+            archivo.seek(0)
+        if not imagenes.get("firma"):
+            raise ValidationError(
+                "No encontramos la firma en el Word: debe ser la primera imagen del cuerpo de la carta."
+            )
+        self.imagenes = imagenes
+        return archivo
+
+    def avisos(self):
+        imagenes = getattr(self, "imagenes", {}) or {}
+        avisos = []
+        if not imagenes.get("logo"):
+            avisos.append("El Word no trae logo en el encabezado; se usará el escudo de la UA.")
+        if not imagenes.get("tarjeta"):
+            avisos.append("El Word no trae la tarjeta de contacto (segunda imagen del cuerpo).")
+        return avisos

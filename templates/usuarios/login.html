@@ -196,6 +196,21 @@
                 </div>
             {% endif %}
 
+            {% if entra_real %}
+            {# Ingreso normal: cuenta Microsoft de la U. La clave queda solo como respaldo. #}
+            <p class="small mb-3" style="color:#1b1b1b;">Ingresa con tu cuenta de la universidad (@uautonoma.cl o @cloud.uautonoma.cl).</p>
+            <a href="{% url 'usuarios:entra_login' %}{% if next %}?next={{ next|urlencode }}{% endif %}"
+               class="btn btn-ms-primary w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
+                <i class="bi bi-microsoft" aria-hidden="true"></i> Iniciar sesión con Microsoft
+            </a>
+            <p class="small text-muted mb-4">
+                <strong>Docentes:</strong> la primera vez, ingresen con el correo institucional con el que fueron
+                registrados en el portal (el de la planificación). Después pueden vincular su otra cuenta en
+                «Mi cuenta».
+            </p>
+            <details {% if form.errors or request.GET.respaldo %}open{% endif %}>
+                <summary class="small ms-link mb-3" style="cursor:pointer;">Acceso de respaldo (usuario y contraseña)</summary>
+            {% endif %}
             <form method="post" action="{% url 'usuarios:login' %}">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{{ next }}">
@@ -206,7 +221,7 @@
                            class="ms-input" 
                            placeholder="tucorreo@cloud.uautonoma.cl" 
                            required 
-                           autofocus>
+                           {% if not entra_real %}autofocus{% endif %}>
                 </div>
 
                 <div class="mb-4">
@@ -226,15 +241,16 @@
                     <button type="submit" class="btn btn-ms-primary">Siguiente</button>
                 </div>
             </form>
+            {% if entra_real %}</details>{% endif %}
         </div>
 
-        {% if entra_activo %}
+        {% if entra_activo and not entra_real %}
         <a href="{% url 'usuarios:entra_login' %}{% if next %}?next={{ next|urlencode }}{% endif %}"
            class="login-options-card text-decoration-none">
             <i class="bi bi-microsoft fs-5 text-secondary" aria-hidden="true"></i>
             <span>Iniciar sesión con Microsoft <small class="text-muted">(acceso simulado)</small></span>
         </a>
-        {% else %}
+        {% elif not entra_real %}
         <div class="login-options-card">
             <i class="bi bi-key fs-5 text-secondary" aria-hidden="true"></i>
             <span>Opciones de inicio de sesión</span>
@@ -247,4 +263,4 @@
     <a href="#">Términos de uso</a>
     <a href="#">Privacidad y cookies</a>
 </div>
-{% endblock %}
+{% endblock %}

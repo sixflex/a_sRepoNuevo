@@ -158,6 +158,33 @@ def enlaces_abiertos_por_plantilla(plantilla_ids):
     return resultado
 
 
+def formularios_qr_de_proceso(request, proceso):
+    """
+    [{titulo, url, qr_base64}] de los formularios abiertos de un proceso (por
+    ejemplo EVALUACION_AS) para proyectar en clase. El docente no ve la
+    encuesta de socios: esa la envía el Coordinador a fin de período.
+    """
+    from core.qr import qr_base64
+    from encuestas.models import FormularioPlantilla
+    from usuarios.permissions import es_coordinador
+
+    from .encuesta_socios import CODIGO_ENCUESTA
+
+    plantillas = FormularioPlantilla.objects.filter(proceso=proceso, activo=True).order_by("titulo")
+    if not es_coordinador(request.user):
+        plantillas = plantillas.exclude(codigo=CODIGO_ENCUESTA)
+
+    enlaces = enlaces_abiertos_por_plantilla(plantillas.values_list("id", flat=True))
+    formularios = []
+    for plantilla in plantillas:
+        enlace = enlaces.get(plantilla.id)
+        if enlace is None:
+            continue
+        url = request.build_absolute_uri(reverse("encuestas:responder", args=[enlace.token]))
+        formularios.append({"titulo": plantilla.titulo, "url": url, "qr_base64": qr_base64(url)})
+    return formularios
+
+
 # ---------------------------------------------------------------------------
 # Recordatorios y Avance de Ruta
 # ---------------------------------------------------------------------------
@@ -634,4 +661,4 @@ def crear_nueva_version_ruta(ruta_version_origen, usuario=None):
 
     RutaActividad.objects.bulk_create(nuevas_actividades)
 
-    return nueva_version
+    return nueva_version

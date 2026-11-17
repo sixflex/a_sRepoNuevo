@@ -1,4 +1,4 @@
-from django.conf import settings
+from comunicaciones.configuracion import remitente_actual
 from django.core.mail import send_mail
 from django.urls import reverse
 from django.utils import timezone
@@ -49,11 +49,7 @@ def enviar_correo_planificacion(request, enlace, reenvio=False):
         "Portal A+S"
     )
 
-    remitente = getattr(
-        settings,
-        "DEFAULT_FROM_EMAIL",
-        None,
-    )
+    remitente = remitente_actual()
 
     enviados = send_mail(
         subject=asunto,
@@ -63,4 +59,4 @@ def enviar_correo_planificacion(request, enlace, reenvio=False):
         fail_silently=False,
     )
 
-    return enviados == 1
+    return enviados == 1

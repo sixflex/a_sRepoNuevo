@@ -1,583 +1,329 @@
 {% extends "base.html" %}
-{% load core_extras %}
+{% load core_extras static %}
 
 {% block title %}Gestionar equipo{% endblock %}
 
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">{% endblock %}
+
 {% block content %}
-<div class="container py-4">
+{% comment %}
+Gestionar un equipo, en formato compacto: datos del equipo en una línea,
+integrantes en una tabla (corregir y etiquetas se abren en un popup), el
+socio vigente con "Cambiar socio" desplegable y el historial plegado.
+Los formularios y acciones son los mismos de antes.
+{% endcomment %}
+<div class="container-fluid py-2 ficha-seccion">
 
-    <!-- ENCABEZADO -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            {% url 'proyectos:gestionar_equipos_seccion' equipo.seccion.id as url_volver %}{% volver url_volver "Volver a los equipos" %}
-            <h2 class="mb-1">
-                Gestionar Grupo {{ equipo.numero_grupo }}
-            </h2>
-
-            <p class="text-muted mb-0">
-                {{ equipo.seccion.asignatura.nombre }}
-                · NRC {{ equipo.seccion.nrc }}
-                · {{ equipo.seccion.periodo }}
-            </p>
-        </div>
-
+    <div class="mb-4">
+        {% url 'proyectos:gestionar_equipos_seccion' equipo.seccion.id as url_volver %}{% volver url_volver "Volver a los equipos" %}
+        <h1 class="h2 fw-bold text-dark mb-1">Grupo {{ equipo.numero_grupo }}</h1>
+        <p class="text-muted mb-0">
+            {{ equipo.seccion.asignatura.nombre }} · NRC {{ equipo.seccion.nrc }} · {{ equipo.seccion.periodo }}
+        </p>
     </div>
 
-    <!-- DATOS GENERALES -->
-    <div class="card shadow-sm mb-4">
-
-        <div class="card-header text-white"
-             style="background-color: #A90000;">
-            <strong>Información del equipo</strong>
+    <!-- DATOS DEL EQUIPO -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white border-bottom py-3">
+            <h2 class="h5 fw-bold mb-0">Información del equipo</h2>
         </div>
-
-        <div class="card-body">
-
-            <div class="row">
-
-                <div class="col-md-6 mb-3">
-                    <strong>Informante</strong>
-                    <div>
-                        {{ equipo.informante_nombre }}
-                    </div>
+        <div class="card-body p-4">
+            <dl class="ficha-datos ficha-datos--cajas">
+                <div class="dato">
+                    <dt>Informante</dt>
+                    <dd>{{ equipo.informante_nombre }}</dd>
                 </div>
-
-                <div class="col-md-6 mb-3">
-                    <strong>Correo del informante</strong>
-                    <div>
-                        {{ equipo.informante_correo }}
-                    </div>
+                <div class="dato dato--ancho">
+                    <dt>Correo del informante</dt>
+                    <dd>{{ equipo.informante_correo }}</dd>
                 </div>
-
-                <div class="col-md-6">
-                    <strong>Estado</strong>
-                    <div>
-                        {{ equipo.estado }}
-                    </div>
+                <div class="dato">
+                    <dt>Estado</dt>
+                    <dd>{{ equipo.estado }}</dd>
                 </div>
-
-                <div class="col-md-6">
-                    <strong>Fecha de registro</strong>
-                    <div>
-                        {{ equipo.fecha_registro|date:"d/m/Y H:i" }}
-                    </div>
+                <div class="dato">
+                    <dt>Registrado</dt>
+                    <dd>{{ equipo.fecha_registro|date:"d/m/Y H:i" }}</dd>
                 </div>
-
-            </div>
-
+            </dl>
         </div>
     </div>
 
     <!-- INTEGRANTES -->
-    <div class="card shadow-sm mb-4">
-
-        <div class="card-header">
-            <strong>Integrantes del equipo</strong>
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white border-bottom py-3">
+            <h2 class="h5 fw-bold mb-0">Integrantes <span class="text-muted small fw-normal">{{ integrantes|length }}</span></h2>
         </div>
-
-        <div class="card-body">
-
-            {% for integrante in integrantes %}
-
-                <div class="border rounded p-3 mb-3">
-
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-
-                        <h6 class="mb-0">
-                            {{ integrante.nombres }}
-                            {{ integrante.apellidos }}
-                        </h6>
-
-                        {% if integrante.es_informante %}
-                            <span class="badge bg-secondary">
-                                Informante
-                            </span>
-                        {% endif %}
-
-                    </div>
-
-                    <div class="row">
-
-                        <div class="col-md-4 mb-2">
-                            <strong>RUT:</strong><br>
-                            {{ integrante.rut }}
-                        </div>
-
-                        <div class="col-md-4 mb-2">
-                            <strong>Correo:</strong><br>
-                            {{ integrante.correo_institucional }}
-                        </div>
-
-                        <div class="col-md-4 mb-2">
-                            <strong>Etiquetas:</strong><br>
-
-                            {% for asignacion in integrante.etiquetas_asignadas.all %}
-                                <span class="badge bg-dark me-1">
-                                    {{ asignacion.etiqueta.nombre }}
-                                </span>
-                            {% empty %}
-                                <span class="text-muted">
-                                    Sin etiquetas
-                                </span>
-                            {% endfor %}
-                        </div>
-
-                    </div>
-
-                    <div class="mt-3">
-
-                        <!-- BOTÓN CORREGIR INTEGRANTE -->
-                        <button type="button"
-                                class="btn btn-sm btn-outline-secondary"
-                                data-bs-toggle="collapse"
-                                data-bs-target="#corregir-integrante-{{ integrante.id }}"
-                                aria-expanded="false"
-                                aria-controls="corregir-integrante-{{ integrante.id }}">
-                            Corregir integrante
-                        </button>
-
-                        <!-- BOTÓN GESTIONAR ETIQUETAS -->
-                        <button type="button"
-                                class="btn btn-sm btn-outline-secondary"
-                                data-bs-toggle="collapse"
-                                data-bs-target="#etiquetas-integrante-{{ integrante.id }}"
-                                aria-expanded="false"
-                                aria-controls="etiquetas-integrante-{{ integrante.id }}">
-                            Gestionar etiquetas
-                        </button>
-
-                        <!-- FORMULARIO DE ETIQUETAS -->
-                        <div class="collapse mt-3"
-                             id="etiquetas-integrante-{{ integrante.id }}">
-
-                            <form method="post"
-                                  class="border rounded p-3 bg-light">
-
-                                {% csrf_token %}
-
-                                <input type="hidden"
-                                       name="accion"
-                                       value="gestionar_etiquetas">
-
-                                <input type="hidden"
-                                       name="integrante_id"
-                                       value="{{ integrante.id }}">
-
-                                <h6 class="mb-3">
-                                    Etiquetas del integrante
-                                </h6>
-
-                                {% if etiquetas %}
-
-                                    {% for etiqueta in etiquetas %}
-
-                                        <div class="form-check mb-2">
-
-                                            <input
-                                                class="form-check-input"
-                                                type="checkbox"
-                                                name="etiquetas"
-                                                value="{{ etiqueta.id }}"
-                                                id="etiqueta-{{ integrante.id }}-{{ etiqueta.id }}"
-
-                                                {% for asignacion in integrante.etiquetas_asignadas.all %}
-                                                    {% if asignacion.etiqueta_id == etiqueta.id %}
-                                                        checked
-                                                    {% endif %}
-                                                {% endfor %}
-                                            >
-
-                                            <label class="form-check-label"
-                                                   for="etiqueta-{{ integrante.id }}-{{ etiqueta.id }}">
-                                                {{ etiqueta.nombre }}
-                                            </label>
-
-                                        </div>
-
+        {% if integrantes %}
+            <div class="table-responsive">
+                <table class="table tabla-ua align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">Nombre</th>
+                            <th scope="col">RUT</th>
+                            <th scope="col">Correo</th>
+                            <th scope="col">Etiquetas</th>
+                            <th scope="col" class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for integrante in integrantes %}
+                            <tr>
+                                <td>
+                                    <span class="fw-semibold">{{ integrante.nombres }} {{ integrante.apellidos }}</span>
+                                    {% if integrante.es_informante %}<span class="badge bg-secondary ms-1">Informante</span>{% endif %}
+                                </td>
+                                <td class="text-nowrap small">{{ integrante.rut }}</td>
+                                <td class="small text-break">{{ integrante.correo_institucional }}</td>
+                                <td>
+                                    {% for asignacion in integrante.etiquetas_asignadas.all %}
+                                        <span class="badge bg-dark me-1">{{ asignacion.etiqueta.nombre }}</span>
+                                    {% empty %}
+                                        <span class="text-muted small">Sin etiquetas</span>
                                     {% endfor %}
-
-                                    <div class="mt-3">
-
-                                        <button type="submit"
-                                                class="btn text-white"
-                                                style="background-color: #A90000;">
-                                            Guardar etiquetas
-                                        </button>
-
-                                    </div>
-
-                                {% else %}
-
-                                    <div class="alert alert-info mb-0">
-                                        No existen etiquetas activas disponibles.
-                                    </div>
-
-                                {% endif %}
-
-                            </form>
-
-                        </div>
-
-                        <!-- FORMULARIO DE CORRECCIÓN -->
-                        <div class="collapse mt-3"
-                             id="corregir-integrante-{{ integrante.id }}">
-
-                            <form method="post"
-                                  class="border rounded p-3 bg-light">
-
-                                {% csrf_token %}
-
-                                <input type="hidden"
-                                       name="accion"
-                                       value="corregir_integrante">
-
-                                <input type="hidden"
-                                       name="integrante_id"
-                                       value="{{ integrante.id }}">
-
-                                <div class="row">
-
-                                    <!-- NOMBRES -->
-                                    <div class="col-md-6 mb-3">
-
-                                        <label class="form-label fw-bold">
-                                            Nombres
-                                        </label>
-
-                                        <input type="text"
-                                               name="nombres"
-                                               class="form-control"
-                                               maxlength="120"
-                                               value="{{ integrante.nombres }}"
-                                               required>
-
-                                    </div>
-
-                                    <!-- APELLIDOS -->
-                                    <div class="col-md-6 mb-3">
-
-                                        <label class="form-label fw-bold">
-                                            Apellidos
-                                        </label>
-
-                                        <input type="text"
-                                               name="apellidos"
-                                               class="form-control"
-                                               maxlength="120"
-                                               value="{{ integrante.apellidos }}"
-                                               required>
-
-                                    </div>
-
-                                    <!-- RUT -->
-                                    <div class="col-md-6 mb-3">
-
-                                        <label class="form-label fw-bold">
-                                            RUT
-                                        </label>
-
-                                        <input type="text"
-                                               class="form-control"
-                                               value="{{ integrante.rut }}"
-                                               disabled>
-
-                                        <div class="form-text">
-                                            El RUT no puede modificarse desde esta corrección.
-                                        </div>
-
-                                    </div>
-
-                                    <!-- CORREO -->
-                                    <div class="col-md-6 mb-3">
-
-                                        <label class="form-label fw-bold">
-                                            Correo institucional
-                                        </label>
-
-                                        <input type="email"
-                                               name="correo"
-                                               class="form-control"
-                                               maxlength="254"
-                                               value="{{ integrante.correo_institucional }}"
-                                               {% if integrante.es_informante %}
-                                                   readonly
-                                               {% endif %}
-                                               required>
-
-                                        {% if integrante.es_informante %}
-
-                                            <div class="form-text">
-                                                El correo del informante está asociado al
-                                                registro original del equipo.
-                                            </div>
-
-                                        {% endif %}
-
-                                    </div>
-
-                                </div>
-
-                                <button type="submit"
-                                        class="btn text-white"
-                                        style="background-color: #A90000;">
-                                    Guardar corrección
-                                </button>
-
-                            </form>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            {% empty %}
-
-                <div class="alert alert-info mb-0">
-                    El equipo no tiene integrantes registrados.
-                </div>
-
-            {% endfor %}
-
-        </div>
+                                </td>
+                                <td class="text-end text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-light-ua" data-bs-toggle="modal"
+                                            data-bs-target="#corregir-integrante-{{ integrante.id }}" title="Corregir integrante">
+                                        <i class="bi bi-pencil" aria-hidden="true"></i><span class="visually-hidden">Corregir integrante</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-light-ua" data-bs-toggle="modal"
+                                            data-bs-target="#etiquetas-integrante-{{ integrante.id }}" title="Gestionar etiquetas">
+                                        <i class="bi bi-tags" aria-hidden="true"></i><span class="visually-hidden">Gestionar etiquetas</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted small px-4 py-3 mb-0">El equipo no tiene integrantes registrados.</p>
+        {% endif %}
     </div>
+
+    {% for integrante in integrantes %}
+        <!-- POPUP: CORREGIR INTEGRANTE -->
+        <div class="modal fade" id="corregir-integrante-{{ integrante.id }}" tabindex="-1"
+             aria-labelledby="corregir-titulo-{{ integrante.id }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <form method="post" class="modal-content">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="corregir_integrante">
+                    <input type="hidden" name="integrante_id" value="{{ integrante.id }}">
+                    <div class="modal-header">
+                        <h2 class="modal-title h5" id="corregir-titulo-{{ integrante.id }}">Corregir integrante</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="nombres-{{ integrante.id }}">Nombres</label>
+                                <input type="text" name="nombres" id="nombres-{{ integrante.id }}" class="form-control"
+                                       maxlength="120" value="{{ integrante.nombres }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="apellidos-{{ integrante.id }}">Apellidos</label>
+                                <input type="text" name="apellidos" id="apellidos-{{ integrante.id }}" class="form-control"
+                                       maxlength="120" value="{{ integrante.apellidos }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="rut-{{ integrante.id }}">RUT</label>
+                                <input type="text" id="rut-{{ integrante.id }}" class="form-control" value="{{ integrante.rut }}" disabled>
+                                <div class="form-text">El RUT no puede modificarse desde esta corrección.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="correo-{{ integrante.id }}">Correo institucional</label>
+                                <input type="email" name="correo" id="correo-{{ integrante.id }}" class="form-control"
+                                       maxlength="254" value="{{ integrante.correo_institucional }}"
+                                       {% if integrante.es_informante %}readonly{% endif %} required>
+                                {% if integrante.es_informante %}
+                                    <div class="form-text">El correo del informante está asociado al registro original del equipo.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light-ua" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-ua">Guardar corrección</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- POPUP: ETIQUETAS -->
+        <div class="modal fade" id="etiquetas-integrante-{{ integrante.id }}" tabindex="-1"
+             aria-labelledby="etiquetas-titulo-{{ integrante.id }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <form method="post" class="modal-content">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="gestionar_etiquetas">
+                    <input type="hidden" name="integrante_id" value="{{ integrante.id }}">
+                    <div class="modal-header">
+                        <h2 class="modal-title h5" id="etiquetas-titulo-{{ integrante.id }}">
+                            Etiquetas de {{ integrante.nombres }} {{ integrante.apellidos }}
+                        </h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                        {% for etiqueta in etiquetas %}
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="etiquetas" value="{{ etiqueta.id }}"
+                                       id="etiqueta-{{ integrante.id }}-{{ etiqueta.id }}"
+                                       {% for asignacion in integrante.etiquetas_asignadas.all %}{% if asignacion.etiqueta_id == etiqueta.id %}checked{% endif %}{% endfor %}>
+                                <label class="form-check-label" for="etiqueta-{{ integrante.id }}-{{ etiqueta.id }}">{{ etiqueta.nombre }}</label>
+                            </div>
+                        {% empty %}
+                            <p class="text-muted mb-0">No existen etiquetas activas disponibles.</p>
+                        {% endfor %}
+                    </div>
+                    {% if etiquetas %}
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-light-ua" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-ua">Guardar etiquetas</button>
+                        </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    {% endfor %}
 
     <!-- SOCIO COMUNITARIO -->
-    <div class="card shadow-sm mb-4">
-
-        <div class="card-header">
-            <strong>Socio Comunitario</strong>
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white border-bottom py-3">
+            <h2 class="h5 fw-bold mb-0">Socio Comunitario</h2>
         </div>
-
-        <div class="card-body">
-
-            <div class="mb-4">
-
-                <strong>Socio actualmente asociado:</strong>
-
-                <div class="mt-2">
-
+        <div class="card-body p-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 ficha-item">
+                <div>
+                    <div class="small text-muted">Socio actualmente asociado</div>
                     {% if equipo.socio_vigente %}
-
-                        {{ equipo.socio_vigente.nombre_organizacion }}
-
-                        {% if equipo.socio_vigente.es_provisional %}
-                            <span class="badge bg-warning text-dark ms-1">
-                                Provisional
-                            </span>
-                        {% endif %}
-
+                        <span class="fw-semibold">{{ equipo.socio_vigente.nombre_organizacion }}</span>
+                        {% if equipo.socio_vigente.es_provisional %}<span class="badge bg-warning text-dark ms-1">Provisional</span>{% endif %}
                     {% else %}
-
-                        <span class="text-muted">
-                            Sin Socio Comunitario asociado
-                        </span>
-
+                        <span class="text-muted">Sin Socio Comunitario asociado</span>
                     {% endif %}
-
                 </div>
-
+                <button type="button" class="btn btn-sm btn-ua-outline" data-bs-toggle="collapse" data-bs-target="#cambiar-socio"
+                        aria-expanded="false" aria-controls="cambiar-socio">
+                    <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i>Cambiar socio
+                </button>
             </div>
 
-            <!-- CAMBIAR SOCIO -->
-            <form method="post"
-                  class="border rounded p-3">
+            <div class="collapse" id="cambiar-socio">
+                <form method="post" class="border rounded p-3 mt-3 bg-light">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="cambiar_socio">
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <label for="socio_comunitario" class="form-label fw-semibold">Nuevo Socio Comunitario</label>
+                            <select name="socio_comunitario" id="socio_comunitario" class="form-select" required>
+                                <option value="">Seleccione un Socio Comunitario</option>
+                                {% for socio in socios_disponibles %}
+                                    <option value="{{ socio.id }}">{{ socio.nombre_organizacion }}</option>
+                                {% empty %}
+                                    <option value="" disabled>No existen Socios Comunitarios disponibles</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                {% if socios_de_la_seccion %}
+                                    Solo los socios que elegiste para esta sección.
+                                {% else %}
+                                    No has elegido socios para esta sección, por eso aparece el catálogo completo.
+                                {% endif %}
+                                {% url 'socios:catalogo_docente' as url_catalogo %}{% with id_txt=equipo.seccion.id|stringformat:'s' %}<a href="{% url_con_volver url_catalogo|add:'?seccion='|add:id_txt %}">Elegir socios</a>{% endwith %}
+                            </div>
+                        </div>
+                        <div class="col-md-7">
+                            <label for="motivo" class="form-label fw-semibold">Motivo del cambio</label>
+                            <textarea name="motivo" id="motivo" class="form-control" rows="2" maxlength="255" required
+                                      placeholder="Ingrese el motivo de la corrección"></textarea>
+                        </div>
+                    </div>
+                    <div class="text-end mt-3">
+                        <button type="submit" class="btn btn-ua btn-sm">Guardar cambio de socio</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
-                {% csrf_token %}
-
-                <input type="hidden"
-                       name="accion"
-                       value="cambiar_socio">
-
-                <label for="socio_comunitario"
-                       class="form-label fw-bold">
-                    Cambiar Socio Comunitario
-                </label>
-
-                <select name="socio_comunitario"
-                        id="socio_comunitario"
-                        class="form-select mb-3"
-                        required>
-
-                    <option value="">
-                        Seleccione un Socio Comunitario
-                    </option>
-
-                    {% for socio in socios_disponibles %}
-
-                        <option value="{{ socio.id }}">
-                            {{ socio.nombre_organizacion }}
-                        </option>
-
-                    {% empty %}
-
-                        <option value="" disabled>
-                            No existen Socios Comunitarios disponibles
-                        </option>
-
-                    {% endfor %}
-
-                </select>
-
-                <label for="motivo"
-                       class="form-label fw-bold">
-                    Motivo del cambio
-                </label>
-
-                <textarea name="motivo"
-                          id="motivo"
-                          class="form-control mb-3"
-                          rows="3"
-                          maxlength="255"
-                          required
-                          placeholder="Ingrese el motivo de la corrección"></textarea>
-
-                <button type="submit"
-                        class="btn text-white"
-                        style="background-color: #A90000;">
-                    Guardar cambio de socio
+    <!-- HISTORIAL DEL SOCIO (plegado) -->
+    <div class="accordion mb-3" id="historial-socio">
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#periodos-socio"
+                        aria-expanded="false" aria-controls="periodos-socio">
+                    Socios Comunitarios asociados al equipo
+                    <span class="badge text-bg-light border ms-2">{{ participaciones_socio|length }}</span>
                 </button>
-
-            </form>
-
+            </h2>
+            <div id="periodos-socio" class="accordion-collapse collapse">
+                <div class="accordion-body p-0">
+                    {% if participaciones_socio %}
+                        <div class="table-responsive">
+                            <table class="table tabla-ua align-middle mb-0">
+                                <thead>
+                                    <tr><th>Socio Comunitario</th><th>Desde</th><th>Hasta</th></tr>
+                                </thead>
+                                <tbody>
+                                    {% for participacion in participaciones_socio %}
+                                        <tr>
+                                            <td>{{ participacion.socio.nombre_organizacion }}</td>
+                                            <td>{{ participacion.fecha_inicio|date:"d/m/Y"|default:"-" }}</td>
+                                            <td>
+                                                {% if participacion.vigente %}
+                                                    <span class="badge text-bg-success">Vigente</span>
+                                                {% else %}
+                                                    {{ participacion.fecha_fin|date:"d/m/Y" }}
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted small px-4 py-3 mb-0">Este equipo todavía no registra asociaciones con Socios Comunitarios.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#cambios-socio"
+                        aria-expanded="false" aria-controls="cambios-socio">
+                    Historial de cambios de Socio Comunitario
+                    <span class="badge text-bg-light border ms-2">{{ historial_socios|length }}</span>
+                </button>
+            </h2>
+            <div id="cambios-socio" class="accordion-collapse collapse">
+                <div class="accordion-body p-0">
+                    {% if historial_socios %}
+                        <div class="table-responsive">
+                            <table class="table tabla-ua align-middle mb-0">
+                                <thead>
+                                    <tr><th>Fecha</th><th>Socio anterior</th><th>Socio nuevo</th><th>Docente</th><th>Motivo</th></tr>
+                                </thead>
+                                <tbody>
+                                    {% for historial in historial_socios %}
+                                        <tr>
+                                            <td class="text-nowrap">{{ historial.fecha_cambio|date:"d/m/Y H:i" }}</td>
+                                            <td>{% if historial.socio_anterior %}{{ historial.socio_anterior.nombre_organizacion }}{% else %}Sin socio{% endif %}</td>
+                                            <td>{% if historial.socio_nuevo %}{{ historial.socio_nuevo.nombre_organizacion }}{% else %}Sin socio{% endif %}</td>
+                                            <td>{{ historial.cambiado_por_docente.nombres }} {{ historial.cambiado_por_docente.apellidos }}</td>
+                                            <td>{{ historial.motivo|default:"-" }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted small px-4 py-3 mb-0">Este equipo todavía no registra cambios de Socio Comunitario.</p>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
-
-    <!-- PERÍODOS DE ASOCIACIÓN (ParticipacionSocio) -->
-    <div class="card shadow-sm mb-4">
-
-        <div class="card-header">
-            <strong>Socios Comunitarios asociados al equipo</strong>
-        </div>
-
-        <div class="card-body">
-
-            {% if participaciones_socio %}
-
-                <div class="table-responsive">
-                    <table class="table table-bordered align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th>Socio Comunitario</th>
-                                <th>Desde</th>
-                                <th>Hasta</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for participacion in participaciones_socio %}
-                                <tr>
-                                    <td>{{ participacion.socio.nombre_organizacion }}</td>
-                                    <td>{{ participacion.fecha_inicio|date:"d/m/Y"|default:"-" }}</td>
-                                    <td>
-                                        {% if participacion.vigente %}
-                                            <span class="badge text-bg-success">Vigente</span>
-                                        {% else %}
-                                            {{ participacion.fecha_fin|date:"d/m/Y" }}
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-
-            {% else %}
-
-                <div class="alert alert-light border mb-0">
-                    Este equipo todavía no registra asociaciones con
-                    Socios Comunitarios.
-                </div>
-
-            {% endif %}
-
-        </div>
-    </div>
-
-    <!-- HISTORIAL SOCIO COMUNITARIO -->
-    <div class="card shadow-sm">
-
-        <div class="card-header">
-            <strong>Historial de cambios de Socio Comunitario</strong>
-        </div>
-
-        <div class="card-body">
-
-            {% if historial_socios %}
-
-                <div class="table-responsive">
-
-                    <table class="table table-bordered align-middle">
-
-                        <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Socio anterior</th>
-                                <th>Socio nuevo</th>
-                                <th>Docente</th>
-                                <th>Motivo</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-
-                            {% for historial in historial_socios %}
-
-                                <tr>
-
-                                    <td>
-                                        {{ historial.fecha_cambio|date:"d/m/Y H:i" }}
-                                    </td>
-
-                                    <td>
-                                        {% if historial.socio_anterior %}
-                                            {{ historial.socio_anterior.nombre_organizacion }}
-                                        {% else %}
-                                            Sin socio
-                                        {% endif %}
-                                    </td>
-
-                                    <td>
-                                        {% if historial.socio_nuevo %}
-                                            {{ historial.socio_nuevo.nombre_organizacion }}
-                                        {% else %}
-                                            Sin socio
-                                        {% endif %}
-                                    </td>
-
-                                    <td>
-                                        {{ historial.cambiado_por_docente.nombres }}
-                                        {{ historial.cambiado_por_docente.apellidos }}
-                                    </td>
-
-                                    <td>
-                                        {% if historial.motivo %}
-                                            {{ historial.motivo }}
-                                        {% else %}
-                                            -
-                                        {% endif %}
-                                    </td>
-
-                                </tr>
-
-                            {% endfor %}
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            {% else %}
-
-                <div class="alert alert-light border mb-0">
-                    Este equipo todavía no registra cambios de
-                    Socio Comunitario.
-                </div>
-
-            {% endif %}
-
-        </div>
-    </div>
-
 </div>
 {% endblock %}

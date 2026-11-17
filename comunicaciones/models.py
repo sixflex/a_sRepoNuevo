@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -74,3 +75,47 @@ class EnvioCorreo(models.Model):
 
     def __str__(self):
         return f"{self.destinatario} - {self.asunto}"
+
+class ConfiguracionCorreo(models.Model):
+    """
+    Cuenta desde la que el portal envía sus correos automáticos (avisos,
+    cartas, encuestas). La elige el Coordinador en Configuración, así puede
+    usar su propio correo mientras DTI no entregue el de A+S y cambiarlo
+    después sin tocar el servidor. Una sola fila (pk=1).
+
+    La clave de aplicación se guarda cifrada (comunicaciones/configuracion.py)
+    y nunca se muestra. Si `activo` es False se usa la cuenta del servidor
+    (.env / Render: EMAIL_HOST_USER, EMAIL_HOST_PASSWORD).
+    """
+
+    PROVEEDOR_CHOICES = [
+        ("MICROSOFT", "Microsoft 365 / Outlook (cuentas de la U)"),
+        ("GMAIL", "Gmail"),
+        ("OTRO", "Otro servidor"),
+    ]
+
+    remitente_nombre = models.CharField(max_length=120, default="Coordinación A+S")
+    remitente_correo = models.EmailField(max_length=254)
+    responder_a = models.EmailField(max_length=254, blank=True)
+    proveedor = models.CharField(max_length=20, choices=PROVEEDOR_CHOICES, default="MICROSOFT")
+    servidor_smtp = models.CharField(max_length=120)
+    puerto = models.PositiveIntegerField(default=587)
+    usar_tls = models.BooleanField(default=True)
+    clave_cifrada = models.TextField(blank=True)
+    activo = models.BooleanField(default=False)
+    fecha_verificacion = models.DateTimeField(null=True, blank=True)
+    modificado_por_usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "configuración de correo"
+        verbose_name_plural = "configuración de correo"
+
+    def __str__(self):
+        return f"{self.remitente_nombre} <{self.remitente_correo}>"

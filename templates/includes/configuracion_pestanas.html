@@ -1,0 +1,20 @@
+{% load static %}
+{# Cabecera común de "Configuración": cuenta de envío de correos y carta oficial. #}
+<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
+<link rel="stylesheet" href="{% static 'css/portal_publico.css' %}?v=2026-11-14">
+
+<div class="mb-3">
+    <h1 class="page-title">Configuración</h1>
+    <p class="page-subtitle mb-0">Datos que usa el portal para comunicarse en nombre de Coordinación A+S.</p>
+</div>
+
+<nav class="portal-pestanas mb-4" aria-label="Secciones de configuración">
+    <a href="{% url 'comunicaciones:correo_envio' %}" class="portal-pestana{% if activa == 'correo' %} active{% endif %}"
+       {% if activa == 'correo' %}aria-current="page"{% endif %}>
+        <i class="bi bi-envelope-at me-1" aria-hidden="true"></i>Correo de envío
+    </a>
+    <a href="{% url 'cartas:plantilla_carta' %}" class="portal-pestana{% if activa == 'carta' %} active{% endif %}"
+       {% if activa == 'carta' %}aria-current="page"{% endif %}>
+        <i class="bi bi-file-earmark-word me-1" aria-hidden="true"></i>Carta oficial
+    </a>
+</nav>

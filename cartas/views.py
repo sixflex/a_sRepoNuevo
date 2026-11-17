@@ -118,6 +118,12 @@ def solicitar_carta_docente(request, seccion_id):
                 "La solicitud de Carta de Presentación fue enviada correctamente.",
             )
 
+            # Vuelve a donde se abrió (Ruta o sección); si no se sabe, a la Ruta.
+            from core.volver import destino_volver
+
+            destino = destino_volver(request)
+            if destino:
+                return redirect(destino)
             return redirect(
                 "rutas:detalle_ruta_docente",
                 seccion_ruta_id=seccion.ruta_asignada.id,
@@ -845,4 +851,4 @@ def listar_cartas_seccion_docente(request, seccion_id):
             "seccion": seccion,
             "cartas": cartas,
         },
-    )
+    )

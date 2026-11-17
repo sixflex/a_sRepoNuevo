@@ -55,6 +55,11 @@ PREGUNTAS = {
         "Nivel": "nivel",
         "Cantidad total de estudiantes (Si tiene más de 1 sección a su cargo, súmelas)": "estudiantes",
         "Cantidad total de socios comunitarios (Si tiene más de 1 sección a su cargo, sume los SC)": "socios",
+        "¿Cuantas secciones de una misma asignatura tiene a su cargo?": "secciones_a_cargo",
+        "¿Qué secciones desea reportar?": "secciones_reportar",
+        "¿En que consistió o consistieron los Proyectos A+S de este semestre o trimestre? Explíquelo en pocas líneas": "proyecto_descripcion",
+        "Tipo de socios comunitarios con los que trabajaron (Trate de asociarlo a alguna de estas categorías, si no es posible, agregue la clasificación en Otras)": "tipos_socio",
+        "¿Aplicó las 3 encuestas de satisfacción? Las encuestas son 3: una para los estudiantes, otra para el docente y otra para el socio comunitario.": "encuestas_aplicadas",
     },
     REGISTRO_REFLEXION: {
         "¿Qué reflexión estás registrando?": "momento_reflexion",
@@ -69,6 +74,9 @@ ORIGEN_POR_DATO = {
     "estudiantes": ORIGEN_EQUIPOS,
     "socios": ORIGEN_EQUIPOS,
     "nivel": ORIGEN_RESPUESTA,
+    "proyecto_descripcion": ORIGEN_RESPUESTA,
+    "tipos_socio": ORIGEN_EQUIPOS,
+    "encuestas_aplicadas": ORIGEN_RUTA,
     "momento_reflexion": ORIGEN_RUTA,
 }
 
@@ -115,6 +123,59 @@ def _nivel_respondido(seccion):
         .first()
     )
     return detalle.strip() if detalle else None
+
+
+def _proyecto_respondido(seccion):
+    """
+    "En qué consistió el proyecto", armado con el objetivo y el servicio que
+    el docente ya escribió en el Formulario del Proyecto (actividad 5), para no
+    pedirlo de nuevo en el resumen final (ficha única).
+    """
+    from .models import RespuestaPregunta
+
+    partes = []
+    for texto, etiqueta in (("Objetivo del Servicio", "Objetivo"), ("Servicio que harán los estudiantes", "Servicio")):
+        valor = (
+            RespuestaPregunta.objects
+            .filter(
+                respuesta__seccion=seccion,
+                respuesta__version__plantilla__codigo=FORMULARIO_PROYECTO,
+                pregunta__texto=texto,
+            )
+            .exclude(valor_texto__isnull=True).exclude(valor_texto="")
+            .order_by("-respuesta__fecha_envio")
+            .values_list("valor_texto", flat=True)
+            .first()
+        )
+        if valor:
+            partes.append(f"{etiqueta}: {valor.strip()}")
+    return "\n".join(partes) or None
+
+
+def _secciones_del_ramo(seccion, docente):
+    """Secciones de la misma asignatura y período que tiene el docente."""
+    if docente is None:
+        return [seccion]
+    from academico.models import Seccion
+
+    return list(
+        Seccion.objects
+        .filter(asignatura_id=seccion.asignatura_id, periodo_id=seccion.periodo_id, docentes=docente)
+        .distinct()
+        .order_by("seccion")
+    ) or [seccion]
+
+
+def _encuestas_aplicadas(seccion):
+    """'Sí.' si la actividad de las encuestas (19) ya está marcada como hecha en la Ruta."""
+    from rutas.models import SeccionActividad
+
+    hecha = SeccionActividad.objects.filter(
+        seccion_ruta__seccion=seccion,
+        ruta_actividad__orden=19,
+        completada_por_docente__isnull=False,
+    ).exists()
+    return "Sí." if hecha else None
 
 
 def _momento_reflexion(seccion):
@@ -177,6 +238,22 @@ def datos_seccion(seccion, usuario=None):
         if socios:
             datos["socios"] = socios
 
+    secciones = _secciones_del_ramo(seccion, docente)
+    datos["secciones_a_cargo"] = len(secciones)
+    datos["secciones_reportar"] = [f"SEC. {s.seccion}" for s in secciones]
+    tipos = (
+        ParticipacionSocio.objects.filter(equipo__seccion=seccion, socio__clasificacion__isnull=False)
+        .values_list("socio__clasificacion__nombre", flat=True).distinct()
+    )
+    if tipos:
+        datos["tipos_socio"] = list(tipos)
+    descripcion = _proyecto_respondido(seccion)
+    if descripcion:
+        datos["proyecto_descripcion"] = descripcion
+    encuestas = _encuestas_aplicadas(seccion)
+    if encuestas:
+        datos["encuestas_aplicadas"] = encuestas
+
     nivel = _nivel_respondido(seccion)
     if nivel:
         datos["nivel"] = nivel
@@ -226,6 +303,11 @@ def precargar(version, preguntas, seccion, usuario=None):
         if pregunta.tipo in (c.LISTA, c.ALTERNATIVA_UNICA):
             valor = _valor_opcion(pregunta, valor)
             if valor is None:
+                continue
+        elif pregunta.tipo == c.SELECCION_MULTIPLE:
+            valores = valor if isinstance(valor, (list, tuple)) else [valor]
+            valor = [v for v in (_valor_opcion(pregunta, x) for x in valores) if v is not None]
+            if not valor:
                 continue
         elif pregunta.tipo in c.TIPOS_CON_OPCIONES:
             continue

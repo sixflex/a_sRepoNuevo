@@ -18,8 +18,11 @@
 
     </div>
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <h5 class="mb-0">Cartas de esta sección</h5>
+        {% url 'cartas:solicitar_carta_docente' seccion.id as url_solicitar %}<a href="{% url_con_volver url_solicitar %}" class="btn btn-sm btn-ua-outline">
+            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Solicitar carta
+        </a>
     </div>
 
     {% for carta in cartas %}

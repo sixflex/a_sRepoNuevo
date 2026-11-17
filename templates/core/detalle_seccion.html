@@ -8,8 +8,8 @@
 {# Ficha única de la sección: la usan el Coordinador y el Docente (vista_coordinador). #}
 <div class="container-fluid py-2 ficha-seccion">
 
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
-        <div>
+    <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-3 gap-lg-4 mb-4 seccion-cabecera">
+        <div class="flex-grow-1 seccion-cabecera-texto" style="min-width: 0;">
             {% if vista_coordinador %}{% url 'seccion_list' as url_volver %}{% volver url_volver "Volver a Secciones / NRC" %}{% else %}{% url 'core:docente' as url_volver %}{% volver url_volver "Volver a mis secciones" %}{% endif %}
             <h1 class="h2 fw-bold text-dark mb-1">
                 {{ seccion.asignatura.nombre }}
@@ -22,19 +22,41 @@
                     Información académica y herramientas disponibles para la sección.
                 {% endif %}
             </p>
-        </div>
-
-        <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-light text-dark border px-3 py-2">
-                NRC {{ seccion.nrc }}
-            </span>
-
             {% if vista_coordinador %}
-                <a href="{% url 'seccion_update' seccion.id %}" class="btn btn-sm btn-outline-secondary">
+                <a href="{% url 'seccion_update' seccion.id %}" class="btn btn-sm btn-outline-secondary mt-2">
                     <i class="bi bi-pencil me-1" aria-hidden="true"></i>Editar
                 </a>
             {% endif %}
         </div>
+
+        {# La Ruta A+S arriba, junto al título: es lo principal de la sección. #}
+        {% if seccion.ruta_asignada %}
+          <div class="flex-shrink-0" style="width: 340px; max-width: 100%;">
+            <div class="ruta-cabecera" aria-label="Ruta del Docente A+S">
+                <div class="d-flex justify-content-between align-items-center small text-muted mb-1">
+                    <span class="d-flex align-items-center gap-2">
+                        Avance actual
+                        <span class="badge bg-secondary">
+                            {% if seccion.ruta_asignada.estado == "COMPLETADA" %}Completada{% else %}En progreso{% endif %}
+                        </span>
+                    </span>
+                    <strong class="text-dark">{{ seccion.ruta_asignada.porcentaje_final|default:"0"|floatformat:0 }}%</strong>
+                </div>
+                <div class="avance-mini mb-3" aria-hidden="true">
+                    <span style="width: {{ seccion.ruta_asignada.porcentaje_final|default:'0'|floatformat:0 }}%"></span>
+                </div>
+                {% if vista_coordinador %}
+                    <a href="{% url 'rutas:detalle_ruta_coordinacion' seccion.ruta_asignada.id %}?volver={{ request.get_full_path|urlencode }}" class="btn btn-rojo btn-sm w-100">
+                        Ver Ruta y evidencias
+                    </a>
+                {% else %}
+                    <a href="{% url 'rutas:detalle_ruta_docente' seccion.ruta_asignada.id %}?desde=seccion" class="btn btn-rojo btn-sm w-100">
+                        Ver mi Ruta A+S
+                    </a>
+                {% endif %}
+            </div>
+          </div>
+        {% endif %}
     </div>
 
     <div class="ficha-grid ficha-grid--2">
@@ -158,49 +180,23 @@
                     </div>
                 </div>
             </div>
-        {% endif %}
 
-        {% if seccion.ruta_asignada %}
-            <div class="col-12 {% if not vista_coordinador %}col-md-6 col-xl-3{% endif %}">
-                <div class="accion-card{% if vista_coordinador %} accion-card--fila{% endif %}">
-                    <div class="accion-card-cuerpo">
-                        <h2 class="accion-card-titulo">
-                            <i class="bi bi-list-check" aria-hidden="true"></i>Ruta del Docente A+S
-                            <span class="badge bg-secondary">
-                                {% if seccion.ruta_asignada.estado == "COMPLETADA" %}Completada{% else %}En progreso{% endif %}
-                            </span>
-                        </h2>
-                        <p class="accion-card-texto">
-                            {% if vista_coordinador %}
-                                Avance de las actividades de la Ruta y evidencias cargadas por el docente.
-                            {% else %}
-                                Consulta y registra el avance de las actividades de tu Ruta A+S.
-                            {% endif %}
-                        </p>
-                    </div>
-                    <div class="accion-card-avance mb-3">
-                        <div class="d-flex justify-content-between small text-muted mb-1">
-                            <span>Avance actual</span>
-                            <strong class="text-dark">{{ seccion.ruta_asignada.porcentaje_final|default:"0"|floatformat:0 }}%</strong>
-                        </div>
-                        <div class="avance-mini" aria-hidden="true">
-                            <span style="width: {{ seccion.ruta_asignada.porcentaje_final|default:'0'|floatformat:0 }}%"></span>
-                        </div>
-                    </div>
-                    <div class="accion-card-pie">
-                        {% if vista_coordinador %}
-                            <a href="{% url 'rutas:detalle_ruta_coordinacion' seccion.ruta_asignada.id %}?volver={{ request.get_full_path|urlencode }}" class="btn btn-rojo btn-sm">
-                                Ver Ruta y evidencias
-                            </a>
-                        {% else %}
-                            <a href="{% url 'rutas:detalle_ruta_docente' seccion.ruta_asignada.id %}" class="btn btn-rojo btn-sm">
-                                Ver mi Ruta A+S
-                            </a>
-                        {% endif %}
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="accion-card">
+                    <h2 class="accion-card-titulo">
+                        <i class="bi bi-envelope-paper" aria-hidden="true"></i>Cartas de presentación
+                    </h2>
+                    <p class="accion-card-texto">
+                        Pide a Coordinación la carta que acredita a un grupo ante su socio y descarga las cartas emitidas.
+                    </p>
+                    <div class="accion-card-pie d-flex flex-wrap gap-2">
+                        <a href="{% url 'cartas:solicitar_carta_docente' seccion.id %}" class="btn btn-ua-outline btn-sm">Solicitar carta</a>
+                        <a href="{% url 'cartas:listar_cartas_seccion_docente' seccion.id %}" class="btn btn-light btn-sm border">Ver cartas emitidas</a>
                     </div>
                 </div>
             </div>
         {% endif %}
+
     </div>
 
 </div>

@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import views, views_plantilla
 
 app_name = "cartas"
 
@@ -64,4 +64,10 @@ urlpatterns = [
     views.listar_cartas_seccion_docente,
     name="listar_cartas_seccion_docente",
     ),
+    # Configuración → Carta oficial (Word con la firma del Coordinador).
+    path("plantilla/", views_plantilla.plantilla_carta, name="plantilla_carta"),
+    path("plantilla/<int:pk>/usar/", views_plantilla.activar_plantilla_carta, name="activar_plantilla_carta"),
+    path("plantilla/dejar-de-usar/", views_plantilla.desactivar_plantilla_carta, name="desactivar_plantilla_carta"),
+    path("plantilla/<int:pk>/ejemplo/", views_plantilla.ejemplo_plantilla_carta, name="ejemplo_plantilla_carta"),
+    path("plantilla/<int:pk>/descargar/", views_plantilla.descargar_plantilla_carta, name="descargar_plantilla_carta"),
 ]

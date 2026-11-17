@@ -164,6 +164,12 @@
                         <i class="bi bi-folder me-2" aria-hidden="true"></i>Proyectos
                     </a>
                 </li>
+
+                <li class="nav-item">
+                    <a class="nav-link {% if m == 'configuracion' %}active{% endif %}" {% if m == 'configuracion' %}aria-current="page"{% endif %} href="{% url 'comunicaciones:correo_envio' %}">
+                        <i class="bi bi-gear me-2" aria-hidden="true"></i>Configuración
+                    </a>
+                </li>
             {% endif %}
 
             {% if grupo == "Docente" %}

@@ -7,6 +7,7 @@ Deja una base de desarrollo lista para revisar el portal, en el orden correcto:
     4. Plantillas de correo.
     5. Datos de demostración (docentes, secciones, equipos, socios, respuestas...).
     6. Vínculo de los dos formularios nuevos a la Ruta (queda una versión en borrador).
+    7. Noticias A+S del portal público.
 
 Cada paso se puede repetir: lo que ya existe no se duplica. Para partir de cero:
 
@@ -20,6 +21,7 @@ from django.core.management.base import BaseCommand, CommandError
 from academico.models import Seccion
 from encuestas import constantes as c
 from encuestas import services as encuestas_services
+from encuestas.definiciones.formalizacion_acuerdos import DEFINICION as ACUERDO_FORMAL
 from encuestas.definiciones.formulario_proyecto_as import DEFINICION as PROYECTO_AS
 from encuestas.definiciones.registro_socio_comunitario import DEFINICION as REGISTRO_SOCIO
 from encuestas.models import FormularioVersion
@@ -28,6 +30,12 @@ from encuestas.models import FormularioVersion
 class Command(BaseCommand):
     help = "Carga en orden todo lo necesario para desarrollar y revisar el portal."
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--liviano", action="store_true",
+            help="Datos de demostración reducidos (para Render): Ruta, formularios y panel con pocas filas.",
+        )
+
     def paso(self, numero, texto):
         self.stdout.write(self.style.MIGRATE_HEADING(f"\n{numero}. {texto}"))
 
@@ -35,10 +43,11 @@ class Command(BaseCommand):
         self.paso(1, "Formularios del cliente")
         call_command("cargar_formularios", stdout=self.stdout)
 
-        self.paso(2, "Formulario del Proyecto A+S y Registro de Socio Comunitario")
+        self.paso(2, "Formulario del Proyecto A+S, Acuerdo formal y Registro de Socio Comunitario")
         call_command("cargar_formulario_proyecto_as", stdout=self.stdout)
+        call_command("cargar_formalizacion_acuerdos", stdout=self.stdout)
         call_command("cargar_registro_socio_comunitario", stdout=self.stdout)
-        for definicion in (PROYECTO_AS, REGISTRO_SOCIO):
+        for definicion in (PROYECTO_AS, ACUERDO_FORMAL, REGISTRO_SOCIO):
             self.publicar_si_falta(definicion["codigo"])
 
         self.paso(3, "Ruta del Docente A+S")
@@ -55,12 +64,15 @@ class Command(BaseCommand):
             ))
         else:
             try:
-                call_command("cargar_datos_demo", stdout=self.stdout)
+                call_command("cargar_datos_demo", liviano=options.get("liviano", False), stdout=self.stdout)
             except CommandError as error:
                 self.stdout.write(self.style.WARNING(f"No se cargaron los datos de demostración: {error}"))
 
         self.paso(6, "Formularios nuevos en la Ruta (versión en borrador)")
         call_command("vincular_formularios_ruta", stdout=self.stdout)
+
+        self.paso(7, "Noticias del portal público")
+        call_command("cargar_noticias", ocultar_relleno=True, stdout=self.stdout)
 
         self.stdout.write(self.style.SUCCESS(
             "\nBase de desarrollo lista. Coordinador: usuario «coordinador». "

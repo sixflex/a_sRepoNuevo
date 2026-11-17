@@ -17,13 +17,15 @@ from django.db.models import Count, Q
 from django.urls import reverse
 
 from core.qr import qr_base64
+from core.volver import con_volver
 from socios.services import socios_elegidos_seccion
 from encuestas.definiciones.registro_reflexion import CODIGO as CODIGO_REFLEXION
 from encuestas.definiciones.registro_reflexion import DINAMICAS, MOMENTO_POR_ORDEN
 from encuestas.models import FormularioVersion, RespuestaOpcion
 from encuestas import precarga
 
-from .services import obtener_o_crear_enlace_seccion, url_recurso
+from . import acuerdo
+from .services import formularios_qr_de_proceso, obtener_o_crear_enlace_seccion, url_recurso
 
 # Orden de la actividad -> código del formulario que se llena en ella.
 FORMULARIO_POR_ORDEN = {
@@ -42,7 +44,7 @@ QUE_HACER = {
     5: "Llena el formulario del proyecto. Los datos de la sección ya vienen escritos.",
     9: "Arma la pauta de evaluación y súbela aquí.",
     10: "Si un grupo la necesita, pide la carta a Coordinación.",
-    11: "Llena el acuerdo de cada grupo, imprímelo, que lo firmen todos y sube el escaneado.",
+    11: "Llena el acuerdo de cada grupo, descárgalo en PDF, imprímelo, que lo firmen todos y sube el escaneado.",
     12: "Elige una de las dinámicas sugeridas, hazla en clase y registra cuál hiciste.",
     13: "Muestra el QR: un estudiante por grupo registra a su socio.",
     15: "Elige una de las dinámicas sugeridas, hazla en clase y registra cuál hiciste.",
@@ -70,10 +72,28 @@ TEXTO_BOTON = {
     23: ("Llenar resumen", "bi-pencil-square"),
 }
 
+# Material de apoyo de la Ruta de la Coordinación (PDF interactivo de Jorge
+# Reino): las tres reflexiones enlazan la misma propuesta de dinámicas.
+MATERIAL_REFLEXION = [
+    {"texto": "Propuesta de reflexiones (PDF)", "icono": "bi-file-earmark-pdf",
+     "url": "https://drive.google.com/file/d/1WMAUxPFofsuq83kIBsDYFUiGGc43tmy7/view"},
+    {"texto": "Presentación «Reflexión: una propuesta»", "icono": "bi-easel",
+     "url": "https://docs.google.com/presentation/d/1LSSh6Qp5PtUXP6N1dEutekKVSj1nSWkW/edit"},
+    {"texto": "Actividades de reflexión A+S (UC)", "icono": "bi-box-arrow-up-right",
+     "url": "https://cddoc.uc.cl/programas/actividades-de-reflexion-as/"},
+]
+MATERIAL_POR_ORDEN = {
+    10: [{"texto": "Cómo pedir la carta (infografía)", "icono": "bi-file-earmark-pdf",
+          "url": "https://drive.google.com/file/d/1u9PZ1gcfUDm91eYJaYetrJI4fIprZmP8/view"}],
+    12: MATERIAL_REFLEXION,
+    15: MATERIAL_REFLEXION,
+    17: MATERIAL_REFLEXION,
+}
+
 NOTA_PRECARGA = {
     5: "Docente, asignatura, carrera y grupos ya vienen llenos.",
     11: "Docente y asignatura ya vienen llenos.",
-    23: "Tus datos, la asignatura y los totales de estudiantes y socios ya vienen llenos.",
+    23: "Tus datos, la asignatura, los totales, el tipo de socios y lo que escribiste del proyecto ya vienen llenos.",
 }
 
 
@@ -125,7 +145,7 @@ def preparar_actividades(request, seccion_ruta, actividades):
     """
     Agrega a cada actividad lo que muestra la Ruta paso a paso:
     accion (botón principal), que_hacer, nota_precarga, progreso,
-    evidencia_pedida, qr (actividad 13) y los recursos de "¿Cómo se hace?".
+    evidencia_pedida, qrs (popup de las actividades 13 y 19) y los recursos de "¿Cómo se hace?".
     """
     seccion = seccion_ruta.seccion
     cache = {}
@@ -142,7 +162,8 @@ def preparar_actividades(request, seccion_ruta, actividades):
         actividad.evidencia_pedida = EVIDENCIA_PEDIDA.get(orden)
         actividad.progreso = None
         actividad.accion = None
-        actividad.qr = None
+        actividad.qrs = []
+        actividad.qr_pantalla_completa = None
         actividad.enlace_formulario = None
 
         version = _version_formulario(ruta_actividad, cache)
@@ -155,15 +176,19 @@ def preparar_actividades(request, seccion_ruta, actividades):
             url = reverse("encuestas:responder", args=[enlace.token])
             if orden == 13:
                 absoluta = request.build_absolute_uri(url)
-                actividad.qr = {"url": absoluta, "qr_base64": qr_base64(absoluta)}
-                actividad.accion = {"texto": "Mostrar QR", "icono": "bi-qr-code", "colapsa": f"qr-{actividad.id}"}
+                actividad.qrs = [{
+                    "titulo": "Registro de Socio Comunitario",
+                    "ayuda": "Un estudiante por grupo escanea el QR y registra a su socio.",
+                    "url": absoluta, "qr_base64": qr_base64(absoluta),
+                }]
+                actividad.accion = {"texto": "Mostrar QR", "icono": "bi-qr-code", "modal": f"qr-{actividad.id}"}
             else:
                 texto, icono = TEXTO_BOTON.get(orden, ("Llenar formulario", "bi-pencil-square"))
                 actividad.accion = {"texto": texto, "icono": icono, "url": url, "nueva_pestana": True}
         elif orden == 10:
             actividad.accion = {
                 "texto": "Pedir carta", "icono": "bi-envelope-paper",
-                "url": reverse("cartas:listar_cartas_seccion_docente", args=[seccion.id]),
+                "url": reverse("cartas:solicitar_carta_docente", args=[seccion.id]),
             }
         elif orden == 6:
             # Seleccionar Socios Comunitarios: los que elija son los que verán
@@ -172,11 +197,14 @@ def preparar_actividades(request, seccion_ruta, actividades):
                 "texto": "Elegir socios", "icono": "bi-building",
                 "url": f"{reverse('socios:catalogo_docente')}?seccion={seccion.id}",
             }
-        elif orden == 19 and actividad.url_recurso:
-            actividad.accion = {
-                "texto": "Mostrar QR de encuestas", "icono": "bi-qr-code",
-                "url": actividad.url_recurso, "nueva_pestana": True,
-            }
+        elif orden == 19:
+            # Las encuestas de evaluación A+S (estudiantes y docentes) en un popup.
+            actividad.qrs = formularios_qr_de_proceso(request, "EVALUACION_AS")
+            if actividad.qrs:
+                actividad.accion = {"texto": "Mostrar QR de encuestas", "icono": "bi-qr-code", "modal": f"qr-{actividad.id}"}
+                actividad.qr_pantalla_completa = (
+                    f"{reverse('rutas:formularios_qr')}?proceso=EVALUACION_AS&ruta={seccion_ruta.id}"
+                )
         elif orden == 1 and actividad.url_recurso:
             actividad.accion = {
                 "texto": "Ir al curso", "icono": "bi-box-arrow-up-right",
@@ -194,6 +222,21 @@ def preparar_actividades(request, seccion_ruta, actividades):
             actividad.progreso = f"{socios_elegidos} socio{'s' if socios_elegidos != 1 else ''} elegido{'s' if socios_elegidos != 1 else ''}"
         elif orden in MOMENTO_POR_ORDEN and reflexiones.get(MOMENTO_POR_ORDEN[orden]):
             actividad.progreso = "Registrada"
+
+        actividad.material = MATERIAL_POR_ORDEN.get(orden, [])
+        actividad.acuerdos = []
+        actividad.acuerdo_en_blanco = None
+        if version is not None and version.plantilla.codigo == precarga.FORMALIZACION_ACUERDOS:
+            url_acuerdo = reverse("rutas:descargar_acuerdo", args=[actividad.id])
+            actividad.acuerdo_en_blanco = url_acuerdo
+            actividad.acuerdos = [
+                {"texto": acuerdo.nombre_acuerdo(respuesta, numero), "url": f"{url_acuerdo}?respuesta={respuesta.id}"}
+                for numero, respuesta in enumerate(acuerdo.acuerdos_de(seccion), start=1)
+            ]
+
+        # Lo que se abre en la misma pestaña vuelve a la Ruta con su "Volver".
+        if actividad.accion and actividad.accion.get("url") and not actividad.accion.get("nueva_pestana"):
+            actividad.accion["url"] = con_volver(actividad.accion["url"], request)
 
         actividad.dinamicas = DINAMICAS.get(MOMENTO_POR_ORDEN.get(orden), [])
         actividad.ejemplo_evidencia = "Ej.: Grupo 2" if orden == 11 else "Descripción (opcional)"
