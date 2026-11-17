@@ -49,16 +49,21 @@ def volver(context, url_defecto, texto="Volver"):
     """
     Enlace "Volver" único del portal: arriba a la izquierda, sobre el título.
 
-    Si la página se abrió desde otra con ?volver=<ruta> (por ejemplo, "Ver
-    socio" desde el catálogo de Proyectos), vuelve a esa página; si no, a
-    url_defecto. Solo acepta rutas del mismo sitio.
+    Si la página se abrió desde otra con ?volver=<ruta> (por ejemplo, Solicitar
+    carta desde la Ruta), vuelve a esa página aunque después se usen filtros o
+    se envíe un formulario (core/volver.py); si no, a url_defecto.
     """
-    from django.utils.http import url_has_allowed_host_and_scheme
+    from core.volver import destino_volver, texto_volver
 
-    request = context.get("request")
-    destino = request.GET.get("volver", "") if request else ""
-    if destino.startswith("/") and url_has_allowed_host_and_scheme(
-        destino, allowed_hosts={request.get_host()}, require_https=request.is_secure(),
-    ):
-        return {"url": destino, "texto": "Volver"}
+    destino = destino_volver(context.get("request"))
+    if destino:
+        return {"url": destino, "texto": texto_volver(destino)}
     return {"url": url_defecto, "texto": texto}
+
+
+@register.simple_tag(takes_context=True)
+def url_con_volver(context, url):
+    """La url con ?volver=<esta página>, para que su "Volver" regrese aquí."""
+    from core.volver import con_volver
+
+    return con_volver(url, context["request"])

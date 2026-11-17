@@ -14,7 +14,6 @@ from django.contrib.auth.views import redirect_to_login
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
-from socios.constantes import ESTADOS_SOCIO_SELECCIONABLES
 from socios.models import SocioComunitario
 from socios.services import asociar_socio_a_equipo, historial_socios_equipo, socios_elegidos_seccion, socios_para_registro_equipos
 
@@ -1095,12 +1094,20 @@ def gestionar_equipos_seccion(request, seccion_id):
         .order_by("numero_grupo")
     )
 
+    equipos = list(equipos)
+    resumen = {
+        "equipos": len(equipos),
+        "estudiantes": sum(len(equipo.integrantes.all()) for equipo in equipos),
+        "con_socio": sum(1 for equipo in equipos if equipo.socio_vigente),
+    }
+
     return render(
         request,
         "proyectos/gestionar_equipos_seccion.html",
         {
             "seccion": seccion,
             "equipos": equipos,
+            "resumen": resumen,
         },
     )
 
@@ -1396,16 +1403,9 @@ def gestionar_equipo(request, equipo_id):
                 )
 
             
-            socio_nuevo = (
-                SocioComunitario.objects
-                .filter(
-                    pk=socio_nuevo_id,
-                    activo=True,
-                    es_provisional=False,
-                    estado_revision__in=ESTADOS_SOCIO_SELECCIONABLES,
-                )
-                .first()
-            )
+            # Solo los socios elegidos para la sección (el mismo listado del popup).
+            socios_permitidos, _ = socios_para_registro_equipos(equipo.seccion)
+            socio_nuevo = socios_permitidos.filter(pk=socio_nuevo_id).first() if socio_nuevo_id.isdigit() else None
 
             if socio_nuevo is None:
                 messages.error(
@@ -1476,17 +1476,12 @@ def gestionar_equipo(request, equipo_id):
         )
     )
 
-    socios_disponibles = (
-        SocioComunitario.objects
-        .filter(
-            activo=True,
-            es_provisional=False,
-            estado_revision__in=ESTADOS_SOCIO_SELECCIONABLES,
-        )
-        .order_by(
-            "nombre_organizacion"
-        )
-    )
+    # RF-SC-03: los socios que el docente eligió para la sección; si no eligió
+    # ninguno, el catálogo completo (igual que en el registro de equipos).
+    socios_disponibles, socios_de_la_seccion = socios_para_registro_equipos(equipo.seccion)
+    socio_actual = equipo.socio_vigente
+    if socio_actual is not None:
+        socios_disponibles = socios_disponibles.exclude(pk=socio_actual.pk)
 
     # Cambios de socio hechos por docentes, desde AUDITORIA_CAMBIO
     # (mismas columnas que el antiguo HistorialSocioEquipo).
@@ -1507,6 +1502,7 @@ def gestionar_equipo(request, equipo_id):
             "integrantes": integrantes,
             "etiquetas": etiquetas,
             "socios_disponibles": socios_disponibles,
+            "socios_de_la_seccion": socios_de_la_seccion,
             "historial_socios": historial_socios,
             "participaciones_socio": participaciones_socio,
         },

@@ -76,12 +76,19 @@
                             </td>
 
                             <td>
+                                {# Candado: abierto mientras la Dirección puede responder, cerrado si no. #}
                                 {% if e.esta_vigente %}
-                                    <span class="badge bg-success">Vigente</span>
+                                    <span class="badge bg-success" title="Abierto: la Dirección de Carrera puede responder">
+                                        <i class="bi bi-unlock-fill me-1" aria-hidden="true"></i>Abierto
+                                    </span>
                                 {% elif e.activo %}
-                                    <span class="badge bg-warning text-dark">Expirado</span>
+                                    <span class="badge bg-warning text-dark" title="Cerrado: pasó la fecha de expiración">
+                                        <i class="bi bi-lock-fill me-1" aria-hidden="true"></i>Expirado
+                                    </span>
                                 {% else %}
-                                    <span class="badge bg-danger">Inactivo</span>
+                                    <span class="badge bg-secondary" title="Cerrado: lo desactivó Coordinación">
+                                        <i class="bi bi-lock-fill me-1" aria-hidden="true"></i>Cerrado
+                                    </span>
                                 {% endif %}
                             </td>
 
@@ -140,11 +147,12 @@
                                     <button
                                         type="submit"
                                         class="btn btn-sm {% if e.activo %}btn-outline-danger{% else %}btn-outline-success{% endif %} ms-1"
+                                        title="{% if e.activo %}Cerrar el enlace: la Dirección ya no podrá responder{% else %}Abrir el enlace otra vez{% endif %}"
                                     >
                                         {% if e.activo %}
-                                            Desactivar
+                                            <i class="bi bi-lock me-1" aria-hidden="true"></i>Cerrar
                                         {% else %}
-                                            Activar
+                                            <i class="bi bi-unlock me-1" aria-hidden="true"></i>Abrir
                                         {% endif %}
                                     </button>
                                 </form>

@@ -29,9 +29,9 @@
                 Aún no eliges socios para esta sección: los estudiantes verán el catálogo completo.
             {% endif %}
         </span>
-        <a href="{% url 'socios:catalogo_docente' %}?seccion={{ seccion.id }}" class="btn btn-sm btn-ua-outline">
+        {% url 'socios:catalogo_docente' as url_catalogo %}{% with id_txt=seccion.id|stringformat:'s' %}<a href="{% url_con_volver url_catalogo|add:'?seccion='|add:id_txt %}" class="btn btn-sm btn-ua-outline">
             {% if total_socios_elegidos %}Ver o cambiar socios{% else %}Elegir socios{% endif %}
-        </a>
+        </a>{% endwith %}
     </div>
 
     <!-- ESTADO DEL FORMULARIO -->
@@ -266,4 +266,4 @@ function copiarEnlace() {
 }
 </script>
 
-{% endblock %}
+{% endblock %}

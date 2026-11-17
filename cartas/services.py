@@ -318,3 +318,62 @@ def enviar_carta_docente(documento):
         },
         carta_documento=documento,
     )
+
+
+DIAS_AVISO_CARTA_APROBADA = 14
+
+
+def avisos_cartas_docente(usuario):
+    """
+    Avisos de cartas para el Inicio del Docente: solicitudes que la
+    Coordinación observó (hasta que las corrija) y cartas aprobadas en los
+    últimos DIAS_AVISO_CARTA_APROBADA días, con el correo al que se enviaron.
+    """
+    from django.urls import reverse
+
+    base = (
+        SolicitudCarta.objects
+        .filter(docente_derivador__usuario=usuario)
+        .select_related("seccion__asignatura")
+    )
+    avisos = []
+
+    for solicitud in base.filter(estado="OBSERVADA").order_by("-fecha_solicitud"):
+        avisos.append({
+            "tipo": "observada",
+            "titulo": f"Carta para {solicitud.institucion_receptora} observada",
+            "detalle": solicitud.motivo_observacion or "La Coordinación pidió corregir la solicitud.",
+            "seccion": solicitud.seccion,
+            "url": reverse("cartas:editar_solicitud_docente", args=[solicitud.id]),
+            "accion": "Corregir solicitud",
+            "fecha": solicitud.fecha_solicitud,
+        })
+
+    desde = timezone.now() - timedelta(days=DIAS_AVISO_CARTA_APROBADA)
+    aprobadas = (
+        base.filter(estado="APROBADA", fecha_aprobacion__gte=desde)
+        .prefetch_related("documentos__envios_correo")
+        .order_by("-fecha_aprobacion")
+    )
+    for solicitud in aprobadas:
+        envios = [
+            envio
+            for documento in solicitud.documentos.all()
+            for envio in documento.envios_correo.all()
+        ]
+        enviada = next((envio for envio in sorted(envios, key=lambda e: -e.id) if envio.resultado == "OK"), None)
+        if enviada:
+            detalle = f"Se envió a tu correo {enviada.destinatario}. Revisa tu bandeja de entrada."
+        else:
+            detalle = "El correo todavía no sale. Puedes descargarla desde las cartas de la sección."
+        avisos.append({
+            "tipo": "aprobada",
+            "titulo": f"Carta para {solicitud.institucion_receptora} aprobada",
+            "detalle": detalle,
+            "seccion": solicitud.seccion,
+            "url": reverse("cartas:listar_cartas_seccion_docente", args=[solicitud.seccion_id]),
+            "accion": "Ver cartas",
+            "fecha": solicitud.fecha_aprobacion,
+        })
+
+    return avisos

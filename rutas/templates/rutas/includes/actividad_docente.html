@@ -18,6 +18,22 @@ Los datos los arma rutas/paso_a_paso.py.
             <div class="ruta-nota"><i class="bi bi-magic me-1" aria-hidden="true"></i>{{ actividad.nota_precarga }}</div>
         {% endif %}
 
+        {# Material de la Ruta de la Coordinación y acuerdos listos para firmar: siempre a la vista. #}
+        {% if actividad.material or actividad.acuerdos %}
+            <div class="ruta-descargas">
+                {% for material in actividad.material %}
+                    <a href="{{ material.url }}" target="_blank" rel="noopener" class="btn btn-light-ua btn-sm">
+                        <i class="bi {{ material.icono }} me-1" aria-hidden="true"></i>{{ material.texto }}
+                    </a>
+                {% endfor %}
+                {% for acuerdo in actividad.acuerdos %}
+                    <a href="{{ acuerdo.url }}" target="_blank" rel="noopener" class="btn btn-light-ua btn-sm">
+                        <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>{{ acuerdo.texto }} · para firmar
+                    </a>
+                {% endfor %}
+            </div>
+        {% endif %}
+
         <div class="ruta-links">
             <button type="button" class="ruta-ayuda" data-bs-toggle="collapse" data-bs-target="#como-{{ actividad.id }}"
                     aria-expanded="false" aria-controls="como-{{ actividad.id }}">
@@ -32,17 +48,8 @@ Los datos los arma rutas/paso_a_paso.py.
             {% endif %}{% endwith %}
         </div>
 
-        {% if actividad.qr %}
-            <div class="collapse" id="qr-{{ actividad.id }}">
-                <div class="ruta-detalle d-flex flex-wrap align-items-center gap-3">
-                    <img src="data:image/png;base64,{{ actividad.qr.qr_base64 }}" alt="Código QR del formulario" width="150" height="150" class="border rounded bg-white p-2">
-                    <div class="flex-grow-1">
-                        <p class="small text-muted mb-2">Proyecta este QR o comparte el enlace con un estudiante por grupo.</p>
-                        <input type="text" class="form-control form-control-sm mb-2" value="{{ actividad.qr.url }}" readonly onclick="this.select()" aria-label="Enlace del formulario">
-                        <a href="{{ actividad.qr.url }}" target="_blank" rel="noopener" class="btn btn-light-ua btn-sm"><i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Abrir formulario</a>
-                    </div>
-                </div>
-            </div>
+        {% if actividad.qrs %}
+            {% include "rutas/includes/modal_qr.html" %}
         {% endif %}
 
         <div class="collapse" id="como-{{ actividad.id }}">
@@ -53,6 +60,14 @@ Los datos los arma rutas/paso_a_paso.py.
                     <p class="fw-semibold small mb-1">Dinámicas sugeridas para este momento</p>
                     <ul class="small mb-2">{% for dinamica in actividad.dinamicas %}<li>{{ dinamica }}</li>{% endfor %}</ul>
                     <p class="small text-muted mb-2">También puedes hacer otra; al registrarla eliges «Otra dinámica».</p>
+                {% endif %}
+
+                {% if actividad.acuerdo_en_blanco %}
+                    <p class="small mb-2">
+                        ¿Prefieres llenarlo a mano?
+                        <a href="{{ actividad.acuerdo_en_blanco }}" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>Descarga el acuerdo en blanco</a>.
+                        Firman el docente, el socio comunitario, la Dirección de Carrera y los estudiantes.
+                    </p>
                 {% endif %}
 
                 {% if ra.archivo_recurso or actividad.recurso_extra %}
@@ -113,7 +128,7 @@ Los datos los arma rutas/paso_a_paso.py.
             {% if ruta_abierta %}
                 <form method="post" action="{% url 'rutas:completar_actividad' actividad.id %}">
                     {% csrf_token %}
-                    <button type="submit" class="ruta-marcar">Deshacer</button>
+                    <button type="submit" class="ruta-marcar" title="Vuelve a dejarla pendiente"><i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Deshacer</button>
                 </form>
             {% endif %}
         {% elif ruta_abierta %}
@@ -122,6 +137,10 @@ Los datos los arma rutas/paso_a_paso.py.
                     <a href="{{ actividad.accion.url }}" class="btn btn-ua btn-sm"{% if actividad.accion.nueva_pestana %} target="_blank" rel="noopener"{% endif %}>
                         <i class="bi {{ actividad.accion.icono }} me-1" aria-hidden="true"></i>{{ actividad.accion.texto }}
                     </a>
+                {% elif actividad.accion.modal %}
+                    <button type="button" class="btn btn-ua btn-sm" data-bs-toggle="modal" data-bs-target="#{{ actividad.accion.modal }}">
+                        <i class="bi {{ actividad.accion.icono }} me-1" aria-hidden="true"></i>{{ actividad.accion.texto }}
+                    </button>
                 {% else %}
                     <button type="button" class="btn btn-ua btn-sm" data-bs-toggle="collapse" data-bs-target="#{{ actividad.accion.colapsa }}" aria-controls="{{ actividad.accion.colapsa }}">
                         <i class="bi {{ actividad.accion.icono }} me-1" aria-hidden="true"></i>{{ actividad.accion.texto }}
@@ -130,12 +149,16 @@ Los datos los arma rutas/paso_a_paso.py.
                 {% if actividad.progreso %}<div class="ruta-progreso">{{ actividad.progreso }}</div>{% endif %}
                 <form method="post" action="{% url 'rutas:completar_actividad' actividad.id %}">
                     {% csrf_token %}
-                    <button type="submit" class="ruta-marcar"><i class="bi bi-check2 me-1" aria-hidden="true"></i>Marcar como hecha</button>
+                    <button type="submit" class="btn btn-sm ruta-hecha-btn" title="Avísale a Coordinación que ya hiciste esta actividad">
+                        <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Marcar como hecha
+                    </button>
                 </form>
             {% else %}
                 <form method="post" action="{% url 'rutas:completar_actividad' actividad.id %}">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-light-ua btn-sm"><i class="bi bi-check2 me-1" aria-hidden="true"></i>Marcar como hecha</button>
+                    <button type="submit" class="btn btn-sm ruta-hecha-btn" title="Avísale a Coordinación que ya hiciste esta actividad">
+                        <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Marcar como hecha
+                    </button>
                 </form>
             {% endif %}
         {% else %}

@@ -1,0 +1,35 @@
+{% comment %}
+Popup con los QR de una actividad (13: registro de socio; 19: encuestas de
+evaluación). Cada QR grande, con su enlace debajo para copiarlo.
+{% endcomment %}
+<div class="modal fade" id="qr-{{ actividad.id }}" tabindex="-1" aria-labelledby="qr-{{ actividad.id }}-titulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable{% if actividad.qrs|length > 1 %} modal-xl{% else %} modal-lg{% endif %}">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="qr-{{ actividad.id }}-titulo">{{ actividad.ruta_actividad.nombre }}</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4 justify-content-center">
+                    {% for qr in actividad.qrs %}
+                        <div class="{% if actividad.qrs|length > 1 %}col-md-6{% else %}col-12{% endif %} text-center">
+                            <h3 class="h6 fw-semibold mb-1">{{ qr.titulo }}</h3>
+                            {% if qr.ayuda %}<p class="small text-muted mb-2">{{ qr.ayuda }}</p>{% endif %}
+                            <img src="data:image/png;base64,{{ qr.qr_base64 }}" alt="Código QR de {{ qr.titulo }}" class="ruta-qr-grande">
+                            <div class="input-group input-group-sm mt-3 mx-auto ruta-qr-enlace">
+                                <input type="text" class="form-control" value="{{ qr.url }}" readonly onclick="this.select()" aria-label="Enlace de {{ qr.titulo }}">
+                                <button type="button" class="btn btn-outline-secondary" data-copiar="{{ qr.url }}"><i class="bi bi-clipboard me-1" aria-hidden="true"></i>Copiar</button>
+                            </div>
+                            <a href="{{ qr.url }}" target="_blank" rel="noopener" class="small d-inline-block mt-2"><i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Abrir formulario</a>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% if actividad.qr_pantalla_completa %}
+                <div class="modal-footer">
+                    <a href="{{ actividad.qr_pantalla_completa }}" class="btn btn-light-ua btn-sm"><i class="bi bi-arrows-fullscreen me-1" aria-hidden="true"></i>Ver en página aparte (para descargar los QR)</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

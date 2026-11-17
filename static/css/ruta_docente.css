@@ -44,6 +44,13 @@
 .ruta-progreso { font-size: .9rem; color: var(--ua-text-muted); }
 .ruta-marcar { background: none; border: 0; padding: 0; font-size: .92rem; color: var(--ua-text-secondary); }
 .ruta-marcar:hover { color: var(--ua-success); text-decoration: underline; }
+/* "Marcar como hecha": un botón de verdad, no texto suelto. */
+.ruta-hecha-btn { border: 1.5px solid var(--ua-success); color: var(--ua-success); background: #fff; font-weight: 600; transition: background-color .15s ease, color .15s ease; }
+.ruta-hecha-btn:hover, .ruta-hecha-btn:focus-visible { background: var(--ua-success); color: #fff; }
+/* Popup de QR: grande para proyectarlo en la sala. */
+.ruta-qr-grande { width: min(320px, 80vw); height: auto; background: #fff; padding: 8px; border: 1px solid var(--ua-border, #e5e7eb); border-radius: 12px; }
+.ruta-qr-enlace { max-width: 460px; }
+.ruta-descargas { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .ruta-pill { display: inline-flex; align-items: center; gap: 4px; font-size: .85rem; font-weight: 700; border-radius: 999px; padding: 4px 12px; }
 .ruta-pill.ok { background: var(--ua-success-soft); color: var(--ua-success); }
 .ruta-pill.pend { background: var(--ua-warning-soft); color: var(--ua-warning); }
@@ -70,7 +77,9 @@
 .ruta-resumen { font-size: 1rem; color: var(--ua-text-secondary); }
 .ruta-pasos .ruta-etapa-cab { padding: 20px 22px 12px; }
 .ruta-pasos .ruta-etapa-cab h2 { font-size: 1.4rem; }
-.ruta-pasos .ruta-acc .btn { font-size: .95rem; padding: .4rem .9rem; }
+/* Botón principal de cada actividad: todos del mismo tamaño. "Marcar como hecha"
+   también igual en todas, 15 % más chico que el principal. */
+.ruta-pasos .ruta-acc .btn { font-size: 1rem; padding: .5rem 1rem; min-width: 200px; }
 .ruta-pasos .page-subtitle { font-size: 1.05rem; }
 @media (max-width: 767.98px) {
     .ruta-act { flex-wrap: wrap; padding: 16px; }

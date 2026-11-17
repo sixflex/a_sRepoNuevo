@@ -171,6 +171,10 @@ def _error_microsoft(request, mensaje):
 
 def _ir_a_microsoft(request):
     """Paso 1: manda a la persona a la página de Microsoft."""
+    # En desarrollo, Microsoft solo acepta volver a http://localhost (no a
+    # 127.0.0.1). Se cambia ANTES de empezar para no perder la sesión al volver.
+    if settings.DEBUG and request.get_host().split(":")[0] == "127.0.0.1":
+        return redirect(request.build_absolute_uri().replace("//127.0.0.1", "//localhost", 1))
     try:
         flujo = entra.get_conector().iniciar(
             request.build_absolute_uri(reverse("usuarios:entra_callback")),

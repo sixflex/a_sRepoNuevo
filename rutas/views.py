@@ -837,46 +837,29 @@ def formularios_qr(request):
         raise PermissionDenied
 
     proceso = request.GET.get("proceso", "").strip()
+    formularios = servicios.formularios_qr_de_proceso(request, proceso)
 
-    plantillas = FormularioPlantilla.objects.filter(
-        proceso=proceso,
-        activo=True,
-    ).order_by("titulo")
-
-    if not es_coordinador(request.user):
-        # La encuesta de socios la envía el Coordinador a fin de período
-        # (rutas:encuesta_socios); el docente proyecta solo estudiantes y docentes.
-        from .encuesta_socios import CODIGO_ENCUESTA
-
-        plantillas = plantillas.exclude(codigo=CODIGO_ENCUESTA)
-
-    enlaces = enlaces_abiertos_por_plantilla(
-        plantillas.values_list("id", flat=True)
-    )
-
-    formularios = []
-
-    for plantilla in plantillas:
-        enlace = enlaces.get(plantilla.id)
-
-        if enlace is None:
-            continue
-
-        url = request.build_absolute_uri(
-            reverse("encuestas:responder", args=[enlace.token])
-        )
-
-        formularios.append({
-            "titulo": plantilla.titulo,
-            "url": url,
-            "qr_base64": qr_base64(url),
-        })
+    # Volver a la Ruta si se llegó desde ella (?ruta=<id>); si no, a mis secciones.
+    url_volver, texto_volver = reverse("core:docente"), "Volver a mis secciones"
+    ruta_id = request.GET.get("ruta", "")
+    if ruta_id.isdigit():
+        seccion_ruta = SeccionRuta.objects.filter(pk=ruta_id).select_related("seccion").first()
+        if seccion_ruta is not None:
+            try:
+                verificar_acceso_ruta(request.user, seccion_ruta)
+            except PermissionDenied:
+                pass
+            else:
+                url_volver = reverse("rutas:detalle_ruta_docente", args=[seccion_ruta.id])
+                texto_volver = "Volver a la Ruta"
 
     return render(
         request,
         "rutas/formularios_qr.html",
         {
             "formularios": formularios,
+            "url_volver": url_volver,
+            "texto_volver": texto_volver,
         },
     )
 
@@ -1197,3 +1180,46 @@ def descargar_expediente(request, seccion_ruta_id):
         filename=nombre,
         content_type="application/zip",
     )
+
+
+@login_required
+def descargar_acuerdo(request, actividad_id):
+    """
+    Acuerdo formal en PDF para imprimir y firmar (actividad 11): el que llenó
+    el docente (?respuesta=<id>) o el formato en blanco.
+    """
+    from encuestas.models import RespuestaFormulario
+    from encuestas.precarga import FORMALIZACION_ACUERDOS
+
+    from .acuerdo import construir_pdf_acuerdo
+
+    actividad = get_object_or_404(
+        SeccionActividad.objects.select_related(
+            "seccion_ruta__seccion__asignatura",
+            "seccion_ruta__seccion__periodo",
+            "ruta_actividad__formulario_version__plantilla",
+        ),
+        id=actividad_id,
+    )
+    verificar_acceso_ruta(request.user, actividad.seccion_ruta)
+    seccion = actividad.seccion_ruta.seccion
+
+    respuesta = None
+    if request.GET.get("respuesta"):
+        respuesta = get_object_or_404(
+            RespuestaFormulario.objects.select_related("version__plantilla"),
+            pk=request.GET["respuesta"],
+            seccion=seccion,
+            version__plantilla__codigo=FORMALIZACION_ACUERDOS,
+        )
+        version = respuesta.version
+    else:
+        version = paso_a_paso._version_formulario(actividad.ruta_actividad, {})
+        if version is None or version.plantilla.codigo != FORMALIZACION_ACUERDOS:
+            raise Http404("Esta actividad no tiene acuerdo formal.")
+
+    pdf = construir_pdf_acuerdo(seccion, version, respuesta)
+    nombre = "Acuerdo formal A+S.pdf" if respuesta else "Acuerdo formal A+S (en blanco).pdf"
+    respuesta_http = HttpResponse(pdf, content_type="application/pdf")
+    respuesta_http["Content-Disposition"] = f'inline; filename="{nombre}"'
+    return respuesta_http
