@@ -17,6 +17,7 @@ from django.db.models import Count, Q
 from django.urls import reverse
 
 from core.qr import qr_base64
+from socios.services import socios_elegidos_seccion
 from encuestas.definiciones.registro_reflexion import CODIGO as CODIGO_REFLEXION
 from encuestas.definiciones.registro_reflexion import DINAMICAS, MOMENTO_POR_ORDEN
 from encuestas.models import FormularioVersion, RespuestaOpcion
@@ -37,6 +38,7 @@ FORMULARIO_POR_ORDEN = {
 
 # Lo que se ve bajo el nombre: qué hacer, en una línea.
 QUE_HACER = {
+    6: "Elige los socios para tu sección: son los que verán los estudiantes al registrar su equipo.",
     5: "Llena el formulario del proyecto. Los datos de la sección ya vienen escritos.",
     9: "Arma la pauta de evaluación y súbela aquí.",
     10: "Si un grupo la necesita, pide la carta a Coordinación.",
@@ -129,6 +131,7 @@ def preparar_actividades(request, seccion_ruta, actividades):
     cache = {}
     grupos, grupos_con_socio = _equipos(seccion)
     reflexiones = _reflexiones_registradas(seccion)
+    socios_elegidos = socios_elegidos_seccion(seccion).count()
 
     for actividad in actividades:
         ruta_actividad = actividad.ruta_actividad
@@ -162,6 +165,13 @@ def preparar_actividades(request, seccion_ruta, actividades):
                 "texto": "Pedir carta", "icono": "bi-envelope-paper",
                 "url": reverse("cartas:listar_cartas_seccion_docente", args=[seccion.id]),
             }
+        elif orden == 6:
+            # Seleccionar Socios Comunitarios: los que elija son los que verán
+            # los estudiantes al registrar su equipo (RF-SC-03, actividad 13).
+            actividad.accion = {
+                "texto": "Elegir socios", "icono": "bi-building",
+                "url": f"{reverse('socios:catalogo_docente')}?seccion={seccion.id}",
+            }
         elif orden == 19 and actividad.url_recurso:
             actividad.accion = {
                 "texto": "Mostrar QR de encuestas", "icono": "bi-qr-code",
@@ -180,6 +190,8 @@ def preparar_actividades(request, seccion_ruta, actividades):
             actividad.progreso = f"{firmados} de {grupos} grupos"
         elif orden == 13 and grupos:
             actividad.progreso = f"{grupos_con_socio} de {grupos} grupos"
+        elif orden == 6 and socios_elegidos:
+            actividad.progreso = f"{socios_elegidos} socio{'s' if socios_elegidos != 1 else ''} elegido{'s' if socios_elegidos != 1 else ''}"
         elif orden in MOMENTO_POR_ORDEN and reflexiones.get(MOMENTO_POR_ORDEN[orden]):
             actividad.progreso = "Registrada"
 
@@ -226,3 +238,24 @@ def armar_etapas(actividades):
         etapa["completa"] = etapa["obligatorias_pendientes"] == 0
         etapa["actual"] = etapa is actual
     return etapas, actual
+
+
+def plantillas_de_la_ruta():
+    """
+    Ids de los formularios que se usan en la Ruta Docente: los que se llenan
+    en una actividad, los vinculados a una actividad y las tres encuestas de
+    evaluación A+S (actividad 19). La lista de Formularios los separa de los
+    demás.
+    """
+    from core.indicadores import ENCUESTAS_SATISFACCION
+    from encuestas.models import FormularioPlantilla
+
+    from .models import RutaActividad
+
+    codigos = set(FORMULARIO_POR_ORDEN.values()) | {codigo for codigo, _ in ENCUESTAS_SATISFACCION}
+    ids = set(FormularioPlantilla.objects.filter(codigo__in=codigos).values_list("id", flat=True))
+    ids |= set(
+        RutaActividad.objects.exclude(formulario_version=None)
+        .values_list("formulario_version__plantilla_id", flat=True)
+    )
+    return ids

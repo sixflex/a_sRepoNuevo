@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load core_extras %}
 {% load static %}
 
 {% block title %}Panel de indicadores | Portal A+S{% endblock %}
@@ -12,7 +13,8 @@
 
     <div class="coord-header d-flex justify-content-between align-items-start flex-wrap gap-3">
         <div>
-            <a href="{% url 'core:coordinacion' %}" class="enlace-volver"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver al Inicio</a>
+
+            {% url 'core:coordinacion' as url_volver %}{% volver url_volver "Volver al Inicio" %}
             <h1 class="coord-title mb-1">Panel de indicadores</h1>
             <p class="coord-subtitle mb-0">Filtra, compara entre años y exporta a Excel lo que estás viendo.</p>
         </div>
@@ -305,4 +307,4 @@
 
 {% block extra_js %}
 <script src="{% static 'js/panel_coordinador.js' %}?v=2026-10-17b"></script>
-{% endblock %}
+{% endblock %}

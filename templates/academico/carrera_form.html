@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load core_extras %}
 {% load static %}
 
 {% block title %}
@@ -8,6 +9,7 @@
 {% block content %}
 <div class="container-fluid py-2">
 
+    {% url 'carrera_list' as url_volver %}{% volver url_volver "Volver a Carreras" %}
     <div class="card shadow-sm border-0 w-100">
 
         <!-- ENCABEZADO -->
@@ -132,9 +134,7 @@
 
                 <!-- BOTONES -->
                 <div class="d-flex justify-content-between align-items-center">
-                    <a href="{% url 'carrera_list' %}" class="btn btn-outline-secondary">
-                        ← Volver
-                    </a>
+                    <a href="{% url 'carrera_list' %}" class="btn btn-outline-secondary">Cancelar</a>
 
                     <button type="submit" class="btn btn-rojo px-4">
                         {% if carrera.pk %}

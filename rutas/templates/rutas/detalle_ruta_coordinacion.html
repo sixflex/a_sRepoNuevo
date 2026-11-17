@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% load core_extras %}
 {% load static %}
 
 {% block title %}Ruta A+S · NRC {{ seccion.nrc }} | Portal A+S{% endblock %}
 
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b"><link rel="stylesheet" href="{% static 'css/ruta_docente.css' %}?v=2026-11-10">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b"><link rel="stylesheet" href="{% static 'css/ruta_docente.css' %}?v=2026-11-14">{% endblock %}
 
 {% block content %}
 {% comment %}
@@ -14,16 +15,26 @@ trae la «Ficha del proyecto.pdf» y una carpeta por etapa.
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
         <div>
+            {% url 'rutas:seguimiento_coordinacion' as url_volver %}{% volver url_volver "Volver a Rutas A+S" %}
             <h1 class="page-title mb-1">{{ seccion.asignatura.nombre }}</h1>
             <p class="page-subtitle mb-0">
                 NRC {{ seccion.nrc }} · Sección {{ seccion.seccion }}{% if docentes %} · {{ docentes }}{% endif %} · {{ seccion.campus.nombre }} · {{ seccion.periodo }}
             </p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <a href="{% url 'rutas:seguimiento_coordinacion' %}" class="btn btn-light-ua">
-                <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver
-            </a>
-            <a href="{% url 'rutas:descargar_expediente' seccion_ruta.id %}" class="btn btn-ua">
+
+            {% if ficha_disponible %}
+                <a href="{% url 'rutas:ver_ficha_coordinacion' seccion_ruta.id %}" class="btn btn-ua">
+                    <i class="bi bi-file-earmark-text me-1" aria-hidden="true"></i>Ver ficha del proyecto
+                </a>
+            {% else %}
+                <span class="d-inline-block" title="Disponible cuando el docente complete la Ruta">
+                    <button type="button" class="btn btn-light-ua" disabled aria-describedby="ficha-bloqueada">
+                        <i class="bi bi-lock me-1" aria-hidden="true"></i>Ver ficha del proyecto
+                    </button>
+                </span>
+            {% endif %}
+            <a href="{% url 'rutas:descargar_expediente' seccion_ruta.id %}" class="btn {% if ficha_disponible %}btn-light-ua{% else %}btn-ua{% endif %}">
                 <i class="bi bi-file-earmark-zip me-1" aria-hidden="true"></i>Descargar evidencias (ZIP)
             </a>
         </div>
@@ -106,6 +117,8 @@ trae la «Ficha del proyecto.pdf» y una carpeta por etapa.
         </div>
     {% endif %}
 
-    <p class="small text-muted"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>El ZIP trae la «Ficha del proyecto.pdf» (datos de la sección, grupos, socios, formularios y avance) y una carpeta por etapa con sus archivos.</p>
+    <p class="small text-muted" id="ficha-bloqueada"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+        {% if ficha_disponible %}La ficha del proyecto trae los datos de la sección, los grupos y socios, el avance y todo lo que llenó el docente. El ZIP trae la ficha y una carpeta por etapa con sus archivos.{% else %}La ficha del proyecto, con todo lo que llenó el docente, se abre cuando complete la Ruta. Mientras tanto, el ZIP trae una carpeta por etapa con los archivos subidos.{% endif %}
+    </p>
 </div>
 {% endblock %}

@@ -106,6 +106,9 @@ def lista_formularios(request):
         .prefetch_related(Prefetch("versiones", queryset=versiones))
         .order_by("titulo")
     )
+    from rutas.paso_a_paso import plantillas_de_la_ruta
+
+    de_la_ruta = plantillas_de_la_ruta()
     filas = []
     for plantilla in plantillas:
         lista = list(plantilla.versiones.all())
@@ -117,8 +120,13 @@ def lista_formularios(request):
             "vigente": vigente,
             "versiones": lista,
             "estado_nombre": c.NOMBRES_ESTADO.get(vigente.estado, vigente.estado),
+            "en_ruta": plantilla.id in de_la_ruta,
         })
-    return render(request, "encuestas/lista.html", {"filas": filas})
+    return render(request, "encuestas/lista.html", {
+        "filas": filas,
+        "total_ruta": sum(fila["en_ruta"] for fila in filas),
+        "total_otros": sum(not fila["en_ruta"] for fila in filas),
+    })
 
 
 @coordinador_required

@@ -1,16 +1,12 @@
 {% extends "base.html" %}
+{% load core_extras %}
 
 {% block content %}
 <div class="container py-4">
 
     <div class="mb-4">
-        <a
-            href="{% url 'rutas:detalle_ruta_docente' actividad.seccion_ruta.id %}"
-            class="btn btn-outline-secondary mb-3"
-        >
-            ← Volver a la Ruta
-        </a>
 
+        {% url 'rutas:detalle_ruta_docente' actividad.seccion_ruta.id as url_volver %}{% volver url_volver "Volver a la Ruta" %}
         <h2>Registro de Socio Comunitario</h2>
 
         <p class="text-muted">

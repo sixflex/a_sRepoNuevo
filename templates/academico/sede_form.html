@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load core_extras %}
 
 {% block title %}
     {% if sede.pk %}Editar Sede{% else %}Nueva Sede{% endif %} | Portal A+S
@@ -8,6 +9,7 @@
 
 <div class="container-fluid py-2">
 
+    {% url 'sede_list' as url_volver %}{% volver url_volver "Volver a Sedes" %}
     <div class="card shadow-sm border-0">
 
         <!-- ENCABEZADO -->
@@ -113,8 +115,7 @@
                 <!-- BOTONES -->
                 <div class="d-flex justify-content-between align-items-center">
 
-                    <a href="{% url 'sede_list' %}"
-                       class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Volver</a>
+                    <a href="{% url 'sede_list' %}" class="btn btn-outline-secondary">Cancelar</a>
 
                     <button
                         type="submit"

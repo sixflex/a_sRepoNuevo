@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% load core_extras static %}
+
+{% block title %}Ficha del proyecto · NRC {{ seccion.nrc }} | Portal A+S{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-11-14"><link rel="stylesheet" href="{% static 'css/ruta_docente.css' %}?v=2026-11-14c">{% endblock %}
+
+{% block content %}
+{% comment %}
+Ficha del proyecto para el Coordinador (RF-EVI-01): lo mismo que el PDF del
+ZIP, pero en pantalla, con cada formulario y sus respuestas, y exportable a Excel.
+{% endcomment %}
+<div class="container py-4 ficha">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+        <div>
+            {% url 'rutas:detalle_ruta_coordinacion' seccion_ruta.id as url_volver %}{% volver url_volver "Volver a la Ruta" %}
+            <h1 class="page-title mb-1">Ficha del proyecto</h1>
+            <p class="page-subtitle mb-0">{{ seccion.asignatura.nombre }} · NRC {{ seccion.nrc }} · Sección {{ seccion.seccion }}</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'rutas:exportar_ficha_excel' seccion_ruta.id %}" class="btn btn-ua">
+                <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i>Exportar a Excel
+            </a>
+            <a href="{% url 'rutas:descargar_expediente' seccion_ruta.id %}" class="btn btn-light-ua" title="Trae la ficha en PDF y una carpeta por etapa con los archivos">
+                <i class="bi bi-file-earmark-zip me-1" aria-hidden="true"></i>Descargar evidencias (ZIP)
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-lg-6">
+            <section class="card-ua p-4 h-100">
+                <h2 class="ficha-titulo">Datos de la sección</h2>
+                <dl class="fp-datos mb-0">
+                    {% for dato, valor in datos_seccion %}
+                        <dt>{{ dato }}</dt><dd>{{ valor|default:"—" }}</dd>
+                    {% endfor %}
+                </dl>
+            </section>
+        </div>
+        <div class="col-12 col-lg-6">
+            <section class="card-ua p-4 h-100">
+                <h2 class="ficha-titulo">Grupos</h2>
+                {% if grupos %}
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead><tr><th>Grupo</th><th>Socio comunitario</th><th class="text-end">Integrantes</th></tr></thead>
+                            <tbody>
+                                {% for g in grupos %}
+                                    <tr><td class="text-nowrap">{{ g.grupo }}{% if g.proyecto %}<div class="small text-muted">{{ g.proyecto }}</div>{% endif %}</td><td>{{ g.socio }}</td><td class="text-end">{{ g.integrantes }}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">Aún no hay grupos registrados.</p>
+                {% endif %}
+            </section>
+        </div>
+    </div>
+
+    <section class="mb-3">
+        <h2 class="ruta-otras-titulo">Formularios llenados ({{ formularios|length }})</h2>
+        {% for f in formularios %}
+            <details class="card-ua ficha-form mb-2"{% if forloop.first %} open{% endif %}>
+                <summary>
+                    <span class="ficha-form-nombre">{{ f.titulo }}{% if f.grupo %} · {{ f.grupo }}{% endif %}</span>
+                    <span class="ficha-form-fecha">{{ f.fecha|date:"d/m/Y" }} · {{ f.filas|length }} respuesta{{ f.filas|length|pluralize }}</span>
+                </summary>
+                <dl class="ficha-respuestas mb-0">
+                    {% for pregunta, texto in f.filas %}
+                        <div><dt>{{ pregunta }}</dt><dd>{{ texto|linebreaksbr }}</dd></div>
+                    {% endfor %}
+                </dl>
+            </details>
+        {% empty %}
+            <div class="card-ua p-4 text-muted">Todavía no se ha llenado ningún formulario desde la Ruta.</div>
+        {% endfor %}
+    </section>
+
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-lg-7">
+            <section class="card-ua p-4 h-100">
+                <h2 class="ficha-titulo">Avance por etapa</h2>
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Etapa</th><th>Hechas</th><th>Archivos</th><th>Pendientes</th></tr></thead>
+                        <tbody>
+                            {% for etapa in etapas %}
+                                <tr><td>{{ etapa.etapa }}</td><td>{{ etapa.hechas }}</td><td>{{ etapa.archivos }}</td>
+                                    <td>{% for p in etapa.pendientes %}{{ p }}{% if not forloop.last %}<br>{% endif %}{% empty %}<span class="text-muted">Nada pendiente</span>{% endfor %}</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+        <div class="col-12 col-lg-5">
+            <section class="card-ua p-4 h-100">
+                <h2 class="ficha-titulo">Encuestas de satisfacción</h2>
+                <dl class="fp-datos mb-3">
+                    {% for nombre, total in encuestas %}<dt>{{ nombre }}</dt><dd>{{ total }} respuesta{{ total|pluralize }}</dd>{% endfor %}
+                </dl>
+                <h2 class="ficha-titulo">Evidencias ({{ evidencias|length }})</h2>
+                {% if evidencias %}
+                    <ul class="ficha-evidencias mb-0">
+                        {% for ev in evidencias %}<li><strong>{{ ev.archivo }}</strong><span>{{ ev.actividad }}{% if ev.descripcion %} · {{ ev.descripcion }}{% endif %}</span></li>{% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">Aún no hay evidencias subidas.</p>
+                {% endif %}
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock %}

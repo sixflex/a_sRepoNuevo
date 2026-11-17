@@ -364,7 +364,7 @@ class SesionEnRegistrosTests(BaseIdentidades):
         self.ingresar("ana@uautonoma.cl")
         datos.update(clave_idempotencia=str(uuid.uuid4()), correo_1="ana@uautonoma.cl")
         respuesta = self.client.post(url, datos)
-        self.assertContains(respuesta, "Ya registraste un equipo en esta sección")
+        self.assertContains(respuesta, "Se registró tu equipo")
         self.assertEqual(Equipo.objects.count(), 1)
 
     def test_solicitante_de_carta(self):

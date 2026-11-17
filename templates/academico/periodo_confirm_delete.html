@@ -1,10 +1,12 @@
 {% extends 'base.html' %}
+{% load core_extras %}
 
 {% block title %}Eliminar Periodo | Portal A+S{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-2">
 
+    {% url 'periodo_list' as url_volver %}{% volver url_volver "Volver a Períodos" %}
     <div class="card shadow-sm border-0 w-100">
 
         <!-- ENCABEZADO -->
@@ -74,9 +76,7 @@
                 {% csrf_token %}
 
                 <div class="d-flex justify-content-between align-items-center mt-4">
-                    <a href="{% url 'periodo_list' %}" class="btn btn-outline-secondary">
-                        ← Volver
-                    </a>
+                    <a href="{% url 'periodo_list' %}" class="btn btn-outline-secondary">Cancelar</a>
 
                     <button type="submit" class="btn btn-danger px-4">
                         Sí, eliminar
@@ -89,4 +89,4 @@
     </div>
 
 </div>
-{% endblock %}
+{% endblock %}

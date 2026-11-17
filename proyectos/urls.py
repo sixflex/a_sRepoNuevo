@@ -7,6 +7,7 @@ app_name = "proyectos"
 
 
 urlpatterns = [
+    path("", views.catalogo_proyectos, name="catalogo"),
     # SP2-T05: generación y gestión de enlaces de planificación.
     path( "enlaces-planificacion/", views.gestionar_enlaces_planificacion, name="gestionar_enlaces",
     ),

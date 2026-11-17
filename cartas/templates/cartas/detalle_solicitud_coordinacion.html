@@ -5,22 +5,11 @@
 
 {% block content %}
 
-
 <div class="container py-4">
 
     <div class="mb-4">
 
-        <a
-            href="{% url 'cartas:listar_solicitudes_coordinacion' %}"
-            class="btn btn-outline-secondary btn-sm"
-        >
-            Volver a solicitudes
-        </a>
-
-    </div>
-
-    <div class="mb-4">
-
+        {% url 'cartas:listar_solicitudes_coordinacion' as url_volver %}{% volver url_volver "Volver a Cartas de presentación" %}
         <h2>
             Solicitud de Carta de Presentación
         </h2>
@@ -377,4 +366,4 @@
     });
 </script>
 
-{% endblock %}
+{% endblock %}

@@ -3,7 +3,8 @@ from django.db.models import Exists, OuterRef, Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from academico.models import Asignatura, Campus, Carrera, PeriodoAcademico, Sede
+from academico.models import Asignatura, Campus, Carrera, PeriodoAcademico, Seccion, Sede
+from django.utils.http import url_has_allowed_host_and_scheme
 from usuarios.decorators import coordinador_required, docente_required
 from django.core.exceptions import PermissionDenied
 from django.views.decorators.http import require_POST
@@ -40,11 +41,7 @@ def socios_disponibles():
     Socios disponibles para otros grupos: activos, no provisionales y en un
     estado seleccionable (CDE-65).
     """
-    return SocioComunitario.objects.filter(
-        activo=True,
-        es_provisional=False,
-        estado_revision__in=ESTADOS_SELECCIONABLES,
-    )
+    return services.socios_seleccionables()
 
 
 def comunas_con_socios(socios):
@@ -83,13 +80,31 @@ def catalogo_socios_docente(request):
     if estado in ESTADOS_SELECCIONABLES:
         socios = socios.filter(estado_revision=estado)
 
+    # RF-SC-03: el docente elige los socios para una de sus secciones. Los
+    # estudiantes de esa sección solo verán esos al registrar su equipo.
+    secciones_docente = _secciones_del_docente(request.user)
+    seccion = None
+    elegidos_ids = set()
+    if request.GET.get('seccion'):
+        seccion = next((s for s in secciones_docente if str(s.pk) == request.GET['seccion']), None)
+        if seccion is None:
+            raise PermissionDenied
+        elegidos_ids = set(services.socios_elegidos_seccion(seccion).values_list('id', flat=True))
+        if request.GET.get('elegidos') == '1':
+            socios = socios.filter(pk__in=elegidos_ids)
+
     socios = list(socios)
     descripciones = services.descripciones_socios([s.id for s in socios])
     for socio in socios:
         socio.que_hace = descripciones.get(socio.id, "")
+        socio.elegido = socio.id in elegidos_ids
 
     context = {
         'socios': socios,
+        'secciones_docente': secciones_docente,
+        'seccion': seccion,
+        'total_elegidos': len(elegidos_ids),
+        'solo_elegidos': request.GET.get('elegidos') == '1',
         'comunas': comunas_con_socios(socios_disponibles()),
         'clasificaciones': ClasificacionSocio.objects.filter(activo=True),
         'estados': ESTADOS_SELECCIONABLES,
@@ -99,6 +114,39 @@ def catalogo_socios_docente(request):
         'estado': estado,
     }
     return render(request, 'socios/catalogo_docente.html', context)
+
+
+def _secciones_del_docente(usuario):
+    """Secciones del docente, del período más reciente al más antiguo."""
+    return list(
+        Seccion.objects.filter(docentes__usuario=usuario, docentes__activo=True)
+        .select_related('asignatura', 'periodo')
+        .distinct()
+        .order_by('-periodo__anio', '-periodo__fecha_inicio', 'asignatura__nombre', 'seccion')
+    )
+
+
+@docente_required
+@require_POST
+def elegir_socio_seccion(request, seccion_id):
+    """Agrega o quita un socio de los elegidos para la sección (RF-SC-03)."""
+    seccion = next((s for s in _secciones_del_docente(request.user) if s.pk == seccion_id), None)
+    if seccion is None:
+        raise PermissionDenied
+    socio = get_object_or_404(services.socios_seleccionables(), pk=request.POST.get('socio'))
+    docente = getattr(request.user, 'perfil_docente', None)
+
+    if request.POST.get('accion') == 'quitar':
+        services.quitar_socio_de_seccion(seccion=seccion, socio=socio, docente=docente, request=request)
+        messages.success(request, f"{socio.nombre_organizacion} ya no aparecerá a los estudiantes de esta sección.")
+    else:
+        services.elegir_socio_para_seccion(seccion=seccion, socio=socio, docente=docente, request=request)
+        messages.success(request, f"{socio.nombre_organizacion} quedó disponible para los equipos de esta sección.")
+
+    destino = request.POST.get('next', '')
+    if not destino.startswith('/') or not url_has_allowed_host_and_scheme(destino, allowed_hosts={request.get_host()}):
+        destino = f"{reverse('socios:catalogo_docente')}?seccion={seccion.pk}"
+    return redirect(destino)
 
 
 @coordinador_required
@@ -168,16 +216,17 @@ def lista_socios_coordinador(request):
         )
 
     # Filtros por historial académico de participaciones (CDE-63)
+    trabajadas = ParticipacionSocio.objects.trabajadas()
     if sede_id:
-        socios = socios.filter(participaciones__sede_id=sede_id).distinct()
+        socios = socios.filter(participaciones__in=trabajadas.filter(sede_id=sede_id)).distinct()
     if campus_id:
-        socios = socios.filter(participaciones__campus_id=campus_id).distinct()
+        socios = socios.filter(participaciones__in=trabajadas.filter(campus_id=campus_id)).distinct()
     if carrera_id:
-        socios = socios.filter(participaciones__carrera_id=carrera_id).distinct()
+        socios = socios.filter(participaciones__in=trabajadas.filter(carrera_id=carrera_id)).distinct()
     if periodo_id:
-        socios = socios.filter(participaciones__periodo_id=periodo_id).distinct()
+        socios = socios.filter(participaciones__in=trabajadas.filter(periodo_id=periodo_id)).distinct()
     if anio:
-        socios = socios.filter(participaciones__periodo__anio=anio).distinct()
+        socios = socios.filter(participaciones__in=trabajadas.filter(periodo__anio=anio)).distinct()
 
     # Cada socio trae los estados a los que el coordinador puede moverlo.
     socios = list(socios)
@@ -186,7 +235,7 @@ def lista_socios_coordinador(request):
 
     # RF-IND-02: organizaciones únicas frente a participaciones registradas,
     # sobre los socios del resultado y el mismo contexto académico filtrado.
-    participaciones_resultado = ParticipacionSocio.objects.filter(
+    participaciones_resultado = ParticipacionSocio.objects.trabajadas().filter(
         socio__in=[socio.pk for socio in socios]
     )
     for campo, valor in (
@@ -266,7 +315,7 @@ def detalle_historial_socio(request, socio_id):
     )
     contactos = socio.contactos.filter(activo=True)
 
-    participaciones = ParticipacionSocio.objects.filter(socio=socio).select_related(
+    participaciones = ParticipacionSocio.objects.trabajadas().filter(socio=socio).select_related(
         'equipo', 'proyecto', 'sede', 'campus', 'periodo', 'carrera', 'asignatura', 'seccion'
     ).order_by('-periodo__anio', '-fecha_inicio', '-pk')
 

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load core_extras %}
 
 {% block title %}Gestión de Facultades{% endblock %}
 
@@ -10,6 +11,7 @@
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
 
         <div>
+            {% url 'home' as url_volver %}{% volver url_volver "Volver a Gestión académica" %}
             <h2 class="fw-bold mb-1">Gestión de Facultades</h2>
 
             <p class="text-muted mb-0">
@@ -23,7 +25,6 @@
         </a>
 
     </div>
-
 
     <!-- TABLA -->
     <div class="card shadow-sm border-0">
@@ -117,17 +118,6 @@
             </div>
 
         </div>
-
-    </div>
-
-
-    <!-- VOLVER -->
-    <div class="mt-4">
-
-        <a href="{% url 'home' %}"
-           class="btn btn-outline-secondary">
-            ← Volver a Gestión Académica
-        </a>
 
     </div>
 

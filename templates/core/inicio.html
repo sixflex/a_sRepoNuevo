@@ -312,7 +312,6 @@
     @media (prefers-reduced-motion: reduce) { .catalogo-pista { scroll-behavior: auto; } }
 </style>
 
-
 <nav class="ua-navbar sticky-top">
     <div class="container d-flex align-items-center justify-content-between">
         <a href="{% url 'core:inicio' %}" class="marca">
@@ -328,7 +327,6 @@
     </div>
 </nav>
 
-
 <section class="ua-hero">
     <div class="container position-relative">
         <span class="ua-badge-model">MODELO EDUCATIVO A+S</span>
@@ -342,7 +340,6 @@
         {% endif %}
     </div>
 </section>
-
 
 <section class="container py-5">
     <div class="row g-4 align-items-center">
@@ -398,7 +395,6 @@
         </div>
     </div>
 </section>
-
 
 {# Mapa y catálogo: el Coordinador decide si se muestran y con qué datos (publico/portal.py). #}
 {% if portal.mapa.activo or portal.catalogo.activo %}
@@ -601,7 +597,6 @@
 </section>
 {% endif %}
 
-
 {% if portal.cifras.asignaturas or portal.cifras.carreras or portal.cifras.facultades or portal.cifras.socios %}
 <section class="container pb-5">
     <h3 class="fw-bold mb-3" style="font-size: 1.35rem;">Cifras Macro del Programa A+S</h3>
@@ -653,7 +648,6 @@
     </div>
 </section>
 {% endif %}
-
 
 <section id="participa" class="container pb-5">
     <h3 class="fw-bold mb-4" style="font-size: 1.4rem;">Participa en A+S</h3>
@@ -720,16 +714,15 @@
     </div>
 </section>
 
-
-{% if portal.noticias.activo %}
+{# Solo noticias reales agregadas por Coordinación (RF-PUB-03/04); sin noticias, no hay sección. #}
+{% if portal.noticias.activo and noticias %}
 <section class="container pb-5">
     <h3 class="fw-bold mb-3" style="font-size: 1.35rem;">Noticias y Recursos</h3>
     <div class="row g-4">
-        {% if noticias %}
             {% for noticia in noticias %}
                 <div class="col-12 col-md-4">
                     <div class="mockup-card h-100 overflow-hidden d-flex flex-column">
-                        <img src="{{ noticia.imagen_url|default:'https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=600&auto=format&fit=crop' }}" class="news-card-img" alt="{{ noticia.titulo }}">
+                        {% if noticia.imagen_url %}<img src="{{ noticia.imagen_url }}" class="news-card-img" alt="" loading="lazy">{% endif %}
                         <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
                             <div>
                                 <div class="news-date mb-2">{{ noticia.fecha_publicacion|date:"d M, Y" }}</div>
@@ -737,55 +730,15 @@
                                 <p class="text-muted small mb-3">{{ noticia.resumen|truncatewords:20 }}</p>
                             </div>
                             {% if noticia.url_fuente %}
-                                <a href="{{ noticia.url_fuente }}" target="_blank" rel="noopener" class="text-danger fw-semibold small text-decoration-none">Leer más &gt;</a>
+                                <a href="{{ noticia.url_fuente }}" target="_blank" rel="noopener" class="text-danger fw-semibold small text-decoration-none">Leer en uautonoma.cl &gt;</a>
                             {% endif %}
                         </div>
                     </div>
                 </div>
             {% endfor %}
-        {% else %}
-            <!-- Tarjetas estáticas predeterminadas si no hay noticias en la BD -->
-            <div class="col-12 col-md-4">
-                <div class="mockup-card h-100 overflow-hidden d-flex flex-column">
-                    <img src="https://images.unsplash.com/photo-1531403009284-440f080d1e12?q=80&w=600&auto=format&fit=crop" class="news-card-img" alt="Reunión UA">
-                    <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
-                        <div>
-                            <div class="news-date mb-2">14 Mar, 2025</div>
-                            <h5 class="fw-bold mb-2" style="font-size: 1.05rem;">Lanzamiento de Proyectos A+S UA 2025</h5>
-                            <p class="text-muted small mb-3">La Universidad Autónoma de Chile oficializa el inicio de los proyectos A+S con una participación récord de socios comunitarios locales.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-md-4">
-                <div class="mockup-card h-100 overflow-hidden d-flex flex-column">
-                    <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?q=80&w=600&auto=format&fit=crop" class="news-card-img" alt="Salud UA">
-                    <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
-                        <div>
-                            <div class="news-date mb-2">10 Mar, 2025</div>
-                            <h5 class="fw-bold mb-2" style="font-size: 1.05rem;">Estudiantes de Salud UA impactan positivamente en comunas vulnerables</h5>
-                            <p class="text-muted small mb-3">Operativos integrales de salud liderados bajo la metodología A+S logran excelente recepción por parte de juntas vecinales territoriales.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-md-4">
-                <div class="mockup-card h-100 overflow-hidden d-flex flex-column">
-                    <img src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=600&auto=format&fit=crop" class="news-card-img" alt="Guía A+S">
-                    <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
-                        <div>
-                            <div class="news-date mb-2">05 Mar, 2025</div>
-                            <h5 class="fw-bold mb-2" style="font-size: 1.05rem;">Nueva Guía de Buenas Prácticas Metodológicas A+S</h5>
-                            <p class="text-muted small mb-3">Publicamos el documento integrador que asiste a los académicos en la formulación de evaluaciones con enfoque de servicio comunitario.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        {% endif %}
     </div>
 </section>
 {% endif %}
-
 
 <footer class="ua-footer">
     <div class="container">
@@ -818,7 +771,7 @@
 
             <div class="col-12 col-md-3">
                 <div class="ua-footer-title">CONTACTO</div>
-                
+
                 <div class="mb-3">
                     <a href="tel:223036069" class="text-decoration-none d-inline-flex align-items-center gap-2" style="color: #FFFFFF; font-size: 0.92rem; font-weight: 600;">
                         <i class="bi bi-telephone text-danger"></i> +56 2 2303 6069
@@ -906,4 +859,4 @@
         actualizar();
     })();
 </script>
-{% endblock layout_completo %}
+{% endblock layout_completo %}

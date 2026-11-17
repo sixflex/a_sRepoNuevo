@@ -5,7 +5,7 @@ from django.db import models
 from django.db.models import F, Q
 from django.utils import timezone
 
-from .constantes import ORIGENES_PARTICIPACION
+from .constantes import ORIGEN_OPERATIVO, ORIGENES_PARTICIPACION
 
 class ClasificacionSocio(models.Model):
     nombre = models.CharField(
@@ -148,7 +148,24 @@ class ContactoSocio(models.Model):
         return f"{self.nombre} - {self.socio}"
 
 
+# Socio que el Docente eligió para su sección (RF-SC-03): participación
+# operativa con la sección y sin equipo. Todavía no es trabajo realizado,
+# así que no cuenta en indicadores, mapa, catálogo de proyectos ni historial.
+ELEGIDA_PARA_SECCION = Q(origen=ORIGEN_OPERATIVO, equipo__isnull=True, seccion__isnull=False)
+
+
+class ParticipacionSocioQuerySet(models.QuerySet):
+    def trabajadas(self):
+        """Participaciones reales: las de equipos y las históricas."""
+        return self.exclude(ELEGIDA_PARA_SECCION)
+
+    def elegidas_para_seccion(self):
+        return self.filter(ELEGIDA_PARA_SECCION)
+
+
 class ParticipacionSocio(models.Model):
+    objects = ParticipacionSocioQuerySet.as_manager()
+
     socio = models.ForeignKey(
         SocioComunitario,
         on_delete=models.PROTECT,
