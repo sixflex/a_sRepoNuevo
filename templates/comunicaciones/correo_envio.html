@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Correo de envío | Portal A+S{% endblock %}
+
+{% block content %}
+{% include "includes/configuracion_pestanas.html" with activa="correo" %}
+
+<div class="card-ua p-4 mb-4" style="max-width: 900px;">
+    <div class="d-flex align-items-start gap-3">
+        <i class="bi {% if activa %}bi-check-circle-fill text-success{% else %}bi-hdd-network text-secondary{% endif %} fs-4" aria-hidden="true"></i>
+        <div>
+            <div class="fw-semibold">Hoy los correos del portal salen desde</div>
+            <div>{{ remitente_actual }}</div>
+            <div class="small text-muted mt-1">
+                {% if activa %}
+                    Cuenta elegida aquí{% if activa.fecha_verificacion %} · conexión probada el {{ activa.fecha_verificacion|date:"j \d\e F Y, H:i" }}{% endif %}.
+                {% else %}
+                    {{ cuenta_servidor }}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% if clave_ilegible %}
+        <div class="alert alert-warning small mt-3 mb-0" role="alert">
+            La clave guardada ya no se puede leer (cambió la llave del servidor). Mientras tanto se usa la cuenta del servidor:
+            escribe la clave otra vez y guarda.
+        </div>
+    {% endif %}
+</div>
+
+<div class="card-ua p-4 mb-4" style="max-width: 900px;">
+    <h2 class="h5 mb-1">Cuenta de envío</h2>
+    <p class="small text-muted mb-4">
+        Desde aquí salen los avisos, las cartas de presentación y las encuestas. Puedes usar tu correo mientras DTI
+        entrega el de A+S, y después solo cambiarlo. Antes de guardar se prueba la conexión: si no funciona, no se
+        cambia nada.
+    </p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="guardar">
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger py-2 small" role="alert">{{ form.non_field_errors|join:" " }}</div>
+        {% endif %}
+
+        <div class="row g-3">
+            {% for campo in form %}
+                {% if campo.name == "usar_tls" or campo.name == "activo" %}
+                {% else %}
+                <div class="{% if campo.name == 'puerto' %}col-md-4{% elif campo.name == 'servidor_smtp' %}col-md-8{% else %}col-md-6{% endif %}{% if campo.name == 'servidor_smtp' or campo.name == 'puerto' %} js-avanzado{% endif %}">
+                    <label for="{{ campo.id_for_label }}" class="form-label-ua">
+                        {{ campo.label }}{% if campo.field.required %} <span class="text-danger" aria-hidden="true">*</span>{% endif %}
+                    </label>
+                    {{ campo }}
+                    {% if campo.help_text %}<div class="form-text">{{ campo.help_text }}</div>{% endif %}
+                    {% for error in campo.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                {% endif %}
+            {% endfor %}
+            <div class="col-12 js-avanzado">
+                <div class="form-check">
+                    {{ form.usar_tls }}
+                    <label class="form-check-label" for="{{ form.usar_tls.id_for_label }}">{{ form.usar_tls.label }}</label>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="form-check form-switch">
+                    {{ form.activo }}
+                    <label class="form-check-label fw-semibold" for="{{ form.activo.id_for_label }}">{{ form.activo.label }}</label>
+                    <div class="form-text">{{ form.activo.help_text }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end mt-4">
+            <button type="submit" class="btn btn-ua">
+                <i class="bi bi-plug me-1" aria-hidden="true"></i>Probar conexión y guardar
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="card-ua p-4 mb-4" style="max-width: 900px;">
+    <h2 class="h5 mb-1">Correo de prueba</h2>
+    <p class="small text-muted mb-3">Envía un correo con la cuenta que se está usando ahora, para confirmar que llega.</p>
+    <form method="post" class="row g-2 align-items-end" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="probar">
+        <div class="col-md-8">
+            <label for="{{ form_prueba.destinatario.id_for_label }}" class="form-label-ua">{{ form_prueba.destinatario.label }}</label>
+            {{ form_prueba.destinatario }}
+            {% for error in form_prueba.destinatario.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-outline-secondary w-100">
+                <i class="bi bi-send me-1" aria-hidden="true"></i>Enviar prueba
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Servidor, puerto y TLS solo se piden para "Otro servidor"; Gmail y Microsoft se completan solos.
+(function () {
+    const proveedor = document.getElementById("{{ form.proveedor.id_for_label }}");
+    const actualizar = () => document.querySelectorAll(".js-avanzado").forEach(
+        (el) => { el.hidden = proveedor.value !== "OTRO"; }
+    );
+    proveedor.addEventListener("change", actualizar);
+    actualizar();
+})();
+</script>
+{% endblock %}

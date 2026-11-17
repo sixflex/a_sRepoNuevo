@@ -21,6 +21,10 @@ urlpatterns = [
         name="entra_login",
     ),
 
+    # Microsoft real vuelve aquí (URL de retorno registrada en Entra ID).
+    path("auth/callback/", views.entra_callback, name="entra_callback"),
+    path("sin-acceso/", views.sin_panel, name="sin_panel"),
+
     path(
         "logout/",
         LogoutView.as_view(),

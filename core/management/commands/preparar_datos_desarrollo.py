@@ -20,6 +20,7 @@ from django.core.management.base import BaseCommand, CommandError
 from academico.models import Seccion
 from encuestas import constantes as c
 from encuestas import services as encuestas_services
+from encuestas.definiciones.formalizacion_acuerdos import DEFINICION as ACUERDO_FORMAL
 from encuestas.definiciones.formulario_proyecto_as import DEFINICION as PROYECTO_AS
 from encuestas.definiciones.registro_socio_comunitario import DEFINICION as REGISTRO_SOCIO
 from encuestas.models import FormularioVersion
@@ -28,6 +29,12 @@ from encuestas.models import FormularioVersion
 class Command(BaseCommand):
     help = "Carga en orden todo lo necesario para desarrollar y revisar el portal."
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--liviano", action="store_true",
+            help="Datos de demostración reducidos (para Render): Ruta, formularios y panel con pocas filas.",
+        )
+
     def paso(self, numero, texto):
         self.stdout.write(self.style.MIGRATE_HEADING(f"\n{numero}. {texto}"))
 
@@ -35,10 +42,11 @@ class Command(BaseCommand):
         self.paso(1, "Formularios del cliente")
         call_command("cargar_formularios", stdout=self.stdout)
 
-        self.paso(2, "Formulario del Proyecto A+S y Registro de Socio Comunitario")
+        self.paso(2, "Formulario del Proyecto A+S, Acuerdo formal y Registro de Socio Comunitario")
         call_command("cargar_formulario_proyecto_as", stdout=self.stdout)
+        call_command("cargar_formalizacion_acuerdos", stdout=self.stdout)
         call_command("cargar_registro_socio_comunitario", stdout=self.stdout)
-        for definicion in (PROYECTO_AS, REGISTRO_SOCIO):
+        for definicion in (PROYECTO_AS, ACUERDO_FORMAL, REGISTRO_SOCIO):
             self.publicar_si_falta(definicion["codigo"])
 
         self.paso(3, "Ruta del Docente A+S")
@@ -55,7 +63,7 @@ class Command(BaseCommand):
             ))
         else:
             try:
-                call_command("cargar_datos_demo", stdout=self.stdout)
+                call_command("cargar_datos_demo", liviano=options.get("liviano", False), stdout=self.stdout)
             except CommandError as error:
                 self.stdout.write(self.style.WARNING(f"No se cargaron los datos de demostración: {error}"))
 

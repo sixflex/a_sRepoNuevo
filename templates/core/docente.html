@@ -94,70 +94,48 @@
 </form>
 
 
-            {% for seccion in secciones %}
-           
-                <div class="border rounded-3 p-4 mb-3">
-                    <div class="row align-items-center g-3">
-
-                        <div class="col-12 col-xl-9">
-                            <div class="d-flex align-items-center mb-3">
-                        
-                                <div class="d-flex align-items-center justify-content-center me-3"
-                                     style="width: 45px; height: 45px; min-width: 45px; border-radius: 10px; background-color: #f8e5e5; color: #a90000; font-size: 20px;">
-                                    📚
-                                </div>
-
-                                <div>
-                                    <h5 class="fw-bold mb-1">
-                                        {{ seccion.asignatura.nombre }}
-                                    </h5>
-                                    <span class="badge" style="background-color: #a90000;">
-                                        NRC {{ seccion.nrc }}
-                                    </span>
-                                </div>
-                            </div>
-
-                          
-                            <div class="row g-3">
-                                <div class="col-12 col-sm-4">
-                                    <div class="text-muted small">
-                                        Sección
-                                    </div>
-                                    <div class="fw-semibold">
-                                        {{ seccion.seccion }}
-                                    </div>
-                                </div>
-
-                                <div class="col-12 col-sm-4">
-                                    <div class="text-muted small">
-                                        Período académico
-                                    </div>
-                                    <div class="fw-semibold">
-                                        {{ seccion.periodo }}
-                                    </div>
-                                </div>
-
-                                <div class="col-12 col-sm-4">
-                                    <div class="text-muted small">
-                                        Campus
-                                    </div>
-                                    <div class="fw-semibold">
-                                        {{ seccion.campus.nombre }}
-                                    </div>
-                                </div>
+            {% for grupo in grupos %}
+                {# Una tarjeta por asignatura (y período); cada sección es una fila. #}
+                <div class="border rounded-3 mb-3 overflow-hidden bg-white">
+                    <div class="d-flex align-items-center gap-3 px-4 pt-4 pb-3">
+                        <div class="d-flex align-items-center justify-content-center"
+                             style="width: 45px; height: 45px; min-width: 45px; border-radius: 10px; background-color: #f8e5e5; color: #a90000; font-size: 20px;">
+                            📚
+                        </div>
+                        <div class="min-w-0">
+                            <h5 class="fw-bold mb-1">{{ grupo.asignatura.nombre }}</h5>
+                            <div class="text-muted small">
+                                {% if grupo.asignatura.codigo %}{{ grupo.asignatura.codigo }} · {% endif %}{{ grupo.periodo }}
+                                · {{ grupo.secciones|length }} {{ grupo.secciones|length|pluralize:"sección,secciones" }}
                             </div>
                         </div>
-
-                     
-                        <div class="col-12 col-xl-3 text-xl-end mt-3 mt-xl-0">
-                            <a href="{% url 'core:detalle_seccion' seccion.id %}" class="btn btn-rojo px-4">
-                                Ver sección
-                            </a>
-                        </div>
-
                     </div>
-                    
-               
+
+                    {% for seccion in grupo.secciones %}
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 px-4 py-3 border-top">
+                            <div class="d-flex flex-wrap align-items-center gap-4">
+                                <div>
+                                    <div class="text-muted small">Sección</div>
+                                    <div class="fw-semibold">{{ seccion.seccion }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-muted small">NRC</div>
+                                    <span class="badge" style="background-color: #a90000;">{{ seccion.nrc }}</span>
+                                </div>
+                                <div>
+                                    <div class="text-muted small">Campus</div>
+                                    <div class="fw-semibold">{{ seccion.campus.nombre }}</div>
+                                </div>
+                                {% if seccion.horario %}
+                                    <div>
+                                        <div class="text-muted small">Horario</div>
+                                        <div class="fw-semibold">{{ seccion.horario }}</div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <a href="{% url 'core:detalle_seccion' seccion.id %}" class="btn btn-rojo px-4">Ver sección</a>
+                        </div>
+                    {% endfor %}
                 </div>
             {% empty %}
                 <div class="text-center py-5">
@@ -195,4 +173,4 @@
     </div>
 
 </div>
-{% endblock %}
+{% endblock %}

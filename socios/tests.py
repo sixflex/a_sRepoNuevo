@@ -1050,6 +1050,20 @@ class VistasAsociacionSocioTests(TestCase):
         version.save(update_fields=["estado"])
         return SeccionActividad.objects.create(seccion_ruta=ruta, ruta_actividad=actividad, estado="PENDIENTE")
 
+    def test_cambiar_socio_ofrece_solo_los_elegidos_para_la_seccion(self):
+        socio_c = crear_socio("Org C", estado_revision="DISPONIBLE")
+        equipo = crear_equipo(self.seccion)
+        socios_services.asociar_socio_a_equipo(equipo=equipo, socio=self.socio_a)
+        socios_services.elegir_socio_para_seccion(seccion=self.seccion, socio=self.socio_b, docente=self.docente)
+        url = reverse("proyectos:gestionar_equipo", args=[equipo.id])
+
+        disponibles = list(self.client.get(url).context["socios_disponibles"])
+        self.assertEqual(disponibles, [self.socio_b])
+
+        # Un socio no elegido no se acepta aunque se mande a mano.
+        self.client.post(url, {"accion": "cambiar_socio", "socio_comunitario": socio_c.id, "motivo": "Otro"})
+        self.assertEqual(abiertas(equipo).get().socio, self.socio_a)
+
     def test_gestionar_equipo_usa_el_servicio(self):
         equipo = crear_equipo(self.seccion)
         socios_services.asociar_socio_a_equipo(equipo=equipo, socio=self.socio_a)

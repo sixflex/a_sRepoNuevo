@@ -1,33 +1,17 @@
 import hashlib
 import logging
 from datetime import timedelta
-from io import BytesIO
-from pathlib import Path
 
-from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import transaction
 from django.utils import timezone
-from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import cm
-from reportlab.lib.utils import ImageReader
-from reportlab.platypus import (
-    Image,
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
 
 from archivos.services import guardar_archivo
 from auditoria.services import registrar_auditoria
 from comunicaciones.services import EmailService
 
 from .models import CartaDocumento, SolicitudCarta
+from .plantilla_oficial import construir_pdf, recursos_carta
 
 
 MAX_ALUMNOS_POR_CARTA = 6
@@ -35,52 +19,6 @@ MESES_ANTIGUEDAD_ALERTA = 12
 CODIGO_PLANTILLA_CARTA = "CARTA_PRESENTACION_DOCENTE"
 
 logger = logging.getLogger(__name__)
-
-FIRMA_ANCHO_MAX = 5 * cm
-FIRMA_ALTO_MAX = 2.5 * cm
-
-
-def _cargar_firma_prueba():
-    """
-    Devuelve la firma de prueba como flowable de ReportLab, o None.
-
-    La ruta viene de settings.CARTA_FIRMA_PRUEBA_PATH (variable de entorno
-    en el .env). El archivo vive fuera del repositorio y fuera de static/media:
-    solo se lee en el servidor y se incrusta en el PDF, nunca se sirve por URL.
-    """
-    ruta = getattr(settings, "CARTA_FIRMA_PRUEBA_PATH", "") or ""
-    if not ruta:
-        return None
-
-    archivo = Path(ruta).expanduser()
-    if not archivo.is_file():
-        logger.warning(
-            "La firma de prueba configurada no existe: %s. "
-            "La carta se genera sin firma.",
-            archivo,
-        )
-        return None
-
-    try:
-        datos = archivo.read_bytes()
-        ancho, alto = ImageReader(BytesIO(datos)).getSize()
-        escala = min(FIRMA_ANCHO_MAX / ancho, FIRMA_ALTO_MAX / alto)
-        firma = Image(
-            BytesIO(datos),
-            width=ancho * escala,
-            height=alto * escala,
-        )
-    except Exception:
-        logger.warning(
-            "No se pudo leer la firma de prueba (%s). "
-            "La carta se genera sin firma.",
-            archivo,
-            exc_info=True,
-        )
-        return None
-
-    firma.hAlign = "LEFT"
-    return firma
 
 
 def verificar_alerta_antiguedad_socio(socio):
@@ -95,17 +33,6 @@ def verificar_alerta_antiguedad_socio(socio):
         return True
 
     return ultima_participacion.fecha_inicio < hace_un_ano
-
-
-def _agregar_marca_de_agua(canvas, doc):
-    """Marca de agua institucional discreta para el PDF."""
-    canvas.saveState()
-    canvas.setFont("Helvetica-Bold", 50)
-    canvas.setFillColor(colors.HexColor("#F1F5F9"))
-    canvas.translate(A4[0] / 2.0, A4[1] / 2.0)
-    canvas.rotate(45)
-    canvas.drawCentredString(0, 0, "APRENDIZAJE + SERVICIO")
-    canvas.restoreState()
 
 
 def generar_pdf_carta(solicitud, usuario, estudiantes=None):
@@ -129,192 +56,23 @@ def generar_pdf_carta(solicitud, usuario, estudiantes=None):
             f"Una carta de presentación no puede contener más de {MAX_ALUMNOS_POR_CARTA} estudiantes."
         )
 
-    buffer = BytesIO()
-
-    documento = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        rightMargin=2.5 * cm,
-        leftMargin=2.5 * cm,
-        topMargin=2.5 * cm,
-        bottomMargin=2.5 * cm,
-    )
-
-    estilos = getSampleStyleSheet()
-
-    titulo = ParagraphStyle(
-        "TituloCarta",
-        parent=estilos["Heading1"],
-        alignment=TA_CENTER,
-        fontSize=14,
-        leading=18,
-        spaceAfter=24,
-    )
-
-    cuerpo = ParagraphStyle(
-        "CuerpoCarta",
-        parent=estilos["Normal"],
-        fontSize=11,
-        leading=17,
-        spaceAfter=12,
-    )
-
-    pie_estilo = ParagraphStyle(
-        "PieEstilo",
-        parent=estilos["Normal"],
-        fontSize=8,
-        leading=11,
-        textColor=colors.HexColor("#64748B"),
-    )
-
-    fecha = solicitud.fecha_aprobacion or timezone.now()
-
     docente = solicitud.docente_derivador
     nombre_docente = (
         f"{docente.nombres} {docente.apellidos}"
     ).strip() if docente else ""
 
-    contenido = [
-        Paragraph(
-            "<b>CARTA PRESENTACIÓN</b>",
-            titulo,
-        ),
-        Paragraph(
-            f"Santiago, {fecha.strftime('%d/%m/%Y')}",
-            cuerpo,
-        ),
-        Spacer(1, 8),
-        Paragraph(
-            f"<b>Señor(a):</b> {solicitud.persona_receptora}",
-            cuerpo,
-        ),
-        Paragraph(
-            f"<b>Institución:</b> {solicitud.institucion_receptora}",
-            cuerpo,
-        ),
-        Spacer(1, 8),
-        Paragraph(
-            (
-                "Junto con saludar, por medio de la presente "
-                "se presenta a los estudiantes que participan "
-                "en una actividad de Aprendizaje + Servicio "
-                f"correspondiente a la asignatura "
-                f"<b>{solicitud.seccion.asignatura.nombre}</b>, "
-                f"impartida por el docente "
-                f"<b>{nombre_docente}</b>."
-            ),
-            cuerpo,
-        ),
-        Paragraph(
-            (
-                "Los estudiantes desarrollarán actividades "
-                "vinculadas con la metodología de "
-                "Aprendizaje + Servicio en colaboración con "
-                "la institución receptora."
-            ),
-            cuerpo,
-        ),
-        Spacer(1, 12),
-    ]
-
-    datos_tabla = [
-        [
-            Paragraph("<b>Nombre</b>", cuerpo),
-            Paragraph("<b>RUT</b>", cuerpo),
-        ]
-    ]
-
-    for estudiante in estudiantes:
-        datos_tabla.append(
-            [
-                estudiante.nombre,
-                estudiante.rut,
-            ]
-        )
-
-    tabla = Table(
-        datos_tabla,
-        colWidths=[
-            11 * cm,
-            4 * cm,
-        ],
-        repeatRows=1,
+    # Formato oficial de Coordinación A+S (cartas/plantilla_oficial.py).
+    recursos = recursos_carta()
+    pdf_bytes = construir_pdf(
+        fecha=solicitud.fecha_aprobacion or timezone.now(),
+        persona_receptora=solicitud.persona_receptora,
+        institucion_receptora=solicitud.institucion_receptora,
+        asignatura=solicitud.seccion.asignatura.nombre,
+        docente=nombre_docente,
+        estudiantes=[(estudiante.nombre, estudiante.rut) for estudiante in estudiantes],
+        borrador=solicitud.estado == "BORRADOR",
+        recursos=recursos,
     )
-
-    tabla.setStyle(
-        TableStyle(
-            [
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.whitesmoke),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 8),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-                ("TOPPADDING", (0, 0), (-1, -1), 7),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-            ]
-        )
-    )
-
-    contenido.append(tabla)
-    contenido.append(Spacer(1, 24))
-
-    if solicitud.consideraciones:
-        contenido.append(
-            Paragraph(
-                (
-                    "<b>Consideraciones:</b> "
-                    f"{solicitud.consideraciones}"
-                ),
-                cuerpo,
-            )
-        )
-
-    firma = _cargar_firma_prueba()
-
-    contenido.extend(
-        [
-            Spacer(1, 12),
-            Paragraph(
-                (
-                    "Agradecemos desde ya la disposición y "
-                    "colaboración brindada para el desarrollo "
-                    "de esta experiencia de Aprendizaje + Servicio."
-                ),
-                cuerpo,
-            ),
-            Spacer(1, 12),
-            firma if firma is not None else Spacer(1, 18),
-            Paragraph(
-                "<b>Coordinación Aprendizaje + Servicio</b>",
-                cuerpo,
-            ),
-            Paragraph(
-                "Universidad Autónoma de Chile",
-                cuerpo,
-            ),
-            Spacer(1, 20),
-        ]
-    )
-
-  
-    codigo_verificacion = f"CDE-{solicitud.id}-{fecha.strftime('%Y%m%d')}"
-    contenido.append(
-        Paragraph(
-            f"<b>Documento Validado Digitalmente</b><br/>"
-            f"<b>Código de Verificación:</b> {codigo_verificacion}<br/>"
-            f"<b>Emitido por:</b> {usuario.get_full_name() or usuario.username}",
-            pie_estilo,
-        )
-    )
-
-    documento.build(
-        contenido,
-        onFirstPage=_agregar_marca_de_agua,
-        onLaterPages=_agregar_marca_de_agua,
-    )
-
-    pdf_bytes = buffer.getvalue()
-    buffer.close()
 
     hash_documento = hashlib.sha256(
         pdf_bytes
@@ -358,6 +116,7 @@ def generar_pdf_carta(solicitud, usuario, estudiantes=None):
             tipo="BORRADOR" if solicitud.estado == "BORRADOR" else "PDF",
             fecha_generacion=timezone.now(),
             hash_documento=hash_documento,
+            plantilla=recursos["plantilla"],
         )
 
     return carta_documento
@@ -558,4 +317,63 @@ def enviar_carta_docente(documento):
             "persona_receptora": solicitud.persona_receptora,
         },
         carta_documento=documento,
-    )
+    )
+
+
+DIAS_AVISO_CARTA_APROBADA = 14
+
+
+def avisos_cartas_docente(usuario):
+    """
+    Avisos de cartas para el Inicio del Docente: solicitudes que la
+    Coordinación observó (hasta que las corrija) y cartas aprobadas en los
+    últimos DIAS_AVISO_CARTA_APROBADA días, con el correo al que se enviaron.
+    """
+    from django.urls import reverse
+
+    base = (
+        SolicitudCarta.objects
+        .filter(docente_derivador__usuario=usuario)
+        .select_related("seccion__asignatura")
+    )
+    avisos = []
+
+    for solicitud in base.filter(estado="OBSERVADA").order_by("-fecha_solicitud"):
+        avisos.append({
+            "tipo": "observada",
+            "titulo": f"Carta para {solicitud.institucion_receptora} observada",
+            "detalle": solicitud.motivo_observacion or "La Coordinación pidió corregir la solicitud.",
+            "seccion": solicitud.seccion,
+            "url": reverse("cartas:editar_solicitud_docente", args=[solicitud.id]),
+            "accion": "Corregir solicitud",
+            "fecha": solicitud.fecha_solicitud,
+        })
+
+    desde = timezone.now() - timedelta(days=DIAS_AVISO_CARTA_APROBADA)
+    aprobadas = (
+        base.filter(estado="APROBADA", fecha_aprobacion__gte=desde)
+        .prefetch_related("documentos__envios_correo")
+        .order_by("-fecha_aprobacion")
+    )
+    for solicitud in aprobadas:
+        envios = [
+            envio
+            for documento in solicitud.documentos.all()
+            for envio in documento.envios_correo.all()
+        ]
+        enviada = next((envio for envio in sorted(envios, key=lambda e: -e.id) if envio.resultado == "OK"), None)
+        if enviada:
+            detalle = f"Se envió a tu correo {enviada.destinatario}. Revisa tu bandeja de entrada."
+        else:
+            detalle = "El correo todavía no sale. Puedes descargarla desde las cartas de la sección."
+        avisos.append({
+            "tipo": "aprobada",
+            "titulo": f"Carta para {solicitud.institucion_receptora} aprobada",
+            "detalle": detalle,
+            "seccion": solicitud.seccion,
+            "url": reverse("cartas:listar_cartas_seccion_docente", args=[solicitud.seccion_id]),
+            "accion": "Ver cartas",
+            "fecha": solicitud.fecha_aprobacion,
+        })
+
+    return avisos

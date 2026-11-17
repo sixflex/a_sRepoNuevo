@@ -9,6 +9,7 @@ urlpatterns = [
     path("docente/<int:seccion_ruta_id>/completar/",views.completar_ruta,name="completar_ruta",),
     path("actividad/<int:actividad_id>/completar/",views.completar_actividad,name="completar_actividad",),
     path("actividad/<int:actividad_id>/evidencia/",views.subir_evidencia,name="subir_evidencia",),
+    path("actividad/<int:actividad_id>/acuerdo.pdf",views.descargar_acuerdo,name="descargar_acuerdo",),
     path("evidencia/<int:evidencia_id>/eliminar/",views.eliminar_evidencia,name="eliminar_evidencia",),
     path("actividad/<int:actividad_id>/sin-cierre/",views.indicar_sin_cierre,name="indicar_sin_cierre",),
     path("actividad/<int:actividad_id>/invitar-socios/",views.invitar_socios_cierre,name="invitar_socios_cierre",),

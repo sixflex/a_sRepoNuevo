@@ -1,6 +1,5 @@
 from types import SimpleNamespace
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.db import IntegrityError, transaction
@@ -8,6 +7,7 @@ from django.db.models import Exists, OuterRef, Q
 from django.db.models.functions import Lower
 from django.utils import timezone
 from academico.models import Docente
+from comunicaciones.configuracion import remitente_actual
 from comunicaciones.models import EnvioCorreo
 from encuestas.models import RespuestaPregunta
 from planificacion.models import FilaPlanificacion
@@ -627,7 +627,7 @@ def revisar_postulacion(request, postulacion, decision, motivo=""):
 
 
 def _enviar_y_registrar(destinatario, asunto, cuerpo, postulacion=None):
-    remitente = getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@uautonoma.cl")
+    remitente = remitente_actual()
     resultado = "PENDIENTE"
     detalle_error = None
 

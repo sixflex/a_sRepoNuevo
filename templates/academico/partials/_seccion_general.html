@@ -1,18 +1,9 @@
 <div class="card shadow-sm border-0 mb-4">
-    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div class="card-header bg-white border-bottom py-3">
         <h2 class="h5 fw-bold mb-0">Información de la sección</h2>
-        {% if request.user.groups.all %}
-            {% for grupo in request.user.groups.all %}
-                {% if grupo.name == "Docente" %}
-                    <a href="{% url 'cartas:solicitar_carta_docente' seccion.id %}" class="btn btn-sm btn-ua-outline">
-                        + Solicitar Carta de Presentación
-                    </a>
-                {% endif %}
-            {% endfor %}
-        {% endif %}
     </div>
     <div class="card-body p-4">
-        <dl class="ficha-datos">
+        <dl class="ficha-datos ficha-datos--cajas">
             <div class="dato dato--ancho">
                 <dt>Asignatura</dt>
                 <dd>

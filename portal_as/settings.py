@@ -234,11 +234,34 @@ PRIVATE_STORAGE_RETENTION_YEARS = int(os.getenv("PRIVATE_STORAGE_RETENTION_YEARS
 # en static/ ni en media/: solo se lee en el servidor y se incrusta en el PDF.
 CARTA_FIRMA_PRUEBA_PATH = os.getenv("CARTA_FIRMA_PRUEBA_PATH", "")
 
+# Planilla Word oficial de la Carta de Presentación (la que usa el
+# Coordinador para combinar correspondencia). De ella se toman el logo, la
+# firma y la tarjeta (cartas/plantilla_oficial.py). Trae la firma real, así que
+# va FUERA del repositorio; en Render se sube como "Secret File".
+CARTA_PLANTILLA_PATH = os.getenv("CARTA_PLANTILLA_PATH", "")
+
+# Ingreso con Microsoft (usuarios/entra.py, guía en CONECTAR_MICROSOFT.md).
+# ENTRA_MODO: "simulado" (desarrollo/demo), "microsoft" (real) o "desactivado".
+# Vacío = "simulado" con DEBUG=True y "desactivado" sin DEBUG.
+ENTRA_MODO = os.getenv("ENTRA_MODO", "")
+ENTRA_TENANT_ID = os.getenv("ENTRA_TENANT_ID", "")
+ENTRA_CLIENT_ID = os.getenv("ENTRA_CLIENT_ID", "")
+ENTRA_CLIENT_SECRET = os.getenv("ENTRA_CLIENT_SECRET", "")
+ENTRA_REDIRECT_URI = os.getenv("ENTRA_REDIRECT_URI", "")
+# Correos que siempre entran como Coordinador, separados por coma.
+COORDINADORES = os.getenv("COORDINADORES", "")
+
 # Configuración de Correo
-EMAIL_BACKEND = os.getenv(
+# Todos los correos pasan por comunicaciones/backend.py: si el Coordinador
+# activó una cuenta en Configuración → Correo de envío se usa esa; si no, este
+# backend del servidor (EMAIL_BACKEND del .env: SMTP o consola).
+EMAIL_BACKEND_RESPALDO = os.getenv(
     "EMAIL_BACKEND",
     "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend"
 )
+EMAIL_BACKEND = "comunicaciones.backend.CorreoConfigurableBackend"
+# Llave para cifrar la clave del correo de envío. Vacía = se deriva de SECRET_KEY.
+CORREO_CLAVE_CIFRADO = os.getenv("CORREO_CLAVE_CIFRADO", "")
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.office365.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"

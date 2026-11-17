@@ -37,9 +37,9 @@ class AccesoSimuladoTests(TestCase):
 
     # --- acceso por rol -----------------------------------------------------
 
-    def comprobar_acceso(self, correo, rol):
+    def comprobar_acceso(self, correo, rol, destino="core:inicio"):
         respuesta = self.ingresar(correo)
-        self.assertRedirects(respuesta, reverse("core:inicio"), fetch_redirect_response=False)
+        self.assertRedirects(respuesta, reverse(destino), fetch_redirect_response=False)
         self.assertTrue(self.sesion_iniciada())
 
         usuario = Usuario.objects.get(correo_institucional=correo)
@@ -56,10 +56,10 @@ class AccesoSimuladoTests(TestCase):
         self.comprobar_acceso("docente@uautonoma.cl", "Docente")
 
     def test_estudiante_entra_con_cuenta_simulada(self):
-        self.comprobar_acceso("estudiante@uautonoma.cl", "Estudiante")
+        self.comprobar_acceso("estudiante@uautonoma.cl", "Estudiante", "usuarios:sin_panel")
 
     def test_correo_institucional_sin_rol_conocido_entra_como_estudiante(self):
-        self.comprobar_acceso("ana.perez@uautonoma.cl", "Estudiante")
+        self.comprobar_acceso("ana.perez@uautonoma.cl", "Estudiante", "usuarios:sin_panel")
 
     def test_correo_se_normaliza_a_minusculas(self):
         self.ingresar("  Docente@UAutonoma.CL ")

@@ -178,6 +178,16 @@ class CartaDocumento(models.Model):
         blank=True,
     )
 
+    # Word oficial (con la firma) con que se armó esta carta. Vacío si se usó
+    # la planilla del servidor o la firma de prueba.
+    plantilla = models.ForeignKey(
+        "cartas.PlantillaCarta",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="documentos",
+    )
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -225,3 +235,42 @@ class EnlaceSolicitudCarta(models.Model):
 
     def __str__(self):
         return f"Enlace solicitud carta - {self.seccion}"
+
+
+class PlantillaCarta(models.Model):
+    """
+    Word oficial de la Carta de Presentación que sube el Coordinador (el de
+    "combinar correspondencia", con su firma, el logo y su tarjeta). El portal
+    toma de él las imágenes para armar cada carta (cartas/plantilla_oficial.py).
+
+    Se guarda en el almacenamiento privado (nunca en static/media, RN-07). Solo
+    una está activa; las anteriores se conservan porque cada CartaDocumento
+    indica con cuál salió.
+    """
+
+    archivo = models.OneToOneField(
+        "archivos.Archivo",
+        on_delete=models.PROTECT,
+        related_name="plantilla_carta",
+    )
+    cargada_por_usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="plantillas_carta_cargadas",
+    )
+    fecha_carga = models.DateTimeField(auto_now_add=True)
+    activa = models.BooleanField(default=False)
+    observacion = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["-fecha_carga"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["activa"],
+                condition=models.Q(activa=True),
+                name="una_plantilla_carta_activa",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.archivo.nombre_original} ({self.fecha_carga:%d-%m-%Y})"

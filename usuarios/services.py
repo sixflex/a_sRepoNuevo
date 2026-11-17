@@ -315,7 +315,22 @@ def obtener_o_crear_usuario_por_identidad(identidad_entra):
         usuario.groups.add(Group.objects.get_or_create(name=identidad_entra.rol)[0])
 
     enlazar_docente(usuario)
+    if correos_de_usuario(usuario) & entra.correos_coordinadores():
+        dar_rol_coordinador(usuario)
     return usuario, identidad
+
+
+def dar_rol_coordinador(usuario):
+    """
+    Deja al usuario como Coordinador (grupo + rol). Lo usan la lista
+    COORDINADORES del servidor y el comando `crear_coordinador`.
+    """
+    usuario.groups.add(Group.objects.get_or_create(name=entra.ROL_COORDINADOR)[0])
+    usuario.groups.remove(*usuario.groups.filter(name=entra.ROL_ESTUDIANTE))
+    if usuario.rol is None or usuario.rol.nombre != entra.ROL_COORDINADOR:
+        usuario.rol = Rol.objects.get_or_create(nombre=entra.ROL_COORDINADOR)[0]
+        usuario.save(update_fields=["rol"])
+    return usuario
 
 
 @transaction.atomic

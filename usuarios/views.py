@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views import View
@@ -12,13 +13,20 @@ from django.views.decorators.http import require_POST
 
 from . import entra, services
 from .models import IdentidadInstitucional
+from .permissions import es_coordinador, es_docente
 
 
 # Modo "vincular otra cuenta": se guarda en la sesión (no se confía en un
 # parámetro de la URL) y vence a los pocos minutos.
 SESION_VINCULAR = "vincular_cuenta"
 SESION_FUSION = "fusion_pendiente"
+SESION_FLUJO_MICROSOFT = "flujo_microsoft"
 MINUTOS_VINCULAR = 10
+
+
+def _microsoft_disponible():
+    """El botón "Iniciar sesión con Microsoft" (simulado o real) está activo."""
+    return entra.modo() in ("simulado", "microsoft")
 
 
 def _modo_vincular(request):
@@ -53,8 +61,56 @@ class LoginTemporalView(LoginView):
 
     def get_context_data(self, **kwargs):
         contexto = super().get_context_data(**kwargs)
-        contexto["entra_activo"] = entra.modo() == "simulado"
+        contexto["entra_activo"] = _microsoft_disponible()
+        contexto["entra_real"] = entra.modo() == "microsoft"
         return contexto
+
+
+def _iniciar_sesion(request, usuario, identidad, destino_pedido):
+    """Inicia la sesión y decide a dónde va la persona."""
+    login(request, usuario, backend="django.contrib.auth.backends.ModelBackend")
+    request.session[services.SESION_IDENTIDAD] = identidad.pk
+    destino = _destino_seguro(request, destino_pedido, "")
+    if destino:
+        return redirect(destino)
+    if es_coordinador(usuario) or es_docente(usuario) or usuario.is_superuser:
+        return redirect(settings.LOGIN_REDIRECT_URL)
+    # Estudiante u otra persona de la U sin rol: no tiene panel.
+    return redirect("usuarios:sin_panel")
+
+
+def _resolver_vinculo(request, identidad_entra):
+    """
+    La otra cuenta ya se autenticó (simulada o real); la sesión sigue siendo la
+    de siempre. Devuelve la redirección. Lanza EntraError si no se puede.
+    """
+    duenio, _ = services.duenio_de_cuenta(identidad_entra)
+    if duenio is not None and duenio.pk != request.user.pk:
+        services.comprobar_fusion(duenio, request.user)
+
+    request.session.pop(SESION_VINCULAR, None)
+
+    if duenio is not None and duenio.pk == request.user.pk:
+        messages.info(request, f"{identidad_entra.correo} ya está vinculada a tu cuenta.")
+        return redirect("usuarios:cuenta")
+
+    if duenio is not None:
+        request.session[SESION_FUSION] = {
+            "usuario_id": duenio.pk,
+            "correo": identidad_entra.correo,
+            "oid": identidad_entra.oid,
+            "tenant_id": identidad_entra.tenant_id,
+        }
+        return redirect("usuarios:cuenta_fusionar")
+
+    services.vincular_identidad(
+        request.user, identidad_entra, IdentidadInstitucional.CONFIRMADO_USUARIO, request=request,
+    )
+    messages.success(
+        request,
+        f"Listo: ahora también puedes entrar con {identidad_entra.correo}.",
+    )
+    return redirect("usuarios:cuenta")
 
 
 class EntraLoginSimuladoView(View):
@@ -63,6 +119,8 @@ class EntraLoginSimuladoView(View):
     template_name = "usuarios/entra_simulado.html"
 
     def dispatch(self, request, *args, **kwargs):
+        if entra.modo() == "microsoft":
+            return _ir_a_microsoft(request)
         if entra.modo() != "simulado":
             raise Http404("El acceso simulado con Microsoft está desactivado.")
         return super().dispatch(request, *args, **kwargs)
@@ -92,46 +150,70 @@ class EntraLoginSimuladoView(View):
             contexto = self._contexto(request, error=str(error), correo=correo)
             return render(request, self.template_name, contexto)
 
-        login(request, usuario, backend="django.contrib.auth.backends.ModelBackend")
-        request.session[services.SESION_IDENTIDAD] = identidad.pk
-
-        destino = _destino_seguro(request, request.POST.get("next", ""), settings.LOGIN_REDIRECT_URL)
-        return redirect(destino)
+        return _iniciar_sesion(request, usuario, identidad, request.POST.get("next", ""))
 
     def _vincular(self, request, correo):
         """La otra cuenta se autenticó; la sesión sigue siendo la de siempre."""
         try:
-            identidad_entra = entra.get_conector().identificar(correo)
-            duenio, _ = services.duenio_de_cuenta(identidad_entra)
-            if duenio is not None and duenio.pk != request.user.pk:
-                services.comprobar_fusion(duenio, request.user)
+            return _resolver_vinculo(request, entra.get_conector().identificar(correo))
         except entra.EntraError as error:
             contexto = self._contexto(request, error=str(error), correo=correo)
             return render(request, self.template_name, contexto)
 
-        request.session.pop(SESION_VINCULAR, None)
 
-        if duenio is not None and duenio.pk == request.user.pk:
-            messages.info(request, f"{identidad_entra.correo} ya está vinculada a tu cuenta.")
-            return redirect("usuarios:cuenta")
+# ---------------------------------------------------------------------------
+# Microsoft real (ENTRA_MODO=microsoft)
+# ---------------------------------------------------------------------------
 
-        if duenio is not None:
-            request.session[SESION_FUSION] = {
-                "usuario_id": duenio.pk,
-                "correo": identidad_entra.correo,
-                "oid": identidad_entra.oid,
-                "tenant_id": identidad_entra.tenant_id,
-            }
-            return redirect("usuarios:cuenta_fusionar")
+def _error_microsoft(request, mensaje):
+    return render(request, "usuarios/microsoft_error.html", {"error": mensaje}, status=400)
 
-        services.vincular_identidad(
-            request.user, identidad_entra, IdentidadInstitucional.CONFIRMADO_USUARIO, request=request,
+
+def _ir_a_microsoft(request):
+    """Paso 1: manda a la persona a la página de Microsoft."""
+    # En desarrollo, Microsoft solo acepta volver a http://localhost (no a
+    # 127.0.0.1). Se cambia ANTES de empezar para no perder la sesión al volver.
+    if settings.DEBUG and request.get_host().split(":")[0] == "127.0.0.1":
+        return redirect(request.build_absolute_uri().replace("//127.0.0.1", "//localhost", 1))
+    try:
+        flujo = entra.get_conector().iniciar(
+            request.build_absolute_uri(reverse("usuarios:entra_callback")),
+            # Siempre se elige la cuenta: en un PC compartido o con dos cuentas
+            # de la U (@uautonoma.cl y @cloud) no se entra solo con la última usada.
+            seleccionar_cuenta=True,
         )
-        messages.success(
-            request,
-            f"Listo: ahora también puedes entrar con {identidad_entra.correo}.",
-        )
-        return redirect("usuarios:cuenta")
+    except entra.EntraError as error:
+        return _error_microsoft(request, str(error))
+    request.session[SESION_FLUJO_MICROSOFT] = {
+        "flujo": flujo,
+        "next": request.GET.get("next", ""),
+    }
+    return redirect(flujo["auth_uri"])
+
+
+def entra_callback(request):
+    """Paso 2: Microsoft vuelve aquí con el código; se inicia la sesión (o se vincula)."""
+    if entra.modo() != "microsoft":
+        raise Http404("El ingreso con Microsoft no está activo.")
+    guardado = request.session.pop(SESION_FLUJO_MICROSOFT, None)
+    if not guardado:
+        return _error_microsoft(request, "El inicio de sesión venció. Vuelve a intentarlo.")
+    try:
+        identidad_entra = entra.get_conector().completar(guardado["flujo"], request.GET)
+        if _modo_vincular(request):
+            return _resolver_vinculo(request, identidad_entra)
+        usuario, identidad = services.obtener_o_crear_usuario_por_identidad(identidad_entra)
+    except entra.EntraError as error:
+        return _error_microsoft(request, str(error))
+    return _iniciar_sesion(request, usuario, identidad, guardado.get("next", ""))
+
+
+@login_required
+def sin_panel(request):
+    """Cuenta de la U sin rol de Coordinador ni Docente."""
+    if es_coordinador(request.user) or es_docente(request.user):
+        return redirect(settings.LOGIN_REDIRECT_URL)
+    return render(request, "usuarios/sin_panel.html", {"hide_sidebar": True})
 
 
 @login_required
@@ -143,14 +225,14 @@ def cuenta(request):
         "identidades": request.user.identidades.all(),
         "identidad_actual": services.identidad_actual(request),
         "dominios": entra.texto_dominios(),
-        "entra_activo": entra.modo() == "simulado",
+        "entra_activo": _microsoft_disponible(),
     })
 
 
 @login_required
 @require_POST
 def cuenta_vincular(request):
-    if entra.modo() != "simulado":
+    if not _microsoft_disponible():
         messages.error(request, "La vinculación con Microsoft no está disponible.")
         return redirect("usuarios:cuenta")
     request.session[SESION_VINCULAR] = {

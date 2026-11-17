@@ -333,6 +333,8 @@ def panel_docente(request):
         "-periodo__anio",
         "-periodo_id",
         "asignatura__nombre",
+        "asignatura_id",
+        "seccion",
     )
 
     secciones = list(secciones)
@@ -341,11 +343,25 @@ def panel_docente(request):
     for seccion in secciones:
         seccion.recordatorio_ruta = recordatorios.get(seccion.id)
 
+    # Una tarjeta por asignatura y período, con sus secciones adentro.
+    grupos = []
+    for seccion in secciones:
+        clave = (seccion.periodo_id, seccion.asignatura_id)
+        if not grupos or grupos[-1]["clave"] != clave:
+            grupos.append({
+                "clave": clave,
+                "asignatura": seccion.asignatura,
+                "periodo": seccion.periodo,
+                "secciones": [],
+            })
+        grupos[-1]["secciones"].append(seccion)
+
     return render(
         request,
         "core/docente.html",
         {
             "secciones": secciones,
+            "grupos": grupos,
             "anios": anios,
             "periodos": periodos,
             "anio_seleccionado": anio_seleccionado,
@@ -444,6 +460,38 @@ def inicio_docente(request):
 
         total_pendientes += ruta.pendientes_obligatorias
 
+    from cartas.services import avisos_cartas_docente
+
+    # Rutas agrupadas por asignatura (y período), como en Mis secciones:
+    # dos secciones del mismo ramo se ven juntas con su avance promedio.
+    from core.indicadores import nivel_avance
+
+    grupos_rutas = []
+    por_clave = {}
+    for ruta in sorted(rutas, key=lambda r: (
+        -(r.seccion.periodo.anio if r.seccion.periodo_id else 0),
+        -(r.seccion.periodo_id or 0),
+        r.seccion.asignatura.nombre,
+        r.seccion.seccion or "",
+    )):
+        clave = (ruta.seccion.periodo_id, ruta.seccion.asignatura_id)
+        if clave not in por_clave:
+            por_clave[clave] = {
+                "asignatura": ruta.seccion.asignatura,
+                "periodo": ruta.seccion.periodo,
+                "rutas": [],
+            }
+            grupos_rutas.append(por_clave[clave])
+        ruta.nivel = nivel_avance(ruta.avance_calculado)
+        por_clave[clave]["rutas"].append(ruta)
+    for grupo in grupos_rutas:
+        grupo["porcentaje"] = round(
+            sum(r.avance_calculado for r in grupo["rutas"]) / len(grupo["rutas"])
+        )
+        grupo["nivel"] = nivel_avance(grupo["porcentaje"])
+        grupo["pendientes"] = sum(r.pendientes_obligatorias for r in grupo["rutas"])
+        grupo["completadas"] = sum(r.estado == "COMPLETADA" for r in grupo["rutas"])
+
     # Promedio de sus Rutas (pedido del cliente): cada sección pesa lo mismo.
     # Se mide en el período vigente para que las Rutas de semestres ya
     # cerrados no inflen el número; si no tiene Rutas en él, usa todas.
@@ -468,6 +516,8 @@ def inicio_docente(request):
             "rutas_en_promedio": len(rutas_promedio),
             "periodo_promedio": periodo_promedio,
             "rutas": rutas,
+            "grupos_rutas": grupos_rutas,
+            "avisos": avisos_cartas_docente(request.user),
             "aviso_vincular": aviso_vincular_cuenta(request),
         },
     )
@@ -595,4 +645,4 @@ def panel_indicadores_coordinacion(request):
         "satisfaccion": indicadores.satisfaccion(filtros),
     }
 
-    return render(request, "core/indicadores_coordinacion.html", contexto)
+    return render(request, "core/indicadores_coordinacion.html", contexto)

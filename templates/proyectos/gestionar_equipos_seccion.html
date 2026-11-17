@@ -1,119 +1,82 @@
 {% extends "base.html" %}
-{% load core_extras %}
+{% load core_extras static %}
 
 {% block title %}Equipos de la sección{% endblock %}
 
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">{% endblock %}
+
 {% block content %}
-<div class="container py-4">
+{% comment %}
+Equipos registrados de una sección: mismo diseño que la ficha de la sección
+(encabezado, tarjetas accion-card) y un resumen arriba.
+{% endcomment %}
+<div class="container-fluid py-2 ficha-seccion">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            {% url 'core:detalle_seccion' seccion.id as url_volver %}{% volver url_volver "Volver a la sección" %}
-            <h2 class="mb-1">Equipos registrados</h2>
-            <p class="text-muted mb-0">
-                {{ seccion.asignatura.nombre }}
-                · NRC {{ seccion.nrc }}
-                · {{ seccion.periodo }}
-            </p>
-        </div>
-
+    <div class="mb-3">
+        {% url 'core:detalle_seccion' seccion.id as url_volver %}{% volver url_volver "Volver a la sección" %}
+        <h1 class="h2 fw-bold text-dark mb-1">Equipos registrados</h1>
+        <p class="text-muted mb-0">{{ seccion.asignatura.nombre }} · NRC {{ seccion.nrc }} · {{ seccion.periodo }}</p>
     </div>
 
     {% if equipos %}
+        <div class="resumen-chips">
+            <span><strong>{{ resumen.equipos }}</strong> equipo{{ resumen.equipos|pluralize }}</span>
+            <span><strong>{{ resumen.estudiantes }}</strong> estudiante{{ resumen.estudiantes|pluralize }}</span>
+            <span><strong>{{ resumen.con_socio }}</strong> de {{ resumen.equipos }} con socio</span>
+        </div>
 
-        <div class="row g-4">
-
+        <div class="row g-3">
             {% for equipo in equipos %}
-                <div class="col-lg-6">
+                <div class="col-12 col-md-6 col-xl-4">
+                    <div class="accion-card equipo-card">
+                        <h2 class="accion-card-titulo">
+                            <span><i class="bi bi-people-fill me-1" aria-hidden="true"></i>Grupo {{ equipo.numero_grupo }}</span>
+                            <span class="badge text-bg-light border fw-normal">{{ equipo.integrantes.all|length }} integrante{{ equipo.integrantes.all|length|pluralize:"s" }}</span>
+                        </h2>
 
-                    <div class="card shadow-sm h-100">
-
-                        <div class="card-header text-white"
-                             style="background-color: #A90000;">
-                            <strong>
-                                Grupo {{ equipo.numero_grupo }}
-                            </strong>
-                        </div>
-
-                        <div class="card-body">
-
-                            <p class="mb-2">
-                                <strong>Informante:</strong>
-                                {{ equipo.informante_nombre }}
-                            </p>
-
-                            <p class="mb-3">
-                                <strong>Correo:</strong>
-                                {{ equipo.informante_correo }}
-                            </p>
-
-                            <p class="mb-3">
-                                <strong>Socio Comunitario:</strong>
-
+                        <div class="equipo-datos">
+                            <div>
+                                <span class="etiqueta">Socio Comunitario</span>
                                 {% if equipo.socio_vigente %}
-                                    {{ equipo.socio_vigente.nombre_organizacion }}
-
-                                    {% if equipo.socio_vigente.es_provisional %}
-                                        <span class="badge bg-warning text-dark ms-1">
-                                            Provisional
-                                        </span>
-                                    {% endif %}
+                                    <span class="fw-semibold">{{ equipo.socio_vigente.nombre_organizacion }}</span>
+                                    {% if equipo.socio_vigente.es_provisional %}<span class="badge bg-warning text-dark ms-1">Provisional</span>{% endif %}
                                 {% else %}
-                                    <span class="text-muted">
-                                        Sin Socio Comunitario
-                                    </span>
+                                    <span class="text-muted">Sin Socio Comunitario</span>
                                 {% endif %}
-                            </p>
-
-                            <hr>
-
-                            <h6>Integrantes</h6>
-
-                            <ul class="mb-0">
-                                {% for integrante in equipo.integrantes.all %}
-                                    <li>
-                                        {{ integrante.nombres }}
-                                        {{ integrante.apellidos }}
-
-                                        {% if integrante.es_informante %}
-                                            <span class="badge bg-secondary">
-                                                Informante
-                                            </span>
-                                        {% endif %}
-                                    </li>
-                                {% empty %}
-                                    <li class="text-muted">
-                                        Sin integrantes registrados.
-                                    </li>
-                                {% endfor %}
-                            </ul>
-
+                            </div>
+                            <div>
+                                <span class="etiqueta">Informante</span>
+                                {{ equipo.informante_nombre }}
+                                <span class="d-block text-muted small text-break">{{ equipo.informante_correo }}</span>
+                            </div>
+                            <div>
+                                <span class="etiqueta">Integrantes</span>
+                                <div class="equipo-integrantes">
+                                    {% for integrante in equipo.integrantes.all %}
+                                        <span{% if integrante.es_informante %} class="informante" title="Informante"{% endif %}>{{ integrante.nombres }} {{ integrante.apellidos }}</span>
+                                    {% empty %}
+                                        <em class="text-muted small">Sin integrantes registrados.</em>
+                                    {% endfor %}
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="card-footer bg-white">
-
-                            <a href="{% url 'proyectos:gestionar_equipo' equipo.id %}"
-                               class="btn text-white"
-                               style="background-color: #A90000;">
-                                Gestionar equipo
+                        <div class="accion-card-pie">
+                            <a href="{% url 'proyectos:gestionar_equipo' equipo.id %}" class="btn btn-rojo btn-sm">
+                                <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Gestionar equipo
                             </a>
-
                         </div>
-
                     </div>
-
                 </div>
             {% endfor %}
-
         </div>
-
     {% else %}
-
-        <div class="alert alert-info">
-            Todavía no existen equipos registrados en esta sección.
+        <div class="accion-card text-center py-5">
+            <i class="bi bi-people fs-1 text-muted" aria-hidden="true"></i>
+            <p class="mb-2 fw-semibold">Todavía no existen equipos registrados en esta sección.</p>
+            <p class="text-muted small mb-3">Los estudiantes registran su equipo con el enlace de registro de la sección.</p>
+            <div><a href="{% url 'proyectos:gestionar_registro_equipos' seccion.id %}" class="btn btn-ua-outline btn-sm">Gestionar registro de equipos</a></div>
         </div>
-
     {% endif %}
-
 </div>
 {% endblock %}

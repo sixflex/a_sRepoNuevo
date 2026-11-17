@@ -16,6 +16,9 @@
         <p class="text-muted">
             NRC {{ seccion.nrc }} · Sección {{ seccion.seccion }}
         </p>
+        {% url 'cartas:listar_cartas_seccion_docente' seccion.id as url_cartas %}<a href="{% url_con_volver url_cartas %}" class="btn btn-sm btn-light-ua">
+            <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>Ver cartas emitidas de la sección
+        </a>
     </div>
 
     <div class="card shadow-sm mb-4">
@@ -211,4 +214,4 @@
 
 </div>
 
-{% endblock %}
+{% endblock %}
