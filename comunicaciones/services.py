@@ -1,10 +1,10 @@
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.mail import EmailMessage
 from django.core.validators import validate_email
 from django.template import Context, Template
 from django.utils import timezone
 from archivos.services import abrir_archivo
+from comunicaciones.configuracion import remitente_actual
 from comunicaciones.models import EnvioCorreo, PlantillaCorreo
 
 
@@ -23,11 +23,8 @@ class EmailService:
         Servicio común para preparar y enviar correos usando PlantillaCorreo.
         Registra el intento en EnvioCorreo indicando éxito o fallo.
         """
-        remitente_final = remitente or getattr(
-            settings,
-            "DEFAULT_FROM_EMAIL",
-            "Coordinación A+S <coordinacion.as@uautonoma.cl>",
-        )
+        # Cuenta elegida en Configuración → Correo de envío, o la del servidor.
+        remitente_final = remitente or remitente_actual()
 
         # CDE-345: Validación de sintaxis del destinatario
         try:
@@ -117,4 +114,4 @@ class EmailService:
             envio.detalle_error = str(ex)
 
         envio.save()
-        return envio
+        return envio

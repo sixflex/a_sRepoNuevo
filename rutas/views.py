@@ -78,6 +78,24 @@ def recalcular_avance(seccion_ruta):
     return porcentaje
 
 
+# Desde dónde abrió el Docente su Ruta, para que "Volver" lo devuelva ahí.
+# Se recuerda en la sesión porque marcar actividades o subir evidencias
+# vuelve a esta página sin el parámetro.
+ORIGENES_RUTA = {"inicio": "Volver al inicio", "seccion": "Volver a la sección"}
+
+
+def _volver_ruta_docente(request, seccion_ruta):
+    clave = f"ruta_docente_desde_{seccion_ruta.pk}"
+    desde = request.GET.get("desde")
+    if desde in ORIGENES_RUTA:
+        request.session[clave] = desde
+    else:
+        desde = request.session.get(clave, "seccion")
+    if desde == "inicio":
+        return reverse("core:inicio_docente"), ORIGENES_RUTA["inicio"]
+    return reverse("core:detalle_seccion", args=[seccion_ruta.seccion_id]), ORIGENES_RUTA["seccion"]
+
+
 @login_required
 def detalle_ruta_docente(request, seccion_ruta_id):
     seccion_ruta = get_object_or_404(
@@ -157,10 +175,14 @@ def detalle_ruta_docente(request, seccion_ruta_id):
                 .exclude(invitaciones_cierre__seccion_ruta=seccion_ruta)
             )
 
+    url_volver, texto_volver = _volver_ruta_docente(request, seccion_ruta)
+
     return render(
         request,
         "rutas/detalle_ruta_docente.html",
         {
+            "url_volver": url_volver,
+            "texto_volver": texto_volver,
             "seccion_ruta": seccion_ruta,
             "seccion": seccion_ruta.seccion,
             "etapas": etapas,

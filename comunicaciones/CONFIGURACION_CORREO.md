@@ -18,4 +18,21 @@ Variables de entorno requeridas en `.env`:
 Para validar el envío de prueba en ambiente controlado, ejecutar desde la consola:
 
 ```bash
-python manage.py probar_correo --destinatario correo@uautonoma.cl
+python manage.py probar_correo --destinatario correo@uautonoma.cl```
+
+---
+
+## 3. Cuenta elegida desde el portal (Configuración → Correo de envío)
+El Coordinador puede elegir desde qué cuenta salen los correos sin tocar el servidor
+(tabla `ConfiguracionCorreo`, una sola fila). Todos los envíos pasan por
+`comunicaciones/backend.py` (`EMAIL_BACKEND`):
+
+* Cuenta activa en el portal → se envía con esa cuenta y ese remitente.
+* Sin cuenta activa, o si su clave no se puede leer → se usa la cuenta del servidor
+  (las variables de arriba; `EMAIL_BACKEND` del `.env` pasa a ser `EMAIL_BACKEND_RESPALDO`).
+* Antes de activar una cuenta se prueba la conexión; si falla, no se guarda nada.
+* La clave de aplicación se guarda cifrada (Fernet). La llave es `CORREO_CLAVE_CIFRADO`
+  o, si no existe, `SECRET_KEY`. Si esa llave cambia, basta con volver a escribir la clave.
+* Gmail: usar una contraseña de aplicación. Microsoft 365: DTI debe tener habilitado
+  "SMTP AUTH" para esa cuenta.
+* Cada cambio queda en auditoría (sin la clave).

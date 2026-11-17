@@ -193,7 +193,7 @@
                                 Ver Ruta y evidencias
                             </a>
                         {% else %}
-                            <a href="{% url 'rutas:detalle_ruta_docente' seccion.ruta_asignada.id %}" class="btn btn-rojo btn-sm">
+                            <a href="{% url 'rutas:detalle_ruta_docente' seccion.ruta_asignada.id %}?desde=seccion" class="btn btn-rojo btn-sm">
                                 Ver mi Ruta A+S
                             </a>
                         {% endif %}

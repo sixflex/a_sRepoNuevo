@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load static %}
+
+{# Cuenta de la U sin rol: solo el aviso, sin barra superior ni sidebar. #}
+{% block main_navbar %}{% endblock %}
+
+{% block title %}Sin acceso al portal | Portal A+S{% endblock %}
+
+{% block extra_css %}
+{% include "encuestas/includes/css.html" %}
+<link rel="stylesheet" href="{% static 'css/proyectos.css' %}?v=2026-11-14-c">
+{% endblock %}
+
+{% block content_public %}
+<div class="reg-fondo">
+<div class="container reg-contenedor py-5">
+    <div class="card-ua enc-encabezado p-4 text-center">
+        <div class="reg-aviso-icono mx-auto mb-3"><i class="bi bi-person-lock" aria-hidden="true"></i></div>
+        <h1 class="enc-titulo mb-2">Tu cuenta no tiene un panel en el portal</h1>
+        <p class="enc-texto mb-2">
+            Ingresaste como <strong>{{ user.correo_institucional|default:user.email }}</strong>.
+            El portal A+S tiene paneles solo para Coordinación y para los docentes que dictan asignaturas A+S.
+        </p>
+        <p class="enc-texto mb-0">
+            Si eres estudiante, usa el enlace o el código QR que te compartió tu docente.
+            Si eres docente A+S y ves este mensaje, pide a Coordinación A+S que revise tu correo en la planificación.
+        </p>
+        <div class="d-flex justify-content-center flex-wrap gap-2 mt-4">
+            <a href="{% url 'core:inicio' %}" class="btn btn-outline-secondary px-4">Ir al portal público</a>
+            <form method="post" action="{% url 'usuarios:logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-ua px-4">Cerrar sesión</button>
+            </form>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}

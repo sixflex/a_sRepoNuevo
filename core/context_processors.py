@@ -25,6 +25,7 @@ MENU_POR_APP = {
     "archivos": "repositorio",
     "publico": "repositorio",
     "reportes": "reportes",
+    "comunicaciones": "configuracion",
 }
 
 
@@ -34,6 +35,10 @@ def _menu_activo(match):
 
     if namespace == "core":
         return MENU_CORE.get(nombre, "")
+
+    # Configuración → Carta oficial vive en la app cartas.
+    if namespace == "cartas" and "plantilla_carta" in nombre:
+        return "configuracion"
 
     if namespace in MENU_POR_APP:
         return MENU_POR_APP[namespace]
