@@ -1,3 +1,5 @@
+import re
+
 from django import template
 
 
@@ -17,6 +19,29 @@ def estado_legible(valor):
         return ""
 
     return str(valor).replace("_", " ").strip().capitalize()
+
+
+@register.filter
+def nombre_visible(usuario):
+    """
+    Nombre que se muestra en la barra superior en vez del correo.
+
+    Usa el nombre y apellido guardados; si no hay, lo arma desde el correo
+    institucional (nombre.apellido2@cloud.uautonoma.cl -> "Nombre Apellido").
+    """
+    if not usuario:
+        return ""
+    completo = (usuario.get_full_name() or "").strip()
+    if completo:
+        return completo
+    correo = next(
+        (c for c in (getattr(usuario, "correo_institucional", ""), usuario.email, usuario.username) if c and "@" in c),
+        "",
+    )
+    if not correo:
+        return usuario.username
+    partes = [re.sub(r"\d+", "", parte) for parte in re.split(r"[._\-]+", correo.split("@", 1)[0])]
+    return " ".join(parte.capitalize() for parte in partes if parte) or usuario.username
 
 
 @register.inclusion_tag("includes/volver.html", takes_context=True)

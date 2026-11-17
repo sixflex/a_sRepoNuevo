@@ -1,4 +1,5 @@
 {% load static %}
+{% load core_extras %}
 <!DOCTYPE html>
 <html lang="es">
 
@@ -47,7 +48,7 @@
                             <li class="nav-item">
                                 {# Un solo enlace a "Mi cuenta": el nombre de quien inició sesión. #}
                                 <a class="nav-link fw-semibold{% if request.resolver_match.url_name == 'cuenta' %} text-decoration-underline{% endif %}" href="{% url 'usuarios:cuenta' %}" title="Mi cuenta: tus cuentas institucionales"{% if request.resolver_match.url_name == 'cuenta' %} aria-current="page"{% endif %}>
-                                    <i class="bi bi-person-circle me-1" aria-hidden="true"></i>{{ user.username }}
+                                    <i class="bi bi-person-circle me-1" aria-hidden="true"></i>{{ user|nombre_visible }}
                                 </a>
                             </li>
                             <li class="nav-item">
