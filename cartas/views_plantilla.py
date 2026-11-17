@@ -43,7 +43,7 @@ def _activar(plantilla):
 
 def _origen_sin_plantilla():
     """Qué se usa cuando no hay carta oficial subida (solo para mostrarlo)."""
-    recursos = plantilla_oficial.recursos_carta()
+    recursos = plantilla_oficial.recursos_carta(None)
     if recursos["firma"]:
         return "la planilla o la firma de prueba configurada en el servidor"
     return "el texto «Coordinación A+S» sin firma (no hay firma configurada)"
@@ -110,11 +110,9 @@ def ejemplo_plantilla_carta(request, pk):
     """Carta de ejemplo con datos ficticios, para revisar cómo queda antes de aprobar cartas reales."""
     plantilla = get_object_or_404(PlantillaCarta.objects.select_related("archivo"), pk=pk)
     try:
-        recursos = dict(plantilla_oficial.imagenes_de_plantilla(plantilla))
-    except Exception as exc:
+        recursos = plantilla_oficial.recursos_carta(plantilla)
+    except plantilla_oficial.CartaOficialIlegible as exc:
         raise Http404("No se pudo leer esta carta oficial.") from exc
-    if not recursos.get("logo"):
-        recursos["logo"] = plantilla_oficial.recursos_carta()["logo"]
     pdf = plantilla_oficial.construir_pdf(
         fecha=date.today(),
         persona_receptora="Nombre de la persona receptora",
