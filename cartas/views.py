@@ -687,6 +687,7 @@ def solicitar_carta_estudiante(request, token):
             request,
             "cartas/solicitud_carta_no_disponible.html",
             {
+                "hide_sidebar": True,
                 "motivo": "El enlace para solicitar la carta se encuentra cerrado.",
             },
             status=403,
@@ -697,6 +698,7 @@ def solicitar_carta_estudiante(request, token):
             request,
             "cartas/solicitud_carta_no_disponible.html",
             {
+                "hide_sidebar": True,
                 "motivo": "El enlace para solicitar la carta ha expirado.",
             },
             status=403,
@@ -717,10 +719,13 @@ def solicitar_carta_estudiante(request, token):
             request,
             "cartas/solicitud_carta_no_disponible.html",
             {
+                "hide_sidebar": True,
                 "motivo": (
-                    "Este formulario solo puede ser utilizado "
-                    "por estudiantes autenticados."
+                    "Esta página es para que un estudiante pida la carta. "
+                    "Comparte el QR con tus estudiantes, o cierra sesión "
+                    "para entrar con una cuenta de estudiante."
                 ),
+                "ofrecer_cambio_cuenta": True,
             },
             status=403,
         )
@@ -851,4 +856,4 @@ def listar_cartas_seccion_docente(request, seccion_id):
             "seccion": seccion,
             "cartas": cartas,
         },
-    )
+    )

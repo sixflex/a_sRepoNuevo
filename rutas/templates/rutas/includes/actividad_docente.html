@@ -34,6 +34,19 @@ Los datos los arma rutas/paso_a_paso.py.
             </div>
         {% endif %}
 
+        {# 22: la carpeta final se arma sola con lo subido durante la Ruta. #}
+        {% if actividad.carpeta %}
+            <ul class="ruta-carpeta list-unstyled small mb-2">
+                {% for fila in actividad.carpeta.filas %}
+                    <li>
+                        {% if fila.listo %}<i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i>{% else %}<i class="bi bi-circle text-muted me-1" aria-hidden="true"></i>{% endif %}
+                        {{ fila.texto }} · <span class="{% if fila.listo %}text-success{% else %}text-muted{% endif %}">{{ fila.detalle }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+            <a href="{{ actividad.carpeta.url_zip }}" class="btn btn-light-ua btn-sm mb-2"><i class="bi bi-file-earmark-zip me-1" aria-hidden="true"></i>Descargar mi carpeta (.zip)</a>
+        {% endif %}
+
         <div class="ruta-links">
             <button type="button" class="ruta-ayuda" data-bs-toggle="collapse" data-bs-target="#como-{{ actividad.id }}"
                     aria-expanded="false" aria-controls="como-{{ actividad.id }}">
@@ -58,8 +71,8 @@ Los datos los arma rutas/paso_a_paso.py.
 
                 {% if actividad.dinamicas %}
                     <p class="fw-semibold small mb-1">Dinámicas sugeridas para este momento</p>
-                    <ul class="small mb-2">{% for dinamica in actividad.dinamicas %}<li>{{ dinamica }}</li>{% endfor %}</ul>
-                    <p class="small text-muted mb-2">También puedes hacer otra; al registrarla eliges «Otra dinámica».</p>
+                    <ul class="small mb-2">{% for dinamica in actividad.dinamicas %}<li><span class="fw-semibold">{{ dinamica.nombre }}</span>{% if dinamica.detalle %}<br><span class="text-muted">{{ dinamica.detalle }}</span>{% endif %}</li>{% endfor %}</ul>
+                    <p class="small text-muted mb-2">El paso a paso y las fichas están en «Propuesta de reflexiones (PDF)». También puedes hacer otra; al registrarla eliges «Otra dinámica».</p>
                 {% endif %}
 
                 {% if actividad.acuerdo_en_blanco %}
@@ -134,16 +147,22 @@ Los datos los arma rutas/paso_a_paso.py.
         {% elif ruta_abierta %}
             {% if actividad.accion %}
                 {% if actividad.accion.opciones %}
-                    {# Un mismo formulario por grupo (Acuerdo de la actividad 11): cada opción viene precargada con el socio del grupo. #}
+                    {# Varias formas de hacer la acción: el Acuerdo por grupo (11, precargado con su socio) o la carta pedida por el docente o por un estudiante con QR (10). #}
                     <div class="dropdown">
                         <button type="button" class="btn btn-ua btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi {{ actividad.accion.icono }} me-1" aria-hidden="true"></i>{{ actividad.accion.texto }}
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             {% for opcion in actividad.accion.opciones %}
-                                <li><a class="dropdown-item small" href="{{ opcion.url }}" target="_blank" rel="noopener">
-                                    {% if opcion.listo %}<i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i>{% else %}<i class="bi bi-circle me-1 text-muted" aria-hidden="true"></i>{% endif %}{{ opcion.texto }}
-                                </a></li>
+                                {% if opcion.modal %}
+                                    <li><button type="button" class="dropdown-item small" data-bs-toggle="modal" data-bs-target="#{{ opcion.modal }}"><i class="bi bi-qr-code me-1" aria-hidden="true"></i>{{ opcion.texto }}</button></li>
+                                {% elif opcion.misma_pestana %}
+                                    <li><a class="dropdown-item small" href="{{ opcion.url }}"><i class="bi bi-pencil-square me-1" aria-hidden="true"></i>{{ opcion.texto }}</a></li>
+                                {% else %}
+                                    <li><a class="dropdown-item small" href="{{ opcion.url }}" target="_blank" rel="noopener">
+                                        {% if opcion.listo %}<i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i>{% else %}<i class="bi bi-circle me-1 text-muted" aria-hidden="true"></i>{% endif %}{{ opcion.texto }}
+                                    </a></li>
+                                {% endif %}
                             {% endfor %}
                         </ul>
                     </div>

@@ -68,6 +68,8 @@ PREGUNTAS = {
         "¿En que consistió o consistieron los Proyectos A+S de este semestre o trimestre? Explíquelo en pocas líneas": "proyecto_descripcion",
         "Tipo de socios comunitarios con los que trabajaron (Trate de asociarlo a alguna de estas categorías, si no es posible, agregue la clasificación en Otras)": "tipos_socio",
         "¿Aplicó las 3 encuestas de satisfacción? Las encuestas son 3: una para los estudiantes, otra para el docente y otra para el socio comunitario.": "encuestas_aplicadas",
+        "Cantidad total de beneficiarios o destinatarios. (Si tiene más de 1 sección a su cargo, sume los beneficiarios apróximados directos o indirectos)": "beneficiarios",
+        "Envió la documentación solicitada como Evidencias (Carpeta de Evidencias: Formato de Proyecto, Acuerdos, Notas, Informes, Fotos y otras)": "documentacion",
     },
     REGISTRO_REFLEXION: {
         "¿Qué reflexión estás registrando?": "momento_reflexion",
@@ -85,6 +87,8 @@ ORIGEN_POR_DATO = {
     "proyecto_descripcion": ORIGEN_RESPUESTA,
     "tipos_socio": ORIGEN_EQUIPOS,
     "encuestas_aplicadas": ORIGEN_RUTA,
+    "beneficiarios": ORIGEN_EQUIPOS,
+    "documentacion": ORIGEN_RUTA,
     "momento_reflexion": ORIGEN_RUTA,
     "socio_nombre": ORIGEN_EQUIPOS,
     "socio_cargo": ORIGEN_EQUIPOS,
@@ -216,6 +220,37 @@ def _encuestas_aplicadas(seccion):
     return "Sí." if hecha else None
 
 
+def _beneficiarios(seccion):
+    """
+    Suma de los beneficiarios que informó cada grupo en «Trabajo con el
+    socio» durante el semestre (ParticipacionSocio vigente del equipo).
+    """
+    from django.db.models import Sum
+
+    from socios.models import ParticipacionSocio
+
+    return (
+        ParticipacionSocio.objects
+        .filter(equipo__seccion=seccion, fecha_fin__isnull=True, beneficiarios_estimados__isnull=False)
+        .aggregate(total=Sum("beneficiarios_estimados"))["total"]
+    )
+
+
+def _documentacion_enviada(seccion):
+    """
+    'Si' cuando la actividad 22 (documentación final) ya tiene la planilla
+    subida o está marcada como hecha: la carpeta se arma sola con lo demás.
+    """
+    from django.db.models import Q
+
+    from rutas.models import SeccionActividad
+
+    lista = SeccionActividad.objects.filter(
+        seccion_ruta__seccion=seccion, ruta_actividad__orden=22,
+    ).filter(Q(completada_por_docente__isnull=False) | Q(evidencias__isnull=False)).exists()
+    return "Si" if lista else None
+
+
 def _momento_reflexion(seccion):
     """La primera reflexión de la Ruta (12, 15, 17) que aún no se marca como hecha."""
     from rutas.models import SeccionActividad
@@ -291,6 +326,12 @@ def datos_seccion(seccion, usuario=None):
     encuestas = _encuestas_aplicadas(seccion)
     if encuestas:
         datos["encuestas_aplicadas"] = encuestas
+    beneficiarios = _beneficiarios(seccion)
+    if beneficiarios is not None:
+        datos["beneficiarios"] = beneficiarios
+    documentacion = _documentacion_enviada(seccion)
+    if documentacion:
+        datos["documentacion"] = documentacion
 
     nivel = _nivel_respondido(seccion)
     if nivel:

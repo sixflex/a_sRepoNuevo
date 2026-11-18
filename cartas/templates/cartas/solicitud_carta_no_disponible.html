@@ -1,23 +1,32 @@
 {% extends "base.html" %}
+{% load static %}
+
+{# Página pública (la abren estudiantes desde el QR): solo el aviso, sin barra superior ni sidebar del portal. #}
+{% block main_navbar %}{% endblock %}
 
 {% block title %}Solicitud no disponible | Portal A+S{% endblock %}
 
-{% block content %}
+{% block extra_css %}
+{% include "encuestas/includes/css.html" %}
+<link rel="stylesheet" href="{% static 'css/proyectos.css' %}?v=2026-11-14-c">
+{% endblock %}
 
-<div class="container py-5">
-
-    <div class="card shadow-sm">
-        <div class="card-body text-center py-5">
-
-            <h3 class="mb-3">Solicitud de carta no disponible</h3>
-
-            <p class="text-muted mb-0">
-                {{ motivo }}
-            </p>
-
-        </div>
+{% block content_public %}
+<div class="reg-fondo">
+<div class="container reg-contenedor py-5">
+    <div class="card-ua enc-encabezado p-4 text-center">
+        <div class="reg-aviso-icono mx-auto mb-3"><i class="bi bi-lock" aria-hidden="true"></i></div>
+        <h1 class="enc-titulo mb-2">Solicitud de carta no disponible</h1>
+        <p class="enc-texto mb-0">{{ motivo }}</p>
+        {% if ofrecer_cambio_cuenta and user.is_authenticated %}
+            <p class="enc-nota mt-3 mb-0">Entraste como {{ user.get_full_name|default:user.username }}.</p>
+            <form method="post" action="{% url 'usuarios:logout' %}" class="mt-3">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-ua px-4">Cerrar sesión e ingresar como estudiante</button>
+            </form>
+        {% endif %}
     </div>
-
 </div>
-
+</div>
 {% endblock %}

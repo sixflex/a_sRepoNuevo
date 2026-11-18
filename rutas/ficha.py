@@ -117,6 +117,16 @@ def con_porcentaje_reprobacion(filas):
     return salida
 
 
+def _contacto(socio):
+    """«Nombre · cargo · teléfono · correo» del contacto principal del socio."""
+    if socio is None:
+        return ""
+    contacto = socio.contactos.filter(activo=True).order_by("-es_principal", "id").first()
+    if contacto is None:
+        return ""
+    return " · ".join(p for p in (contacto.nombre, contacto.cargo, contacto.telefono, contacto.correo) if p)
+
+
 def datos_ficha(seccion_ruta):
     """
     Todo lo que muestra la ficha, una sola vez: lo usan la página del
@@ -144,12 +154,22 @@ def datos_ficha(seccion_ruta):
         .order_by("numero_grupo")
     ):
         socio = equipo.socio_vigente
+        vigentes = getattr(equipo, "participaciones_vigentes", [])
+        participacion = vigentes[0] if vigentes else None
         grupos.append({
             "grupo": f"Grupo {equipo.numero_grupo}",
             "proyecto": equipo.proyecto.nombre if equipo.proyecto_id else "",
             "socio": socio.nombre_organizacion if socio else "Sin socio registrado",
             "integrantes": len(equipo.integrantes.all()),
+            # Lo que el grupo ingresó en el registro (13) y en «Trabajo con
+            # el socio» durante el semestre: la Coordinación lo ve sin pedirlo.
+            "contacto": _contacto(socio),
+            "beneficiarios": participacion.beneficiarios_estimados if participacion else None,
+            "servicio": (participacion.servicio_realizado or "") if participacion else "",
+            "evaluacion": participacion.evaluacion if participacion else None,
+            "comentario": (participacion.comentario or "") if participacion else "",
         })
+    con_trabajo = any(g["beneficiarios"] is not None or g["servicio"] or g["evaluacion"] for g in grupos)
 
     actividades = actividades_de(seccion_ruta)
     etapas, _ = armar_etapas(actividades)
@@ -200,6 +220,7 @@ def datos_ficha(seccion_ruta):
         "seccion": seccion,
         "datos_seccion": datos_seccion,
         "grupos": grupos,
+        "con_trabajo": con_trabajo,
         "etapas": avance_etapas,
         "formularios": formularios,
         "encuestas": encuestas,
@@ -232,9 +253,15 @@ def generar_ficha_excel(seccion_ruta):
             formularios.append([formulario["titulo"], formulario["grupo"], formulario["fecha"].replace(tzinfo=None), pregunta, texto])
 
     grupos = libro.create_sheet("Grupos")
-    grupos.append(["Grupo", "Proyecto", "Socio comunitario", "Integrantes"])
+    grupos.append([
+        "Grupo", "Proyecto", "Socio comunitario", "Contacto", "Integrantes",
+        "Beneficiarios", "Servicio realizado", "Evaluación (1 a 5)", "Comentario",
+    ])
     for grupo in datos["grupos"]:
-        grupos.append([grupo["grupo"], grupo["proyecto"], grupo["socio"], grupo["integrantes"]])
+        grupos.append([
+            grupo["grupo"], grupo["proyecto"], grupo["socio"], grupo["contacto"], grupo["integrantes"],
+            grupo["beneficiarios"], grupo["servicio"], grupo["evaluacion"], grupo["comentario"],
+        ])
 
     avance = libro.create_sheet("Avance por etapa")
     avance.append(["Etapa", "Hechas", "Archivos", "Pendientes"])
@@ -271,6 +298,19 @@ def generar_ficha_pdf(seccion_ruta):
         historia.append(_tabla(filas, [2 * cm, 5.6 * cm, 6 * cm, ancho - 13.6 * cm], e))
     else:
         historia.append(_p("Aún no hay grupos registrados.", e["nota"]))
+
+    if datos["con_trabajo"]:
+        historia.append(Paragraph("Trabajo con el socio (lo informan los grupos)", e["h2"]))
+        filas = [["Grupo", "Socio y contacto", "Benef.", "Servicio realizado", "Eval.", "Comentario"]]
+        filas += [
+            [
+                g["grupo"], " · ".join(p for p in (g["socio"], g["contacto"]) if p),
+                "" if g["beneficiarios"] is None else str(g["beneficiarios"]),
+                g["servicio"], "" if g["evaluacion"] is None else f"{g['evaluacion']} / 5", g["comentario"],
+            ]
+            for g in datos["grupos"]
+        ]
+        historia.append(_tabla(filas, [1.7 * cm, 4.3 * cm, 1.4 * cm, 4.6 * cm, 1.3 * cm, ancho - 13.3 * cm], e))
 
     historia.append(Paragraph("Avance por etapa", e["h2"]))
     filas = [["Etapa", "Hechas", "Archivos", "Pendientes"]]

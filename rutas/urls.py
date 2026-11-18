@@ -23,4 +23,5 @@ urlpatterns = [
     path("coordinacion/<int:seccion_ruta_id>/ficha/",views.ver_ficha_coordinacion,name="ver_ficha_coordinacion",),
     path("coordinacion/<int:seccion_ruta_id>/ficha.xlsx",views.exportar_ficha_excel,name="exportar_ficha_excel",),
     path("coordinacion/<int:seccion_ruta_id>/expediente.zip",views.descargar_expediente,name="descargar_expediente",),
+    path("<int:seccion_ruta_id>/mi-carpeta.zip", views.descargar_mi_carpeta, name="descargar_mi_carpeta"),
 ]

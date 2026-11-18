@@ -17,10 +17,16 @@ DEFINICION = {
             pregunta("Correo electrónico del representante", c.CORREO),
         ]),
 
-        seccion("Servicio y/o productos entregables", [
+        # Igual que el Excel de Jorge (Formulario_A_S_de Acuerdo con SC_2026, 3 · Servicio y calendarización).
+        seccion("Servicio y calendarización", [
             pregunta(
                 "Servicio y/o productos entregables que realizarán los estudiantes",
                 c.TEXTO_LARGO,
+            ),
+            pregunta(
+                "Calendarización de las actividades y fechas importantes",
+                c.TEXTO_LARGO,
+                ayuda="Ejemplo: 15/09 diagnóstico con el socio; 20/10 entrega del servicio; 25/11 presentación final.",
             ),
         ]),
 
