@@ -141,6 +141,10 @@ def leer_imagenes_planilla(contenido):
     }
 
 
+class CartaOficialIlegible(ValueError):
+    """La carta oficial activa existe, pero su Word no se pudo leer."""
+
+
 @lru_cache(maxsize=4)
 def _imagenes_planilla_cacheadas(ruta, _mtime):
     return leer_imagenes_planilla(Path(ruta).read_bytes())
@@ -154,49 +158,67 @@ def _leer_archivo(ruta):
     return archivo.read_bytes()
 
 
-@lru_cache(maxsize=4)
-def _imagenes_archivo_cacheadas(archivo_id, _hash):
-    from archivos.models import Archivo
-    from archivos.services import abrir_archivo
-
-    with abrir_archivo(Archivo.objects.get(pk=archivo_id)) as contenido:
-        return leer_imagenes_planilla(contenido.read())
+# Imágenes ya leídas de cartas oficiales, por hash del Word: el mismo archivo
+# no se vuelve a abrir en cada carta.
+_IMAGENES_POR_HASH = {}
 
 
 def plantilla_activa():
-    """La carta oficial que subió el Coordinador y está en uso, o None."""
+    """La carta oficial que subió el Coordinador y está en uso, o None (consulta la BD)."""
     from .models import PlantillaCarta
 
-    try:
-        return PlantillaCarta.objects.select_related("archivo").filter(activa=True).first()
-    except Exception:  # tabla aún sin migrar: se sigue con el respaldo
-        logger.warning("No se pudo consultar la carta oficial activa.", exc_info=True)
-        return None
+    return PlantillaCarta.objects.select_related("archivo").filter(activa=True).first()
 
 
 def imagenes_de_plantilla(plantilla):
+    """
+    Logo, firma y tarjeta del Word de una PlantillaCarta.
+
+    Lanza CartaOficialIlegible si el archivo ya no está o no es un Word válido.
+    """
+    from archivos.services import abrir_archivo
+
     archivo = plantilla.archivo
-    return _imagenes_archivo_cacheadas(archivo.pk, archivo.hash_sha256)
+    imagenes = _IMAGENES_POR_HASH.get(archivo.hash_sha256)
+    if imagenes is None:
+        try:
+            with abrir_archivo(archivo) as contenido:
+                imagenes = leer_imagenes_planilla(contenido.read())
+        except (OSError, ValueError) as exc:
+            raise CartaOficialIlegible(
+                f"No se pudo leer la carta oficial «{archivo.nombre_original}». "
+                "Súbela de nuevo en Configuración → Carta oficial."
+            ) from exc
+        if len(_IMAGENES_POR_HASH) >= 4:
+            _IMAGENES_POR_HASH.clear()
+        _IMAGENES_POR_HASH[archivo.hash_sha256] = imagenes
+    return imagenes
 
 
-def recursos_carta():
+def recursos_carta(plantilla=None, *, final=True):
     """
     Logo, firma y tarjeta que usará la carta, y la PlantillaCarta de donde
-    salieron (o None).
+    salieron (o None). No consulta la BD: quien llama pasa `plantilla`
+    (normalmente plantilla_activa()).
 
-    Orden: carta oficial subida al portal (PlantillaCarta activa) → planilla
-    del servidor (CARTA_PLANTILLA_PATH) → firma de prueba
+    Orden: carta oficial subida al portal (`plantilla`) → planilla del
+    servidor (CARTA_PLANTILLA_PATH) → firma de prueba
     (CARTA_FIRMA_PRUEBA_PATH) → logo de static/img. Lo que falte queda None.
+
+    Si hay carta oficial y no se puede leer, una carta `final` no se emite
+    (CartaOficialIlegible): no puede salir firmada con otra firma. Un borrador
+    no lleva firma, así que sigue con el respaldo.
     """
     recursos = {"logo": None, "firma": None, "tarjeta": None, "plantilla": None}
 
-    plantilla = plantilla_activa()
     if plantilla is not None:
         try:
             recursos.update({k: v for k, v in imagenes_de_plantilla(plantilla).items() if v})
             recursos["plantilla"] = plantilla
-        except Exception:
-            logger.warning("No se pudo leer la carta oficial subida (id %s).", plantilla.pk, exc_info=True)
+        except CartaOficialIlegible:
+            if final:
+                raise
+            logger.warning("Borrador sin la carta oficial (id %s): no se pudo leer.", plantilla.pk, exc_info=True)
 
     ruta_planilla = getattr(settings, "CARTA_PLANTILLA_PATH", "") or ""
     if ruta_planilla and recursos["plantilla"] is None:
@@ -206,7 +228,7 @@ def recursos_carta():
                 recursos.update(
                     {k: v for k, v in _imagenes_planilla_cacheadas(str(archivo), archivo.stat().st_mtime).items() if v}
                 )
-            except Exception:
+            except (OSError, ValueError):
                 logger.warning("No se pudo leer la planilla de la carta: %s", archivo, exc_info=True)
         else:
             logger.warning("La planilla de la carta configurada no existe: %s", archivo)
@@ -341,15 +363,17 @@ def _proteccion():
 
 
 def construir_pdf(*, fecha, persona_receptora, institucion_receptora, asignatura,
-                  docente, estudiantes, borrador, recursos=None, proteger=True):
+                  docente, estudiantes, borrador, recursos, proteger=True):
     """
     Devuelve los bytes del PDF con el formato oficial.
 
     `estudiantes`: lista de (nombre, rut). En borrador no lleva firma ni
     tarjeta y sí una marca "BORRADOR" (RF-CAR-03: la vista previa se
     distingue del documento final firmado).
+
+    `recursos`: lo que entrega recursos_carta(). Esta función no consulta la
+    BD ni lee archivos: solo arma el PDF.
     """
-    recursos = recursos if recursos is not None else recursos_carta()
     # La planilla usa Century Gothic, que no viene en los servidores Linux; se
     # usa Helvetica en todos lados para que la carta salga igual en cualquier PC.
     normal, negrita = "Helvetica", "Helvetica-Bold"

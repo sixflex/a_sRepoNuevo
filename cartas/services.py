@@ -11,7 +11,7 @@ from auditoria.services import registrar_auditoria
 from comunicaciones.services import EmailService
 
 from .models import CartaDocumento, SolicitudCarta
-from .plantilla_oficial import construir_pdf, recursos_carta
+from .plantilla_oficial import construir_pdf, plantilla_activa, recursos_carta
 
 
 MAX_ALUMNOS_POR_CARTA = 6
@@ -61,8 +61,11 @@ def generar_pdf_carta(solicitud, usuario, estudiantes=None):
         f"{docente.nombres} {docente.apellidos}"
     ).strip() if docente else ""
 
-    # Formato oficial de Coordinación A+S (cartas/plantilla_oficial.py).
-    recursos = recursos_carta()
+    # Formato oficial de Coordinación A+S (cartas/plantilla_oficial.py). Si la
+    # carta oficial activa no se puede leer, la final no se emite
+    # (CartaOficialIlegible es un ValueError: la pantalla muestra el mensaje).
+    borrador = solicitud.estado == "BORRADOR"
+    recursos = recursos_carta(plantilla_activa(), final=not borrador)
     pdf_bytes = construir_pdf(
         fecha=solicitud.fecha_aprobacion or timezone.now(),
         persona_receptora=solicitud.persona_receptora,
@@ -70,7 +73,7 @@ def generar_pdf_carta(solicitud, usuario, estudiantes=None):
         asignatura=solicitud.seccion.asignatura.nombre,
         docente=nombre_docente,
         estudiantes=[(estudiante.nombre, estudiante.rut) for estudiante in estudiantes],
-        borrador=solicitud.estado == "BORRADOR",
+        borrador=borrador,
         recursos=recursos,
     )
 
@@ -113,7 +116,7 @@ def generar_pdf_carta(solicitud, usuario, estudiantes=None):
             archivo=archivo,
             generado_por_usuario=usuario,
             numero_version=numero_version,
-            tipo="BORRADOR" if solicitud.estado == "BORRADOR" else "PDF",
+            tipo="BORRADOR" if borrador else "PDF",
             fecha_generacion=timezone.now(),
             hash_documento=hash_documento,
             plantilla=recursos["plantilla"],

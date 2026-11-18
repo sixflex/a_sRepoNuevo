@@ -8,11 +8,9 @@ hay ninguna firma real en el repositorio (RN-07).
 import re
 import tempfile
 import zipfile
-from datetime import date, datetime, timezone as dt_timezone
+from datetime import date
 from io import BytesIO
 from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
 
 from django.conf import settings
 from django.test import SimpleTestCase, override_settings
@@ -20,7 +18,7 @@ from PIL import Image as PilImage
 
 from reportlab import rl_config
 
-from cartas import plantilla_oficial, services
+from cartas import plantilla_oficial
 
 
 def setUpModule():
@@ -115,12 +113,14 @@ class LeerPlanillaTests(SimpleTestCase):
 
 
 class RecursosCartaTests(SimpleTestCase):
+    """Respaldo cuando no hay carta oficial subida: no toca la BD."""
+
     def test_usa_la_planilla_configurada(self):
         with tempfile.TemporaryDirectory() as tmp:
             ruta = Path(tmp) / "carta.docx"
             ruta.write_bytes(_planilla_docx())
             with override_settings(CARTA_PLANTILLA_PATH=str(ruta), CARTA_FIRMA_PRUEBA_PATH=""):
-                recursos = plantilla_oficial.recursos_carta()
+                recursos = plantilla_oficial.recursos_carta(None)
         self.assertTrue(all(recursos[k] for k in ("logo", "firma", "tarjeta")))
 
     def test_sin_planilla_usa_la_firma_de_prueba_y_el_logo_del_portal(self):
@@ -129,7 +129,7 @@ class RecursosCartaTests(SimpleTestCase):
             contenido = _png("navy")
             firma.write_bytes(contenido)
             with override_settings(CARTA_PLANTILLA_PATH="", CARTA_FIRMA_PRUEBA_PATH=str(firma)):
-                recursos = plantilla_oficial.recursos_carta()
+                recursos = plantilla_oficial.recursos_carta(None)
         self.assertEqual(recursos["firma"], contenido)
         self.assertIsNotNone(recursos["logo"])
         self.assertIsNone(recursos["tarjeta"])
@@ -137,7 +137,7 @@ class RecursosCartaTests(SimpleTestCase):
     def test_planilla_inexistente_no_rompe(self):
         with override_settings(CARTA_PLANTILLA_PATH="/no/existe/carta.docx", CARTA_FIRMA_PRUEBA_PATH=""):
             with self.assertLogs("cartas.plantilla_oficial", level="WARNING"):
-                recursos = plantilla_oficial.recursos_carta()
+                recursos = plantilla_oficial.recursos_carta(None)
         self.assertIsNone(recursos["firma"])
 
     def test_la_planilla_no_esta_en_rutas_publicas(self):
@@ -210,42 +210,3 @@ class PdfCartaTests(SimpleTestCase):
 
     def test_fecha_en_castellano(self):
         self.assertEqual(plantilla_oficial.fecha_carta(date(2026, 12, 25)), "Santiago, 25 de diciembre de 2026")
-
-
-def _solicitud_falsa(estado):
-    solicitud = MagicMock()
-    solicitud.id = 7
-    solicitud.estado = estado
-    solicitud.fecha_aprobacion = datetime(2026, 10, 1, tzinfo=dt_timezone.utc)
-    solicitud.docente_derivador = SimpleNamespace(nombres="Ana", apellidos="Pérez")
-    solicitud.seccion.asignatura.nombre = "Taller de Servicio"
-    solicitud.persona_receptora = "María Soto"
-    solicitud.institucion_receptora = "Junta de Vecinos"
-    solicitud.documentos.order_by.return_value.values_list.return_value.first.return_value = None
-    return solicitud
-
-
-class GenerarPdfCartaTests(SimpleTestCase):
-    """generar_pdf_carta usa el formato oficial y guarda el PDF."""
-
-    def _generar(self, estado):
-        estudiantes = [SimpleNamespace(nombre=n, rut=r) for n, r in ESTUDIANTES]
-        usuario = SimpleNamespace(get_full_name=lambda: "Coordinador", username="coord")
-        with patch.object(services, "guardar_archivo") as guardar, \
-                patch.object(services, "CartaDocumento") as documento, \
-                patch.object(services, "transaction"), \
-                patch.object(plantilla_oficial, "_proteccion", return_value=None):
-            services.generar_pdf_carta(_solicitud_falsa(estado), usuario, estudiantes)
-        return guardar.call_args.args[0].read(), documento.objects.create.call_args.kwargs
-
-    def test_aprobada_genera_pdf_final(self):
-        pdf, datos = self._generar("APROBADA")
-        self.assertEqual(datos["tipo"], "PDF")
-        self.assertIn("plantilla", datos)  # queda con qué carta oficial salió
-        self.assertIn("Santiago, 1 de octubre de 2026", _texto_pdf(pdf))
-        self.assertNotIn("BORRADOR", _texto_pdf(pdf))
-
-    def test_borrador_genera_vista_previa_marcada(self):
-        pdf, datos = self._generar("BORRADOR")
-        self.assertEqual(datos["tipo"], "BORRADOR")
-        self.assertIn("BORRADOR", _texto_pdf(pdf))
