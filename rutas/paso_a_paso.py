@@ -14,6 +14,7 @@ versión publicada de ese código, así no hace falta tocar la Ruta cargada.
 """
 
 from datetime import timedelta
+from urllib.parse import quote
 
 from django.db.models import Count, Q
 from django.urls import reverse
@@ -23,12 +24,22 @@ from core.qr import qr_base64
 from core.volver import con_volver
 from socios.services import socios_elegidos_seccion
 from encuestas.definiciones.registro_reflexion import CODIGO as CODIGO_REFLEXION
-from encuestas.definiciones.registro_reflexion import DINAMICAS, MOMENTO_POR_ORDEN
+from encuestas.definiciones.registro_reflexion import DETALLE_DINAMICA, DINAMICAS, MOMENTO_POR_ORDEN
 from encuestas.models import FormularioVersion, RespuestaOpcion
 from encuestas import precarga
 
 from . import acuerdo
 from .services import formularios_qr_de_proceso, obtener_o_crear_enlace_seccion, url_recurso
+
+# Actividades donde la Ruta de Jorge dice "contacte al Coordinador A+S"
+# (1.2 reunión inicial, 1.3 charla, 2.1 reunión con socios, 2.4 instrumento):
+# orden -> (texto del botón, asunto del correo).
+CONTACTO_COORDINACION = {
+    2: ("Escribir a Coordinación", "Reunión inicial A+S"),
+    3: ("Invitar a Coordinación", "Charla A+S para mi curso"),
+    6: ("Pedir reunión con socios a Coordinación", "Reunión con socios comunitarios en la Universidad"),
+    9: ("Pedir apoyo a Coordinación", "Apoyo con el instrumento de evaluación A+S"),
+}
 
 # Días que queda abierto el registro de equipos al crearlo (igual que en proyectos).
 DIAS_REGISTRO_EQUIPOS = 7
@@ -45,10 +56,12 @@ FORMULARIO_POR_ORDEN = {
 
 # Lo que se ve bajo el nombre: qué hacer, en una línea.
 QUE_HACER = {
+    2: "Escríbele a Coordinación para agendar la visita a tu sala y recibir las instrucciones del período.",
+    3: "Presenta A+S a tu curso. Si quieres, invita a Coordinación a dar la charla.",
     6: "Elige los socios para tu sección: son los que verán los estudiantes al registrar su equipo.",
     5: "Llena el formulario del proyecto. Los datos de la sección ya vienen escritos.",
     9: "Arma la pauta de evaluación y súbela aquí.",
-    10: "Si un grupo la necesita, pide la carta a Coordinación.",
+    10: "Si un grupo la necesita, pide la carta a Coordinación o muestra el QR para que la pida un estudiante.",
     11: "Llena el acuerdo de cada grupo (viene con su socio y sus integrantes), descárgalo en PDF, imprímelo, que lo firmen todos y sube el escaneado.",
     12: "Elige una de las dinámicas sugeridas, hazla en clase y registra cuál hiciste.",
     13: "Muestra el QR: un estudiante por grupo inscribe a su equipo y a su socio. Durante el semestre vuelven al mismo enlace para contar el trabajo con el socio.",
@@ -57,7 +70,7 @@ QUE_HACER = {
     17: "Elige una de las dinámicas sugeridas, hazla en clase y registra cuál hiciste.",
     19: "Proyecta el QR para que estudiantes y docentes respondan la encuesta.",
     21: "Las informas en el Resumen final (actividad 23): nota promedio A+S, promedio final del curso, estudiantes y reprobados. El porcentaje de reprobación lo calcula el portal.",
-    22: "Sube la planilla de notas. Los acuerdos (11), las fotos (16) y lo demás que ya subiste van solos en la carpeta.",
+    22: "Tu carpeta se fue armando con lo que subiste en la Ruta. Revisa qué tiene y sube la planilla de notas: Coordinación la ve completa, no hay que enviarla por correo.",
     23: "Llena el resumen final. Lo que el sistema ya sabe viene escrito.",
 }
 
@@ -66,7 +79,7 @@ EVIDENCIA_PEDIDA = {
     9: "Sube el instrumento de evaluación.",
     11: "Sube el acuerdo firmado de cada grupo (uno por grupo).",
     16: "Sube las fotos y productos.",
-    22: "Sube la planilla de notas (los acuerdos y las fotos ya están en sus actividades).",
+    22: "Sube la planilla de notas (lo demás ya está en la carpeta).",
 }
 
 TEXTO_BOTON = {
@@ -99,7 +112,7 @@ MATERIAL_POR_ORDEN = {
 NOTA_PRECARGA = {
     5: "Docente, asignatura, carrera y grupos ya vienen llenos.",
     11: "Docente, asignatura, el socio del grupo y sus integrantes ya vienen llenos.",
-    23: "Tus datos, la asignatura, los totales, el tipo de socios y lo que escribiste del proyecto ya vienen llenos.",
+    23: "Tus datos, la asignatura, los totales, el tipo de socios, los beneficiarios que informaron los grupos y lo que escribiste del proyecto ya vienen llenos.",
 }
 
 
@@ -172,6 +185,53 @@ def _acuerdos_por_grupo(seccion, url):
     return opciones
 
 
+def _correo_coordinacion():
+    """Correo del Coordinador A+S (el primero del grupo), o None."""
+    from django.contrib.auth import get_user_model
+
+    usuario = (
+        get_user_model().objects.filter(groups__name="Coordinador", is_active=True)
+        .filter(Q(correo_institucional__gt="") | Q(email__gt="")).order_by("id").first()
+    )
+    if usuario is None:
+        return None
+    return usuario.correo_institucional or usuario.email or None
+
+
+def _mailto(correo, asunto, seccion):
+    asunto = f"{asunto} · {seccion.asignatura.nombre} (NRC {seccion.nrc})"
+    return f"mailto:{correo}?subject={quote(asunto)}"
+
+
+def _carta_estudiantes(request, seccion, actividad):
+    """
+    QR para que un estudiante pida la carta (Ruta de Jorge, 2.5: "el
+    formulario puede ser completado por un estudiante bajo su supervisión").
+    El enlace de la sección se crea la primera vez, como el del registro.
+    """
+    from cartas.models import EnlaceSolicitudCarta
+
+    enlace = (
+        EnlaceSolicitudCarta.objects.filter(seccion=seccion, activo=True)
+        .filter(Q(fecha_expiracion__isnull=True) | Q(fecha_expiracion__gt=timezone.now()))
+        .order_by("-fecha_inicio", "-id").first()
+    )
+    if enlace is None:
+        docente = getattr(request.user, "perfil_docente", None) or seccion.docentes.first()
+        if docente is None:
+            return False
+        enlace = EnlaceSolicitudCarta.objects.create(
+            seccion=seccion, creado_por_docente=docente, fecha_inicio=timezone.now(), activo=True,
+        )
+    url = request.build_absolute_uri(reverse("cartas:solicitar_carta_estudiante", args=[enlace.token]))
+    actividad.qrs = [{
+        "titulo": "Solicitud de Carta de Presentación",
+        "ayuda": "Un estudiante del grupo escanea el QR y pide la carta; te llega a ti y a Coordinación para revisarla.",
+        "url": url, "qr_base64": qr_base64(url),
+    }]
+    return True
+
+
 def _registro_equipos(request, seccion, actividad):
     """
     QR del registro de equipos de la sección (actividad 13). Si la sección
@@ -210,6 +270,37 @@ def _registro_equipos(request, seccion, actividad):
     actividad.qr_pantalla_texto = "Registro de equipos (abrir, cerrar, descargar el QR)"
 
 
+def _carpeta_final(seccion_ruta, actividades, grupos, reflexiones):
+    """
+    Lo que lleva la carpeta de la actividad 22 (Ruta de Jorge 5.5: evidencias,
+    planilla de notas y acuerdo firmado), juntado durante toda la Ruta.
+    """
+    archivos = {a.ruta_actividad.orden: len(a.evidencias.all()) for a in actividades}
+    acuerdos = archivos.get(11, 0)
+    registradas = sum(1 for momento in MOMENTO_POR_ORDEN.values() if reflexiones.get(momento))
+
+    def fila(texto, detalle, listo):
+        return {"texto": texto, "detalle": detalle, "listo": listo}
+
+    def n_archivos(n):
+        return f"{n} archivo{'s' if n != 1 else ''}" if n else "Falta"
+
+    return {
+        "filas": [
+            fila("Instrumento de evaluación (actividad 9)", n_archivos(archivos.get(9, 0)), archivos.get(9, 0) > 0),
+            fila(
+                "Acuerdos firmados (actividad 11)",
+                f"{min(acuerdos, grupos)} de {grupos} grupos" if grupos else n_archivos(acuerdos),
+                acuerdos >= grupos if grupos else acuerdos > 0,
+            ),
+            fila("Reflexiones registradas (12, 15 y 17)", f"{registradas} de 3", registradas == 3),
+            fila("Fotos y productos (actividad 16)", n_archivos(archivos.get(16, 0)), archivos.get(16, 0) > 0),
+            fila("Planilla de notas (aquí)", n_archivos(archivos.get(22, 0)), archivos.get(22, 0) > 0),
+        ],
+        "url_zip": reverse("rutas:descargar_mi_carpeta", args=[seccion_ruta.id]),
+    }
+
+
 def preparar_actividades(request, seccion_ruta, actividades):
     """
     Agrega a cada actividad lo que muestra la Ruta paso a paso:
@@ -221,6 +312,7 @@ def preparar_actividades(request, seccion_ruta, actividades):
     grupos, grupos_con_socio = _equipos(seccion)
     reflexiones = _reflexiones_registradas(seccion)
     socios_elegidos = socios_elegidos_seccion(seccion).count()
+    correo_coordinacion = _correo_coordinacion()
 
     for actividad in actividades:
         ruta_actividad = actividad.ruta_actividad
@@ -264,6 +356,11 @@ def preparar_actividades(request, seccion_ruta, actividades):
                 "texto": "Pedir carta", "icono": "bi-envelope-paper",
                 "url": reverse("cartas:solicitar_carta_docente", args=[seccion.id]),
             }
+            if _carta_estudiantes(request, seccion, actividad):
+                actividad.accion["opciones"] = [
+                    {"texto": "La pido yo", "url": con_volver(actividad.accion["url"], request), "misma_pestana": True},
+                    {"texto": "Mostrar QR para que la pida un estudiante", "modal": f"qr-{actividad.id}"},
+                ]
         elif orden == 6:
             # Seleccionar Socios Comunitarios: los que elija son los que verán
             # los estudiantes al registrar su equipo (RF-SC-03, actividad 13).
@@ -279,6 +376,12 @@ def preparar_actividades(request, seccion_ruta, actividades):
                 actividad.qr_pantalla_completa = (
                     f"{reverse('rutas:formularios_qr')}?proceso=EVALUACION_AS&ruta={seccion_ruta.id}"
                 )
+        elif orden in (2, 3) and correo_coordinacion:
+            texto, asunto = CONTACTO_COORDINACION[orden]
+            actividad.accion = {
+                "texto": texto, "icono": "bi-envelope",
+                "url": _mailto(correo_coordinacion, asunto, seccion), "nueva_pestana": True,
+            }
         elif orden == 1 and actividad.url_recurso:
             actividad.accion = {
                 "texto": "Ir al curso", "icono": "bi-box-arrow-up-right",
@@ -298,6 +401,9 @@ def preparar_actividades(request, seccion_ruta, actividades):
             actividad.progreso = "Registrada"
 
         actividad.material = MATERIAL_POR_ORDEN.get(orden, [])
+        actividad.carpeta = (
+            _carpeta_final(seccion_ruta, actividades, grupos, reflexiones) if orden == 22 else None
+        )
         actividad.acuerdos = []
         actividad.acuerdo_en_blanco = None
         if version is not None and version.plantilla.codigo == precarga.FORMALIZACION_ACUERDOS:
@@ -312,7 +418,10 @@ def preparar_actividades(request, seccion_ruta, actividades):
         if actividad.accion and actividad.accion.get("url") and not actividad.accion.get("nueva_pestana"):
             actividad.accion["url"] = con_volver(actividad.accion["url"], request)
 
-        actividad.dinamicas = DINAMICAS.get(MOMENTO_POR_ORDEN.get(orden), [])
+        actividad.dinamicas = [
+            {"nombre": nombre, "detalle": DETALLE_DINAMICA.get(nombre, "")}
+            for nombre in DINAMICAS.get(MOMENTO_POR_ORDEN.get(orden), [])
+        ]
         actividad.ejemplo_evidencia = "Ej.: Grupo 2" if orden == 11 else "Descripción (opcional)"
 
         # Lo que se ve en "¿Cómo se hace?": la descripción y los recursos.
@@ -323,6 +432,11 @@ def preparar_actividades(request, seccion_ruta, actividades):
         )
         # 13: el docente también puede asignar el socio a un grupo él mismo.
         actividad.recurso_texto = "Asignar yo el socio a un grupo" if orden == 13 else None
+        # 6 y 9: la Ruta de Jorge ofrece el apoyo de Coordinación.
+        if orden in (6, 9) and correo_coordinacion and not actividad.recurso_extra:
+            texto, asunto = CONTACTO_COORDINACION[orden]
+            actividad.recurso_extra = _mailto(correo_coordinacion, asunto, seccion)
+            actividad.recurso_texto = texto
     return actividades
 
 

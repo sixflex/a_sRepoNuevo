@@ -1141,6 +1141,27 @@ def exportar_ficha_excel(request, seccion_ruta_id):
 
 
 @login_required
+def descargar_mi_carpeta(request, seccion_ruta_id):
+    """
+    El docente descarga la carpeta que se armó con lo que subió en la Ruta
+    (actividad 22), la misma que ve Coordinación.
+    """
+    seccion_ruta = get_object_or_404(
+        SeccionRuta.objects.select_related("seccion__asignatura", "seccion__periodo"),
+        id=seccion_ruta_id,
+    )
+    verificar_acceso_ruta(request.user, seccion_ruta)
+    expediente = ExpedienteSeccion.objects.filter(seccion=seccion_ruta.seccion).first()
+    destino = tempfile.SpooledTemporaryFile(max_size=50 * 1024 * 1024)
+    servicios.generar_zip_expediente(expediente, destino, seccion_ruta=seccion_ruta)
+    destino.seek(0)
+    return FileResponse(
+        destino, as_attachment=True,
+        filename=servicios.nombre_zip_expediente(seccion_ruta.seccion), content_type="application/zip",
+    )
+
+
+@login_required
 def descargar_expediente(request, seccion_ruta_id):
     if not es_coordinador(request.user):
         raise PermissionDenied

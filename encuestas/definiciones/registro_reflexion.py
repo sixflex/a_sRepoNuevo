@@ -34,6 +34,30 @@ DINAMICAS = {
     ],
 }
 
+# Cómo se hace cada dinámica, según «Propuesta de reflexiones» (el PDF que
+# la Ruta de Jorge enlaza en las tres reflexiones): duración, quiénes, qué
+# pedir a Coordinación y dónde está la ficha de evidencia.
+DETALLE_DINAMICA = {
+    "Jenga: propuestas de mejora y competencias":
+        "30 min · grupal · pide el Jenga a Coordinación · ficha de evidencia: Anexo 1 (pág. 12)",
+    "¿Cómo me enfrento a los conflictos?":
+        "30 min · individual o grupal · cuestionario: Anexo 2 (págs. 13-19) · ficha: Anexo 3 (pág. 20)",
+    "Me reconozco como agente de cambio":
+        "20 min · grupal · lectura: Anexo 4 (págs. 21-22) · ficha: Anexo 5 (págs. 23-24)",
+    "Análisis de nuestro primer encuentro":
+        "30 min · individual y luego grupal · ficha: Anexo 6 (págs. 25-26)",
+    "Mesa redonda":
+        "30 min · grupos de 7 · pide los dados a Coordinación · preguntas: Anexo 7 (págs. 27-29) · ficha: Anexo 8 (págs. 30-34)",
+    "Identifico mis metas":
+        "15 min · individual · video motivador (enlace en el PDF) · ficha: Anexo 9 (pág. 35)",
+    "Jenga: aprendizajes adquiridos":
+        "30 min · grupal · pide el Jenga a Coordinación · ficha: Anexo 10 (pág. 36)",
+    "Dados mágicos":
+        "20 min · equipos de 6 · pide los dados a Coordinación · ficha: Anexo 11 (pág. 37)",
+    "Quemada de síntesis":
+        "20 min · todo el curso · pide las pelotas a Coordinación · ficha: Anexo 12 (pág. 38)",
+}
+
 # Orden de la actividad en la Ruta -> momento de la reflexión.
 MOMENTO_POR_ORDEN = {12: ANTES, 15: DURANTE, 17: DESPUES}
 

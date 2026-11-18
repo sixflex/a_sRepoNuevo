@@ -59,6 +59,30 @@ ZIP, pero en pantalla, con cada formulario y sus respuestas, y exportable a Exce
         </div>
     </div>
 
+    {% if con_trabajo %}
+    <section class="card-ua p-4 mb-3">
+        <h2 class="ficha-titulo">Trabajo con el socio</h2>
+        <p class="small text-muted">Lo informan los grupos durante el semestre (registro de equipo y «Trabajo con el socio»).</p>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead><tr><th>Grupo</th><th>Socio y contacto</th><th class="text-end">Beneficiarios</th><th>Servicio realizado</th><th>Evaluación</th><th>Comentario</th></tr></thead>
+                <tbody>
+                    {% for g in grupos %}
+                        <tr>
+                            <td class="text-nowrap">{{ g.grupo }}</td>
+                            <td>{{ g.socio }}{% if g.contacto %}<div class="small text-muted">{{ g.contacto }}</div>{% endif %}</td>
+                            <td class="text-end">{{ g.beneficiarios|default_if_none:"—" }}</td>
+                            <td>{{ g.servicio|default:"—" }}</td>
+                            <td class="text-nowrap">{% if g.evaluacion %}{{ g.evaluacion }} / 5{% else %}—{% endif %}</td>
+                            <td>{{ g.comentario|default:"—" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
+
     <section class="mb-3">
         <h2 class="ruta-otras-titulo">Formularios llenados ({{ formularios|length }})</h2>
         {% for f in formularios %}
