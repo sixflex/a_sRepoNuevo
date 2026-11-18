@@ -3,7 +3,8 @@
 
 {% block title %}Gestionar equipo{% endblock %}
 
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/socios.css' %}?v=2026-10-19b">
+<link rel="stylesheet" href="{% static 'css/encuestas.css' %}?v=2026-11-14">{% endblock %}
 
 {% block content %}
 {% comment %}
@@ -52,7 +53,14 @@ Los formularios y acciones son los mismos de antes.
     <!-- INTEGRANTES -->
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-white border-bottom py-3">
-            <h2 class="h5 fw-bold mb-0">Integrantes <span class="text-muted small fw-normal">{{ integrantes|length }}</span></h2>
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <h2 class="h5 fw-bold mb-0">Integrantes <span class="text-muted small fw-normal">{{ integrantes|length }}</span></h2>
+                {% if integrantes|length < maximo_integrantes %}
+                    <button type="button" class="btn btn-sm btn-ua-outline" data-bs-toggle="modal" data-bs-target="#agregar-integrante">
+                        <i class="bi bi-person-plus me-1" aria-hidden="true"></i>Agregar integrante
+                    </button>
+                {% endif %}
+            </div>
         </div>
         {% if integrantes %}
             <div class="table-responsive">
@@ -91,6 +99,12 @@ Los formularios y acciones son los mismos de antes.
                                             data-bs-target="#etiquetas-integrante-{{ integrante.id }}" title="Gestionar etiquetas">
                                         <i class="bi bi-tags" aria-hidden="true"></i><span class="visually-hidden">Gestionar etiquetas</span>
                                     </button>
+                                    {% if integrantes|length > 1 %}
+                                        <button type="button" class="btn btn-sm btn-light-ua" data-bs-toggle="modal"
+                                                data-bs-target="#quitar-integrante-{{ integrante.id }}" title="Quitar del equipo">
+                                            <i class="bi bi-person-dash" aria-hidden="true"></i><span class="visually-hidden">Quitar del equipo</span>
+                                        </button>
+                                    {% endif %}
                                 </td>
                             </tr>
                         {% endfor %}
@@ -151,6 +165,30 @@ Los formularios y acciones son los mismos de antes.
             </div>
         </div>
 
+        <!-- POPUP: QUITAR INTEGRANTE -->
+        <div class="modal fade" id="quitar-integrante-{{ integrante.id }}" tabindex="-1"
+             aria-labelledby="quitar-titulo-{{ integrante.id }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <form method="post" class="modal-content">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="quitar_integrante">
+                    <input type="hidden" name="integrante_id" value="{{ integrante.id }}">
+                    <div class="modal-header">
+                        <h2 class="modal-title h5" id="quitar-titulo-{{ integrante.id }}">Quitar del equipo</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-2">¿Quitar a <strong>{{ integrante.nombres }} {{ integrante.apellidos }}</strong> del Grupo {{ equipo.numero_grupo }}?</p>
+                        <p class="small text-muted mb-0">El equipo, su socio y lo que ya contaron del trabajo con el socio se mantienen para los demás integrantes. El cambio queda en la auditoría.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light-ua" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-ua">Quitar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- POPUP: ETIQUETAS -->
         <div class="modal fade" id="etiquetas-integrante-{{ integrante.id }}" tabindex="-1"
              aria-labelledby="etiquetas-titulo-{{ integrante.id }}" aria-hidden="true">
@@ -187,6 +225,46 @@ Los formularios y acciones son los mismos de antes.
             </div>
         </div>
     {% endfor %}
+
+    <!-- POPUP: AGREGAR INTEGRANTE -->
+    <div class="modal fade" id="agregar-integrante" tabindex="-1" aria-labelledby="agregar-titulo" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form method="post" class="modal-content">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="agregar_integrante">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="agregar-titulo">Agregar integrante al Grupo {{ equipo.numero_grupo }}</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" for="agregar-nombres">Nombres</label>
+                            <input type="text" name="nombres" id="agregar-nombres" class="form-control" maxlength="120" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" for="agregar-apellidos">Apellidos</label>
+                            <input type="text" name="apellidos" id="agregar-apellidos" class="form-control" maxlength="120" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" for="agregar-rut">RUT</label>
+                            <input type="text" name="rut" id="agregar-rut" class="form-control" maxlength="14" placeholder="12345678-5" required>
+                            <div class="form-text">Sin puntos y con guion.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold" for="agregar-correo">Correo institucional</label>
+                            <input type="email" name="correo" id="agregar-correo" class="form-control" maxlength="254" placeholder="nombre@cloud.uautonoma.cl" required>
+                            <div class="form-text">Con este correo podrá entrar al enlace del equipo.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light-ua" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-ua">Agregar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- SOCIO COMUNITARIO -->
     <div class="card shadow-sm border-0 mb-4">
@@ -247,6 +325,49 @@ Los formularios y acciones son los mismos de antes.
             </div>
         </div>
     </div>
+
+    <!-- TRABAJO CON EL SOCIO (preguntas 18 a 22 del Registro de Socios Comunitarios) -->
+    {% if participacion_vigente %}
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap align-items-center gap-2">
+            <h2 class="h5 fw-bold mb-0">Trabajo con el socio</h2>
+            {% if trabajo_completo %}<span class="badge text-bg-success">Completo</span>{% else %}<span class="badge text-bg-light border">Pendiente</span>{% endif %}
+        </div>
+        <div class="card-body p-4">
+            <p class="small text-muted">Lo completan los estudiantes desde el enlace del registro de equipos a medida que avanzan. Si falta algo, puedes completarlo o corregirlo aquí.</p>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="trabajo_socio">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold small" for="{{ form_trabajo.beneficiarios_estimados.id_for_label }}">Beneficiarios (aprox.)</label>
+                        {{ form_trabajo.beneficiarios_estimados }}
+                    </div>
+                    <div class="col-md-8">
+                        <span class="form-label fw-semibold small d-block">Evaluación del socio</span>
+                        <div class="enc-estrellas" role="radiogroup" aria-label="Evaluación del socio">
+                            {% for n in "54321" %}
+                                <input type="radio" name="evaluacion" id="evaluacion_{{ n }}" value="{{ n }}" {% if form_trabajo.evaluacion.value|stringformat:"s" == n %}checked{% endif %}>
+                                <label for="evaluacion_{{ n }}" title="{{ n }}"><span aria-hidden="true">★</span><span class="visually-hidden">{{ n }}</span></label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold small" for="{{ form_trabajo.servicio_realizado.id_for_label }}">Servicio realizado</label>
+                        {{ form_trabajo.servicio_realizado }}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold small" for="{{ form_trabajo.comentario.id_for_label }}">Comentario acerca del socio</label>
+                        {{ form_trabajo.comentario }}
+                    </div>
+                </div>
+                <div class="text-end mt-3">
+                    <button type="submit" class="btn btn-ua btn-sm">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- HISTORIAL DEL SOCIO (plegado) -->
     <div class="accordion mb-3" id="historial-socio">

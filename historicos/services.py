@@ -389,9 +389,10 @@ def _analizar_formulario(codigo, encabezados, filas):
         .values_list("fecha_envio", "respondente_correo", "respondente_rut", "respondente_nombre")
     )
     resultados = []
+    listas = {}  # catálogos de comunas, carreras... leídos una sola vez
     for numero, fila in filas:
         resultado = _analizar_fila_formulario(
-            numero, fila, bloques, preguntas, columnas, columna_fecha, ya_importadas,
+            numero, fila, bloques, preguntas, columnas, columna_fecha, ya_importadas, listas,
         )
         resultados.append(resultado)
     return mapeo, resultados
@@ -406,14 +407,14 @@ def _clave_respuesta(fecha, preguntas, valores):
     return (fecha, datos.get("correo"), datos.get("rut") or None, datos.get("nombre"))
 
 
-def _analizar_fila_formulario(numero, fila, bloques, preguntas, columnas, columna_fecha, ya_importadas):
+def _analizar_fila_formulario(numero, fila, bloques, preguntas, columnas, columna_fecha, ya_importadas, listas=None):
     errores = []
     fecha = _fecha_hora(fila.get(columna_fecha)) if columna_fecha else None
     if fecha is None:
         errores.append(("Fecha de envío", "SIN_FECHA", "La fila no tiene una fecha de envío válida."))
         return _resultado(numero, fila, errores, omitir=True)
 
-    valores, _, seleccion, avisos = encuestas_services.valores_desde_celdas(preguntas, _celdas(fila, columnas))
+    valores, _, seleccion, avisos = encuestas_services.valores_desde_celdas(preguntas, _celdas(fila, columnas), listas)
     if not valores:
         errores.append((None, "SIN_RESPUESTAS", "La fila no tiene respuestas reconocidas."))
         return _resultado(numero, fila, errores, omitir=True)
@@ -612,10 +613,11 @@ def _importar_formulario(carga, filas, campus):
     columna_fecha = _columna_fecha(encabezados)
     catalogos = _Catalogos()
     pregunta_carrera = next((p for p in preguntas if _n(p.texto) == "carrera"), None)
+    listas = {}
 
     for fila in filas:
         datos = fila.datos_raw_json
-        valores, otros, seleccion, _ = encuestas_services.valores_desde_celdas(preguntas, _celdas(datos, columnas))
+        valores, otros, seleccion, _ = encuestas_services.valores_desde_celdas(preguntas, _celdas(datos, columnas), listas)
         _, visibles, _ = encuestas_services.calcular_visibilidad(bloques, preguntas, seleccion)
         contexto = {"sede": campus.sede, "campus": campus}
         if pregunta_carrera and pregunta_carrera.id in columnas:
@@ -635,6 +637,16 @@ def _fechas_participacion(anio, semestre):
     """Otoño: marzo a julio; Primavera: agosto a diciembre; Ambos o sin dato: el año académico."""
     inicio, termino = MESES_SEMESTRE.get(_n(semestre), (3, 12))
     return date(anio, inicio, 1), date(anio, termino, calendar.monthrange(anio, termino)[1])
+
+
+def _telefono(texto):
+    """El teléfono escrito como en el portal (+56 9 ...); si no se reconoce, tal cual."""
+    from encuestas import formatos
+
+    try:
+        return formatos.telefono(texto) if texto else ""
+    except ValidationError:
+        return formatos.ordenado(texto)
 
 
 def _importar_registro_socios(carga, filas, campus):
@@ -682,7 +694,7 @@ def _importar_registro_socios(carga, filas, campus):
                     nombre=(valor("representante") or valor("socio"))[:180],
                     cargo=valor("cargo")[:120] or None,
                     correo=valor("correo")[:254] or None,
-                    telefono=valor("telefono")[:30] or None,
+                    telefono=_telefono(valor("telefono"))[:30] or None,
                     es_principal=True,
                     activo=True,
                 )

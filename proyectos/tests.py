@@ -25,6 +25,21 @@ from proyectos.models import (
 )
 
 
+
+def datos_socio_nuevo():
+    """Datos del socio nuevo que pide el registro de equipos (como el Registro de Socios de la Coordinación)."""
+    from socios.models import Comuna
+
+    Comuna.objects.get_or_create(
+        nombre="Providencia", region="Metropolitana de Santiago", defaults={"activo": True},
+    )
+    return {
+        "socio_representante": "maría pérez", "socio_cargo": "Presidenta",
+        "socio_telefono": "912345678", "socio_correo": "junta@correo.cl",
+        "socio_comuna": "providencia", "socio_direccion": "Av. Siempre Viva 123",
+        "socio_clasificacion": "otra", "socio_clasificacion_otra": "Junta de vecinos",
+    }
+
 class RegistroEquiposCDE48Tests(TestCase):
 
     def setUp(self):
@@ -173,6 +188,7 @@ class RegistroEquiposCDE48Tests(TestCase):
 
             "tipo_socio": "provisional",
             "socio_provisional_nombre": "Organización Test",
+            **datos_socio_nuevo(),
 
             "cantidad_integrantes": "1",
 

@@ -792,13 +792,15 @@ def _fecha_celda(celda):
     return None
 
 
-def valores_desde_celdas(preguntas, celdas):
+def valores_desde_celdas(preguntas, celdas, catalogos=None):
     """
     Convierte las celdas de una fila exportada ({pregunta_id: celda}) en lo
     que recibe guardar_respuesta. Devuelve (valores, otros, seleccion, avisos);
     cada aviso es (pregunta, código, mensaje) y el valor que lo causa se omite.
     """
     valores, otros, seleccion, avisos = {}, {}, {}, []
+    # {formato: [nombres]} leído una vez; quien importa muchas filas lo reutiliza.
+    catalogos = {} if catalogos is None else catalogos
     for pregunta in preguntas:
         celda = celdas.get(pregunta.id)
         if celda is None or str(celda).strip() == "":
@@ -853,9 +855,33 @@ def valores_desde_celdas(preguntas, celdas):
             valores[pregunta.id] = fecha
         elif tipo == c.ARCHIVO:
             continue
+        elif tipo == c.TEXTO_CORTO:
+            valores[pregunta.id], aviso = _texto_corto_historico(pregunta, texto, catalogos)
+            if aviso:
+                avisos.append((pregunta, *aviso))
         else:
             valores[pregunta.id] = texto
     return valores, otros, seleccion, avisos
+
+
+def _texto_corto_historico(pregunta, texto, catalogos):
+    """
+    Una respuesta corta importada queda escrita igual que las del portal
+    (comuna oficial, teléfono +56...). Lo que no se reconoce se conserva
+    tal cual, con un aviso, porque la respuesta histórica no se puede corregir
+    preguntándole a quien la envió. Devuelve (valor, aviso o None).
+    """
+    from . import formatos
+
+    nombre = formatos.formato(pregunta, configuracion(pregunta))
+    if nombre in formatos.CON_LISTA and nombre not in catalogos:
+        catalogos[nombre] = formatos.opciones(nombre)
+    try:
+        valor = formatos.normalizar(nombre, texto, catalogos)
+    except ValidationError:
+        codigo = "COMUNA_NO_RECONOCIDA" if nombre == formatos.COMUNA else "TELEFONO_INVALIDO"
+        return formatos.ordenado(texto), (codigo, f"«{texto}» no se reconoció; se guardó tal cual")
+    return valor, None
 
 
 def configuracion_opcion(opcion):

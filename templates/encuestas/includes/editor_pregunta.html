@@ -54,6 +54,15 @@ Cada data-error-para recibe los errores de ese campo cuando se guarda.
             <input type="number" min="1" max="5000" name="largo_max" id="largo-{{ uid }}" class="form-control form-control-sm"
                    value="{{ form.largo_max.value|default_if_none:'' }}" placeholder="Sin límite">
         </div>
+        <div class="col-sm-5" data-para-tipos="TEXTO_CORTO">
+            <label class="enc-nota" for="formato-{{ uid }}">{{ form.formato.label }}</label>
+            <select name="formato" id="formato-{{ uid }}" class="form-select form-select-sm">
+                {% for valor, nombre in form.fields.formato.choices %}
+                    <option value="{{ valor }}" {% if form.formato.value == valor %}selected{% endif %}>{{ nombre }}</option>
+                {% endfor %}
+            </select>
+            <div class="enc-nota mt-1">{{ form.formato.help_text }}</div>
+        </div>
         <div class="col-sm-3" data-para-tipos="NUMERO,ESCALA">
             <label class="enc-nota" for="minimo-{{ uid }}">{{ form.minimo.label }}</label>
             <input type="number" name="minimo" id="minimo-{{ uid }}" class="form-control form-control-sm" value="{{ form.minimo.value|default_if_none:'' }}">

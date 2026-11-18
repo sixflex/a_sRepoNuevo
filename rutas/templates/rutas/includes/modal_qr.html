@@ -1,5 +1,5 @@
 {% comment %}
-Popup con los QR de una actividad (13: registro de socio; 19: encuestas de
+Popup con los QR de una actividad (13: registro de equipo y socio; 19: encuestas de
 evaluación). Cada QR grande, con su enlace debajo para copiarlo.
 {% endcomment %}
 <div class="modal fade" id="qr-{{ actividad.id }}" tabindex="-1" aria-labelledby="qr-{{ actividad.id }}-titulo" aria-hidden="true">
@@ -27,7 +27,7 @@ evaluación). Cada QR grande, con su enlace debajo para copiarlo.
             </div>
             {% if actividad.qr_pantalla_completa %}
                 <div class="modal-footer">
-                    <a href="{{ actividad.qr_pantalla_completa }}" class="btn btn-light-ua btn-sm"><i class="bi bi-arrows-fullscreen me-1" aria-hidden="true"></i>Ver en página aparte (para descargar los QR)</a>
+                    <a href="{{ actividad.qr_pantalla_completa }}" class="btn btn-light-ua btn-sm"><i class="bi bi-arrows-fullscreen me-1" aria-hidden="true"></i>{{ actividad.qr_pantalla_texto|default:"Ver en página aparte (para descargar los QR)" }}</a>
                 </div>
             {% endif %}
         </div>

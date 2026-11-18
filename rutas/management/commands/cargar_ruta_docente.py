@@ -1,13 +1,14 @@
 
 from datetime import date
+from decimal import Decimal
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.urls import reverse
 
 from encuestas.models import FormularioVersion
-from rutas.models import RutaActividad, RutaPlantilla, RutaVersion
-from rutas.services import RECORDATORIO_INVITACION_CIERRE
+from rutas.models import Evidencia, RutaActividad, RutaPlantilla, RutaVersion, SeccionRuta
+from rutas.services import RECORDATORIO_INVITACION_CIERRE, asignar_ruta_a_seccion, obtener_version_ruta_vigente
 
 
 def _url_con_marcador(nombre_url, marcador):
@@ -23,8 +24,22 @@ def _ultima_version(codigo_plantilla):
     )
 
 
+# Ruta docente.txt: 23 actividades en 5 etapas.
+TOTAL_ACTIVIDADES = 23
+
+
 class Command(BaseCommand):
     help = "Carga la Ruta del Docente A+S 2026 según PV-03"
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--reparar", action="store_true",
+            help=(
+                "Si la Ruta activa no tiene las 23 actividades (p. ej. una Ruta de prueba hecha "
+                "a mano), crea una versión nueva con las 23, la deja activa y pasa a ella las "
+                "secciones sin evidencias subidas. No borra usuarios ni respuestas."
+            ),
+        )
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -36,22 +51,45 @@ class Command(BaseCommand):
             },
         )
 
-        version, version_creada = RutaVersion.objects.get_or_create(
-            plantilla=plantilla,
-            numero_version=1,
-            defaults={
-                "estado": "BORRADOR",
-                "fecha_vigencia_desde": date(2026, 1, 1),
-            },
-        )
-
-        if not version_creada:
-            self.stdout.write(
-                self.style.SUCCESS(
-                    "La versión 1 ya existe. Se conserva sin modificaciones."
-                )
+        if not plantilla.versiones.exists():
+            version = RutaVersion.objects.create(
+                plantilla=plantilla, numero_version=1, estado="BORRADOR",
+                fecha_vigencia_desde=date(2026, 1, 1),
             )
+            self.cargar_version(version)
+            if options.get("reparar"):
+                # Una Ruta de prueba con otro nombre: sus secciones pasan a esta.
+                self.mover_secciones(version)
             return
+
+        vigente = obtener_version_ruta_vigente()
+        total = vigente.actividades.count() if vigente else 0
+        if total == TOTAL_ACTIVIDADES:
+            self.stdout.write(self.style.SUCCESS(
+                f"La versión {vigente.numero_version} ya tiene las {TOTAL_ACTIVIDADES} actividades. "
+                "Se conserva sin modificaciones."
+            ))
+            return
+
+        # Una Ruta creada a mano (p. ej. de prueba) no se corrige sola.
+        if not options.get("reparar"):
+            self.stdout.write(self.style.WARNING(
+                f"Ojo: la Ruta activa tiene {total} actividades y la Ruta del Docente tiene "
+                f"{TOTAL_ACTIVIDADES}. Para corregirla sin borrar datos usa: "
+                "python manage.py cargar_ruta_docente --reparar"
+            ))
+            return
+
+        siguiente = (plantilla.versiones.order_by("-numero_version").first().numero_version) + 1
+        nueva = RutaVersion.objects.create(
+            plantilla=plantilla, numero_version=siguiente, estado="BORRADOR",
+            fecha_vigencia_desde=date(2026, 1, 1),
+        )
+        plantilla.versiones.filter(estado="ACTIVA").update(estado="INACTIVA")
+        self.cargar_version(nueva)
+        self.mover_secciones(nueva)
+
+    def cargar_version(self, version):
         actividades = [
             (1, "Inicio y habilitación", "Completar curso habilitante en metodología A+S",
              "Completar el curso de metodología A+S disponible en Canvas durante las primeras tres semanas."),
@@ -124,6 +162,11 @@ class Command(BaseCommand):
                     + "?proceso=EVALUACION_AS"
                 ),
             },
+            5: {
+                "formulario_version": _ultima_version(
+                    "FORMULARIO_PROYECTO_AS_2026"
+                ),
+            },
             23: {
                 "formulario_version": _ultima_version(
                     "RESUMEN_IMPLEMENTACION_DOCENTE"
@@ -161,3 +204,52 @@ class Command(BaseCommand):
                 f"Actividades creadas: {len(nuevas_actividades)}."
             )
         )
+
+    def mover_secciones(self, nueva):
+        """
+        Pasa a la Ruta nueva las secciones que estaban en una versión
+        incompleta. Lo marcado como hecho se conserva cuando la actividad
+        tiene el mismo número y nombre; las secciones con evidencias subidas
+        se dejan como están (las evidencias no se borran).
+        """
+        movidas, con_evidencias = 0, []
+        for seccion_ruta in (
+            SeccionRuta.objects.exclude(ruta_version=nueva)
+            .select_related("seccion", "ruta_version")
+        ):
+            if seccion_ruta.ruta_version.actividades.count() == TOTAL_ACTIVIDADES:
+                continue
+            if Evidencia.objects.filter(seccion_actividad__seccion_ruta=seccion_ruta).exists():
+                con_evidencias.append(seccion_ruta.seccion.nrc)
+                continue
+            hechas = {
+                (a.ruta_actividad.orden, a.ruta_actividad.nombre): a
+                for a in seccion_ruta.actividades.select_related("ruta_actividad").exclude(fecha_completada=None)
+            }
+            seccion_ruta.actividades.all().delete()
+            seccion_ruta.ruta_version = nueva
+            seccion_ruta.estado = "EN_PROGRESO"
+            seccion_ruta.save(update_fields=["ruta_version", "estado"])
+            asignar_ruta_a_seccion(seccion_ruta.seccion, nueva)
+            for actividad in seccion_ruta.actividades.select_related("ruta_actividad"):
+                anterior = hechas.get((actividad.ruta_actividad.orden, actividad.ruta_actividad.nombre))
+                if anterior:
+                    actividad.estado = anterior.estado
+                    actividad.fecha_completada = anterior.fecha_completada
+                    actividad.completada_por_docente = anterior.completada_por_docente
+                    actividad.observacion = anterior.observacion
+                    actividad.save()
+            completadas = seccion_ruta.actividades.filter(
+                ruta_actividad__es_obligatoria=True, completada_por_docente__isnull=False,
+            ).count()
+            obligatorias = seccion_ruta.actividades.filter(ruta_actividad__es_obligatoria=True).count()
+            seccion_ruta.porcentaje_final = round(Decimal(completadas) * 100 / obligatorias, 2) if obligatorias else Decimal("0.00")
+            seccion_ruta.save(update_fields=["porcentaje_final"])
+            movidas += 1
+
+        self.stdout.write(self.style.SUCCESS(f"Secciones pasadas a la versión {nueva.numero_version}: {movidas}."))
+        if con_evidencias:
+            self.stdout.write(self.style.WARNING(
+                "Se dejaron en su versión anterior por tener evidencias subidas: "
+                + ", ".join(f"NRC {nrc}" for nrc in con_evidencias)
+            ))

@@ -82,11 +82,63 @@
                 <div class="form-text">{% if socios_de_la_seccion %}Son los socios que tu docente eligió para esta sección.{% else %}Escribe para buscar por nombre.{% endif %}</div>
             </div>
 
+            {# Socio nuevo: los datos del Registro de Socios Comunitarios de la Coordinación (preguntas 9 a 16). #}
             <div id="contenedor-socio-provisional" class="reg-detalle d-none">
-                <label for="socio_provisional_nombre" class="form-label fw-semibold">Nombre de la organización</label>
-                <input type="text" class="form-control" id="socio_provisional_nombre" name="socio_provisional_nombre"
-                       maxlength="220" placeholder="Ej: Junta de Vecinos Los Aromos">
-                <div class="form-text">Quedará como provisional hasta que coordinación lo revise.</div>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label for="socio_provisional_nombre" class="form-label fw-semibold">Nombre del socio comunitario (institución, empresa o comunidad)</label>
+                        <input type="text" class="form-control" id="socio_provisional_nombre" name="socio_provisional_nombre"
+                               maxlength="220" placeholder="Ej: Junta de Vecinos Los Aromos">
+                        <div class="form-text">Quedará como provisional hasta que coordinación lo revise. Pueden trabajar con él desde ya.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="socio_representante" class="form-label fw-semibold">Representante</label>
+                        <input type="text" class="form-control" id="socio_representante" name="socio_representante"
+                               maxlength="180" value="{{ datos_formulario.socio_representante|default:'' }}" placeholder="Nombre y apellido" data-socio-nuevo>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="socio_cargo" class="form-label fw-semibold">Cargo del representante</label>
+                        <input type="text" class="form-control" id="socio_cargo" name="socio_cargo"
+                               maxlength="120" value="{{ datos_formulario.socio_cargo|default:'' }}" placeholder="Ej: Presidenta" data-socio-nuevo>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="socio_telefono" class="form-label fw-semibold">Teléfono de contacto</label>
+                        <input type="text" class="form-control" id="socio_telefono" name="socio_telefono" inputmode="tel" autocomplete="off"
+                               maxlength="40" value="{{ datos_formulario.socio_telefono|default:'' }}" placeholder="+56 9 1234 5678" data-socio-nuevo>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="socio_correo" class="form-label fw-semibold">Correo electrónico</label>
+                        <input type="email" class="form-control" id="socio_correo" name="socio_correo"
+                               maxlength="254" value="{{ datos_formulario.socio_correo|default:'' }}" placeholder="nombre@correo.cl" data-socio-nuevo>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="socio_comuna" class="form-label fw-semibold">Comuna</label>
+                        <input type="text" class="form-control" id="socio_comuna" name="socio_comuna" list="lista-comunas" autocomplete="off"
+                               maxlength="120" value="{{ datos_formulario.socio_comuna|default:'' }}" placeholder="Escribe y elige de la lista" data-socio-nuevo>
+                        <datalist id="lista-comunas">{% for comuna in comunas %}<option>{{ comuna }}</option>{% endfor %}</datalist>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="socio_direccion" class="form-label fw-semibold">Dirección</label>
+                        <input type="text" class="form-control" id="socio_direccion" name="socio_direccion"
+                               maxlength="255" value="{{ datos_formulario.socio_direccion|default:'' }}" placeholder="Calle y número" data-socio-nuevo>
+                        <div class="form-text">No se publica: el mapa solo muestra la comuna.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="socio_clasificacion" class="form-label fw-semibold">Clasificación</label>
+                        <select class="form-select" id="socio_clasificacion" name="socio_clasificacion" data-socio-nuevo>
+                            <option value="">Selecciona</option>
+                            {% for clasificacion in clasificaciones %}
+                                <option value="{{ clasificacion.id }}" {% if datos_formulario.socio_clasificacion == clasificacion.id|stringformat:"s" %}selected{% endif %}>{{ clasificacion.nombre }}</option>
+                            {% endfor %}
+                            <option value="otra" {% if datos_formulario.socio_clasificacion == "otra" %}selected{% endif %}>Otra</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6" id="contenedor-clasificacion-otra" {% if datos_formulario.socio_clasificacion != "otra" %}hidden{% endif %}>
+                        <label for="socio_clasificacion_otra" class="form-label fw-semibold">¿Cuál?</label>
+                        <input type="text" class="form-control" id="socio_clasificacion_otra" name="socio_clasificacion_otra"
+                               maxlength="120" value="{{ datos_formulario.socio_clasificacion_otra|default:'' }}">
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -179,6 +231,19 @@ document.addEventListener("DOMContentLoaded", function () {
     const inputSocioProvisional =
         document.getElementById("socio_provisional_nombre");
 
+    const camposSocioNuevo =
+        document.querySelectorAll("[data-socio-nuevo]");
+
+    const selectorClasificacion =
+        document.getElementById("socio_clasificacion");
+
+    const contenedorClasificacionOtra =
+        document.getElementById("contenedor-clasificacion-otra");
+
+    selectorClasificacion.addEventListener("change", function () {
+        contenedorClasificacionOtra.hidden = selectorClasificacion.value !== "otra";
+    });
+
 
     
 
@@ -191,6 +256,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             selectorSocio.required = true;
             inputSocioProvisional.required = false;
+            camposSocioNuevo.forEach((campo) => { campo.required = false; });
 
         }
         else if (radioSocioProvisional.checked) {
@@ -200,6 +266,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             selectorSocio.required = false;
             inputSocioProvisional.required = true;
+            camposSocioNuevo.forEach((campo) => { campo.required = true; });
 
         }
         else {
@@ -209,6 +276,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             selectorSocio.required = false;
             inputSocioProvisional.required = false;
+            camposSocioNuevo.forEach((campo) => { campo.required = false; });
 
         }
 

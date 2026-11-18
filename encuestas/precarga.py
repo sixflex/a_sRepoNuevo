@@ -41,6 +41,14 @@ PREGUNTAS = {
         "Nombre del Docente / Profesor formador": "docente_nombre",
         "Nombre de la Asignatura": "asignatura",
         "Nombre del docente firmante": "docente_nombre",
+        # Del equipo (cuando el acuerdo se llena para un grupo): su socio y
+        # contacto, tal como los registraron en la actividad 13.
+        "Nombre del Socio Comunitario o representante": "socio_nombre",
+        "Cargo del representante": "socio_cargo",
+        "Teléfono del representante": "socio_telefono",
+        "Correo electrónico del representante": "socio_correo",
+        "Nombre del socio comunitario firmante": "socio_representante",
+        "Nombres de los estudiantes firmantes": "estudiantes_equipo",
     },
     RESUMEN_IMPLEMENTACION: {
         "Nombre Completo Docente (dos nombres y dos apellidos)": "docente_nombre",
@@ -78,7 +86,37 @@ ORIGEN_POR_DATO = {
     "tipos_socio": ORIGEN_EQUIPOS,
     "encuestas_aplicadas": ORIGEN_RUTA,
     "momento_reflexion": ORIGEN_RUTA,
+    "socio_nombre": ORIGEN_EQUIPOS,
+    "socio_cargo": ORIGEN_EQUIPOS,
+    "socio_telefono": ORIGEN_EQUIPOS,
+    "socio_correo": ORIGEN_EQUIPOS,
+    "socio_representante": ORIGEN_EQUIPOS,
+    "estudiantes_equipo": ORIGEN_EQUIPOS,
 }
+
+
+def datos_equipo(equipo):
+    """El socio vigente del equipo, su contacto principal y sus integrantes."""
+    datos = {}
+    integrantes = [f"{i.nombres} {i.apellidos}" for i in equipo.integrantes.order_by("id")]
+    if integrantes:
+        datos["estudiantes_equipo"] = "\n".join(integrantes)
+    socio = equipo.socio_vigente
+    if socio is None:
+        return datos
+    datos["socio_nombre"] = socio.nombre_organizacion
+    contacto = (
+        socio.contactos.filter(activo=True).order_by("-es_principal", "id").first()
+    )
+    if contacto:
+        datos["socio_representante"] = contacto.nombre
+        if contacto.cargo:
+            datos["socio_cargo"] = contacto.cargo
+        if contacto.telefono:
+            datos["socio_telefono"] = contacto.telefono
+        if contacto.correo:
+            datos["socio_correo"] = contacto.correo
+    return datos
 
 
 def _normalizar(texto):
@@ -279,7 +317,7 @@ def _valor_opcion(pregunta, valor):
     return None
 
 
-def precargar(version, preguntas, seccion, usuario=None):
+def precargar(version, preguntas, seccion, usuario=None, equipo=None):
     """
     Valores iniciales para RespuestaFormularioForm y el origen de cada uno.
 
@@ -294,6 +332,8 @@ def precargar(version, preguntas, seccion, usuario=None):
         return {}, {}
 
     datos = datos_seccion(seccion, usuario)
+    if equipo is not None:
+        datos.update(datos_equipo(equipo))
     initial, origenes = {}, {}
     for pregunta in preguntas:
         dato = mapa.get(pregunta.texto)

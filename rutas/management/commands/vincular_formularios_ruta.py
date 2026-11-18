@@ -7,40 +7,45 @@ from rutas.models import RutaActividad, RutaVersion
 from rutas.services import crear_nueva_version_ruta, obtener_version_ruta_vigente
 
 
+# La actividad 13 (registrar al socio) ya no usa un formulario: el registro
+# de equipos pide los datos del Registro de Socios Comunitarios y los guarda
+# en el socio y la participación del equipo (ver proyectos.registro_socio).
 FORMULARIOS = {
     5: "FORMULARIO_PROYECTO_AS_2026",
-    13: "REGISTRO_SOCIO_COMUNITARIO_AS_2026",
 }
 
 
 class Command(BaseCommand):
     help = (
-        "Vincula los formularios de las actividades 5 y 13 a la versión en borrador "
+        "Vincula el formulario de la actividad 5 a la versión en borrador "
         "de la Ruta Docente; si no hay borrador, lo crea desde la versión activa"
     )
 
     @transaction.atomic
     def handle(self, *args, **options):
-        # Se usa el borrador más reciente, no "la versión 2": los números de
-        # versión dependen de cada base de datos.
+        vigente = obtener_version_ruta_vigente()
+
+        if vigente is None:
+            raise CommandError(
+                "No existe una versión activa de la Ruta del Docente A+S. "
+                "Ejecuta primero: python manage.py cargar_ruta_docente"
+            )
+
+        # Se usa el borrador más reciente posterior a la versión activa, no
+        # "la versión 2": los números de versión dependen de cada base de
+        # datos, y un borrador de una Ruta reemplazada no sirve.
         ruta = (
             RutaVersion.objects.select_for_update()
             .filter(
-                plantilla__nombre="Ruta del Docente A+S",
+                plantilla=vigente.plantilla,
                 estado="BORRADOR",
+                numero_version__gt=vigente.numero_version,
             )
             .order_by("-numero_version")
             .first()
         )
 
         if ruta is None:
-            vigente = obtener_version_ruta_vigente()
-
-            if vigente is None:
-                raise CommandError(
-                    "No existe una versión activa de la Ruta del Docente A+S. "
-                    "Ejecuta primero: python manage.py cargar_ruta_docente"
-                )
 
             # Si algo falla más abajo, la transacción deshace también este borrador.
             ruta = crear_nueva_version_ruta(vigente)

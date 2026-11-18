@@ -43,6 +43,7 @@ from proyectos.models import EnlaceRegistroEquipo, Equipo, IntegranteEquipo
 from rutas.models import SeccionActividad
 from rutas.services import obtener_version_ruta_vigente
 from rutas.views import recalcular_avance
+from socios.comunas import clave as clave_comuna
 from socios import services as socios_services
 from socios.constantes import ORIGEN_HISTORICO
 from socios.models import (
@@ -370,6 +371,9 @@ class Command(BaseCommand):
 
     def cargar_socios(self):
         comunas = {}
+        # Las comunas ya cargadas (p. ej. la lista oficial) se reconocen aunque
+        # el Excel las escriba sin tildes o con otras mayúsculas.
+        por_clave = {clave_comuna(c.nombre): c for c in Comuna.objects.all()}
         # Primero las comunas correctas, así las corregidas reutilizan su ubicación.
         filas = sorted(self.datos["Comunas"], key=lambda f: texto(f["Comuna"]).lower() in CORRECCIONES_COMUNA)
         for fila in filas:
@@ -378,9 +382,10 @@ class Command(BaseCommand):
                 original.lower(), (original, None, Decimal(str(fila["Latitud"])), Decimal(str(fila["Longitud"]))),
             )
             # Una comuna ya registrada se reutiliza; solo se completa su ubicación para el mapa.
-            comuna = Comuna.objects.filter(nombre__iexact=nombre).first()
+            comuna = por_clave.get(clave_comuna(nombre))
             if comuna is None:
                 comuna = Comuna.objects.create(nombre=nombre, region=region or texto(fila["Región"]), activo=True)
+                por_clave[clave_comuna(nombre)] = comuna
             if (comuna.lat_centro is None or comuna.lon_centro is None) and lat is not None:
                 comuna.lat_centro = lat
                 comuna.lon_centro = lon

@@ -72,3 +72,12 @@ ORIGENES_PARTICIPACION = [
     (ORIGEN_OPERATIVO, "Operativo"),
     (ORIGEN_HISTORICO, "Histórico"),
 ]
+
+# Clasificaciones del "Registro de Socios Comunitarios" de la Coordinación
+# (pregunta 16). Se cargan en ClasificacionSocio con cargar_catalogos_socios;
+# "Otras" guarda el detalle en SocioComunitario.clasificacion_otra.
+CLASIFICACIONES_SOCIO = [
+    "Municipalidad", "Corporación", "Fundación", "Cesfam", "Colegio", "CDN Sercotec",
+    "Junta de Vecinos", "Club de Adulto Mayor", "Club deportivo", "Emprendedor(a) - Pyme",
+    "Universidad Autónoma", "Otras",
+]
