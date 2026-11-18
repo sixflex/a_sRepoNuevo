@@ -1207,8 +1207,10 @@ class RegistroEquipoParticipacionTests(TestCase):
         self.assertEqual(socios_services.historial_socios_equipo(equipo), [])
 
     def test_registro_con_socio_provisional_sigue_funcionando(self):
+        from proyectos.tests import datos_socio_nuevo
+
         self.client.post(self.url, self._datos(
-            tipo_socio="provisional", socio_provisional_nombre="Junta Provisional",
+            tipo_socio="provisional", socio_provisional_nombre="Junta Provisional", **datos_socio_nuevo(),
         ))
 
         equipo = Equipo.objects.get(seccion=self.seccion)
@@ -1217,6 +1219,12 @@ class RegistroEquipoParticipacionTests(TestCase):
         self.assertEqual(socio.estado_revision, "RECIBIDO")
         self.assertEqual(equipo.socio_vigente, socio)
         self.assertEqual(abiertas(equipo).get().socio, socio)
+        # Los datos del Registro de Socios quedan normalizados en el socio y su contacto.
+        self.assertEqual(socio.comuna.nombre, "Providencia")
+        self.assertEqual(socio.clasificacion_otra, "Junta de vecinos")
+        contacto = socio.contactos.get()
+        self.assertEqual(contacto.nombre, "María Pérez")
+        self.assertEqual(contacto.telefono, "+56 9 1234 5678")
 
     def test_si_falla_la_asociacion_no_queda_equipo_a_medias(self):
         socio = crear_socio("Org Catálogo", estado_revision="DISPONIBLE")

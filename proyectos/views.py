@@ -14,11 +14,13 @@ from django.contrib.auth.views import redirect_to_login
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from socios.comunas import nombres_comunas
 from socios.models import SocioComunitario
 from socios.services import asociar_socio_a_equipo, historial_socios_equipo, socios_elegidos_seccion, socios_para_registro_equipos
 
 from usuarios.decorators import coordinador_required, docente_required
 from usuarios.services import correo_de_sesion, correos_de_usuario, oid_de_sesion
+from core.textos import nombre_persona
 from core.validators import es_rut_valido, normalizar_rut
 
 from planificacion.models import PlanificacionEnlace
@@ -45,6 +47,7 @@ from auditoria.services import registrar_auditoria
 from django.core.exceptions import PermissionDenied
 
 from .models import EnlaceRegistroEquipo
+from . import integrantes_equipo, registro_socio, trabajo_socio
 @coordinador_required
 def gestionar_enlaces_planificacion(request):
     if request.method == "POST":
@@ -465,33 +468,9 @@ def acceso_registro_equipos(request, token):
 
     ahora = timezone.now()
 
-    
-    if not enlace.activo:
-        return render(
-            request,
-            "proyectos/registro_equipos_no_disponible.html",
-            {
-                "motivo": "El formulario de registro se encuentra cerrado.",
-                "hide_sidebar": True,
-            },
-            status=403,
-        )
-
-    if (
-        enlace.fecha_expiracion
-        and enlace.fecha_expiracion <= ahora
-    ):
-        return render(
-            request,
-            "proyectos/registro_equipos_no_disponible.html",
-            {
-                "motivo": "El enlace de registro ha expirado.",
-                "hide_sidebar": True,
-            },
-            status=403,
-        )
-
-    
+    # Primero la cuenta: un integrante vuelve a este mismo enlace durante el
+    # semestre para completar el trabajo con el socio, aunque el registro ya
+    # esté cerrado.
     if not request.user.is_authenticated:
         return redirect_to_login(
             request.get_full_path(),
@@ -520,9 +499,10 @@ def acceso_registro_equipos(request, token):
             status=403,
         )
 
-    
-    # HU-03: el equipo se registra una sola vez. Si el estudiante ya lo
-    # registró (o lo inscribió un compañero), ve su registro y no el formulario.
+    # HU-03: el equipo se registra una sola vez. Quien es integrante (lo haya
+    # registrado él o un compañero) ve su equipo, no el formulario. Se busca
+    # por integrante y no por informante: si el docente cambia los
+    # integrantes, el equipo sigue siendo de quienes están en él.
     mis_correos = {
         correo.lower()
         for correo in correos_de_usuario(request.user) | {correo_de_sesion(request) or ""}
@@ -532,7 +512,6 @@ def acceso_registro_equipos(request, token):
     if mis_correos:
         filtro_registro = Q(pk__in=[])
         for correo in mis_correos:
-            filtro_registro |= Q(informante_correo__iexact=correo)
             filtro_registro |= Q(integrantes__correo_institucional__iexact=correo)
         equipo_registrado = (
             Equipo.objects
@@ -543,15 +522,31 @@ def acceso_registro_equipos(request, token):
             .first()
         )
     if equipo_registrado is not None:
+        return _mi_equipo(request, enlace, equipo_registrado, mis_correos)
+
+    if not enlace.activo:
         return render(
             request,
-            "proyectos/registro_equipos_listo.html",
+            "proyectos/registro_equipos_no_disponible.html",
             {
-                "seccion": enlace.seccion,
-                "equipo": equipo_registrado,
-                "lo_registre_yo": equipo_registrado.informante_correo.lower() in mis_correos,
+                "motivo": "El formulario de registro se encuentra cerrado.",
                 "hide_sidebar": True,
             },
+            status=403,
+        )
+
+    if (
+        enlace.fecha_expiracion
+        and enlace.fecha_expiracion <= ahora
+    ):
+        return render(
+            request,
+            "proyectos/registro_equipos_no_disponible.html",
+            {
+                "motivo": "El enlace de registro ha expirado.",
+                "hide_sidebar": True,
+            },
+            status=403,
         )
 
     # RF-SC-03 / HU-03: solo los socios que eligió el docente para la
@@ -602,6 +597,9 @@ def acceso_registro_equipos(request, token):
         datos_formulario[
             "socio_provisional_nombre"
         ] = socio_provisional_nombre
+        socio_nuevo = registro_socio.leer(request.POST)
+        datos_formulario.update(socio_nuevo)
+        socio_nuevo_limpio = {}
 
         if tipo_socio not in ["existente", "provisional"]:
             errores.append(
@@ -645,6 +643,10 @@ def acceso_registro_equipos(request, token):
                     "El nombre de la organización no puede superar "
                     "los 220 caracteres."
                 )
+
+            # Los demás datos del Registro de Socios Comunitarios (RF-SC-04).
+            socio_nuevo_limpio, errores_socio = registro_socio.validar(socio_nuevo)
+            errores.extend(errores_socio)
 
         
         cantidad_raw = request.POST.get(
@@ -692,11 +694,11 @@ def acceso_registro_equipos(request, token):
                     "",
                 )
 
-                nombres = normalizar_nombre(
+                nombres = nombre_persona(
                     nombres_declarados
                 )
 
-                apellidos = normalizar_nombre(
+                apellidos = nombre_persona(
                     apellidos_declarados
                 )
 
@@ -920,16 +922,9 @@ def acceso_registro_equipos(request, token):
                             
                             if tipo_socio == "provisional":
 
-                                socio_seleccionado = (
-                                    SocioComunitario.objects.create(
-                                        nombre_organizacion=(
-                                            socio_provisional_nombre
-                                        ),
-                                        estado_revision="RECIBIDO",
-                                        es_provisional=True,
-                                        activo=True,
-                                        fecha_creacion=timezone.now(),
-                                    )
+                                socio_seleccionado = registro_socio.crear(
+                                    socio_provisional_nombre,
+                                    socio_nuevo_limpio,
                                 )
 
                             
@@ -951,7 +946,7 @@ def acceso_registro_equipos(request, token):
                                 integrantes_validados[0]
                             )
 
-                            nombre_informante = normalizar_nombre(
+                            nombre_informante = nombre_persona(
                                 (
                                     f"{integrante_informante['nombres']} "
                                     f"{integrante_informante['apellidos']}"
@@ -1053,9 +1048,42 @@ def acceso_registro_equipos(request, token):
             # CDE-46
             "socios_disponibles": socios_disponibles,
             "socios_de_la_seccion": socios_de_la_seccion,
+            "comunas": nombres_comunas(),
+            "clasificaciones": registro_socio.clasificaciones(),
             "hide_sidebar": True,
         },
     )
+
+def _mi_equipo(request, enlace, equipo, mis_correos):
+    """
+    Página del equipo ya registrado: sus datos y el trabajo con el socio
+    (beneficiarios, servicio, evaluación y comentario), que cualquier
+    integrante completa o corrige durante el semestre.
+    """
+    participacion = equipo.participaciones_vigentes[0] if equipo.participaciones_vigentes else None
+    # Solo el formulario del trabajo con el socio guarda aquí; un segundo
+    # envío del registro (otra pestaña, otra cuenta) solo muestra el equipo.
+    guardando = request.method == "POST" and request.POST.get("accion") == "trabajo_socio"
+    form = trabajo_socio.formulario(participacion, request.POST if guardando else None)
+    if guardando and participacion is not None and form.is_valid():
+        trabajo_socio.guardar(participacion, form, request)
+        messages.success(request, "Se guardó el trabajo con el socio. Pueden corregirlo cuando quieran.")
+        return redirect("proyectos:acceso_registro_equipos", token=enlace.token)
+
+    return render(
+        request,
+        "proyectos/registro_equipos_listo.html",
+        {
+            "seccion": enlace.seccion,
+            "equipo": equipo,
+            "participacion": participacion,
+            "form_trabajo": form,
+            "trabajo_completo": trabajo_socio.completo(participacion),
+            "lo_registre_yo": equipo.informante_correo.lower() in mis_correos,
+            "hide_sidebar": True,
+        },
+    )
+
 
 def normalizar_nombre(valor):
    
@@ -1212,6 +1240,43 @@ def gestionar_equipo(request, equipo_id):
             )
 
         
+        elif accion == "agregar_integrante":
+            # RF-EQP-07: el docente corrige el equipo cuando alguien entra.
+            errores_integrante = integrantes_equipo.agregar(equipo, request.POST, request)
+            for error in errores_integrante:
+                messages.error(request, error)
+            if not errores_integrante:
+                messages.success(request, "Se agregó el integrante al equipo.")
+            return redirect("proyectos:gestionar_equipo", equipo_id=equipo.id)
+
+        elif accion == "quitar_integrante":
+            # RF-EQP-07: o cuando alguien sale. El equipo y su socio siguen
+            # siendo del resto de los integrantes.
+            integrante = get_object_or_404(
+                IntegranteEquipo, pk=request.POST.get("integrante_id", "").strip() or 0, equipo=equipo,
+            )
+            error = integrantes_equipo.quitar(equipo, integrante, request)
+            if error:
+                messages.error(request, error)
+            else:
+                messages.success(request, f"Se quitó a {integrante.nombres} {integrante.apellidos} del equipo.")
+            return redirect("proyectos:gestionar_equipo", equipo_id=equipo.id)
+
+        elif accion == "trabajo_socio":
+            # El docente también puede completar o corregir el trabajo con el
+            # socio (en el formulario de la Coordinación lo llenaban estudiantes o docentes).
+            participacion = equipo.participaciones_socios.filter(fecha_fin__isnull=True).first()
+            form_trabajo = trabajo_socio.formulario(participacion, request.POST)
+            if participacion is None:
+                messages.error(request, "El equipo no tiene un socio asociado.")
+            elif form_trabajo.is_valid():
+                trabajo_socio.guardar(participacion, form_trabajo, request)
+                messages.success(request, "Se guardó el trabajo con el socio.")
+            else:
+                for errores_campo in form_trabajo.errors.values():
+                    messages.error(request, errores_campo[0])
+            return redirect("proyectos:gestionar_equipo", equipo_id=equipo.id)
+
         elif accion == "corregir_integrante":
             integrante_id = request.POST.get(
                 "integrante_id",
@@ -1224,11 +1289,11 @@ def gestionar_equipo(request, equipo_id):
                 equipo=equipo,
             )
 
-            nombres = normalizar_nombre(
+            nombres = nombre_persona(
                 request.POST.get("nombres", "")
             )
 
-            apellidos = normalizar_nombre(
+            apellidos = nombre_persona(
                 request.POST.get("apellidos", "")
             )
 
@@ -1336,7 +1401,7 @@ def gestionar_equipo(request, equipo_id):
 
             
             if integrante.es_informante:
-                equipo.informante_nombre = normalizar_nombre(
+                equipo.informante_nombre = nombre_persona(
                     f"{nombres} {apellidos}"
                 )
 
@@ -1493,6 +1558,7 @@ def gestionar_equipo(request, equipo_id):
         .select_related("socio")
         .order_by("-fecha_inicio", "-pk")
     )
+    participacion_vigente = next((p for p in participaciones_socio if p.vigente), None)
 
     return render(
         request,
@@ -1505,6 +1571,10 @@ def gestionar_equipo(request, equipo_id):
             "socios_de_la_seccion": socios_de_la_seccion,
             "historial_socios": historial_socios,
             "participaciones_socio": participaciones_socio,
+            "maximo_integrantes": integrantes_equipo.MAXIMO,
+            "form_trabajo": trabajo_socio.formulario(participacion_vigente),
+            "participacion_vigente": participacion_vigente,
+            "trabajo_completo": trabajo_socio.completo(participacion_vigente),
         },
     )
 

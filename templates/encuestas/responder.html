@@ -20,6 +20,7 @@
 
     <div class="card-ua enc-encabezado p-4 mb-3">
         <h1 class="enc-titulo mb-2">{{ version.plantilla.titulo }}</h1>
+        {% if equipo %}<p class="enc-texto fw-semibold mb-2"><i class="bi bi-people me-1" aria-hidden="true"></i>Grupo {{ equipo.numero_grupo }}{% if equipo.socio_vigente %} · {{ equipo.socio_vigente.nombre_organizacion }}{% endif %}</p>{% endif %}
         {% if version.plantilla.descripcion %}
             <p class="enc-texto mb-0">{{ version.plantilla.descripcion }}</p>
         {% endif %}
@@ -59,6 +60,11 @@
                     {% include "encuestas/includes/pregunta.html" %}
                 {% endfor %}
             </section>
+        {% endfor %}
+
+        {# Listas que se sugieren al escribir (comunas, carreras, asignaturas): un solo datalist por formato. #}
+        {% for nombre, valores in form.listas.items %}
+            <datalist id="lista-{{ nombre }}">{% for valor in valores %}<option>{{ valor }}</option>{% endfor %}</datalist>
         {% endfor %}
 
         {# Navegación por secciones, como en Microsoft Forms: formulario_dinamico.js muestra una sección por página. Sin JS se ven todas y solo "Enviar". #}

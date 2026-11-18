@@ -117,8 +117,11 @@ class PrepararDatosDesarrolloTests(TestCase):
         self.assertTrue(Comuna.objects.filter(nombre="Carahue", lat_centro__isnull=False).exists())
         self.assertEqual(Seccion.objects.count(), 15)
         borrador = RutaVersion.objects.get(estado="BORRADOR")
-        vinculadas = RutaActividad.objects.filter(ruta_version=borrador, orden__in=[5, 13])
-        self.assertTrue(all(actividad.formulario_version_id for actividad in vinculadas))
+        # Solo la 5: la 13 usa el registro de equipos, no un formulario.
+        self.assertIsNotNone(RutaActividad.objects.get(ruta_version=borrador, orden=5).formulario_version_id)
+        # La lista oficial de comunas queda cargada una sola vez.
+        self.assertEqual(Comuna.objects.filter(nombre="La Florida").count(), 1)
+        self.assertGreaterEqual(Comuna.objects.count(), 346)
 
 
 

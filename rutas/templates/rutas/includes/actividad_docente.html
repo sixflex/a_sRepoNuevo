@@ -76,7 +76,7 @@ Los datos los arma rutas/paso_a_paso.py.
                             <a href="{% url 'archivos:descargar' ra.archivo_recurso.id %}" class="btn btn-light-ua btn-sm"><i class="bi bi-download me-1" aria-hidden="true"></i>{% if actividad.dinamicas %}Guía de dinámicas (PDF){% else %}Descargar formato{% endif %}</a>
                         {% endif %}
                         {% if actividad.recurso_extra %}
-                            <a href="{{ actividad.recurso_extra }}" target="_blank" rel="noopener" class="btn btn-light-ua btn-sm"><i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Más ideas</a>
+                            <a href="{{ actividad.recurso_extra }}" target="_blank" rel="noopener" class="btn btn-light-ua btn-sm"><i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>{{ actividad.recurso_texto|default:"Más ideas" }}</a>
                         {% endif %}
                     </div>
                 {% endif %}
@@ -133,7 +133,21 @@ Los datos los arma rutas/paso_a_paso.py.
             {% endif %}
         {% elif ruta_abierta %}
             {% if actividad.accion %}
-                {% if actividad.accion.url %}
+                {% if actividad.accion.opciones %}
+                    {# Un mismo formulario por grupo (Acuerdo de la actividad 11): cada opción viene precargada con el socio del grupo. #}
+                    <div class="dropdown">
+                        <button type="button" class="btn btn-ua btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi {{ actividad.accion.icono }} me-1" aria-hidden="true"></i>{{ actividad.accion.texto }}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            {% for opcion in actividad.accion.opciones %}
+                                <li><a class="dropdown-item small" href="{{ opcion.url }}" target="_blank" rel="noopener">
+                                    {% if opcion.listo %}<i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i>{% else %}<i class="bi bi-circle me-1 text-muted" aria-hidden="true"></i>{% endif %}{{ opcion.texto }}
+                                </a></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% elif actividad.accion.url %}
                     <a href="{{ actividad.accion.url }}" class="btn btn-ua btn-sm"{% if actividad.accion.nueva_pestana %} target="_blank" rel="noopener"{% endif %}>
                         <i class="bi {{ actividad.accion.icono }} me-1" aria-hidden="true"></i>{{ actividad.accion.texto }}
                     </a>

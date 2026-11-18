@@ -84,6 +84,39 @@ def actividades_de(seccion_ruta):
     )
 
 
+def con_porcentaje_reprobacion(filas):
+    """
+    La Ruta pide informar el porcentaje de reprobación (y Jorge, también el
+    de aprobación); el Resumen solo pregunta estudiantes y reprobados, así
+    que se calculan aquí.
+    """
+    def numero(inicio):
+        for texto, valor in filas:
+            if texto.startswith(inicio):
+                try:
+                    return float(str(valor).replace(",", "."))
+                except ValueError:
+                    return None
+        return None
+
+    estudiantes = numero("Cantidad total de estudiantes")
+    reprobados = numero("Cantidad de reprobados")
+    if not estudiantes or reprobados is None:
+        return filas
+    def porcentaje(cantidad):
+        return f"{cantidad * 100 / estudiantes:.1f}".replace(".", ",") + " %"
+
+    salida = []
+    for texto, valor in filas:
+        salida.append((texto, valor))
+        if texto.startswith("Cantidad de reprobados"):
+            # Jorge (reunión 2026-11-09): para acreditación importan la tasa
+            # de aprobación y la de reprobación del curso.
+            salida.append(("Porcentaje de aprobación (calculado)", porcentaje(estudiantes - reprobados)))
+            salida.append(("Porcentaje de reprobación (calculado)", porcentaje(reprobados)))
+    return salida
+
+
 def datos_ficha(seccion_ruta):
     """
     Todo lo que muestra la ficha, una sola vez: lo usan la página del
@@ -143,7 +176,9 @@ def datos_ficha(seccion_ruta):
             "titulo": respuesta.version.plantilla.titulo,
             "grupo": f"Grupo {respuesta.equipo.numero_grupo}" if respuesta.equipo_id else "",
             "fecha": timezone.localtime(respuesta.fecha_envio),
-            "filas": [(pregunta.texto, texto) for pregunta, texto in resumen_respuesta(respuesta) if texto],
+            "filas": con_porcentaje_reprobacion(
+                [(pregunta.texto, texto) for pregunta, texto in resumen_respuesta(respuesta) if texto]
+            ),
         })
 
     encuestas = [

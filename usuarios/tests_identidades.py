@@ -351,6 +351,9 @@ class SesionEnRegistrosTests(BaseIdentidades):
             "rut_1": "12.345.678-5", "nombres_1": "Ana", "apellidos_1": "Pérez",
             "correo_1": "ana@cloud.uautonoma.cl",
         }
+        from proyectos.tests import datos_socio_nuevo
+
+        datos.update(datos_socio_nuevo())
         self.client.post(url, datos)
         equipo = Equipo.objects.get()
         self.assertEqual(equipo.informante_correo, "ana@cloud.uautonoma.cl")

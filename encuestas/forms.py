@@ -8,6 +8,7 @@ from archivos.validators import get_extensiones_permitidas, validar_extension_ar
 from core.validators import validar_rut_chileno
 
 from . import constantes as c
+from . import formatos
 from . import services
 from .models import BloqueFormulario
 
@@ -74,6 +75,8 @@ def indicacion(pregunta, config):
         if config.get("estilo") == "numeros":
             return f"Elija un número del {minimo} al {maximo}."
         return f"Elija de 1 a {maximo} estrellas."
+    if tipo == c.TEXTO_CORTO:
+        return formatos.indicacion(formatos.formato(pregunta, config))
     if tipo == c.ARCHIVO:
         extensiones = config.get("extensiones") or get_extensiones_permitidas()
         return (
@@ -105,6 +108,14 @@ class RespuestaFormularioForm(forms.Form):
         self.seleccion = {}
         self.valores = {}
         self.otros = {}
+        # Respuestas cortas con formato (comuna, teléfono...) y las listas
+        # que se sugieren al escribir: {formato: [nombres]}.
+        self.formatos = {
+            p.id: formatos.formato(p, services.configuracion(p)) for p in preguntas
+        }
+        self.listas = {
+            f: formatos.opciones(f) for f in set(self.formatos.values()) if f in formatos.CON_LISTA
+        }
         for pregunta in preguntas:
             self.fields[services.nombre_campo(pregunta)] = self._campo(pregunta)
             if any(o.es_otras for o in pregunta.opciones.all()):
@@ -215,6 +226,8 @@ class RespuestaFormularioForm(forms.Form):
                 self.otros[pregunta.id] = otro
             return valor
 
+        if tipo == c.TEXTO_CORTO:
+            return formatos.normalizar(self.formatos.get(pregunta.id, formatos.LIBRE), valor, self.listas)
         if isinstance(valor, str):
             return valor.strip()
         return valor
@@ -261,6 +274,11 @@ class RespuestaFormularioForm(forms.Form):
                     "pregunta": pregunta,
                     "config": config,
                     "indicacion": indicacion(pregunta, config),
+                    "formato": self.formatos.get(pregunta.id, formatos.LIBRE),
+                    "lista": (
+                        f"lista-{self.formatos[pregunta.id]}"
+                        if self.formatos.get(pregunta.id) in self.listas else ""
+                    ),
                     "campo": self[services.nombre_campo(pregunta)],
                     "campo_otro": self[nombre_otro] if nombre_otro in self.fields else None,
                     "visible": pregunta.id in preguntas_visibles,
@@ -383,6 +401,11 @@ class PreguntaForm(ReglaMixin):
     dato_respondente = forms.ChoiceField(
         label="Usar como dato de quien responde", choices=c.DATOS_RESPONDENTE, required=False,
     )
+    formato = forms.ChoiceField(
+        label="Formato de la respuesta", required=False,
+        choices=[("", "Automático según la pregunta")] + formatos.FORMATOS,
+        help_text="Comuna y teléfono se guardan siempre escritos igual, para filtrar y contar bien.",
+    )
     largo_max = forms.IntegerField(label="Largo máximo", required=False, min_value=1, max_value=5000)
     minimo = forms.IntegerField(label="Mínimo", required=False)
     maximo = forms.IntegerField(label="Máximo", required=False)
@@ -401,7 +424,7 @@ class PreguntaForm(ReglaMixin):
 
     field_order = [
         "texto", "ayuda", "tipo", "obligatoria", "bloque", "dato_respondente",
-        "largo_max", "minimo", "maximo", "estilo_escala", "etiqueta_minimo",
+        "formato", "largo_max", "minimo", "maximo", "estilo_escala", "etiqueta_minimo",
         "etiqueta_maximo", "min_marcadas", "max_marcadas", "extensiones",
         "regla_pregunta", "regla_valores",
     ]
@@ -425,6 +448,7 @@ class PreguntaForm(ReglaMixin):
                 bloque=pregunta.bloque_id,
                 ayuda=config.get("ayuda", ""),
                 dato_respondente=config.get("dato_respondente", ""),
+                formato=config.get("formato", ""),
                 largo_max=config.get("largo_max"),
                 minimo=config.get("minimo"),
                 maximo=config.get("maximo"),
@@ -474,6 +498,8 @@ class PreguntaForm(ReglaMixin):
             config["ayuda"] = datos["ayuda"].strip()
         if datos.get("dato_respondente"):
             config["dato_respondente"] = datos["dato_respondente"]
+        if tipo == c.TEXTO_CORTO and datos.get("formato"):
+            config["formato"] = datos["formato"]
         if tipo in (c.TEXTO_CORTO, c.TEXTO_LARGO) and datos.get("largo_max"):
             config["largo_max"] = datos["largo_max"]
         if tipo in (c.NUMERO, c.ESCALA):

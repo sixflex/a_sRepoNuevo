@@ -767,6 +767,23 @@ def _envios_de_sesion(request):
     return request.session.get(SESION_ENVIOS, {})
 
 
+def _equipo_del_enlace(request, enlace):
+    """
+    El equipo de ?equipo=, solo si es de la sección del enlace y quien
+    responde es docente de esa sección: la precarga trae el contacto del
+    socio, que no se muestra a cualquiera que tenga el enlace.
+    """
+    from proyectos.models import Equipo
+
+    equipo_id = (request.GET.get("equipo") or "").strip()
+    if not equipo_id.isdigit() or enlace.seccion_id is None or not request.user.is_authenticated:
+        return None
+    docente = getattr(request.user, "perfil_docente", None)
+    if docente is None or not enlace.seccion.docentes.filter(pk=docente.pk).exists():
+        return None
+    return Equipo.objects.filter(pk=equipo_id, seccion_id=enlace.seccion_id).first()
+
+
 def responder(request, token):
     enlace = get_object_or_404(
         EnlaceFormulario.objects.select_related("version__plantilla"), token=token,
@@ -778,8 +795,12 @@ def responder(request, token):
         return render(request, "encuestas/cerrado.html", contexto)
 
     bloques, preguntas = services.cargar_estructura(version)
+    # Un formulario por grupo (p. ej. el Acuerdo de la actividad 11): ?equipo=
+    # trae el socio y los integrantes del equipo y deja la respuesta ligada a él.
+    equipo = _equipo_del_enlace(request, enlace)
+    contexto["equipo"] = equipo
     # Ficha única: lo que el sistema ya sabe de la sección viene escrito.
-    inicial, precargadas = precarga.precargar(version, preguntas, enlace.seccion, request.user)
+    inicial, precargadas = precarga.precargar(version, preguntas, enlace.seccion, request.user, equipo=equipo)
     form = RespuestaFormularioForm(
         version, bloques, preguntas, request.POST or None, request.FILES or None,
         initial=inicial, precargadas=precargadas,
@@ -802,6 +823,7 @@ def responder(request, token):
                 respuesta = services.guardar_respuesta(
                     version, preguntas, form.valores, form.otros, form.visibilidad[1], form.seleccion,
                     enlace=enlace, usuario=request.user,
+                    contexto={"equipo": equipo, "socio": equipo.socio_vigente} if equipo else None,
                 )
                 envios[clave or str(respuesta.id)] = respuesta.id
                 request.session[SESION_ENVIOS] = envios

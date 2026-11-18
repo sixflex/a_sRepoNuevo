@@ -106,7 +106,7 @@ Las reglas de visibilidad van en data-regla para que formulario_dinamico.js mues
                    {% elif p.tipo == "FECHA" %}type="date"
                    {% elif p.tipo == "CORREO" %}type="email" autocomplete="email" placeholder="nombre@correo.cl"
                    {% elif p.tipo == "RUT" %}type="text" inputmode="text" placeholder="12345678-5" autocomplete="off" data-rut
-                   {% else %}type="text"{% if item.config.largo_max %} maxlength="{{ item.config.largo_max }}" data-contador{% endif %}{% endif %}>
+                   {% else %}type="text"{% if item.config.largo_max %} maxlength="{{ item.config.largo_max }}" data-contador{% endif %}{% if item.lista %} list="{{ item.lista }}" autocomplete="off"{% endif %}{% if item.formato == "telefono" %} inputmode="tel" autocomplete="tel" placeholder="+56 9 1234 5678"{% endif %}{% endif %}>
         {% endif %}
     {% endif %}
 

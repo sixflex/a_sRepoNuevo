@@ -13,8 +13,11 @@ actividad no tiene un formulario vinculado en la BD se usa la última
 versión publicada de ese código, así no hace falta tocar la Ruta cargada.
 """
 
+from datetime import timedelta
+
 from django.db.models import Count, Q
 from django.urls import reverse
+from django.utils import timezone
 
 from core.qr import qr_base64
 from core.volver import con_volver
@@ -27,12 +30,14 @@ from encuestas import precarga
 from . import acuerdo
 from .services import formularios_qr_de_proceso, obtener_o_crear_enlace_seccion, url_recurso
 
+# Días que queda abierto el registro de equipos al crearlo (igual que en proyectos).
+DIAS_REGISTRO_EQUIPOS = 7
+
 # Orden de la actividad -> código del formulario que se llena en ella.
 FORMULARIO_POR_ORDEN = {
     5: precarga.FORMULARIO_PROYECTO,
     11: precarga.FORMALIZACION_ACUERDOS,
     12: CODIGO_REFLEXION,
-    13: "REGISTRO_SOCIO_COMUNITARIO_AS_2026",
     15: CODIGO_REFLEXION,
     17: CODIGO_REFLEXION,
     23: precarga.RESUMEN_IMPLEMENTACION,
@@ -44,14 +49,15 @@ QUE_HACER = {
     5: "Llena el formulario del proyecto. Los datos de la sección ya vienen escritos.",
     9: "Arma la pauta de evaluación y súbela aquí.",
     10: "Si un grupo la necesita, pide la carta a Coordinación.",
-    11: "Llena el acuerdo de cada grupo, descárgalo en PDF, imprímelo, que lo firmen todos y sube el escaneado.",
+    11: "Llena el acuerdo de cada grupo (viene con su socio y sus integrantes), descárgalo en PDF, imprímelo, que lo firmen todos y sube el escaneado.",
     12: "Elige una de las dinámicas sugeridas, hazla en clase y registra cuál hiciste.",
-    13: "Muestra el QR: un estudiante por grupo registra a su socio.",
+    13: "Muestra el QR: un estudiante por grupo inscribe a su equipo y a su socio. Durante el semestre vuelven al mismo enlace para contar el trabajo con el socio.",
     15: "Elige una de las dinámicas sugeridas, hazla en clase y registra cuál hiciste.",
     16: "Sube fotos, productos y otros respaldos del servicio.",
     17: "Elige una de las dinámicas sugeridas, hazla en clase y registra cuál hiciste.",
     19: "Proyecta el QR para que estudiantes y docentes respondan la encuesta.",
-    22: "Sube la planilla de notas, los acuerdos firmados y las fotos.",
+    21: "Las informas en el Resumen final (actividad 23): nota promedio A+S, promedio final del curso, estudiantes y reprobados. El porcentaje de reprobación lo calcula el portal.",
+    22: "Sube la planilla de notas. Los acuerdos (11), las fotos (16) y lo demás que ya subiste van solos en la carpeta.",
     23: "Llena el resumen final. Lo que el sistema ya sabe viene escrito.",
 }
 
@@ -60,7 +66,7 @@ EVIDENCIA_PEDIDA = {
     9: "Sube el instrumento de evaluación.",
     11: "Sube el acuerdo firmado de cada grupo (uno por grupo).",
     16: "Sube las fotos y productos.",
-    22: "Sube la planilla de notas, los acuerdos firmados y las fotos.",
+    22: "Sube la planilla de notas (los acuerdos y las fotos ya están en sus actividades).",
 }
 
 TEXTO_BOTON = {
@@ -82,9 +88,9 @@ MATERIAL_REFLEXION = [
     {"texto": "Actividades de reflexión A+S (UC)", "icono": "bi-box-arrow-up-right",
      "url": "https://cddoc.uc.cl/programas/actividades-de-reflexion-as/"},
 ]
+# La infografía de la carta (10) no va: explicaba el formulario de Microsoft,
+# y la carta ahora se pide en el portal con el botón "Pedir carta".
 MATERIAL_POR_ORDEN = {
-    10: [{"texto": "Cómo pedir la carta (infografía)", "icono": "bi-file-earmark-pdf",
-          "url": "https://drive.google.com/file/d/1u9PZ1gcfUDm91eYJaYetrJI4fIprZmP8/view"}],
     12: MATERIAL_REFLEXION,
     15: MATERIAL_REFLEXION,
     17: MATERIAL_REFLEXION,
@@ -92,18 +98,12 @@ MATERIAL_POR_ORDEN = {
 
 NOTA_PRECARGA = {
     5: "Docente, asignatura, carrera y grupos ya vienen llenos.",
-    11: "Docente y asignatura ya vienen llenos.",
+    11: "Docente, asignatura, el socio del grupo y sus integrantes ya vienen llenos.",
     23: "Tus datos, la asignatura, los totales, el tipo de socios y lo que escribiste del proyecto ya vienen llenos.",
 }
 
 
-def _version_formulario(ruta_actividad, cache):
-    codigo = FORMULARIO_POR_ORDEN.get(ruta_actividad.orden)
-    vinculada = ruta_actividad.formulario_version
-    if vinculada is not None and (codigo is None or vinculada.plantilla.codigo == codigo):
-        return vinculada
-    if codigo is None:
-        return None
+def _publicada(codigo, cache):
     if codigo not in cache:
         cache[codigo] = (
             FormularioVersion.objects
@@ -113,6 +113,18 @@ def _version_formulario(ruta_actividad, cache):
             .first()
         )
     return cache[codigo]
+
+
+def _version_formulario(ruta_actividad, cache):
+    codigo = FORMULARIO_POR_ORDEN.get(ruta_actividad.orden)
+    vinculada = ruta_actividad.formulario_version
+    if vinculada is not None and (codigo is None or vinculada.plantilla.codigo == codigo):
+        # Si el formulario tiene una versión más nueva publicada (al publicarla
+        # la vinculada queda cerrada), la Ruta abre la vigente.
+        return _publicada(vinculada.plantilla.codigo, cache) or vinculada
+    if codigo is None:
+        return None
+    return _publicada(codigo, cache)
 
 
 def _reflexiones_registradas(seccion):
@@ -141,6 +153,63 @@ def _equipos(seccion):
     return equipos["total"], equipos["con_socio"]
 
 
+def _acuerdos_por_grupo(seccion, url):
+    """Opciones del botón "Llenar acuerdo": una por grupo y una en blanco."""
+    from proyectos.models import Equipo
+
+    con_acuerdo = {r.equipo_id for r in acuerdo.acuerdos_de(seccion) if r.equipo_id}
+    equipos = Equipo.objects.filter(seccion=seccion).con_socio_vigente().order_by("numero_grupo")
+    opciones = [
+        {
+            "texto": f"Grupo {e.numero_grupo}" + (f" · {e.socio_vigente.nombre_organizacion}" if e.socio_vigente else ""),
+            "url": f"{url}?equipo={e.id}",
+            "listo": e.id in con_acuerdo,
+        }
+        for e in equipos
+    ]
+    if opciones:
+        opciones.append({"texto": "Sin grupo (se llena a mano)", "url": url, "listo": False})
+    return opciones
+
+
+def _registro_equipos(request, seccion, actividad):
+    """
+    QR del registro de equipos de la sección (actividad 13). Si la sección
+    nunca lo habilitó se crea aquí, como los enlaces de los formularios; si
+    el docente lo cerró, el QR sigue sirviendo a los equipos ya inscritos y
+    se avisa cómo reabrirlo.
+    """
+    from proyectos.models import EnlaceRegistroEquipo
+
+    enlace = EnlaceRegistroEquipo.objects.filter(seccion=seccion).order_by("-fecha_inicio", "-id").first()
+    if enlace is None:
+        docente = getattr(request.user, "perfil_docente", None) or seccion.docentes.first()
+        if docente is None:
+            return
+        ahora = timezone.now()
+        enlace = EnlaceRegistroEquipo.objects.create(
+            seccion=seccion, creado_por_docente=docente, fecha_inicio=ahora,
+            fecha_expiracion=ahora + timedelta(days=DIAS_REGISTRO_EQUIPOS), activo=True,
+        )
+    abierto = enlace.activo and (enlace.fecha_expiracion is None or enlace.fecha_expiracion > timezone.now())
+    url = request.build_absolute_uri(reverse("proyectos:acceso_registro_equipos", args=[enlace.token]))
+    ayuda = "Un estudiante por grupo escanea el QR e inscribe a su equipo y a su socio."
+    if not abierto:
+        ayuda = (
+            "El registro está cerrado para equipos nuevos (ábrelo de nuevo en «Registro de equipos»); "
+            "los equipos ya inscritos igual entran para contar su trabajo con el socio."
+        )
+    actividad.qrs = [{
+        "titulo": "Registro de equipo y socio comunitario",
+        "ayuda": ayuda, "url": url, "qr_base64": qr_base64(url),
+    }]
+    actividad.accion = {"texto": "Mostrar QR", "icono": "bi-qr-code", "modal": f"qr-{actividad.id}"}
+    actividad.qr_pantalla_completa = con_volver(
+        reverse("proyectos:gestionar_registro_equipos", args=[seccion.id]), request,
+    )
+    actividad.qr_pantalla_texto = "Registro de equipos (abrir, cerrar, descargar el QR)"
+
+
 def preparar_actividades(request, seccion_ruta, actividades):
     """
     Agrega a cada actividad lo que muestra la Ruta paso a paso:
@@ -164,27 +233,32 @@ def preparar_actividades(request, seccion_ruta, actividades):
         actividad.accion = None
         actividad.qrs = []
         actividad.qr_pantalla_completa = None
+        actividad.qr_pantalla_texto = None
         actividad.enlace_formulario = None
 
-        version = _version_formulario(ruta_actividad, cache)
+        # 13 usa el registro de equipos, no un formulario (aunque una versión
+        # de la Ruta lo tenga vinculado).
+        version = None if orden == 13 else _version_formulario(ruta_actividad, cache)
         enlace = None
         if version is not None:
             enlace = obtener_o_crear_enlace_seccion(version, seccion, request.user)
         actividad.enlace_formulario = enlace
 
-        if enlace is not None:
+        if orden == 13:
+            # Registrar al socio (Ruta docente.txt: "un estudiante por grupo
+            # completa el formulario oficial"): el Registro de equipo pide los
+            # datos del Registro de Socios Comunitarios y los guarda en el
+            # socio y la participación del equipo, una sola vez.
+            _registro_equipos(request, seccion, actividad)
+        elif enlace is not None:
             url = reverse("encuestas:responder", args=[enlace.token])
-            if orden == 13:
-                absoluta = request.build_absolute_uri(url)
-                actividad.qrs = [{
-                    "titulo": "Registro de Socio Comunitario",
-                    "ayuda": "Un estudiante por grupo escanea el QR y registra a su socio.",
-                    "url": absoluta, "qr_base64": qr_base64(absoluta),
-                }]
-                actividad.accion = {"texto": "Mostrar QR", "icono": "bi-qr-code", "modal": f"qr-{actividad.id}"}
-            else:
-                texto, icono = TEXTO_BOTON.get(orden, ("Llenar formulario", "bi-pencil-square"))
-                actividad.accion = {"texto": texto, "icono": icono, "url": url, "nueva_pestana": True}
+            texto, icono = TEXTO_BOTON.get(orden, ("Llenar formulario", "bi-pencil-square"))
+            actividad.accion = {"texto": texto, "icono": icono, "url": url, "nueva_pestana": True}
+            if version.plantilla.codigo == precarga.FORMALIZACION_ACUERDOS:
+                # Un acuerdo por grupo, precargado con su socio y sus integrantes.
+                opciones = _acuerdos_por_grupo(seccion, url)
+                if opciones:
+                    actividad.accion["opciones"] = opciones
         elif orden == 10:
             actividad.accion = {
                 "texto": "Pedir carta", "icono": "bi-envelope-paper",
@@ -244,9 +318,11 @@ def preparar_actividades(request, seccion_ruta, actividades):
         # Lo que se ve en "¿Cómo se hace?": la descripción y los recursos.
         actividad.recurso_extra = (
             actividad.url_recurso
-            if actividad.url_recurso and orden not in (1, 10, 13, 19)
+            if actividad.url_recurso and orden not in (1, 10, 19)
             else None
         )
+        # 13: el docente también puede asignar el socio a un grupo él mismo.
+        actividad.recurso_texto = "Asignar yo el socio a un grupo" if orden == 13 else None
     return actividades
 
 
