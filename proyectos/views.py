@@ -48,6 +48,140 @@ from django.core.exceptions import PermissionDenied
 
 from .models import EnlaceRegistroEquipo
 from . import integrantes_equipo, registro_socio, trabajo_socio
+def _crear_enlaces_planificacion(request):
+    """
+    Genera un enlace individual por cada unidad académica marcada y cada campus
+    marcado donde esa unidad imparte carreras (RF-ACA-02: unidad, campus, sede
+    y período; oferta en CarreraCampus). El destinatario viene del correo
+    oficial de la unidad y se puede editar. Si algo está mal no se crea
+    ninguno, para no dejar envíos a medias.
+    """
+    from planificacion.services import campus_de_unidad
+
+    volver = redirect("proyectos:gestionar_enlaces")
+    unidad_ids = [valor for valor in request.POST.getlist("unidades") if valor.isdigit()]
+    campus_ids = [valor for valor in request.POST.getlist("campus") if valor.isdigit()]
+    periodo_id = request.POST.get("periodo")
+    fecha_expiracion = parse_date(request.POST.get("fecha_expiracion") or "")
+
+    if not unidad_ids:
+        messages.error(request, "Marque al menos una unidad académica.")
+        return volver
+    if not campus_ids:
+        messages.error(request, "Marque al menos un campus.")
+        return volver
+    if not (periodo_id and fecha_expiracion):
+        messages.error(request, "Debe completar el período y la fecha límite de vigencia.")
+        return volver
+
+    # La fecha elegida se considera vigente hasta el final de ese día.
+    fecha_expiracion_dt = timezone.make_aware(datetime.combine(fecha_expiracion, time.max))
+    if fecha_expiracion_dt <= timezone.now():
+        messages.error(request, "La fecha de expiración debe ser posterior al momento actual.")
+        return volver
+
+    periodo = get_object_or_404(PeriodoAcademico, pk=periodo_id)
+    campus_marcados = list(
+        Campus.objects.filter(pk__in=campus_ids, activo=True)
+        .select_related("sede")
+        .order_by("sede__nombre", "nombre")
+    )
+    unidades = {
+        str(unidad.pk): unidad
+        for unidad in UnidadAcademica.objects.filter(pk__in=unidad_ids, activo=True)
+    }
+
+    envios = []
+    errores = []
+    omitidas = []
+    for unidad_id in unidad_ids:
+        unidad = unidades.get(unidad_id)
+        if unidad is None:
+            errores.append("Una de las unidades marcadas no existe o está inactiva.")
+            continue
+        nombre = (request.POST.get(f"nombre_{unidad_id}") or "").strip()
+        correo = (request.POST.get(f"correo_{unidad_id}") or "").strip()
+        if not nombre or not correo:
+            errores.append(f"{unidad.nombre}: falta el nombre o el correo del destinatario.")
+            continue
+        try:
+            validate_email(correo)
+        except ValidationError:
+            errores.append(f"{unidad.nombre}: el correo «{correo}» no tiene un formato válido.")
+            continue
+        campus_unidad = set(campus_de_unidad(unidad).values_list("pk", flat=True))
+        if not campus_unidad:
+            errores.append(
+                f"{unidad.nombre}: su carrera no tiene campus registrados. "
+                "Márquelos en Gestión académica > Carreras."
+            )
+            continue
+        destinos = [campus for campus in campus_marcados if campus.pk in campus_unidad]
+        if not destinos:
+            omitidas.append(unidad.nombre)
+            continue
+        envios.extend((unidad, campus, nombre, correo) for campus in destinos)
+
+    if errores:
+        for error in errores:
+            messages.error(request, error)
+        messages.info(request, "No se generó ningún enlace. Corrija los datos y vuelva a intentarlo.")
+        return volver
+
+    enviados, sin_correo = [], []
+    for unidad, campus, nombre, correo in envios:
+        enlace = PlanificacionEnlace.objects.create(
+            unidad_academica=unidad,
+            campus=campus,
+            periodo=periodo,
+            destinatario_nombre=nombre,
+            destinatario_correo=correo,
+            fecha_emision=timezone.now(),
+            fecha_expiracion=fecha_expiracion_dt,
+            activo=True,
+        )
+        registrar_auditoria(
+            request=request,
+            entidad="PlanificacionEnlace",
+            entidad_id=enlace.id,
+            accion="CREAR_ENLACE",
+            valores_nuevos={
+                "unidad_academica_id": enlace.unidad_academica_id,
+                "campus_id": enlace.campus_id,
+                "periodo_id": enlace.periodo_id,
+                "destinatario_nombre": enlace.destinatario_nombre,
+                "destinatario_correo": enlace.destinatario_correo,
+                "fecha_expiracion": enlace.fecha_expiracion.isoformat(),
+                "activo": enlace.activo,
+            },
+        )
+        try:
+            enviado = enviar_correo_planificacion(request, enlace, reenvio=False)
+        except Exception:
+            enviado = False
+        (enviados if enviado else sin_correo).append(f"{unidad.nombre} · {campus.nombre} ({correo})")
+
+    if enviados:
+        messages.success(
+            request,
+            f"Se generaron y enviaron {len(enviados)} enlace(s): " + "; ".join(enviados) + ".",
+        )
+    if sin_correo:
+        messages.warning(
+            request,
+            "Enlace(s) generado(s) pero no se pudo enviar el correo a: "
+            + "; ".join(sin_correo)
+            + ". Puede copiarlos o reenviarlos desde la lista.",
+        )
+    if omitidas:
+        messages.info(
+            request,
+            "No se envió enlace a " + ", ".join(omitidas)
+            + ": sus carreras no se imparten en los campus marcados.",
+        )
+    return volver
+
+
 @coordinador_required
 def gestionar_enlaces_planificacion(request):
     if request.method == "POST":
@@ -152,137 +286,9 @@ def gestionar_enlaces_planificacion(request):
                 )
             return redirect("proyectos:gestionar_enlaces")
 
-        unidad_id = request.POST.get("unidad_academica")
-        destinatario_nombre = (request.POST.get("destinatario_nombre") or "").strip()
-        destinatario_correo = (request.POST.get("destinatario_email") or "").strip()
-        campus_id = request.POST.get("campus")
-        periodo_id = request.POST.get("periodo")
-        fecha_expiracion_texto = request.POST.get("fecha_expiracion")
+        return _crear_enlaces_planificacion(request)
 
-        if not all(
-            [
-                unidad_id,
-                destinatario_nombre,
-                destinatario_correo,
-                campus_id,
-                periodo_id,
-                fecha_expiracion_texto,
-            ]
-        ):
-            messages.error(
-                request,
-                "Debe completar todos los campos obligatorios.",
-            )
-        else:
-            try:
-                validate_email(destinatario_correo)
-            except ValidationError:
-                messages.error(
-                    request,
-                    "El correo del destinatario no tiene un formato válido.",
-                )
-                return redirect("proyectos:gestionar_enlaces")
 
-            fecha_expiracion = parse_date(fecha_expiracion_texto)
-
-            if fecha_expiracion is None:
-                messages.error(
-                    request,
-                    "La fecha de expiración no es válida.",
-                )
-                return redirect("proyectos:gestionar_enlaces")
-
-            # La fecha elegida se considera vigente hasta el final de ese día.
-            fecha_expiracion_dt = timezone.make_aware(
-                datetime.combine(fecha_expiracion, time.max)
-            )
-
-            if fecha_expiracion_dt <= timezone.now():
-                messages.error(
-                    request,
-                    "La fecha de expiración debe ser posterior al momento actual.",
-                )
-                return redirect("proyectos:gestionar_enlaces")
-
-            unidad = get_object_or_404(
-                UnidadAcademica,
-                pk=unidad_id,
-                activo=True,
-            )
-            campus = get_object_or_404(
-                Campus.objects.select_related("sede"),
-                pk=campus_id,
-                activo=True,
-            )
-            periodo = get_object_or_404(
-                PeriodoAcademico,
-                pk=periodo_id,
-            )
-
-            enlace = PlanificacionEnlace.objects.create(
-                unidad_academica=unidad,
-                campus=campus,
-                periodo=periodo,
-                destinatario_nombre=destinatario_nombre,
-                destinatario_correo=destinatario_correo,
-                fecha_emision=timezone.now(),
-                fecha_expiracion=fecha_expiracion_dt,
-                activo=True,
-            )
-            registrar_auditoria(
-                request=request,
-                entidad="PlanificacionEnlace",
-                entidad_id=enlace.id,
-                accion="CREAR_ENLACE",
-                valores_nuevos={
-                    "unidad_academica_id": enlace.unidad_academica_id,
-                    "campus_id": enlace.campus_id,
-                    "periodo_id": enlace.periodo_id,
-                    "destinatario_nombre": enlace.destinatario_nombre,
-                    "destinatario_correo": enlace.destinatario_correo,
-                    "fecha_expiracion": (
-                        enlace.fecha_expiracion.isoformat()
-                        if enlace.fecha_expiracion
-                        else None
-                    ),
-                    "activo": enlace.activo,
-                },
-            )
-            try:
-                enviado = enviar_correo_planificacion(
-                    request,
-                    enlace,
-                    reenvio=False,
-                )
-
-                if enviado:
-                    messages.success(
-                        request,
-                        (
-                            f"Enlace generado y enviado correctamente a "
-                            f"{destinatario_correo}."
-                        ),
-                    )
-                else:
-                    messages.warning(
-                        request,
-                        (
-                            "El enlace fue generado correctamente, "
-                            "pero no pudo enviarse por correo."
-                        ),
-                    )
-
-            except Exception:
-                messages.warning(
-                    request,
-                    (
-                        "El enlace fue generado correctamente, "
-                        "pero no pudo enviarse por correo. "
-                        "Puede copiarlo manualmente desde la lista."
-                    ),
-                )
-
-            return redirect("proyectos:gestionar_enlaces")
     enlaces = list(
         PlanificacionEnlace.objects.select_related(
             "unidad_academica",
@@ -303,11 +309,17 @@ def gestionar_enlaces_planificacion(request):
             )
         )
 
-    unidades = (
+    unidades = list(
         UnidadAcademica.objects.filter(activo=True)
-        .select_related("facultad", "carrera")
+        .select_related("facultad", "carrera__facultad")
         .order_by("tipo", "nombre")
     )
+    # Campus donde opera cada unidad (CarreraCampus), para mostrarlo en el modal.
+    from planificacion.services import campus_de_unidad
+
+    for unidad in unidades:
+        unidad.campus_imparte = list(campus_de_unidad(unidad).values_list("pk", "nombre"))
+        unidad.campus_imparte_ids = [pk for pk, _ in unidad.campus_imparte]
     campus = (
         Campus.objects.filter(activo=True)
         .select_related("sede")

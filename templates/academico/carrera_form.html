@@ -110,6 +110,29 @@
                             required>
                     </div>
 
+                    <!-- CAMPUS DONDE SE IMPARTE (CarreraCampus) -->
+                    <div class="col-12">
+                        <fieldset>
+                            <legend class="form-label fw-semibold fs-6 mb-1">Campus donde se imparte</legend>
+                            <div class="d-flex flex-wrap gap-3">
+                                {% for c in campus %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="campus" value="{{ c.id }}"
+                                               id="campus-{{ c.id }}" {% if c.id in campus_seleccionados %}checked{% endif %}>
+                                        <label class="form-check-label" for="campus-{{ c.id }}">
+                                            {{ c.sede.nombre }} · {{ c.nombre }}{% if not c.activo %} <span class="text-muted">(inactivo)</span>{% endif %}
+                                        </label>
+                                    </div>
+                                {% empty %}
+                                    <span class="text-muted small">No hay campus registrados. Créalos primero en Campus.</span>
+                                {% endfor %}
+                            </div>
+                            <div class="form-text">
+                                Marca todos los campus donde se dicta esta carrera (por ejemplo Providencia y El Llano). Se usa para enviar los enlaces de planificación solo a los campus que corresponden.
+                            </div>
+                        </fieldset>
+                    </div>
+
                     <!-- ACTIVO -->
                     <div class="col-12">
                         <div class="form-check">

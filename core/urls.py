@@ -22,5 +22,11 @@ urlpatterns = [
 
     path("coordinacion/planificacion/<int:planificacion_id>/", views.detalle_planificacion_coordinacion, name="detalle_planificacion_coordinacion"),
 
+    path("coordinacion/planificacion/<int:planificacion_id>/aprobar/", views.aprobar_planificacion_coordinacion, name="aprobar_planificacion_coordinacion"),
+
+    path("coordinacion/planificacion/<int:planificacion_id>/devolver/", views.devolver_planificacion_coordinacion, name="devolver_planificacion_coordinacion"),
+
+    path("coordinacion/planificacion/<int:planificacion_id>/filas/<int:fila_id>/editar/", views.editar_fila_planificacion_coordinacion, name="editar_fila_planificacion_coordinacion"),
+
     path("coordinacion/indicadores/", views.panel_indicadores_coordinacion, name="indicadores_coordinacion"),
 ]

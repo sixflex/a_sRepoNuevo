@@ -31,6 +31,7 @@
                             <th>Código</th>
                             <th>Nombre</th>
                             <th>Facultad</th>
+                            <th>Campus</th>
                             <th>Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
@@ -59,6 +60,15 @@
                             <!-- FACULTAD -->
                             <td>
                                 {{ carrera.facultad.nombre }}
+                            </td>
+
+                            <!-- CAMPUS DONDE SE IMPARTE -->
+                            <td>
+                                {% for c in carrera.campus.all %}
+                                    <span class="badge text-bg-light border">{{ c.nombre }}</span>
+                                {% empty %}
+                                    <span class="text-danger small" title="Sin campus no recibe enlaces de planificación">Sin campus</span>
+                                {% endfor %}
                             </td>
 
                             <!-- ESTADO -->
@@ -91,7 +101,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-4">
+                            <td colspan="6" class="text-center text-muted py-4">
                                 No hay carreras registradas.
                             </td>
                         </tr>
@@ -103,4 +113,4 @@
     </div>
 
 </div>
-{% endblock %}
+{% endblock %}

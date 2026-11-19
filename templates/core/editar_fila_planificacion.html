@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% load static core_extras %}
+
+{% block title %}Editar fila {{ fila.numero_fila }} | Portal A+S{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/planificacion.css' %}?v=2026-11-18">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="mb-4">
+        {% url 'core:detalle_planificacion_coordinacion' planificacion.id as url_volver %}{% volver url_volver "Volver a la planificación" %}
+        <h1 class="h3 fw-bold">Editar fila {{ fila.numero_fila }}</h1>
+        <p class="text-muted mb-0">
+            Corrija lo que envió {{ planificacion.enlace.destinatario_nombre }} antes de aprobar. Al guardar, la fila se vuelve a revisar.
+        </p>
+    </div>
+
+    {% if errores %}
+        <div class="alert alert-warning">
+            <strong>Observaciones de esta fila</strong>
+            <ul class="mb-0 mt-1">{% for error in errores %}<li>{{ error.mensaje }}</li>{% endfor %}</ul>
+        </div>
+    {% endif %}
+
+    {% if revision.parecidas %}
+        <div class="alert alert-info revision-parecidas">
+            <strong>«{{ fila.asignatura_texto }}» no está registrada en la carrera.</strong>
+            ¿Es alguna de estas? Si la elige, se usa la existente y no se crea una duplicada:
+            <div class="d-flex flex-wrap gap-2 mt-2">
+                {% for asignatura in revision.parecidas %}
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-usar-asignatura="{{ asignatura.nombre }}">{{ asignatura.nombre }}</button>
+                {% endfor %}
+            </div>
+            <small class="d-block mt-2">Si ninguna corresponde, déjela como está: se registrará como asignatura nueva al aprobar.</small>
+        </div>
+    {% endif %}
+
+    <form method="post" class="plan-planilla" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+        <fieldset class="plan-tabla-scroll">
+            <table class="tabla-planificacion" id="tabla-planificacion">
+                <thead>
+                    <tr>
+                        <th scope="col" class="col-facultad">Facultad</th>
+                        <th scope="col" class="col-carrera">Carrera</th>
+                        <th scope="col" class="col-as" title="Declaración A+S">A+S</th>
+                        <th scope="col" class="col-nrc">NRC</th>
+                        <th scope="col" class="col-seccion">Sección</th>
+                        <th scope="col" class="col-asignatura">Asignatura</th>
+                        <th scope="col" class="col-nivel">Nivel</th>
+                        <th scope="col" class="col-jornada">Jornada</th>
+                        <th scope="col" class="col-horario">Horario</th>
+                        <th scope="col" class="col-estudiantes">Estudiantes</th>
+                    </tr>
+                </thead>
+                <tbody class="fila-planificacion">
+                    <tr class="fila-asignatura">
+                        <td class="col-facultad">{{ form.facultad_texto }}{% if facultad_fija %}<span class="plan-facultad-fija">{{ facultad_fija }}</span>{% endif %}</td>
+                        <td class="col-carrera">{{ form.carrera_texto }}</td>
+                        <td class="col-as">{{ form.declaracion_as }}</td>
+                        <td class="col-nrc">{{ form.nrc }}</td>
+                        <td class="col-seccion">{{ form.seccion }}</td>
+                        <td class="col-asignatura">{{ form.asignatura_texto }}</td>
+                        <td class="col-nivel">{{ form.nivel }}</td>
+                        <td class="col-jornada">{{ form.jornada }}</td>
+                        <td class="col-horario">{{ form.horario }}</td>
+                        <td class="col-estudiantes">{{ form.estudiantes_planificados }}</td>
+                    </tr>
+                    {% if form.errors %}
+                        <tr><td colspan="10">
+                            <ul class="plan-errores">
+                                {% for campo in form %}{% for error in campo.errors %}<li><strong>{{ campo.label }}:</strong> {{ error }}</li>{% endfor %}{% endfor %}
+                            </ul>
+                        </td></tr>
+                    {% endif %}
+                    <tr class="fila-docentes">
+                        <td colspan="10">
+                            {{ docentes.management_form }}
+                            <div class="docentes-titulo">Docente(s) responsable(s)</div>
+                            <p class="plan-ayuda mb-2">Si el docente aún no está registrado, se registra al aprobar con estos datos (RUT, nombre y apellido, y correo son necesarios). Si ya existe, se reconoce por RUT o correo.</p>
+                            {% if docentes.non_form_errors %}
+                                <ul class="plan-errores">{% for error in docentes.non_form_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+                            {% endif %}
+                            <div class="docentes-encabezado" aria-hidden="true">
+                                <span>RUT</span><span>Nombre completo</span><span>Tipo de contrato</span><span>Capacitado A+S</span><span>Correo</span><span>Teléfono</span><span></span>
+                            </div>
+                            <div class="docentes-container" data-prefix="{{ docentes.prefix }}">
+                                {% for docente in docentes %}
+                                    {% include "planificacion/includes/docente.html" with editable=True %}
+                                {% endfor %}
+                            </div>
+                            <button type="button" class="plan-agregar-docente agregar-docente" data-prefix="{{ docentes.prefix }}">
+                                <i class="bi bi-person-plus" aria-hidden="true"></i>Agregar docente
+                            </button>
+                            <template id="template-{{ docentes.prefix }}">
+                                {% include "planificacion/includes/docente.html" with docente=docentes.empty_form editable=True %}
+                            </template>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </fieldset>
+
+        <div class="plan-acciones">
+            <span class="plan-ayuda d-none d-md-inline">El cambio queda registrado en auditoría.</span>
+            <div class="d-flex gap-2 ms-auto">
+                <a href="{{ url_volver }}" class="plan-boton plan-boton-secundario">Cancelar</a>
+                <button type="submit" class="plan-boton plan-boton-primario">
+                    <i class="bi bi-check2" aria-hidden="true"></i>Guardar fila
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ asignaturas_por_carrera|json_script:"asignaturas-por-carrera" }}
+<script src="{% static 'js/planificacion_tabular.js' %}?v=2026-11-18"></script>
+<script src="{% static 'js/asignatura_sugerida.js' %}?v=2026-11-18"></script>
+<script>
+    // «¿Es alguna de estas?»: pone el nombre exacto de la asignatura registrada.
+    document.querySelectorAll("[data-usar-asignatura]").forEach(function (boton) {
+        boton.addEventListener("click", function () {
+            const input = document.querySelector('input[name="asignatura_texto"]');
+            input.value = boton.dataset.usarAsignatura;
+            input.focus();
+            document.querySelectorAll("[data-usar-asignatura]").forEach(function (otro) {
+                otro.classList.toggle("active", otro === boton);
+            });
+        });
+    });
+</script>
+{% endblock %}

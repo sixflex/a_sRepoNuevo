@@ -1,0 +1,10 @@
+{# Estado de una planificación recibida (texto en Planificacion.estado, ver planificacion/services.py). #}
+{% if planificacion.estado == "FINAL" %}
+    <span class="badge bg-primary" title="Dirección la envió; falta su revisión">Por revisar</span>
+{% elif planificacion.estado == "APROBADA" %}
+    <span class="badge bg-success">Aprobada</span>
+{% elif planificacion.estado == "DEVUELTA" %}
+    <span class="badge bg-warning text-dark" title="Devuelta a Dirección para corregir">Devuelta</span>
+{% else %}
+    <span class="badge bg-secondary" title="La Dirección aún no envía la versión final">En edición</span>
+{% endif %}

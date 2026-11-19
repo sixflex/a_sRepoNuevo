@@ -1,5 +1,5 @@
-{# Horario de la fila (subtarea 2.1): días de la semana y hora de inicio, en una sola línea. #}
-{% with dias=widget.subwidgets.0 hora=widget.subwidgets.1 anterior=widget.subwidgets.2 %}
+{# Horario de la fila: días de la semana y una hora de inicio por cada día marcado (cada día puede tener otra hora). #}
+{% with dias=widget.subwidgets.0 anterior=widget.subwidgets.7 %}
 <div class="horario-campo">
     <fieldset class="horario-dias">
         <legend class="visually-hidden">Días de la semana</legend>
@@ -10,11 +10,19 @@
             </label>
         {% endfor %}{% endfor %}
     </fieldset>
-    <label class="visually-hidden" for="{{ hora.attrs.id }}">Hora de inicio</label>
-    {% include hora.template_name with widget=hora %}
+    {# Solo se ven las horas de los días marcados (CSS, por posición del día). #}
+    <div class="horario-horas">
+        {% for dia in widget.horas_por_dia %}
+            <label class="horario-hora" for="{{ dia.hora.attrs.id }}">
+                <span title="{{ dia.nombre }}">{{ dia.codigo }}</span>
+                <span class="visually-hidden">Hora de inicio del {{ dia.nombre }}</span>
+                {% include dia.hora.template_name with widget=dia.hora %}
+            </label>
+        {% endfor %}
+    </div>
     {% include anterior.template_name with widget=anterior %}
     {% if anterior.value %}
-        <div class="horario-anterior" title="Horario guardado con otro formato; marque días y hora para reemplazarlo">
+        <div class="horario-anterior" title="Horario guardado con otro formato; marque días y horas para reemplazarlo">
             Guardado: {{ anterior.value }}
         </div>
     {% endif %}

@@ -1,8 +1,10 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from django.forms import BaseModelFormSet, formset_factory, modelformset_factory
 
 from academico.constantes import JORNADAS, NIVELES, TIPOS_CONTRATO
 from academico.models import Carrera, Facultad
+from core.validators import validar_rut_chileno
 
 from .models import FilaPlanificacion
 from .textos import DIAS_SEMANA, leer_horario, texto_horario
@@ -37,21 +39,32 @@ def _lista(opciones, vacia="Seleccione"):
     )
 
 
-def opciones_planificacion():
+def opciones_planificacion(facultad=None, campus=None):
     """
     Facultades y carreras activas, por nombre: la consolidación busca la
     carrera por nombre (planificacion/services.py, _resolver_carrera).
+    Con la facultad del enlace, esa queda fija y solo se ofrecen sus carreras;
+    con el campus del enlace, solo las que se imparten ahí (CarreraCampus).
     """
     carreras = {}
+    consulta = Carrera.objects.filter(activo=True).select_related("facultad")
+    if facultad is not None:
+        consulta = consulta.filter(facultad=facultad)
+    if campus is not None:
+        consulta = consulta.filter(campus=campus)
 
-    for carrera in (
-        Carrera.objects.filter(activo=True)
-        .select_related("facultad")
-        .order_by("facultad__nombre", "nombre")
-    ):
+    for carrera in consulta.order_by("facultad__nombre", "nombre"):
         carreras.setdefault(carrera.facultad.nombre, []).append(
             (carrera.nombre, carrera.nombre)
         )
+
+    if facultad is not None:
+        return {
+            "facultades": [(facultad.nombre, facultad.nombre)],
+            # Una sola facultad: lista simple, sin agrupar.
+            "carreras": carreras.get(facultad.nombre, []),
+            "facultad_fija": facultad.nombre,
+        }
 
     return {
         "facultades": [
@@ -61,11 +74,20 @@ def opciones_planificacion():
             .values_list("nombre", flat=True)
         ],
         "carreras": list(carreras.items()),
+        "facultad_fija": None,
     }
 
 
+def _input_hora():
+    return forms.TimeInput(format="%H:%M", attrs={"type": "time", "class": "form-control form-control-sm"})
+
+
 class HorarioWidget(forms.MultiWidget):
-    """Checks Lu a Sá y hora de inicio; un horario antiguo con otro formato se muestra tal cual."""
+    """
+    Checks Lu a Sá y una hora de inicio por cada día marcado (una clase puede
+    ser martes 17:00 y jueves 20:00). Subwidgets: 0 = días, 1..6 = hora de
+    cada día en el orden de DIAS_SEMANA, 7 = horario antiguo con otro formato.
+    """
 
     template_name = "planificacion/widgets/horario.html"
 
@@ -73,21 +95,30 @@ class HorarioWidget(forms.MultiWidget):
         super().__init__(
             [
                 forms.CheckboxSelectMultiple(choices=DIAS_SEMANA),
-                forms.TimeInput(format="%H:%M", attrs={"type": "time", "class": "form-control form-control-sm"}),
+                *(_input_hora() for _ in DIAS_SEMANA),
                 forms.HiddenInput(),
             ],
             attrs,
         )
 
     def decompress(self, value):
-        leido = leer_horario(value)
-        if leido:
-            return [leido[0], leido[1], ""]
-        return [[], "", value or ""]
+        horas = leer_horario(value)
+        if horas:
+            return [list(horas), *(horas.get(codigo, "") for codigo, _ in DIAS_SEMANA), ""]
+        return [[], *("" for _ in DIAS_SEMANA), value or ""]
+
+    def get_context(self, name, value, attrs):
+        contexto = super().get_context(name, value, attrs)
+        subwidgets = contexto["widget"]["subwidgets"]
+        contexto["widget"]["horas_por_dia"] = [
+            {"codigo": codigo, "nombre": nombre, "hora": hora}
+            for (codigo, nombre), hora in zip(DIAS_SEMANA, subwidgets[1:-1])
+        ]
+        return contexto
 
 
 class HorarioField(forms.MultiValueField):
-    """Se guarda como texto en FilaPlanificacion.horario, por ejemplo «Lu, Mi 08:30» (RNF-USA-03)."""
+    """Se guarda como texto en FilaPlanificacion.horario, por ejemplo «Martes 17:00, Jueves 20:00» (RNF-USA-03)."""
 
     widget = HorarioWidget
 
@@ -95,10 +126,13 @@ class HorarioField(forms.MultiValueField):
         super().__init__(
             fields=[
                 forms.MultipleChoiceField(choices=DIAS_SEMANA, required=False),
-                forms.TimeField(
-                    required=False,
-                    input_formats=["%H:%M"],
-                    error_messages={"invalid": "Ingrese una hora válida, por ejemplo 08:30."},
+                *(
+                    forms.TimeField(
+                        required=False,
+                        input_formats=["%H:%M"],
+                        error_messages={"invalid": "Ingrese una hora válida, por ejemplo 08:30."},
+                    )
+                    for _ in DIAS_SEMANA
                 ),
                 forms.CharField(required=False),
             ],
@@ -108,14 +142,24 @@ class HorarioField(forms.MultiValueField):
         )
 
     def compress(self, data_list):
-        dias, hora, anterior = (list(data_list) + [None, None, None])[:3]
-        if not dias and not hora:
-            return anterior or ""
+        datos = list(data_list) + [None] * (len(DIAS_SEMANA) + 2)
+        dias = set(datos[0] or [])
+        horas = dict(zip((codigo for codigo, _ in DIAS_SEMANA), datos[1:len(DIAS_SEMANA) + 1]))
+        anterior = datos[len(DIAS_SEMANA) + 1]
+
         if not dias:
-            raise forms.ValidationError("Marque al menos un día para la hora de inicio.")
-        if not hora:
-            raise forms.ValidationError("Ingrese la hora de inicio de los días marcados.")
-        return texto_horario(dias, hora)
+            if any(horas.values()):
+                raise forms.ValidationError("Marque el día de la hora ingresada.")
+            return anterior or ""
+
+        nombres = dict(DIAS_SEMANA)
+        faltan = [nombres[codigo] for codigo, _ in DIAS_SEMANA if codigo in dias and not horas[codigo]]
+        if faltan:
+            raise forms.ValidationError(
+                "Ingrese la hora de inicio de: " + ", ".join(faltan) + "."
+            )
+        # Una hora de un día que se desmarcó no se guarda.
+        return texto_horario({codigo: hora for codigo, hora in horas.items() if codigo in dias})
 
 
 class FilaPlanificacionForm(forms.ModelForm):
@@ -148,7 +192,12 @@ class FilaPlanificacionForm(forms.ModelForm):
                 attrs={"class": "form-control form-control-sm"}
             ),
             "asignatura_texto": forms.TextInput(
-                attrs={"class": "form-control form-control-sm"}
+                attrs={
+                    "class": "form-control form-control-sm",
+                    "placeholder": "Nombre oficial de la malla",
+                    "title": "Escriba el nombre oficial completo, como aparece en la malla. Si aparece en la lista, selecciónelo.",
+                    "autocomplete": "off",
+                }
             ),
             "nivel": _lista(NIVELES, "—"),
             "jornada": _lista(JORNADAS, "—"),
@@ -163,17 +212,28 @@ class FilaPlanificacionForm(forms.ModelForm):
     def __init__(self, *args, opciones=None, **kwargs):
         super().__init__(*args, **kwargs)
         opciones = opciones or opciones_planificacion()
-        self.fields["facultad_texto"].widget.choices = [("", "Seleccione"), *opciones["facultades"]]
+        self.facultad_fija = opciones.get("facultad_fija")
         self.fields["carrera_texto"].widget.choices = [("", "Seleccione"), *opciones["carreras"]]
+        if self.facultad_fija:
+            # La facultad la define el enlace (su unidad académica): no se elige.
+            self.fields["facultad_texto"].widget = forms.HiddenInput()
+            self.initial["facultad_texto"] = self.facultad_fija
+        else:
+            self.fields["facultad_texto"].widget.choices = [("", "Seleccione"), *opciones["facultades"]]
+
+    def clean_facultad_texto(self):
+        if self.facultad_fija:
+            return self.facultad_fija
+        return self.cleaned_data.get("facultad_texto")
 
     def clean_nrc(self):
         return (self.cleaned_data.get("nrc") or "").strip()
 
 
 class BaseFilaPlanificacionFormSet(BaseModelFormSet):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, facultad=None, campus=None, **kwargs):
         # Las opciones se consultan una vez para todas las filas.
-        kwargs.setdefault("form_kwargs", {"opciones": opciones_planificacion()})
+        kwargs.setdefault("form_kwargs", {"opciones": opciones_planificacion(facultad, campus)})
         super().__init__(*args, **kwargs)
     def clean(self):
         super().clean()
@@ -195,7 +255,7 @@ class BaseFilaPlanificacionFormSet(BaseModelFormSet):
                     form.data.get(form.add_prefix("nivel")),
                     form.data.get(form.add_prefix("jornada")),
                     *form.data.getlist(form.add_prefix("horario_0"), []),
-                    form.data.get(form.add_prefix("horario_1")),
+                    *(form.data.get(form.add_prefix(f"horario_{indice}")) for indice in range(1, len(DIAS_SEMANA) + 1)),
                     form.data.get(form.add_prefix("estudiantes_planificados")),
                 ]
 
@@ -281,6 +341,16 @@ class DocenteFilaForm(forms.Form):
             attrs={"class": "form-control form-control-sm"}
         ),
     )
+
+    def clean_rut(self):
+        # Formato del RUT (RF-ACA-04): se avisa al tiro y se guarda normalizado.
+        rut = (self.cleaned_data.get("rut") or "").strip()
+        if not rut:
+            return ""
+        try:
+            return validar_rut_chileno(rut)
+        except ValidationError as error:
+            raise forms.ValidationError(error.message)
 
     def clean(self):
         cleaned = super().clean()

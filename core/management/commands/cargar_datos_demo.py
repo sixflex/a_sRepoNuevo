@@ -38,7 +38,7 @@ from encuestas import constantes as c
 from encuestas import services as encuestas_services
 from encuestas.models import EnlaceFormulario, FormularioVersion
 from planificacion.models import FilaPlanificacion, FilaPlanificacionDocente, Planificacion, PlanificacionEnlace
-from planificacion.services import validar_y_consolidar_planificacion
+from planificacion.services import actualizar_totales, aprobar_planificacion, consolidar_fila, revisar_planificacion
 from proyectos.models import EnlaceRegistroEquipo, Equipo, IntegranteEquipo
 from rutas.models import SeccionActividad
 from rutas.services import obtener_version_ruta_vigente
@@ -457,10 +457,13 @@ class Command(BaseCommand):
                 defaults={"tipo": texto(unidad_fila["Tipo"]), "carrera": carrera, "facultad": carrera.facultad,
                           "correo_oficial": texto(unidad_fila["Correo"]), "activo": True},
             )
+            # Oferta académica: la carrera se imparte en el campus del enlace (CarreraCampus).
+            campus = self.campus[texto(unidad_fila["Campus"])]
+            carrera.campus.add(campus)
             enviada = texto(unidad_fila["Estado planilla"]) == "FINAL"
             emision = aware(datetime(self.periodo.anio, 7, 6, 10))
             enlace = PlanificacionEnlace.objects.create(
-                unidad_academica=unidad, campus=self.campus[texto(unidad_fila["Campus"])], periodo=self.periodo,
+                unidad_academica=unidad, campus=campus, periodo=self.periodo,
                 destinatario_nombre=texto(unidad_fila["Destinatario"]),
                 destinatario_correo=texto(unidad_fila["Correo"]),
                 fecha_emision=emision,
@@ -495,7 +498,16 @@ class Command(BaseCommand):
                     capacitado_as=si(fila["YA SE CAPACITÓ ANTERIORMENTE EN A+S"]),
                     correo=texto(fila["CORREO ELECTRÓNICO"]), telefono=texto(fila["CELULAR"]),
                 )
-            validar_y_consolidar_planificacion(planificacion)
+            # Envío final y revisión. Sin observaciones, el Coordinador la aprobó;
+            # con observaciones queda «Por revisar» con sus filas válidas ya
+            # incorporadas, para mostrar cómo se corrigen las demás.
+            revisar_planificacion(planificacion)
+            if not planificacion.filas_observadas:
+                aprobar_planificacion(planificacion)
+            else:
+                for fila_plan in planificacion.filas.filter(estado_validacion="PENDIENTE").order_by("numero_fila"):
+                    consolidar_fila(fila_plan)
+                actualizar_totales(planificacion)
             Seccion.objects.filter(filas_planificacion_resultantes__planificacion=planificacion).update(fecha_consolidacion=envio)
             aceptadas += planificacion.filas_aceptadas
             observadas += planificacion.filas_observadas

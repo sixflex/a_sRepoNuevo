@@ -2,6 +2,30 @@
 
 {% block title %}Enlaces para Dirección | Portal A+S{% endblock %}
 
+{% block extra_css %}
+<style>
+    .unidades-envio { max-height: 300px; overflow-y: auto; }
+    .unidad-envio {
+        display: grid;
+        grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1.2fr);
+        gap: 8px;
+        align-items: center;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--bs-border-color);
+        transition: background-color 0.15s ease;
+    }
+    .unidad-envio:last-child { border-bottom: 0; }
+    .unidad-envio-campus { grid-column: 1 / -1; padding-left: 24px; font-size: 0.78rem; color: var(--bs-secondary-color); }
+    .campus-envio { display: flex; flex-wrap: wrap; gap: 6px; }
+    .campus-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px solid var(--bs-border-color); border-radius: 999px; font-size: 0.8rem; background: var(--bs-body-bg); cursor: pointer; }
+    .campus-chip:has(input:checked) { border-color: var(--bs-primary); color: var(--bs-primary); }
+    .unidad-envio:has(input[name="unidades"]:checked) { background: var(--bs-light); }
+    @media (max-width: 767.98px) {
+        .unidad-envio { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 
 <div class="container-fluid py-3">
@@ -18,7 +42,7 @@
             data-bs-target="#modalNuevoEnlace"
         >
             <i class="bi bi-plus-circle me-1"></i>
-            Generar Nuevo Enlace
+            Generar enlaces
         </button>
     </div>
 
@@ -186,54 +210,73 @@
 
             <div class="modal-header">
                 <h5 class="modal-title fw-bold">
-                    Generar Enlace Individual de Planificación
+                    Generar enlaces de planificación
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
             <div class="modal-body row g-3">
 
-                <div class="col-12 col-md-6">
-                    <label class="form-label fw-semibold">
-                        Unidad académica *
-                    </label>
-                    <select
-                        name="unidad_academica"
-                        class="form-select"
-                        required
-                    >
-                        <option value="">
-                            Seleccione una unidad
-                        </option>
-
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-1">
+                        <label class="form-label fw-semibold mb-0">Unidades académicas *</label>
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" id="marcar-todas-unidades">
+                            <label class="form-check-label small" for="marcar-todas-unidades">Marcar todas</label>
+                        </div>
+                    </div>
+                    <div class="form-text mt-0 mb-2">
+                        Se envía un enlace individual a cada unidad por cada campus marcado donde se imparte su carrera (según Gestión académica &gt; Carreras). El destinatario viene del correo oficial de la unidad y puede cambiarlo.
+                    </div>
+                    <div class="unidades-envio border rounded">
                         {% for u in unidades %}
-                            <option value="{{ u.id }}">{{ u.nombre }}</option>
+                            <div class="unidad-envio" data-unidad>
+                                <div class="form-check unidad-envio-nombre">
+                                    <input class="form-check-input" type="checkbox" name="unidades" value="{{ u.id }}" id="unidad-{{ u.id }}">
+                                    <label class="form-check-label" for="unidad-{{ u.id }}">
+                                        {{ u.nombre }}
+                                        <small class="d-block text-muted">{{ u.tipo }}{% if u.facultad %} · {{ u.facultad.nombre }}{% elif u.carrera %} · {{ u.carrera.facultad.nombre }}{% endif %}</small>
+                                    </label>
+                                </div>
+                                <div>
+                                    <label class="visually-hidden" for="nombre-{{ u.id }}">Nombre del destinatario de {{ u.nombre }}</label>
+                                    <input type="text" name="nombre_{{ u.id }}" id="nombre-{{ u.id }}" class="form-control form-control-sm"
+                                           value="{{ u.nombre }}" placeholder="Nombre del destinatario" disabled>
+                                </div>
+                                <div>
+                                    <label class="visually-hidden" for="correo-{{ u.id }}">Correo de {{ u.nombre }}</label>
+                                    <input type="email" name="correo_{{ u.id }}" id="correo-{{ u.id }}" class="form-control form-control-sm"
+                                           value="{{ u.correo_oficial|default:'' }}" placeholder="Sin correo oficial: escríbalo" disabled>
+                                </div>
+                                <div class="unidad-envio-campus" data-campus-unidad="{% for pk in u.campus_imparte_ids %}{{ pk }}{% if not forloop.last %},{% endif %}{% endfor %}">
+                                    {% if u.campus_imparte %}
+                                        Se imparte en: {% for pk, nombre in u.campus_imparte %}{{ nombre }}{% if not forloop.last %} · {% endif %}{% endfor %}
+                                    {% else %}
+                                        <span class="text-danger">Su carrera no tiene campus registrados: márquelos en Gestión académica &gt; Carreras.</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="p-3 text-muted small">
+                                No hay unidades académicas activas. Regístrelas primero en Gestión académica &gt; Unidades académicas.
+                            </div>
                         {% endfor %}
-                    </select>
+                    </div>
                 </div>
 
-                <div class="col-12 col-md-6">
-                    <label class="form-label fw-semibold">
-                        Nombre del destinatario *
-                    </label>
-                    <input
-                        type="text"
-                        name="destinatario_nombre"
-                        class="form-control"
-                        required
-                    >
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <label class="form-label fw-semibold">
-                        Correo electrónico *
-                    </label>
-                    <input
-                        type="email"
-                        name="destinatario_email"
-                        class="form-control"
-                        required
-                    >
+                <div class="col-12">
+                    <label class="form-label fw-semibold mb-1">Campus *</label>
+                    <div class="form-text mt-0 mb-2">Marque uno o varios. Cada unidad recibe enlace solo de los campus donde se imparte su carrera.</div>
+                    <div class="campus-envio">
+                        {% for c in campus %}
+                            <label class="campus-chip">
+                                <input type="checkbox" name="campus" value="{{ c.id }}"{% if campus|length == 1 %} checked{% endif %}>
+                                <span>{{ c.sede.nombre }} · {{ c.nombre }}</span>
+                            </label>
+                        {% empty %}
+                            <span class="text-muted small">No hay campus activos. Regístrelos en Gestión académica &gt; Campus.</span>
+                        {% endfor %}
+                    </div>
                 </div>
 
                 <div class="col-12 col-md-6">
@@ -247,26 +290,6 @@
                         min="{{ hoy }}"
                         required
                     >
-                </div>
-
-                <div class="col-12 col-md-6">
-                    <label class="form-label fw-semibold">
-                        Campus *
-                    </label>
-                    <select
-                        name="campus"
-                        class="form-select"
-                        required
-                    >
-                        <option value="">
-                            Seleccione un campus
-                        </option>
-                        {% for c in campus %}
-                            <option value="{{ c.id }}">
-                                {{ c.sede.nombre }} — {{ c.nombre }}
-                            </option>
-                        {% endfor %}
-                    </select>
                 </div>
 
                 <div class="col-12 col-md-6">
@@ -304,7 +327,7 @@
                     type="submit"
                     class="btn btn-primary px-4"
                 >
-                    Generar enlace
+                    Generar y enviar <span data-contador-unidades></span>
                 </button>
             </div>
         </form>
@@ -314,6 +337,58 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+    // Varias unidades: solo se envían (y exigen) los datos de las marcadas.
+    const checks = Array.from(document.querySelectorAll('input[name="unidades"]'));
+    const todas = document.getElementById("marcar-todas-unidades");
+    const contador = document.querySelector("[data-contador-unidades]");
+
+    const campusInputs = Array.from(document.querySelectorAll('input[name="campus"]'));
+
+    function actualizar() {
+        const campusMarcados = campusInputs.filter(function (i) { return i.checked; }).map(function (i) { return i.value; });
+        let unidadesMarcadas = 0;
+        let enlaces = 0;
+        checks.forEach(function (check) {
+            const fila = check.closest("[data-unidad]");
+            fila.querySelectorAll('input[type="text"], input[type="email"]').forEach(function (input) {
+                input.disabled = !check.checked;
+                input.required = check.checked;
+            });
+            if (check.checked) {
+                unidadesMarcadas += 1;
+                const info = fila.querySelector("[data-campus-unidad]");
+                const propios = info && info.dataset.campusUnidad ? info.dataset.campusUnidad.split(",") : [];
+                enlaces += propios.filter(function (id) { return campusMarcados.includes(id); }).length;
+            }
+        });
+        // Un enlace por unidad y campus marcado donde se imparte su carrera.
+        if (contador) contador.textContent = enlaces ? "(" + enlaces + (enlaces === 1 ? " enlace)" : " enlaces)") : "";
+        if (todas) {
+            todas.checked = unidadesMarcadas > 0 && unidadesMarcadas === checks.length;
+            todas.indeterminate = unidadesMarcadas > 0 && unidadesMarcadas < checks.length;
+        }
+    }
+
+    campusInputs.forEach(function (input) {
+        input.addEventListener("change", actualizar);
+    });
+    checks.forEach(function (check) {
+        check.addEventListener("change", function () {
+            actualizar();
+            if (check.checked) {
+                const correo = check.closest("[data-unidad]").querySelector('input[type="email"]');
+                if (correo && !correo.value) correo.focus();
+            }
+        });
+    });
+    if (todas) {
+        todas.addEventListener("change", function () {
+            checks.forEach(function (check) { check.checked = todas.checked; });
+            actualizar();
+        });
+    }
+    actualizar();
+
     document.querySelectorAll(".btn-copiar").forEach(function (boton) {
         boton.addEventListener("click", function () {
             const url = this.getAttribute("data-url");

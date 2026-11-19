@@ -70,11 +70,7 @@ Planificaciones recibidas | Portal A+S
                                     <td>{{ planificacion.filas_recibidas }}</td>
 
                                     <td>
-                                        {% if planificacion.estado == "FINAL" %}
-                                            <span class="badge bg-success">Recibida</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary" title="La Dirección aún no envía la versión final">En edición</span>
-                                        {% endif %}
+                                        {% include "core/partials/_estado_planificacion.html" %}
                                     </td>
 
                                     <td>

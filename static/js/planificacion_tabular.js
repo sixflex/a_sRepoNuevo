@@ -107,6 +107,28 @@
         });
     }
 
+    // Horario: al marcar un día sin hora, se propone la última hora escrita en
+    // esa fila (lo común es la misma hora); se puede cambiar por día.
+    tabla.addEventListener("change", function (evento) {
+        const check = evento.target;
+        if (!check.matches('.horario-dias input[type="checkbox"]') || !check.checked) {
+            return;
+        }
+        const campo = check.closest(".horario-campo");
+        const checks = Array.from(campo.querySelectorAll('.horario-dias input[type="checkbox"]'));
+        const horas = Array.from(campo.querySelectorAll('.horario-hora input[type="time"]'));
+        const hora = horas[checks.indexOf(check)];
+        if (!hora || hora.value) {
+            return;
+        }
+        const otra = horas.find(function (input, indice) { return input !== hora && checks[indice].checked && input.value; });
+        if (otra) {
+            hora.value = otra.value;
+        } else {
+            hora.focus();
+        }
+    });
+
     vincularQuitarDocente(document);
     vincularAgregarDocente(document);
     vincularQuitarFila(document);
