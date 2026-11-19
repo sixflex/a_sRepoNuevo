@@ -7,6 +7,7 @@ from .models import (
     Carrera,
     Asignatura,
     AsignaturaCarrera,
+    CarreraCampus,
     Docente,
     PeriodoAcademico,
     Seccion,
@@ -21,8 +22,9 @@ admin.site.register(Facultad)
 admin.site.register(Carrera)
 admin.site.register(Asignatura)
 admin.site.register(AsignaturaCarrera)
+admin.site.register(CarreraCampus)
 admin.site.register(Docente)
 admin.site.register(PeriodoAcademico)
 admin.site.register(Seccion)
 admin.site.register(SeccionCarrera)
-admin.site.register(SeccionDocente)
+admin.site.register(SeccionDocente)

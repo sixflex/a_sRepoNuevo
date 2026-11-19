@@ -19,8 +19,8 @@ _NOMBRE_DIA = dict(DIAS_SEMANA)
 # Se aceptan el nombre completo y el código corto (borradores guardados antes).
 _CODIGO_DE = {**{codigo: codigo for codigo in _CODIGOS_DIAS}, **{nombre: codigo for codigo, nombre in DIAS_SEMANA}}
 
-_PATRON_HORARIO = re.compile(
-    r"^(?P<dias>(?:%(d)s)(?:, (?:%(d)s))*) (?P<hora>\d{2}:\d{2})$"
+_PATRON_PARTE = re.compile(
+    r"^(?P<dia>%(d)s)(?: (?P<hora>\d{2}:\d{2}))?$"
     % {"d": "|".join(sorted(_CODIGO_DE, key=len, reverse=True))}
 )
 
@@ -29,18 +29,38 @@ SIN_SOCIO = {"", "-", "—", "por definir", "n/a", "na", "no aplica", "sin socio
 SEPARADOR_SOCIO = " | "
 
 
-def texto_horario(dias, hora):
-    """['Lu', 'Mi'] y 08:30 -> 'Lunes, Miércoles 08:30' (días en el orden de la semana)."""
-    nombres = [_NOMBRE_DIA[codigo] for codigo in _CODIGOS_DIAS if codigo in set(dias)]
-    return f"{', '.join(nombres)} {hora.strftime('%H:%M')}"
+def texto_horario(horas):
+    """
+    {'Mi': 10:00, 'Lu': 08:30} -> 'Lunes 08:30, Miércoles 10:00'.
+    Cada día lleva su hora: una clase puede ser martes 17:00 y jueves 20:00.
+    """
+    return ", ".join(
+        f"{_NOMBRE_DIA[codigo]} {horas[codigo].strftime('%H:%M')}"
+        for codigo in _CODIGOS_DIAS
+        if codigo in horas
+    )
 
 
 def leer_horario(texto):
-    """'Lunes, Miércoles 08:30' (o 'Lu, Mi 08:30') -> (['Lu', 'Mi'], '08:30'); None si tiene otro formato."""
-    coincidencia = _PATRON_HORARIO.match((texto or "").strip())
-    if not coincidencia:
+    """
+    'Lunes 08:30, Miércoles 10:00' -> {'Lu': '08:30', 'Mi': '10:00'}.
+    También lee el formato anterior, una hora para todos los días
+    ('Lunes, Miércoles 08:30' o 'Lu, Mi 08:30'). None si tiene otro formato.
+    """
+    horas = {}
+    sin_hora = []
+    for parte in (texto or "").strip().split(", "):
+        coincidencia = _PATRON_PARTE.match(parte)
+        if not coincidencia:
+            return None
+        sin_hora.append(_CODIGO_DE[coincidencia.group("dia")])
+        if coincidencia.group("hora"):
+            for codigo in sin_hora:
+                horas[codigo] = coincidencia.group("hora")
+            sin_hora = []
+    if sin_hora or not horas:
         return None
-    return [_CODIGO_DE[dia] for dia in coincidencia.group("dias").split(", ")], coincidencia.group("hora")
+    return horas
 
 
 # La dirección la pidió el cliente (2/11/2026) para contactar al socio sugerido.

@@ -25,8 +25,10 @@ class CargarDatosDemoTests(TestCase):
         call_command("cargar_datos_demo", stdout=salida)
 
     def test_crea_secciones_desde_las_planificaciones(self):
-        self.assertEqual(Seccion.objects.count(), 15)
-        self.assertEqual(Planificacion.objects.filter(filas_observadas__gt=0).count(), 3)
+        # 16: el docente que no estaba registrado (Pedro Salinas) ya no es
+        # observación, se registra al aprobar con los datos de Dirección.
+        self.assertEqual(Seccion.objects.count(), 16)
+        self.assertEqual(Planificacion.objects.filter(filas_observadas__gt=0).count(), 2)
         self.assertEqual(SeccionRuta.objects.filter(estado="COMPLETADA").count(), 2)
 
     def test_equipos_con_socio_vigente(self):
@@ -115,7 +117,7 @@ class PrepararDatosDesarrolloTests(TestCase):
         self.assertFalse(Comuna.objects.filter(nombre__contains=",").exists())
         self.assertFalse(Comuna.objects.filter(nombre__endswith="-").exists())
         self.assertTrue(Comuna.objects.filter(nombre="Carahue", lat_centro__isnull=False).exists())
-        self.assertEqual(Seccion.objects.count(), 15)
+        self.assertEqual(Seccion.objects.count(), 16)
         borrador = RutaVersion.objects.get(estado="BORRADOR")
         # Solo la 5: la 13 usa el registro de equipos, no un formulario.
         self.assertIsNotNone(RutaActividad.objects.get(ruta_version=borrador, orden=5).formulario_version_id)
@@ -133,7 +135,8 @@ class DatosDemoLivianoTests(TestCase):
         call_command("cargar_datos_demo", liviano=True, stdout=salida)
 
         secciones = Seccion.objects.filter(periodo__anio=2026)
-        self.assertLessEqual(secciones.count(), 6)
+        # 2 por docente del dataset + la del docente nuevo que informa Dirección.
+        self.assertLessEqual(secciones.count(), 7)
         self.assertEqual(SeccionRuta.objects.filter(seccion__in=secciones).count(), secciones.count())
         self.assertTrue(Equipo.objects.exists())
         self.assertLessEqual(Equipo.objects.count(), secciones.count() * 3)

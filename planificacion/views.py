@@ -8,7 +8,7 @@ from django.utils import timezone
 from academico.constantes import TIPOS_CONTRATO
 from .forms import (DocenteFilaFormSet, FilaPlanificacionFormSet, SocioFilaFormSet)
 from .models import (FilaPlanificacion, FilaPlanificacionDocente, Planificacion, PlanificacionEnlace)
-from .services import validar_y_consolidar_planificacion
+from .services import facultad_de_enlace, PLAN_APROBADA, PLAN_BORRADOR, PLAN_DEVUELTA, PLAN_EDITABLES, PLAN_ENVIADA, motivo_devolucion, opciones_asignaturas, revisar_planificacion
 from .textos import leer_socios, texto_socios
 from auditoria.services import registrar_auditoria
 
@@ -209,14 +209,15 @@ def formulario_tabular_as(request, token):
     planificacion, _ = Planificacion.objects.get_or_create(
         enlace=enlace,
         defaults={
-            "estado": "BORRADOR",
+            "estado": PLAN_BORRADOR,
             "filas_recibidas": 0,
             "filas_aceptadas": 0,
             "filas_observadas": 0,
         },
     )
 
-    editable = vigente and planificacion.estado != "FINAL"
+    # Editable en borrador o cuando la Coordinación la devolvió para corregir.
+    editable = vigente and planificacion.estado in PLAN_EDITABLES
 
     queryset = (
         FilaPlanificacion.objects.filter(
@@ -225,6 +226,9 @@ def formulario_tabular_as(request, token):
         .prefetch_related("docentes", "errores")
         .order_by("numero_fila", "id")
     )
+
+    # La facultad la define la unidad del enlace; la carrera se elige entre las suyas.
+    facultad = facultad_de_enlace(enlace)
 
     if request.method == "POST":
         if not editable:
@@ -241,6 +245,8 @@ def formulario_tabular_as(request, token):
             request.POST,
             queryset=queryset,
             prefix="filas",
+            facultad=facultad,
+            campus=enlace.campus,
         )
         docentes_formsets = _crear_formsets_docentes(
             request,
@@ -287,10 +293,12 @@ def formulario_tabular_as(request, token):
                 docentes_validos = False
 
         if formularios_validos and docentes_validos:
+            enviar = "enviar_final" in request.POST
             estado_guardado = (
-                "FINAL"
-                if "enviar_final" in request.POST
-                else "BORRADOR"
+                PLAN_ENVIADA
+                if enviar
+                # Un borrador de una planificación devuelta sigue «devuelta».
+                else planificacion.estado
             )
 
             with transaction.atomic():
@@ -336,7 +344,7 @@ def formulario_tabular_as(request, token):
                 planificacion.estado = estado_guardado
                 planificacion.fecha_guardado = timezone.now()
 
-                if estado_guardado == "FINAL":
+                if enviar:
                     planificacion.fecha_envio_final = timezone.now()
 
                 planificacion.filas_recibidas = planificacion.filas.count()
@@ -353,13 +361,14 @@ def formulario_tabular_as(request, token):
                     "filas_recibidas",
                 ]
 
-                if estado_guardado == "FINAL":
+                if enviar:
                     campos_actualizados.append("fecha_envio_final")
 
                 planificacion.save(update_fields=campos_actualizados)
 
-                if estado_guardado == "FINAL":
-                    validar_y_consolidar_planificacion(planificacion)
+                if enviar:
+                    # Solo se revisa: lo crea el Coordinador al aprobar.
+                    revisar_planificacion(planificacion)
 
                     registrar_auditoria(
                         request=request,
@@ -382,8 +391,8 @@ def formulario_tabular_as(request, token):
 
             messages.success(
                 request,
-                "Planificación enviada correctamente."
-                if estado_guardado == "FINAL"
+                "Planificación enviada. La Coordinación A+S la revisará y le avisará por correo si necesita cambios."
+                if enviar
                 else "Borrador guardado correctamente.",
             )
             return redirect(
@@ -414,6 +423,8 @@ def formulario_tabular_as(request, token):
             queryset=queryset,
             prefix="filas",
             initial=initial,
+            facultad=facultad,
+            campus=enlace.campus,
         )
         if not queryset.exists():
             formset.extra = 1
@@ -448,5 +459,15 @@ def formulario_tabular_as(request, token):
             "editable": editable,
             "token": token,
             "hide_sidebar": True,
+            "asignaturas_por_carrera": opciones_asignaturas(),
+            "facultad_fija": facultad.nombre if facultad else "",
+            "motivo_devolucion": (
+                motivo_devolucion(planificacion)
+                if planificacion.estado == PLAN_DEVUELTA
+                else ""
+            ),
+            "PLAN_ENVIADA": PLAN_ENVIADA,
+            "PLAN_APROBADA": PLAN_APROBADA,
+            "PLAN_DEVUELTA": PLAN_DEVUELTA,
         },
     )

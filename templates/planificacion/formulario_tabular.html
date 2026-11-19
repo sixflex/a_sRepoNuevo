@@ -4,7 +4,7 @@
 {% block title %}Planificación A+S | Universidad Autónoma de Chile{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/planificacion.css' %}?v=2026-11-03">
+<link rel="stylesheet" href="{% static 'css/planificacion.css' %}?v=2026-11-18">
 {% endblock %}
 
 {% block layout_completo %}
@@ -21,8 +21,12 @@
                         <p class="plan-antetitulo">Universidad Autónoma de Chile · Aprendizaje + Servicio</p>
                         <h1 class="plan-titulo">Planificación de asignaturas A+S</h1>
                     </div>
-                    {% if planificacion and planificacion.estado == "FINAL" %}
-                        <span class="plan-estado plan-estado-final"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Enviada · solo lectura</span>
+                    {% if planificacion.estado == PLAN_APROBADA %}
+                        <span class="plan-estado plan-estado-final"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Aprobada · solo lectura</span>
+                    {% elif planificacion.estado == PLAN_ENVIADA %}
+                        <span class="plan-estado plan-estado-final"><i class="bi bi-hourglass-split" aria-hidden="true"></i>Enviada · en revisión</span>
+                    {% elif planificacion.estado == PLAN_DEVUELTA and vigente %}
+                        <span class="plan-estado plan-estado-edicion"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>Devuelta para corregir</span>
                     {% elif vigente %}
                         <span class="plan-estado plan-estado-edicion"><i class="bi bi-pencil-fill" aria-hidden="true"></i>En edición</span>
                     {% else %}
@@ -31,17 +35,20 @@
                 </div>
 
                 <dl class="plan-datos">
-                    <div><dt>Unidad académica</dt><dd>{{ enlace.unidad_academica.nombre }}</dd></div>
+                    <div><dt>Unidad académica</dt><dd>{{ enlace.unidad_academica.nombre }}{% if facultad_fija %}<span class="plan-dato-secundario">{{ facultad_fija }}</span>{% endif %}</dd></div>
                     <div><dt>Sede y campus</dt><dd>{{ enlace.campus.sede.nombre }} · {{ enlace.campus.nombre }}</dd></div>
                     <div><dt>Período</dt><dd>{{ enlace.periodo }}</dd></div>
                     <div><dt>Destinatario</dt><dd>{{ enlace.destinatario_nombre }}<span class="plan-dato-secundario">{{ enlace.destinatario_correo }}</span></dd></div>
                 </dl>
 
-                {% if planificacion.filas_recibidas > 0 or planificacion.estado == "FINAL" %}
+                {% if planificacion.estado == PLAN_APROBADA %}
                     <div class="plan-totales">
                         <span><strong>{{ planificacion.filas_recibidas }}</strong> filas recibidas</span>
-                        <span class="plan-total-ok"><strong>{{ planificacion.filas_aceptadas }}</strong> aceptadas</span>
-                        <span class="plan-total-obs"><strong>{{ planificacion.filas_observadas }}</strong> observadas</span>
+                        <span class="plan-total-ok"><strong>{{ planificacion.filas_aceptadas }}</strong> incorporadas</span>
+                    </div>
+                {% elif planificacion.estado == PLAN_ENVIADA %}
+                    <div class="plan-totales">
+                        <span><strong>{{ planificacion.filas_recibidas }}</strong> filas enviadas</span>
                     </div>
                 {% endif %}
             </header>
@@ -60,10 +67,24 @@
                 </div>
             {% endif %}
 
-            {% if planificacion and planificacion.estado == "FINAL" %}
+            {% if planificacion.estado == PLAN_ENVIADA %}
+                <div class="plan-aviso plan-aviso-info">
+                    <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+                    La planificación se envió a la Coordinación A+S y está en revisión. Si necesita cambios, se la devolverán por correo con el motivo.
+                </div>
+            {% elif planificacion.estado == PLAN_APROBADA %}
                 <div class="plan-aviso plan-aviso-info">
                     <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-                    Esta planificación ya se envió a la Coordinación A+S como versión final y no se puede modificar.
+                    La Coordinación A+S aprobó esta planificación. Ya no se puede modificar.
+                </div>
+            {% elif planificacion.estado == PLAN_DEVUELTA and vigente %}
+                <div class="plan-aviso plan-aviso-advertencia">
+                    <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                    <div>
+                        <strong>La Coordinación A+S devolvió la planificación para corregirla.</strong>
+                        {% if motivo_devolucion %}<div class="mt-1">Motivo: {{ motivo_devolucion|linebreaksbr }}</div>{% endif %}
+                        <div class="mt-1">Haga los cambios y vuelva a usar «Enviar versión final».</div>
+                    </div>
                 </div>
             {% endif %}
 
@@ -74,8 +95,9 @@
                     <ol>
                         <li>Complete una fila por cada sección que implementará A+S, incluso si se repite la misma asignatura.</li>
                         <li>Agregue en cada fila el o los docentes. Escriba el RUT sin puntos y con guion, ej. 12345678-5.</li>
-                        <li>En «Horario» marque los días y la hora de inicio. Si ya tienen un posible socio comunitario, use «Agregar socio (opcional)»; si no, déjelo sin agregar y quedará «Por definir».</li>
-                        <li>Puede usar «Guardar borrador» las veces que necesite. Al terminar, use «Enviar versión final»: después ya no podrá editar.</li>
+                        <li>En «Asignatura» escriba el nombre oficial completo, como aparece en la malla (por ejemplo «Consultoría de Empresas», no «Consultoría»). Al escribir verá las asignaturas ya registradas en la carrera: si es una de ellas, selecciónela.</li>
+                        <li>En «Horario» marque los días y escriba la hora de inicio de cada día (pueden ser distintas, por ejemplo martes 17:00 y jueves 20:00). Si ya tienen un posible socio comunitario, use «Agregar socio (opcional)»; si no, déjelo sin agregar y quedará «Por definir».</li>
+                        <li>Puede usar «Guardar borrador» las veces que necesite. Al terminar, use «Enviar versión final»: la Coordinación A+S la revisará y, si hace falta corregir algo, se la devolverá por correo.</li>
                     </ol>
                     <p>Tiempo estimado: 5 a 10 minutos. Si falta una carrera u otro dato en las listas, infórmelo a la Coordinación A+S por correo.</p>
                 </details>
@@ -119,7 +141,7 @@
                                     <tbody class="fila-planificacion" data-fila-idx="{{ forloop.counter0 }}">
                                         <tr class="fila-asignatura">
                                             <td class="col-num" aria-hidden="true"></td>
-                                            <td class="col-facultad">{% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}{{ form.facultad_texto }}</td>
+                                            <td class="col-facultad">{% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}{{ form.facultad_texto }}{% if facultad_fija %}<span class="plan-facultad-fija" title="Definida por el enlace">{{ facultad_fija }}</span>{% endif %}</td>
                                             <td class="col-carrera">{{ form.carrera_texto }}</td>
                                             <td class="col-as">{{ form.declaracion_as }}</td>
                                             <td class="col-nrc">{{ form.nrc }}</td>
@@ -222,7 +244,7 @@
                             <tbody class="fila-planificacion fila-nueva" data-fila-idx="__prefix__">
                                 <tr class="fila-asignatura">
                                     <td class="col-num" aria-hidden="true"></td>
-                                    <td class="col-facultad">{% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}{{ formset.empty_form.facultad_texto }}</td>
+                                    <td class="col-facultad">{% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}{{ formset.empty_form.facultad_texto }}{% if facultad_fija %}<span class="plan-facultad-fija" title="Definida por el enlace">{{ facultad_fija }}</span>{% endif %}</td>
                                     <td class="col-carrera">{{ formset.empty_form.carrera_texto }}</td>
                                     <td class="col-as">{{ formset.empty_form.declaracion_as }}</td>
                                     <td class="col-nrc">{{ formset.empty_form.nrc }}</td>
@@ -314,13 +336,13 @@
                         </template>
 
                         <div class="plan-acciones">
-                            <span class="plan-ayuda d-none d-md-inline">El borrador se puede seguir editando; la versión final no.</span>
+                            <span class="plan-ayuda d-none d-md-inline">El borrador se puede seguir editando; la versión final pasa a revisión de la Coordinación A+S.</span>
                             <div class="d-flex gap-2 ms-auto">
                                 <button type="submit" name="guardar_borrador" class="plan-boton plan-boton-secundario">
                                     <i class="bi bi-save" aria-hidden="true"></i>Guardar borrador
                                 </button>
                                 <button type="submit" name="enviar_final" class="plan-boton plan-boton-primario"
-                                        onclick="return confirm('¿Enviar la versión final? Después ya no podrá editarla.');">
+                                        onclick="return confirm('¿Enviar la versión final? Pasará a revisión de la Coordinación A+S y no podrá editarla salvo que se la devuelvan.');">
                                     <i class="bi bi-send-check" aria-hidden="true"></i>Enviar versión final
                                 </button>
                             </div>
@@ -341,6 +363,8 @@
 </div>
 
 {% if editable %}
-<script src="{% static 'js/planificacion_tabular.js' %}?v=2026-10-27"></script>
+{{ asignaturas_por_carrera|json_script:"asignaturas-por-carrera" }}
+<script src="{% static 'js/planificacion_tabular.js' %}?v=2026-11-18"></script>
+<script src="{% static 'js/asignatura_sugerida.js' %}?v=2026-11-18"></script>
 {% endif %}
 {% endblock layout_completo %}

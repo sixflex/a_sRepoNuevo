@@ -589,14 +589,10 @@ def detalle_seccion(request, seccion_id):
     )
 
 
-@coordinador_required
-def detalle_planificacion_coordinacion(
-    request,
-    planificacion_id,
-):
+def _planificacion_coordinacion(planificacion_id):
     from planificacion.models import Planificacion
 
-    planificacion = get_object_or_404(
+    return get_object_or_404(
         Planificacion.objects
         .select_related(
             "enlace",
@@ -606,19 +602,31 @@ def detalle_planificacion_coordinacion(
             "enlace__unidad_academica",
             "enlace__unidad_academica__facultad",
             "enlace__unidad_academica__carrera",
-        )
-        .prefetch_related(
-            "filas__docentes",
-            "filas__errores",
         ),
         id=planificacion_id,
     )
 
+
+@coordinador_required
+def detalle_planificacion_coordinacion(
+    request,
+    planificacion_id,
+):
+    from planificacion import services as servicios_planificacion
+
+    planificacion = _planificacion_coordinacion(planificacion_id)
+
     filas = (
         planificacion.filas.all()
+        .select_related("carrera_resuelta", "seccion_resultante")
         .prefetch_related("docentes", "errores")
         .order_by("numero_fila", "id")
     )
+    por_revisar = planificacion.estado == servicios_planificacion.PLAN_ENVIADA
+    filas_revision = [
+        (fila, servicios_planificacion.revision_fila(fila) if por_revisar else None)
+        for fila in filas
+    ]
 
     return render(
         request,
@@ -626,8 +634,175 @@ def detalle_planificacion_coordinacion(
         {
             "planificacion": planificacion,
             "filas": filas,
+            "filas_revision": filas_revision,
+            "por_revisar": por_revisar,
+            "motivo_devolucion": (
+                servicios_planificacion.motivo_devolucion(planificacion)
+                if planificacion.estado == servicios_planificacion.PLAN_DEVUELTA
+                else ""
+            ),
+            "PLAN_ENVIADA": servicios_planificacion.PLAN_ENVIADA,
+            "PLAN_APROBADA": servicios_planificacion.PLAN_APROBADA,
+            "PLAN_DEVUELTA": servicios_planificacion.PLAN_DEVUELTA,
         },
     )
+
+
+@coordinador_required
+def aprobar_planificacion_coordinacion(request, planificacion_id):
+    """Botón general «Aprobar»: crea lo nuevo y las secciones (HU-01)."""
+    from django.contrib import messages
+
+    from planificacion.services import PlanificacionNoAprobable, aprobar_planificacion
+
+    planificacion = _planificacion_coordinacion(planificacion_id)
+    if request.method != "POST":
+        return redirect("core:detalle_planificacion_coordinacion", planificacion_id)
+
+    try:
+        secciones, creados = aprobar_planificacion(planificacion, request=request)
+    except PlanificacionNoAprobable as error:
+        messages.error(request, str(error))
+    else:
+        detalle = [f"{secciones} sección(es) incorporada(s)"]
+        if creados["asignaturas"]:
+            detalle.append(f"{len(creados['asignaturas'])} asignatura(s) nueva(s)")
+        if creados["docentes"]:
+            detalle.append(f"{len(creados['docentes'])} docente(s) nuevo(s)")
+        messages.success(request, "Planificación aprobada: " + ", ".join(detalle) + ".")
+    return redirect("core:detalle_planificacion_coordinacion", planificacion_id)
+
+
+@coordinador_required
+def devolver_planificacion_coordinacion(request, planificacion_id):
+    """Devuelve la planificación a Dirección con un motivo y le avisa por correo."""
+    from django.contrib import messages
+
+    from planificacion.email_service import enviar_correo_devolucion
+    from planificacion.services import PlanificacionNoAprobable, devolver_planificacion
+
+    planificacion = _planificacion_coordinacion(planificacion_id)
+    if request.method != "POST":
+        return redirect("core:detalle_planificacion_coordinacion", planificacion_id)
+
+    motivo = (request.POST.get("motivo") or "").strip()
+    if not motivo:
+        messages.error(request, "Escriba el motivo para que Dirección sepa qué corregir.")
+        return redirect("core:detalle_planificacion_coordinacion", planificacion_id)
+
+    try:
+        devolver_planificacion(planificacion, motivo, request=request)
+    except PlanificacionNoAprobable as error:
+        messages.error(request, str(error))
+        return redirect("core:detalle_planificacion_coordinacion", planificacion_id)
+
+    try:
+        enviar_correo_devolucion(request, planificacion.enlace, motivo)
+    except Exception:
+        messages.warning(
+            request,
+            "La planificación quedó devuelta y el enlace abierto, pero no se pudo enviar el correo. "
+            f"Avise a {planificacion.enlace.destinatario_correo} o reenvíe el enlace.",
+        )
+    else:
+        messages.success(
+            request,
+            f"Planificación devuelta. Se avisó por correo a {planificacion.enlace.destinatario_correo}.",
+        )
+    return redirect("core:detalle_planificacion_coordinacion", planificacion_id)
+
+
+@coordinador_required
+def editar_fila_planificacion_coordinacion(request, planificacion_id, fila_id):
+    """
+    El Coordinador corrige a mano una fila recibida (asignatura, docentes,
+    horario...) antes de aprobar. Al guardar se vuelve a revisar la fila.
+    """
+    from django.contrib import messages
+    from django.db import transaction
+
+    from auditoria.services import registrar_auditoria
+    from planificacion import services as servicios_planificacion
+    from planificacion.forms import DocenteFilaFormSet, FilaPlanificacionForm
+    from planificacion.views import _docente_tiene_datos, _docentes_initial, _guardar_docentes
+
+    planificacion = _planificacion_coordinacion(planificacion_id)
+    fila = get_object_or_404(planificacion.filas, pk=fila_id)
+    url_detalle = reverse("core:detalle_planificacion_coordinacion", args=[planificacion.id])
+
+    if planificacion.estado != servicios_planificacion.PLAN_ENVIADA or fila.seccion_resultante_id:
+        messages.info(request, "Solo se pueden editar filas de una planificación por revisar que aún no se incorporan.")
+        return redirect(url_detalle)
+
+    from planificacion.forms import opciones_planificacion
+
+    facultad = servicios_planificacion.facultad_de_enlace(planificacion.enlace)
+    opciones = opciones_planificacion(facultad, planificacion.enlace.campus)
+
+    def foto():
+        return {
+            **{
+                campo: getattr(fila, campo)
+                for campo in FilaPlanificacionForm.Meta.fields
+            },
+            "docentes": [
+                {"rut": d.rut, "nombre": d.nombre, "correo": d.correo, "telefono": d.telefono}
+                for d in fila.docentes.order_by("id")
+            ],
+        }
+
+    if request.method == "POST":
+        form = FilaPlanificacionForm(request.POST, instance=fila, opciones=opciones)
+        docentes = DocenteFilaFormSet(request.POST, prefix="docentes")
+        docentes_validos = docentes.is_valid()
+        if docentes_validos and not any(
+            _docente_tiene_datos(getattr(f, "cleaned_data", {})) for f in docentes.forms
+        ):
+            docentes._non_form_errors = docentes.error_class(["Debe dejar al menos un docente."])
+            docentes_validos = False
+
+        if form.is_valid() and docentes_validos:
+            anteriores = foto()
+            with transaction.atomic():
+                form.save()
+                _guardar_docentes(fila, docentes)
+                servicios_planificacion.validar_fila(fila)
+                servicios_planificacion.actualizar_totales(planificacion)
+                registrar_auditoria(
+                    request=request,
+                    entidad="FilaPlanificacion",
+                    entidad_id=fila.id,
+                    accion="EDITAR_FILA_PLANIFICACION",
+                    valores_anteriores=anteriores,
+                    valores_nuevos=foto(),
+                )
+            if fila.estado_validacion == servicios_planificacion.ESTADO_OBSERVADA:
+                messages.warning(request, f"Fila {fila.numero_fila} guardada, pero sigue con observaciones.")
+            else:
+                messages.success(request, f"Fila {fila.numero_fila} corregida y lista para aprobar.")
+            return redirect(f"{url_detalle}#fila-{fila.id}")
+    else:
+        form = FilaPlanificacionForm(instance=fila, opciones=opciones)
+        docentes = DocenteFilaFormSet(prefix="docentes", initial=_docentes_initial(fila))
+        if not docentes.initial:
+            docentes.extra = 1
+
+    revision = servicios_planificacion.revision_fila(fila)
+    return render(
+        request,
+        "core/editar_fila_planificacion.html",
+        {
+            "planificacion": planificacion,
+            "fila": fila,
+            "form": form,
+            "docentes": docentes,
+            "revision": revision,
+            "errores": fila.errores.all(),
+            "asignaturas_por_carrera": servicios_planificacion.opciones_asignaturas(),
+            "facultad_fija": facultad.nombre if facultad else "",
+        },
+    )
+
 
 @coordinador_required
 def panel_indicadores_coordinacion(request):

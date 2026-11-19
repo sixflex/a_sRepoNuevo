@@ -82,8 +82,46 @@ class Carrera(models.Model):
     nombre = models.CharField(max_length=180)
     activo = models.BooleanField()
 
+    # Oferta académica: campus donde se imparte la carrera (puede ser más de uno).
+    campus = models.ManyToManyField(
+        Campus,
+        through="CarreraCampus",
+        related_name="carreras",
+        blank=True,
+    )
+
     def __str__(self):
         return self.nombre
+
+
+class CarreraCampus(models.Model):
+    """
+    Campus donde se imparte una carrera (ej. Derecho en Providencia y en El Llano).
+    Se usa para enviar los enlaces de planificación solo donde corresponde.
+    """
+
+    carrera = models.ForeignKey(
+        Carrera,
+        on_delete=models.CASCADE,
+        related_name="campus_imparte",
+    )
+
+    campus = models.ForeignKey(
+        Campus,
+        on_delete=models.PROTECT,
+        related_name="carreras_imparte",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["carrera", "campus"],
+                name="unique_carrera_campus",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.carrera} - {self.campus}"
 
 
 class UnidadAcademica(models.Model):
@@ -338,4 +376,4 @@ class SeccionDocente(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.seccion} - {self.docente}"
+        return f"{self.seccion} - {self.docente}"

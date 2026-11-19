@@ -370,6 +370,18 @@
 .horario-dias label:has(input:checked) { border-color: var(--ua-red); background: var(--ua-red); color: #FFF; }
 .horario-dias label:has(input:focus-visible) { outline: 2px solid var(--ua-red); outline-offset: 1px; }
 .horario-campo input[type="time"] { width: 92px; flex: none; }
+/* Una hora por día marcado: se muestra solo la hora de los días con el check activo. */
+.horario-horas { display: flex; flex-wrap: wrap; gap: 4px 8px; flex-basis: 100%; }
+.horario-hora input[type="time"] { width: 104px; }
+.horario-hora { display: none; align-items: center; gap: 4px; margin: 0; font-size: 0.72rem; font-weight: 600; color: var(--ua-text-muted); animation: horario-aparece 0.18s ease-out; }
+.horario-campo:has(.horario-dias label:nth-of-type(1) input:checked) .horario-hora:nth-child(1),
+.horario-campo:has(.horario-dias label:nth-of-type(2) input:checked) .horario-hora:nth-child(2),
+.horario-campo:has(.horario-dias label:nth-of-type(3) input:checked) .horario-hora:nth-child(3),
+.horario-campo:has(.horario-dias label:nth-of-type(4) input:checked) .horario-hora:nth-child(4),
+.horario-campo:has(.horario-dias label:nth-of-type(5) input:checked) .horario-hora:nth-child(5),
+.horario-campo:has(.horario-dias label:nth-of-type(6) input:checked) .horario-hora:nth-child(6) { display: inline-flex; }
+@keyframes horario-aparece { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .horario-hora { animation: none; } }
 .horario-anterior { flex-basis: 100%; font-size: 0.72rem; color: var(--ua-text-muted); }
 
 /* Posibles socios de la fila: opcionales, bajo los docentes (subtarea 2.2) */
@@ -481,3 +493,6 @@
     .fila-nueva, .docente-subcard, .socio-subcard { animation: none; }
     .fila-planificacion, .docente-subcard, .socio-subcard { transition: none; }
 }
+
+/* Facultad definida por el enlace: se muestra como texto, no se elige. */
+.plan-facultad-fija { display: block; font-size: 0.82rem; font-weight: 600; color: var(--ua-text); line-height: 1.25; }

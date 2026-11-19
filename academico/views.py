@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import transaction
-from django.db.models import ProtectedError
+from django.db.models import ProtectedError, Q
 from django.shortcuts import render, redirect, get_object_or_404
 
 from core.validators import validar_rut_chileno
@@ -20,6 +20,7 @@ from .models import (
     UnidadAcademica,
     Asignatura,
     AsignaturaCarrera,
+    CarreraCampus,
     Docente,
     PeriodoAcademico,
     Seccion,
@@ -405,6 +406,7 @@ def carrera_list(request):
     carreras = (
         Carrera.objects
         .select_related("facultad")
+        .prefetch_related("campus__sede")
         .all()
         .order_by("facultad__nombre", "nombre")
     )
@@ -425,6 +427,16 @@ def _guardar_carrera(request, carrera):
     if es_nuevo:
         facultades = facultades.filter(activo=True)
 
+    # Campus donde se imparte (CarreraCampus). En edición se muestran también
+    # los inactivos ya asociados para no perder la relación.
+    campus_seleccionados = (
+        [] if es_nuevo
+        else list(carrera.campus.values_list("id", flat=True))
+    )
+    campus = Campus.objects.select_related("sede").filter(
+        Q(activo=True) | Q(pk__in=campus_seleccionados)
+    ).order_by("sede__nombre", "nombre")
+
     error = None
 
     if request.method == "POST":
@@ -432,6 +444,8 @@ def _guardar_carrera(request, carrera):
         carrera.nombre = request.POST.get("nombre", "").strip()
         carrera.activo = request.POST.get("activo") == "on"
         facultad_id = request.POST.get("facultad")
+        campus_seleccionados = _ids_seleccionados(request.POST.getlist("campus"))
+        campus_objetos = list(campus.filter(pk__in=campus_seleccionados))
 
         if facultad_id:
             carrera.facultad = get_object_or_404(facultades, pk=facultad_id)
@@ -441,6 +455,9 @@ def _guardar_carrera(request, carrera):
 
         elif not facultad_id:
             error = "Debes seleccionar una facultad."
+
+        elif not campus_objetos:
+            error = "Marca al menos un campus donde se imparte la carrera."
 
         elif nombre_repetido(
             Carrera.objects.filter(facultad=carrera.facultad),
@@ -462,7 +479,14 @@ def _guardar_carrera(request, carrera):
             if not carrera.codigo:
                 carrera.codigo = codigo_unico(Carrera, carrera.nombre, carrera.pk)
 
-            carrera.save()
+            with transaction.atomic():
+                carrera.save()
+                # Reemplazamos los campus anteriores por los marcados.
+                CarreraCampus.objects.filter(carrera=carrera).delete()
+                CarreraCampus.objects.bulk_create([
+                    CarreraCampus(carrera=carrera, campus=campus_carrera)
+                    for campus_carrera in campus_objetos
+                ])
             return redirect("carrera_list")
 
     return render(
@@ -471,6 +495,8 @@ def _guardar_carrera(request, carrera):
         {
             "carrera": carrera,
             "facultades": facultades,
+            "campus": campus,
+            "campus_seleccionados": campus_seleccionados,
             "error": error,
             **_contexto_codigo(Carrera, carrera),
         },

@@ -1,4 +1,5 @@
 from importlib import import_module
+from io import StringIO
 
 from django.apps import apps
 from django.contrib.auth import get_user_model
@@ -13,6 +14,7 @@ from .models import (
     AsignaturaCarrera,
     Campus,
     Carrera,
+    CarreraCampus,
     Docente,
     Facultad,
     PeriodoAcademico,
@@ -1005,7 +1007,7 @@ class GestionAcademicaTestCase(TestCase):
             ("facultad_create", {"nombre": "  INGENIERIA ", "activo": "on"},
              "Ya existe una facultad con ese nombre."),
             ("carrera_create",
-             {"nombre": "ingeniería civil informática", "facultad": self.facultad.id, "activo": "on"},
+             {"nombre": "ingeniería civil informática", "facultad": self.facultad.id, "campus": [self.campus.id], "activo": "on"},
              "Ya existe una carrera con ese nombre en esta facultad."),
         ]
         Asignatura.objects.create(nombre="Taller de Integración", activo=True)
@@ -1034,7 +1036,7 @@ class GestionAcademicaTestCase(TestCase):
     def test_carrera_con_el_mismo_nombre_en_otra_facultad(self):
         self.client.post(
             reverse("carrera_create"),
-            {"nombre": "Ingeniería Civil Informática", "facultad": self.otra_facultad.id, "activo": "on"},
+            {"nombre": "Ingeniería Civil Informática", "facultad": self.otra_facultad.id, "campus": [self.campus.id], "activo": "on"},
         )
 
         self.assertEqual(Carrera.objects.filter(nombre__iexact="Ingeniería Civil Informática").count(), 2)
@@ -1045,7 +1047,7 @@ class GestionAcademicaTestCase(TestCase):
 
         self.client.post(
             reverse("carrera_create"),
-            {"nombre": "Ingeniería Comercial e Informática", "codigo": "", "facultad": self.facultad.id, "activo": "on"},
+            {"nombre": "Ingeniería Comercial e Informática", "codigo": "", "facultad": self.facultad.id, "campus": [self.campus.id], "activo": "on"},
         )
         self.client.post(
             reverse("facultad_create"),
@@ -1058,7 +1060,7 @@ class GestionAcademicaTestCase(TestCase):
     def test_codigo_escrito_se_respeta_en_mayusculas(self):
         self.client.post(
             reverse("carrera_create"),
-            {"nombre": "Derecho", "codigo": " der 01 ", "facultad": self.otra_facultad.id, "activo": "on"},
+            {"nombre": "Derecho", "codigo": " der 01 ", "facultad": self.otra_facultad.id, "campus": [self.campus.id], "activo": "on"},
         )
         self.client.post(
             reverse("asignatura_create"),
@@ -1080,6 +1082,55 @@ class GestionAcademicaTestCase(TestCase):
         # Al editar se respeta el código guardado: no se sugiere otro.
         response = self.client.get(reverse("carrera_update", args=[self.carrera.id]))
         self.assertNotContains(response, "js/codigo_sugerido.js")
+
+    def test_carrera_guarda_los_campus_donde_se_imparte(self):
+        el_llano = Campus.objects.create(sede=self.sede, nombre="Campus El Llano", activo=True)
+
+        self.client.post(
+            reverse("carrera_create"),
+            {"nombre": "Enfermería", "facultad": self.facultad.id,
+             "campus": [self.campus.id, el_llano.id], "activo": "on"},
+        )
+
+        carrera = Carrera.objects.get(nombre="Enfermería")
+        self.assertEqual(CarreraCampus.objects.filter(carrera=carrera).count(), 2)
+        response = self.client.get(reverse("carrera_list"))
+        self.assertContains(response, "Campus El Llano")
+
+    def test_carrera_sin_campus_no_se_guarda_y_conserva_lo_escrito(self):
+        response = self.client.post(
+            reverse("carrera_create"),
+            {"nombre": "Enfermería", "facultad": self.facultad.id, "activo": "on"},
+        )
+
+        self.assertContains(response, "Marca al menos un campus")
+        self.assertContains(response, 'value="Enfermería"')
+        self.assertFalse(Carrera.objects.filter(nombre="Enfermería").exists())
+
+    def test_editar_carrera_reemplaza_los_campus(self):
+        el_llano = Campus.objects.create(sede=self.sede, nombre="Campus El Llano", activo=True)
+        self.carrera.campus.add(self.campus)
+
+        for _ in range(2):
+            self.client.post(
+                reverse("carrera_update", args=[self.carrera.id]),
+                {"nombre": self.carrera.nombre, "facultad": self.facultad.id,
+                 "campus": [el_llano.id], "activo": "on"},
+            )
+
+        self.assertEqual(list(self.carrera.campus.all()), [el_llano])
+
+    def test_comando_asigna_campus_solo_a_carreras_sin_campus(self):
+        from django.core.management import call_command
+
+        el_llano = Campus.objects.create(sede=self.sede, nombre="Campus El Llano", activo=True)
+        derecho = Carrera.objects.create(facultad=self.otra_facultad, nombre="Derecho", activo=True)
+        derecho.campus.add(el_llano)
+
+        call_command("asignar_campus_carreras", campus="campus providencia", stdout=StringIO())
+
+        self.assertEqual(list(self.carrera.campus.all()), [self.campus])
+        self.assertEqual(list(derecho.campus.all()), [el_llano])
 
     def test_asignatura_sin_codigo_no_se_inventa(self):
         self.client.post(

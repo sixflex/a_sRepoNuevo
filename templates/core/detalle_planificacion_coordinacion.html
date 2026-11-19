@@ -5,6 +5,14 @@
 Detalle de Planificación | Portal A+S
 {% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Revisión primero: estado y «Editar» quedan a la vista aunque la tabla tenga scroll. */
+    .col-revision { min-width: 190px; }
+    .col-asignatura-revision { min-width: 200px; }
+</style>
+{% endblock %}
+
 {% block content %}
 
 <div class="container-fluid">
@@ -59,13 +67,7 @@ Detalle de Planificación | Portal A+S
 
                 <div class="col-md-4 mb-3">
                     <strong>Estado</strong>
-                    <div>
-                        {% if planificacion.estado == "FINAL" %}
-                            <span class="badge bg-success">Enviada</span>
-                        {% else %}
-                            <span class="badge bg-secondary">Borrador</span>
-                        {% endif %}
-                    </div>
+                    <div>{% include "core/partials/_estado_planificacion.html" %}</div>
                 </div>
 
                 <div class="col-md-4 mb-3">
@@ -83,13 +85,74 @@ Detalle de Planificación | Portal A+S
                     <strong>Resumen</strong>
                     <div>
                         Recibidas: {{ planificacion.filas_recibidas }} ·
-                        Aceptadas: {{ planificacion.filas_aceptadas }} ·
+                        Incorporadas: {{ planificacion.filas_aceptadas }} ·
                         Observadas: {{ planificacion.filas_observadas }}
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    {% if por_revisar %}
+        <div class="card shadow-sm border-0 mb-4 revision-plan">
+            <div class="card-body d-flex flex-wrap align-items-center gap-3">
+                <div class="flex-grow-1">
+                    <h2 class="h5 fw-bold mb-1">Revisión de la Coordinación</h2>
+                    {% if planificacion.filas_observadas %}
+                        <p class="mb-0 text-muted">
+                            Hay <strong>{{ planificacion.filas_observadas }}</strong> fila(s) observada(s). Corríjalas con «Editar» o, si no puede corregirlas usted, devuelva la planificación a Dirección.
+                        </p>
+                    {% else %}
+                        <p class="mb-0 text-muted">
+                            Todo está listo. Al aprobar se registran las asignaturas y los docentes marcados como «nuevo», se crean las secciones y, si son A+S, su Ruta docente.
+                        </p>
+                    {% endif %}
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modal-devolver">
+                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Devolver a Dirección
+                    </button>
+                    <form method="post" action="{% url 'core:aprobar_planificacion_coordinacion' planificacion.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success"
+                                {% if planificacion.filas_observadas %}disabled title="Corrija o devuelva las filas observadas antes de aprobar"{% endif %}
+                                onclick="return confirm('¿Aprobar la planificación? Se crearán las secciones y lo marcado como nuevo.');">
+                            <i class="bi bi-check2-circle" aria-hidden="true"></i> Aprobar planificación
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="modal-devolver" tabindex="-1" aria-labelledby="titulo-devolver" aria-hidden="true">
+            <div class="modal-dialog">
+                <form method="post" action="{% url 'core:devolver_planificacion_coordinacion' planificacion.id %}" class="modal-content">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h2 class="modal-title h5" id="titulo-devolver">Devolver a Dirección</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <label for="motivo-devolucion" class="form-label fw-semibold">¿Qué deben corregir?</label>
+                        <textarea name="motivo" id="motivo-devolucion" rows="4" class="form-control" required
+                                  placeholder="Ej.: La fila 3 no indica el docente; revisen los NRC de Consultoría de Empresas."></textarea>
+                        <div class="form-text">
+                            Se envía por correo a {{ planificacion.enlace.destinatario_correo }} junto con el mismo enlace, que se vuelve a abrir para que corrijan y reenvíen.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger">Devolver y avisar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% elif motivo_devolucion %}
+        <div class="alert alert-warning">
+            <strong>Devuelta a Dirección.</strong> Motivo: {{ motivo_devolucion|linebreaksbr }}
+            <div class="small mt-1">Cuando la reenvíen, volverá a quedar «Por revisar».</div>
+        </div>
+    {% endif %}
 
     <div class="card shadow-sm border-0">
         <div class="card-body">
@@ -101,6 +164,7 @@ Detalle de Planificación | Portal A+S
                         <thead class="table-light">
                             <tr>
                                 <th>Fila</th>
+                                <th class="col-revision">Revisión</th>
                                 <th>Facultad</th>
                                 <th>Carrera</th>
                                 <th>A+S</th>
@@ -114,14 +178,37 @@ Detalle de Planificación | Portal A+S
                                 <th>Estudiantes</th>
                                 <th>Posible SC</th>
                                 <th>Docentes</th>
-                                <th>Validación</th>
                             </tr>
                         </thead>
 
                         <tbody>
-                            {% for fila in filas %}
-                                <tr>
+                            {% for fila, revision in filas_revision %}
+                                <tr id="fila-{{ fila.id }}">
                                     <td>{{ fila.numero_fila }}</td>
+                                    <td class="col-revision">
+                                        {% if fila.seccion_resultante_id %}
+                                            <span class="badge text-bg-success">Incorporada</span>
+                                        {% elif fila.estado_validacion == "OBSERVADA" %}
+                                            <span class="badge text-bg-danger">Observada</span>
+                                        {% elif por_revisar %}
+                                            <span class="badge text-bg-primary">Lista para aprobar</span>
+                                        {% else %}
+                                            {{ fila.estado_validacion|estado_legible|default:"Pendiente" }}
+                                        {% endif %}
+
+                                        {% for error in fila.errores.all %}
+                                            <div class="text-danger small mt-1">
+                                                {{ error.mensaje }}
+                                            </div>
+                                        {% endfor %}
+
+                                        {% if por_revisar and not fila.seccion_resultante_id %}
+                                            <a href="{% url 'core:editar_fila_planificacion_coordinacion' planificacion.id fila.id %}"
+                                               class="btn btn-sm btn-outline-primary mt-2">
+                                                <i class="bi bi-pencil" aria-hidden="true"></i> Editar
+                                            </a>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ fila.facultad_texto|default:"—" }}</td>
                                     <td>{{ fila.carrera_texto|default:"—" }}</td>
                                     <td>
@@ -136,7 +223,25 @@ Detalle de Planificación | Portal A+S
                                     <td>{{ fila.nrc }}</td>
                                     <td>{{ fila.campus_texto|default:"—" }}</td>
                                     <td>{{ fila.seccion }}</td>
-                                    <td>{{ fila.asignatura_texto }}</td>
+                                    <td class="col-asignatura-revision">
+                                        {{ fila.asignatura_texto }}
+                                        {% if revision and not revision.incorporada %}
+                                            <div class="mt-1">
+                                                {% if revision.estado_asignatura == "registrada" %}
+                                                    <span class="badge text-bg-light border">Ya registrada</span>
+                                                {% elif revision.estado_asignatura == "otra_carrera" %}
+                                                    <span class="badge text-bg-info" title="Existe en otra carrera; al aprobar se asocia también a esta">Se asociará a la carrera</span>
+                                                {% else %}
+                                                    <span class="badge text-bg-warning" title="No existe: se registra al aprobar">Nueva</span>
+                                                {% endif %}
+                                            </div>
+                                            {% if revision.parecidas %}
+                                                <div class="small text-warning-emphasis mt-1">
+                                                    ¿Será {% for asignatura in revision.parecidas %}«{{ asignatura.nombre }}»{% if not forloop.last %} o {% endif %}{% endfor %}? Revísela con «Editar».
+                                                </div>
+                                            {% endif %}
+                                        {% endif %}
+                                    </td>
                                     <td>{{ fila.nivel|default:"—" }}</td>
                                     <td>{{ fila.jornada|default:"—" }}</td>
                                     <td>{{ fila.horario|default:"—" }}</td>
@@ -147,6 +252,15 @@ Detalle de Planificación | Portal A+S
                                         {% for docente in fila.docentes.all %}
                                             <div class="mb-2">
                                                 <strong>{{ docente.nombre|default:"Sin nombre" }}</strong>
+                                                {% if revision and not revision.incorporada %}
+                                                    {% for item in revision.docentes %}{% if item.fila.pk == docente.pk %}
+                                                        {% if item.docente %}
+                                                            <span class="badge text-bg-light border" title="Registrado como {{ item.docente }}">Registrado</span>
+                                                        {% else %}
+                                                            <span class="badge text-bg-warning" title="Se registra al aprobar con estos datos">Nuevo</span>
+                                                        {% endif %}
+                                                    {% endif %}{% endfor %}
+                                                {% endif %}
                                                 {% if docente.rut %}
                                                     · {{ docente.rut }}
                                                 {% endif %}
@@ -166,16 +280,6 @@ Detalle de Planificación | Portal A+S
                                         {% endfor %}
                                     </td>
 
-                                    <td>
-                                        {{ fila.estado_validacion|estado_legible|default:"Pendiente" }}
-
-                                        {% for error in fila.errores.all %}
-                                            <div class="text-danger small mt-1">
-                                                {{ error.campo|default:"Fila" }}:
-                                                {{ error.mensaje }}
-                                            </div>
-                                        {% endfor %}
-                                    </td>
                                 </tr>
                             {% endfor %}
                         </tbody>
