@@ -111,7 +111,7 @@ class PlantillaCartaTests(TestCase):
         plantilla_oficial._IMAGENES_POR_HASH.clear()
         with self.assertRaises(plantilla_oficial.CartaOficialIlegible):
             plantilla_oficial.recursos_carta(plantilla)
-        # El borrador no lleva firma: sigue con el respaldo y queda en el log.
+
         with self.assertLogs("cartas.plantilla_oficial", level="WARNING"):
             recursos = plantilla_oficial.recursos_carta(plantilla, final=False)
         self.assertIsNone(recursos["plantilla"])
@@ -127,7 +127,7 @@ class GenerarCartaTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        # Sin compresión, el texto del borrador se puede buscar en el PDF.
+
         cls._compresion = rl_config.pageCompression
         rl_config.pageCompression = 0
 
@@ -184,7 +184,7 @@ class GenerarCartaTests(TestCase):
         documento = solicitud.documentos.get()
         self.assertEqual(documento.tipo, "PDF")
         self.assertEqual(documento.plantilla, plantilla)
-        self.assertIn(b"/Encrypt", self.pdf(documento))  # final protegida
+        self.assertIn(b"/Encrypt", self.pdf(documento))
 
     def test_borrador_sale_marcado_y_sin_carta_oficial(self):
         _, documento = generar_borrador_carta(self.solicitud.pk, self.usuario)
@@ -198,7 +198,7 @@ class GenerarCartaTests(TestCase):
         with self.assertRaises(plantilla_oficial.CartaOficialIlegible):
             aprobar_y_enviar_carta(self.solicitud.pk, self.usuario)
         self.solicitud.refresh_from_db()
-        self.assertEqual(self.solicitud.estado, "PENDIENTE")  # la aprobación se deshace
+        self.assertEqual(self.solicitud.estado, "PENDIENTE")
         self.assertFalse(CartaDocumento.objects.exists())
 
     def test_borrador_sigue_aunque_la_oficial_no_se_pueda_leer(self):

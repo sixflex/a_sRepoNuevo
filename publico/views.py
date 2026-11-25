@@ -18,7 +18,7 @@ def configurar_portal(request):
             portal.guardar_configuracion(opciones, request)
             messages.success(request, "Listo: el portal público ya muestra lo que elegiste.")
             return redirect("publico:configurar_portal")
-        # Se vuelve a mostrar lo que marcó, sin perderlo (RNF-USA-02).
+
         configuracion.opciones_json = opciones
 
     return render(request, "publico/configurar_portal.html", {
@@ -28,9 +28,9 @@ def configurar_portal(request):
     })
 
 
-# ---------------------------------------------------------------------------
-# Noticias (RF-PUB-03, RF-PUB-04)
-# ---------------------------------------------------------------------------
+
+
+
 
 from django.shortcuts import get_object_or_404
 from django.utils import timezone

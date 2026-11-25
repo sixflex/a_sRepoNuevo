@@ -5,7 +5,7 @@ socios comunitarios de cada fila.
 """
 import re
 
-# Código corto del check (Lu) y nombre completo que se guarda y se lee (Lunes).
+
 DIAS_SEMANA = [
     ("Lu", "Lunes"),
     ("Ma", "Martes"),
@@ -16,7 +16,7 @@ DIAS_SEMANA = [
 ]
 _CODIGOS_DIAS = [codigo for codigo, _ in DIAS_SEMANA]
 _NOMBRE_DIA = dict(DIAS_SEMANA)
-# Se aceptan el nombre completo y el código corto (borradores guardados antes).
+
 _CODIGO_DE = {**{codigo: codigo for codigo in _CODIGOS_DIAS}, **{nombre: codigo for codigo, nombre in DIAS_SEMANA}}
 
 _PATRON_PARTE = re.compile(
@@ -24,7 +24,7 @@ _PATRON_PARTE = re.compile(
     % {"d": "|".join(sorted(_CODIGO_DE, key=len, reverse=True))}
 )
 
-# Textos que la planilla original usaba para decir que aún no hay socio.
+
 SIN_SOCIO = {"", "-", "—", "por definir", "n/a", "na", "no aplica", "sin socio"}
 SEPARADOR_SOCIO = " | "
 
@@ -63,7 +63,7 @@ def leer_horario(texto):
     return horas
 
 
-# La dirección la pidió el cliente (2/11/2026) para contactar al socio sugerido.
+
 CAMPOS_SOCIO = ("nombre", "correo", "rubro", "direccion")
 
 
@@ -89,7 +89,7 @@ def leer_socios(texto):
     for linea in (texto or "").splitlines():
         if linea.strip().lower() in SIN_SOCIO:
             continue
-        # Las líneas guardadas antes de agregar la dirección tienen 3 partes.
+
         partes = [parte.strip() for parte in linea.split("|")] + [""] * len(CAMPOS_SOCIO)
         socios.append(dict(zip(CAMPOS_SOCIO, partes)))
     return socios

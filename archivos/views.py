@@ -48,9 +48,9 @@ def _respuesta_archivo(archivo):
     )
 
 
-# ---------------------------------------------------------------------------
-# Repositorio de recursos (RF-PUB-02)
-# ---------------------------------------------------------------------------
+
+
+
 
 def _datos_auditoria(recurso):
     return {
@@ -105,7 +105,7 @@ def _guardar_recurso(request, recurso):
                 recurso = form.save(commit=False)
                 subido = form.cleaned_data.get("archivo_subido")
                 if subido:
-                    # Reemplazar no borra el archivo anterior: queda en el almacenamiento.
+
                     recurso.archivo = guardar_archivo(
                         subido, autor=request.user, limite_mb=settings.REPOSITORIO_MAX_FILE_SIZE_MB
                     )
@@ -159,7 +159,7 @@ def cambiar_estado_recurso(request, pk):
 @coordinador_required
 @require_POST
 def eliminar_recurso(request, pk):
-    # Elimina la ficha del repositorio; el archivo queda en el almacenamiento.
+
     recurso = get_object_or_404(RecursoRepositorio.objects.select_related("archivo"), pk=pk)
     anteriores = _datos_auditoria(recurso)
     recurso.delete()
@@ -182,7 +182,7 @@ def descargar_recurso(request, pk):
     return _respuesta_archivo(recurso.archivo)
 
 
-# Portal público, sin sesión: solo recursos públicos y publicados.
+
 
 def recursos_publicos():
     return RecursoRepositorio.objects.filter(

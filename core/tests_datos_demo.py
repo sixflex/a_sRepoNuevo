@@ -25,8 +25,8 @@ class CargarDatosDemoTests(TestCase):
         call_command("cargar_datos_demo", stdout=salida)
 
     def test_crea_secciones_desde_las_planificaciones(self):
-        # 16: el docente que no estaba registrado (Pedro Salinas) ya no es
-        # observación, se registra al aprobar con los datos de Dirección.
+
+
         self.assertEqual(Seccion.objects.count(), 16)
         self.assertEqual(Planificacion.objects.filter(filas_observadas__gt=0).count(), 2)
         self.assertEqual(SeccionRuta.objects.filter(estado="COMPLETADA").count(), 2)
@@ -64,7 +64,7 @@ class CargarDatosDemoTests(TestCase):
         self.assertContains(respuesta, texto)
         self.assertContains(respuesta, reverse("socios:revisar_postulacion", args=[postulacion.id]))
 
-        # Si falta el motivo de rechazo, vuelve a la misma página con el aviso.
+
         error = self.client.post(
             reverse("socios:revisar_postulacion", args=[postulacion.id]), {"estado": "RECHAZADA"},
         )
@@ -84,7 +84,7 @@ class CargarDatosDemoTests(TestCase):
         cifras = indicadores.cifras_publicas(filtros)
         self.assertEqual(cifras["socios"], ParticipacionSocio.objects.values("socio").distinct().count())
         self.assertEqual(cifras["participaciones"], ParticipacionSocio.objects.count())
-        # RF-IND-02: cada comuna distingue socios únicos de participaciones.
+
         mapa = indicadores.mapa(filtros)
         self.assertEqual(mapa["total_participaciones"], sum(p["participaciones"] for p in mapa["puntos"]))
 
@@ -119,9 +119,9 @@ class PrepararDatosDesarrolloTests(TestCase):
         self.assertTrue(Comuna.objects.filter(nombre="Carahue", lat_centro__isnull=False).exists())
         self.assertEqual(Seccion.objects.count(), 16)
         borrador = RutaVersion.objects.get(estado="BORRADOR")
-        # Solo la 5: la 13 usa el registro de equipos, no un formulario.
+
         self.assertIsNotNone(RutaActividad.objects.get(ruta_version=borrador, orden=5).formulario_version_id)
-        # La lista oficial de comunas queda cargada una sola vez.
+
         self.assertEqual(Comuna.objects.filter(nombre="La Florida").count(), 1)
         self.assertGreaterEqual(Comuna.objects.count(), 346)
 
@@ -135,7 +135,7 @@ class DatosDemoLivianoTests(TestCase):
         call_command("cargar_datos_demo", liviano=True, stdout=salida)
 
         secciones = Seccion.objects.filter(periodo__anio=2026)
-        # 2 por docente del dataset + la del docente nuevo que informa Dirección.
+
         self.assertLessEqual(secciones.count(), 7)
         self.assertEqual(SeccionRuta.objects.filter(seccion__in=secciones).count(), secciones.count())
         self.assertTrue(Equipo.objects.exists())

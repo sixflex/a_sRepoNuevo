@@ -148,9 +148,9 @@ class ContactoSocio(models.Model):
         return f"{self.nombre} - {self.socio}"
 
 
-# Socio que el Docente eligió para su sección (RF-SC-03): participación
-# operativa con la sección y sin equipo. Todavía no es trabajo realizado,
-# así que no cuenta en indicadores, mapa, catálogo de proyectos ni historial.
+
+
+
 ELEGIDA_PARA_SECCION = Q(origen=ORIGEN_OPERATIVO, equipo__isnull=True, seccion__isnull=False)
 
 
@@ -172,8 +172,8 @@ class ParticipacionSocio(models.Model):
         related_name="participaciones",
     )
 
-    # Opcionales según el modelo de BD: una participación histórica puede no
-    # tener equipo ni proyecto operativo (RF-MIG-02).
+
+
     equipo = models.ForeignKey(
         "proyectos.Equipo",
         on_delete=models.PROTECT,
@@ -272,8 +272,8 @@ class ParticipacionSocio(models.Model):
 
     class Meta:
         constraints = [
-            # Como máximo una asociación vigente (fecha_fin NULL) por equipo
-            # (RN-09, RF-EQP-08). Las cerradas forman el historial.
+
+
             models.UniqueConstraint(
                 fields=["equipo"],
                 condition=Q(equipo__isnull=False, fecha_fin__isnull=True),

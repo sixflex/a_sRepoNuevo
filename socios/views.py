@@ -29,10 +29,10 @@ from .models import (ClasificacionSocio,Comuna,ParticipacionSocio,PostulacionSoc
 
 ESTADOS_SOCIO = [codigo for codigo, _ in services.ESTADOS_SOCIO]
 
-# Largo máximo del motivo de cambio de socio (igual que gestionar_equipo).
+
 MAX_LARGO_MOTIVO_CAMBIO_SOCIO = 255
 
-# Estados en los que un socio puede ser elegido por un docente (CDE-60)
+
 ESTADOS_SELECCIONABLES = ESTADOS_SOCIO_SELECCIONABLES
 
 
@@ -67,7 +67,7 @@ def catalogo_socios_docente(request):
     estado = request.GET.get('estado', '')
 
     if q:
-        # Nombre, RUT o lo que hace el socio (rubro, producto, servicio realizado).
+
         socios = socios.filter(
             Q(nombre_organizacion__icontains=q) |
             Q(rut__icontains=q) |
@@ -80,8 +80,8 @@ def catalogo_socios_docente(request):
     if estado in ESTADOS_SELECCIONABLES:
         socios = socios.filter(estado_revision=estado)
 
-    # RF-SC-03: el docente elige los socios para una de sus secciones. Los
-    # estudiantes de esa sección solo verán esos al registrar su equipo.
+
+
     secciones_docente = _secciones_del_docente(request.user)
     seccion = None
     elegidos_ids = set()
@@ -154,9 +154,9 @@ def lista_socios_coordinador(request):
     """
     Panel completo de búsqueda, filtros combinados y revisión para el Coordinador.
     """
-    # Lo que falta revisar (postulaciones y socios propuestos por equipos, en
-    # estado Recibido) y los postulantes rechazados se ven en Postulaciones;
-    # el catálogo muestra los socios ya aceptados.
+
+
+
     catalogo = SocioComunitario.objects.exclude(estado_revision="RECIBIDO").exclude(
         Q(estado_revision="RECHAZADO")
         & Q(Exists(PostulacionSocio.objects.filter(socio=OuterRef('pk'))))
@@ -168,12 +168,12 @@ def lista_socios_coordinador(request):
     else:
         socios = ordenar_por_fecha(socios, 'fecha_creacion', orden)
 
-    # Parámetros de Búsqueda (CDE-62)
+
     q = request.GET.get('q', '').strip()
     clasificacion_id = request.GET.get('clasificacion')
     comuna_id = request.GET.get('comuna')
 
-    # Parámetros de Filtros Combinados (CDE-63)
+
     estado = request.GET.get('estado')
     es_provisional = request.GET.get('provisional')
     sede_id = request.GET.get('sede')
@@ -182,7 +182,7 @@ def lista_socios_coordinador(request):
     periodo_id = request.GET.get('periodo')
     anio = request.GET.get('anio')
 
-    # Disponibilidad (CDE-65): 'disponibles' o 'historial'
+
     vista = request.GET.get('vista')
 
     if q:
@@ -215,7 +215,7 @@ def lista_socios_coordinador(request):
             Q(activo=False) | Q(estado_revision="TRABAJO_TERMINADO")
         )
 
-    # Filtros por historial académico de participaciones (CDE-63)
+
     trabajadas = ParticipacionSocio.objects.trabajadas()
     if sede_id:
         socios = socios.filter(participaciones__in=trabajadas.filter(sede_id=sede_id)).distinct()
@@ -228,13 +228,13 @@ def lista_socios_coordinador(request):
     if anio:
         socios = socios.filter(participaciones__in=trabajadas.filter(periodo__anio=anio)).distinct()
 
-    # Cada socio trae los estados a los que el coordinador puede moverlo.
+
     socios = list(socios)
     for socio in socios:
         socio.estados_siguientes = estados_siguientes(socio.estado_revision)
 
-    # RF-IND-02: organizaciones únicas frente a participaciones registradas,
-    # sobre los socios del resultado y el mismo contexto académico filtrado.
+
+
     participaciones_resultado = ParticipacionSocio.objects.trabajadas().filter(
         socio__in=[socio.pk for socio in socios]
     )
@@ -393,7 +393,7 @@ def revisar_socio_propuesto(request, socio_id):
         SocioComunitario.objects.select_related('clasificacion', 'comuna'), pk=socio_id,
     )
     if socio.postulaciones.exists():
-        # Los que postularon por una convocatoria se revisan en su postulación.
+
         return redirect('socios:detalle_postulacion', postulacion_id=socio.postulaciones.latest('fecha_recepcion').id)
 
     contacto = socio.contactos.filter(activo=True).order_by('-es_principal', 'pk').first()
@@ -542,7 +542,7 @@ def asociar_socio_equipo(request, actividad_id):
                 "Debes seleccionar un equipo y un Socio Comunitario.",
             )
         elif len(motivo) > MAX_LARGO_MOTIVO_CAMBIO_SOCIO:
-            # Mismo límite que gestionar_equipo (el motivo queda en la auditoría).
+
             messages.error(
                 request,
                 "El motivo del cambio no puede superar "
@@ -619,7 +619,7 @@ def postular_publico(request, convocatoria_id=None):
     
     if convocatoria_id:
         convocatoria = get_object_or_404(Convocatoria, pk=convocatoria_id)
-        # BUG-01 Fix: Si se especifica un ID explícito, validar estado PUBLICADA y fecha de inicio.
+
         if convocatoria.estado != "PUBLICADA" or convocatoria.fecha_inicio > ahora:
             return render(request, "socios/postulacion_cerrada.html", {
                 "convocatoria": convocatoria,
@@ -744,7 +744,7 @@ def postulacion_exitosa(request, postulacion_id):
         "postulacion": postulacion,
     })
 
-# Se mantienen por compatibilidad con los enlaces de SP5-T12; el flujo real es postular_publico.
+
 def postular_publico_fijo(request):
     return redirect("socios:postular_publico")
 

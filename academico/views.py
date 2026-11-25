@@ -29,18 +29,18 @@ from .models import (
 )
 
 
-# =========================================================
-# UTILIDADES COMUNES
-# =========================================================
-#
-# Criterio para los 9 CRUD:
-# - Crear y editar comparten una sola función por entidad (_guardar_*).
-# - Los datos enviados se copian al objeto ANTES de validar. Si hay un
-#   error, el formulario se vuelve a mostrar con lo que escribió el
-#   usuario (RNF-USA-02) y el objeto no se guarda.
-# - Eliminar nunca da error 500: si hay datos asociados se avisa.
 
-# Nombres en español de los registros que pueden impedir un borrado.
+
+
+
+
+
+
+
+
+
+
+
 NOMBRES_RELACIONADOS = {
     "academico.Campus": ("campus", "campus"),
     "academico.Carrera": ("carrera", "carreras"),
@@ -134,18 +134,18 @@ def _ids_seleccionados(valores):
     ]
 
 
-# =========================================================
-# HOME
-# =========================================================
+
+
+
 
 @coordinador_required
 def home(request):
     return render(request, "academico/home.html")
 
 
-# =========================================================
-# CRUD SEDES
-# =========================================================
+
+
+
 
 @coordinador_required
 def sede_list(request):
@@ -216,9 +216,9 @@ def sede_delete(request, pk):
         },
     )
 
-# =========================================================
-# CRUD CAMPUS
-# =========================================================
+
+
+
 
 @coordinador_required
 def campus_list(request):
@@ -239,8 +239,8 @@ def campus_list(request):
 def _guardar_campus(request, campus):
     es_nuevo = campus.pk is None
 
-    # Al crear solo se ofrecen sedes activas. En edición mostramos todas
-    # para no perder la relación si la sede actual está inactiva.
+
+
     sedes = Sede.objects.all().order_by("nombre")
     if es_nuevo:
         sedes = sedes.filter(activo=True)
@@ -316,9 +316,9 @@ def campus_delete(request, pk):
         },
     )
 
-# =========================================================
-# CRUD FACULTADES
-# =========================================================
+
+
+
 
 @coordinador_required
 def facultad_list(request):
@@ -397,9 +397,9 @@ def facultad_delete(request, pk):
         },
     )
 
-# =========================================================
-# CRUD CARRERAS
-# =========================================================
+
+
+
 
 @coordinador_required
 def carrera_list(request):
@@ -421,14 +421,14 @@ def carrera_list(request):
 def _guardar_carrera(request, carrera):
     es_nuevo = carrera.pk is None
 
-    # En edición mostramos todas para conservar correctamente
-    # una relación existente aunque la facultad esté inactiva.
+
+
     facultades = Facultad.objects.all().order_by("nombre")
     if es_nuevo:
         facultades = facultades.filter(activo=True)
 
-    # Campus donde se imparte (CarreraCampus). En edición se muestran también
-    # los inactivos ya asociados para no perder la relación.
+
+
     campus_seleccionados = (
         [] if es_nuevo
         else list(carrera.campus.values_list("id", flat=True))
@@ -481,7 +481,7 @@ def _guardar_carrera(request, carrera):
 
             with transaction.atomic():
                 carrera.save()
-                # Reemplazamos los campus anteriores por los marcados.
+
                 CarreraCampus.objects.filter(carrera=carrera).delete()
                 CarreraCampus.objects.bulk_create([
                     CarreraCampus(carrera=carrera, campus=campus_carrera)
@@ -531,9 +531,9 @@ def carrera_delete(request, pk):
         },
     )
 
-# =========================================================
-# CRUD UNIDADES ACADÉMICAS
-# =========================================================
+
+
+
 
 @coordinador_required
 def unidad_academica_list(request):
@@ -582,7 +582,7 @@ def _guardar_unidad_academica(request, unidad):
             if carrera_id else None
         )
 
-        # Si solo se eligió la carrera, la facultad se deduce de ella.
+
         if unidad.carrera and not unidad.facultad:
             unidad.facultad = unidad.carrera.facultad
 
@@ -667,9 +667,9 @@ def unidad_academica_delete(request, pk):
         },
     )
 
-# =========================================================
-# CRUD ASIGNATURAS
-# =========================================================
+
+
+
 
 @coordinador_required
 def asignatura_list(request):
@@ -691,8 +691,8 @@ def asignatura_list(request):
 def _guardar_asignatura(request, asignatura):
     es_nuevo = asignatura.pk is None
 
-    # En edición mostramos todas para conservar
-    # correctamente asociaciones existentes.
+
+
     carreras = Carrera.objects.all().order_by("nombre")
     if es_nuevo:
         carreras = carreras.filter(activo=True)
@@ -709,7 +709,7 @@ def _guardar_asignatura(request, asignatura):
         asignatura.nombre = request.POST.get("nombre", "").strip()
         asignatura.activo = request.POST.get("activo") == "on"
 
-        # Relación N:M. Conservamos la selección si ocurre un error.
+
         carrera_ids = request.POST.getlist("carreras")
         carreras_seleccionadas = _ids_seleccionados(carrera_ids)
 
@@ -743,7 +743,7 @@ def _guardar_asignatura(request, asignatura):
             with transaction.atomic():
                 asignatura.save()
 
-                # Reemplazamos las asociaciones anteriores por las nuevas.
+
                 AsignaturaCarrera.objects.filter(
                     asignatura=asignatura
                 ).delete()
@@ -804,9 +804,9 @@ def asignatura_delete(request, pk):
     )
 
 
-# =========================================================
-# CRUD DOCENTES
-# =========================================================
+
+
+
 
 @coordinador_required
 def docente_list(request):
@@ -839,9 +839,9 @@ def _guardar_docente(request, docente):
         docente.telefono = request.POST.get("telefono", "").strip() or None
         docente.activo = request.POST.get("activo") == "on"
 
-        # VALIDACIONES
-        # El RUT se guarda sin puntos y con guion, igual que en el resto
-        # del portal, para que la planificación encuentre al docente.
+
+
+
         try:
             docente.rut = validar_rut_chileno(docente.rut)
             error_rut = None
@@ -949,9 +949,9 @@ def docente_delete(request, pk):
         },
     )
 
-# =========================================================
-# CRUD PERIODOS ACADÉMICOS
-# =========================================================
+
+
+
 
 @coordinador_required
 def periodo_list(request):
@@ -987,8 +987,8 @@ def _guardar_periodo(request, periodo):
         periodo.fecha_fin = fecha_fin or None
         periodo.estado = request.POST.get("estado", "").strip()
 
-        # Sin JS el nombre puede llegar vacío: se arma con la parte del año
-        # (semestre, trimestre...) y el año.
+
+
         if not periodo.nombre:
             periodo.nombre = constantes.nombre_periodo(periodo.tipo, parte, anio)
 
@@ -1084,14 +1084,14 @@ def periodo_delete(request, pk):
         },
     )
 
-# =========================================================
-# SECCIONES / NRC
-# =========================================================
-#
-# Un solo listado con filtros (período, carrera, asignatura, docente,
-# NRC, sede y campus; RNF-ALC-01) y las acciones de editar y eliminar.
-# El detalle de la sección es core:detalle_seccion, común a Coordinador
-# y Docente.
+
+
+
+
+
+
+
+
 
 FILTROS_SECCION = [
     "periodo",
@@ -1119,9 +1119,9 @@ def seccion_list(request):
         )
     )
 
-    # -------------------------
-    # FILTROS
-    # -------------------------
+
+
+
 
     filtros = {
         nombre: request.GET.get(nombre, "").strip()
@@ -1150,7 +1150,7 @@ def seccion_list(request):
             nrc__icontains=filtros["nrc"]
         )
 
-    # Las relaciones N:M pueden generar filas repetidas.
+
     secciones = (
         secciones
         .distinct()
@@ -1162,9 +1162,9 @@ def seccion_list(request):
         )
     )
 
-    # -------------------------
-    # OPCIONES DE LOS FILTROS
-    # -------------------------
+
+
+
 
     context = {
         "secciones": secciones,
@@ -1211,8 +1211,8 @@ def _sincronizar_relacion(modelo, seccion, campo, seleccionados):
 def _guardar_seccion(request, seccion):
     es_nuevo = seccion.pk is None
 
-    # Al crear solo se ofrecen registros activos. En edición mostramos
-    # todos para no perder relaciones antiguas si alguno quedó inactivo.
+
+
     asignaturas = Asignatura.objects.all().order_by("nombre")
     docentes = Docente.objects.all().order_by("apellidos", "nombres")
     campus_list = (
@@ -1267,7 +1267,7 @@ def _guardar_seccion(request, seccion):
         docente_ids = request.POST.getlist("docentes")
         carrera_ids = request.POST.getlist("carreras")
 
-        # Mantiene las selecciones si ocurre un error.
+
         docentes_seleccionados = _ids_seleccionados(docente_ids)
         carreras_seleccionadas = _ids_seleccionados(carrera_ids)
 

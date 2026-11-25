@@ -118,7 +118,7 @@ def solicitar_carta_docente(request, seccion_id):
                 "La solicitud de Carta de Presentación fue enviada correctamente.",
             )
 
-            # Vuelve a donde se abrió (Ruta o sección); si no se sabe, a la Ruta.
+
             from core.volver import destino_volver
 
             destino = destino_volver(request)
@@ -266,7 +266,7 @@ def listar_solicitudes_coordinacion(request):
         )
     )
 
-    # Cantidad por estado, para los chips (sobre todas las solicitudes).
+
     conteos = {
         fila["estado"]: fila["n"]
         for fila in SolicitudCarta.objects.values("estado").annotate(n=Count("id"))
@@ -278,7 +278,7 @@ def listar_solicitudes_coordinacion(request):
         estado = ""
 
     if prioridad_pendientes:
-        # Llegada desde el aviso del Inicio: solo pendientes, las más antiguas primero.
+
         estado = ""
         solicitudes = solicitudes.filter(estado="PENDIENTE").order_by(
             "fecha_solicitud", "id"
@@ -755,7 +755,7 @@ def solicitar_carta_estudiante(request, token):
             solicitud.solicitante_nombre = (
                 f"{request.user.first_name} {request.user.last_name}"
             ).strip() or request.user.username
-            # La cuenta con que entró en esta sesión (puede tener dos).
+
             solicitud.solicitante_correo = (
                 correo_de_sesion(request)
                 or request.user.username

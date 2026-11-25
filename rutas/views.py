@@ -78,9 +78,9 @@ def recalcular_avance(seccion_ruta):
     return porcentaje
 
 
-# Desde dónde abrió el Docente su Ruta, para que "Volver" lo devuelva ahí.
-# Se recuerda en la sesión porque marcar actividades o subir evidencias
-# vuelve a esta página sin el parámetro.
+
+
+
 ORIGENES_RUTA = {"inicio": "Volver al inicio", "seccion": "Volver a la sección"}
 
 
@@ -152,8 +152,8 @@ def detalle_ruta_docente(request, seccion_ruta_id):
         and seccion_ruta.estado != "COMPLETADA"
     )
 
-    # Paso a paso: una acción por actividad, formularios por sección y
-    # precargados (ficha única), y solo la etapa en curso abierta.
+
+
     actividades = paso_a_paso.preparar_actividades(request, seccion_ruta, list(actividades))
     etapas, etapa_actual = paso_a_paso.armar_etapas(actividades)
     total_actividades = len(actividades)
@@ -356,7 +356,7 @@ def completar_ruta(request, seccion_ruta_id):
             seccion_ruta_id=seccion_ruta.id,
         )
 
-    # Captura del estado previo a la modificacion
+
     estado_anterior = seccion_ruta.estado
 
     seccion_ruta.estado = "COMPLETADA"
@@ -652,8 +652,8 @@ def seguimiento_rutas_coordinacion(request):
     if estado_filtro:
         rutas = rutas.filter(estado=estado_filtro)
 
-    # Pestaña "Por docente": promedio de todas las Rutas de cada docente con
-    # los mismos filtros. Al tocar un docente se ven sus secciones.
+
+
     por_docente = servicios.promedio_por_docente(rutas.order_by()) if vista == "docentes" else []
 
     docente_filtrado = None
@@ -737,7 +737,7 @@ def detalle_ruta_coordinacion(request, seccion_ruta_id):
         )
     )
 
-    # Vista simple: avance, etapa en curso y una fila por etapa con lo pendiente.
+
     lista = list(actividades)
     etapas, etapa_actual = paso_a_paso.armar_etapas(lista)
     total_actividades = len(lista)
@@ -839,7 +839,7 @@ def formularios_qr(request):
     proceso = request.GET.get("proceso", "").strip()
     formularios = servicios.formularios_qr_de_proceso(request, proceso)
 
-    # Volver a la Ruta si se llegó desde ella (?ruta=<id>); si no, a mis secciones.
+
     url_volver, texto_volver = reverse("core:docente"), "Volver a mis secciones"
     ruta_id = request.GET.get("ruta", "")
     if ruta_id.isdigit():
@@ -1178,7 +1178,7 @@ def descargar_expediente(request, seccion_ruta_id):
     seccion = seccion_ruta.seccion
     expediente = ExpedienteSeccion.objects.filter(seccion=seccion).first()
 
-    # Aunque aún no haya evidencias, el ZIP trae la ficha del proyecto.
+
     nombre = servicios.nombre_zip_expediente(seccion)
     destino = tempfile.SpooledTemporaryFile(max_size=50 * 1024 * 1024)
     faltantes = servicios.generar_zip_expediente(expediente, destino, seccion_ruta=seccion_ruta)

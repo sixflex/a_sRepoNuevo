@@ -12,7 +12,7 @@ from comunicaciones.models import PlantillaCorreo
 
 PLANTILLAS = [
     {
-        # RF-CAR-07: el mensaje pide al Docente comprobar la carta antes de entregarla.
+
         "codigo": "CARTA_PRESENTACION_DOCENTE",
         "asunto_template": "Carta de Presentación aprobada - Solicitud #{{ numero_solicitud }}",
         "cuerpo_template": (

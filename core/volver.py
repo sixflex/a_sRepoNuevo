@@ -15,7 +15,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 
 CLAVE = "volver:{}"
 
-# Texto del enlace según la página a la que se vuelve.
+
 TEXTOS = {
     "rutas:detalle_ruta_docente": "Volver a la Ruta",
     "core:detalle_seccion": "Volver a la sección",
@@ -51,7 +51,7 @@ def destino_volver(request):
 
     referer = urlparse(request.META.get("HTTP_REFERER", ""))
     if referer.path and referer.netloc == request.get_host() and referer.path != request.path:
-        # Se entró desde otra página sin ?volver: el origen guardado ya no vale.
+
         sesion.pop(clave, None)
         return None
     return sesion.get(clave)

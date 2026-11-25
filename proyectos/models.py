@@ -7,7 +7,7 @@ from django.utils.functional import cached_property
 
 from academico.models import Seccion
 
-# Atributo donde se precargan las participaciones abiertas de cada equipo.
+
 ATRIBUTO_PARTICIPACIONES_VIGENTES = "participaciones_vigentes"
 
 
@@ -84,8 +84,8 @@ class Equipo(models.Model):
     fecha_registro = models.DateTimeField(auto_now_add=True)
     estado = models.CharField(max_length=20)
 
-    # El socio del equipo vive en socios.ParticipacionSocio (modelo de BD
-    # aprobado: EQUIPO no tiene FK a socio). Ver socio_vigente.
+
+
     objects = EquipoQuerySet.as_manager()
 
     class Meta:

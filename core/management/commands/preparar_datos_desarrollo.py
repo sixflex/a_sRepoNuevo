@@ -75,8 +75,8 @@ class Command(BaseCommand):
         call_command("cargar_plantillas_correo", stdout=self.stdout)
 
         self.paso(5, "Datos de demostración")
-        # cargar_datos_demo se niega solo si sus NRC ya están; las secciones
-        # creadas a mano (p. ej. en Render) no lo impiden ni se tocan.
+
+
         try:
             call_command("cargar_datos_demo", liviano=options.get("liviano", False), stdout=self.stdout)
         except CommandError as error:

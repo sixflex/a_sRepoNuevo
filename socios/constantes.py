@@ -7,7 +7,7 @@ los nombres que se muestran. Los valores son los que ya se guardan hoy,
 más ASIGNADO (RF-SC-02).
 """
 
-# Ciclo de vida del socio (SocioComunitario.estado_revision)
+
 ESTADOS_SOCIO = [
     ("RECIBIDO", "Recibido"),
     ("APROBADO", "Aprobado"),
@@ -17,9 +17,9 @@ ESTADOS_SOCIO = [
     ("TRABAJO_TERMINADO", "Trabajo terminado"),
 ]
 
-# RF-SC-02: un socio aprobado pasa a Disponible, Asignado y Trabajo
-# terminado. El coordinador lo mueve entre esos estados en ambos sentidos
-# (p. ej. de Trabajo terminado vuelve a Disponible para otra convocatoria).
+
+
+
 ESTADOS_SOCIO_APROBADO = ["APROBADO", "DISPONIBLE", "ASIGNADO", "TRABAJO_TERMINADO"]
 
 TRANSICIONES_SOCIO = {
@@ -31,12 +31,12 @@ TRANSICIONES_SOCIO = {
     },
 }
 
-# Estados en que el docente ve al socio en el catálogo y puede elegirlo
-# (RF-SC-03). Asignado sigue visible: un socio puede trabajar con varios
-# equipos (RN-09).
+
+
+
 ESTADOS_SOCIO_SELECCIONABLES = ["APROBADO", "DISPONIBLE", "ASIGNADO"]
 
-# Decisión sobre la postulación (PostulacionSocio.estado)
+
 ESTADOS_POSTULACION = [
     ("RECIBIDA", "Recibida"),
     ("APROBADA", "Aprobada"),
@@ -61,10 +61,10 @@ def estados_siguientes(actual):
     return [opcion for opcion in ESTADOS_SOCIO if opcion[0] in permitidos]
 
 
-# Procedencia de cada ParticipacionSocio (modelo de BD: OPERATIVO / HISTORICO).
-# OPERATIVO: asociación creada desde el portal (registro de equipo o cambio
-# del docente). HISTORICO: carga de datos antiguos, que puede no tener
-# equipo ni proyecto (RF-MIG-02).
+
+
+
+
 ORIGEN_OPERATIVO = "OPERATIVO"
 ORIGEN_HISTORICO = "HISTORICO"
 
@@ -73,9 +73,9 @@ ORIGENES_PARTICIPACION = [
     (ORIGEN_HISTORICO, "Histórico"),
 ]
 
-# Clasificaciones del "Registro de Socios Comunitarios" de la Coordinación
-# (pregunta 16). Se cargan en ClasificacionSocio con cargar_catalogos_socios;
-# "Otras" guarda el detalle en SocioComunitario.clasificacion_otra.
+
+
+
 CLASIFICACIONES_SOCIO = [
     "Municipalidad", "Corporación", "Fundación", "Cesfam", "Colegio", "CDN Sercotec",
     "Junta de Vecinos", "Club de Adulto Mayor", "Club deportivo", "Emprendedor(a) - Pyme",

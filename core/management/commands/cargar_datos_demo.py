@@ -64,7 +64,7 @@ ARCHIVO_POR_DEFECTO = Path(__file__).resolve().parents[2] / "datos_demo" / "dato
 CLAVE_DOCENTE = "Docente1234"
 CLAVE_COORDINADOR = "Coord1234"
 
-# Hoja de respuestas -> código del formulario (la ficha se carga con las postulaciones).
+
 HOJAS_RESPUESTAS = {
     "Resp_Eval_Estudiantes": "EVALUACION_AS_ESTUDIANTES",
     "Resp_Eval_Docentes": "EVALUACION_AS_DOCENTES",
@@ -95,10 +95,10 @@ def si(valor):
     return texto(valor).upper() in ("SI", "SÍ", "TRUE", "1")
 
 
-# En la hoja Comunas del Excel algunas "comunas" son en realidad direcciones
-# (venían así del formulario original). Se cargan con la comuna correcta para
-# que el mapa y el catálogo públicos no muestren direcciones (RNF-PRI-01);
-# la dirección de esos socios ya está en su columna Dirección.
+
+
+
+
 CORRECCIONES_COMUNA = {
     "carahue -": ("Carahue", "La Araucanía", Decimal("-38.7114"), Decimal("-73.1647")),
     "el establecimiento se encuentra camino quepe, boroa km 5, temuco": ("Temuco", None, None, None),
@@ -115,7 +115,7 @@ def leer_libro(ruta):
         filas = list(hoja.iter_rows(values_only=True))
         if not filas:
             continue
-        # Las hojas de respuestas tienen una nota en la primera fila.
+
         if sum(1 for v in filas[0] if v not in (None, "")) == 1 and len(filas) > 1 and filas[1][0] is not None:
             filas = filas[1:]
         encabezados = [texto(v) for v in filas[0]]
@@ -142,8 +142,8 @@ def reducir_dataset(datos):
     """
     con_ruta = {texto(f["NRC"]) for f in datos["Avance_Ruta"]}
 
-    # Hasta 2 secciones por docente; primero las de una misma asignatura, así
-    # se ve cómo el Inicio agrupa las secciones de un ramo.
+
+
     por_docente = {}
     for fila in sorted(datos["Planificacion"], key=lambda f: (texto(f["RUT"]), texto(f["ASIGNATURA"]), texto(f["SECCIÓN"]))):
         nrc = texto(fila["NRC"])
@@ -151,7 +151,7 @@ def reducir_dataset(datos):
             por_docente.setdefault(texto(fila["RUT"]), []).append(nrc)
     nrcs = {nrc for lista in por_docente.values() for nrc in lista[:SECCIONES_POR_DOCENTE_LIVIANO]}
 
-    # Las filas sin Ruta son las observadas de la planilla: se dejan para mostrar la validación.
+
     datos["Planificacion"] = [
         f for f in datos["Planificacion"] if texto(f["NRC"]) in nrcs or texto(f["NRC"]) not in con_ruta
     ]
@@ -210,7 +210,7 @@ class Command(BaseCommand):
             self.datos = reducir_dataset(self.datos)
         self.validar_requisitos()
 
-        # Nada sale por correo: las notificaciones quedan registradas en EnvioCorreo.
+
         with override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"):
             with transaction.atomic():
                 self.cargar()
@@ -222,9 +222,9 @@ class Command(BaseCommand):
             f"  Docentes: entran con su correo en «Iniciar sesión con Microsoft» o con la clave {CLAVE_DOCENTE}."
         )
 
-    # ------------------------------------------------------------------
-    # Requisitos
-    # ------------------------------------------------------------------
+
+
+
 
     def validar_requisitos(self):
         if obtener_version_ruta_vigente() is None:
@@ -249,9 +249,9 @@ class Command(BaseCommand):
             .order_by("-numero_version").first()
         )
 
-    # ------------------------------------------------------------------
-    # Carga
-    # ------------------------------------------------------------------
+
+
+
 
     def cargar(self):
         self.resumen = []
@@ -300,7 +300,7 @@ class Command(BaseCommand):
                 Facultad.objects.filter(nombre__iexact=texto(fila["Facultad"])).first()
                 or Facultad.objects.create(nombre=texto(fila["Facultad"]), activo=True)
             )
-            # Una carrera que ya existe se respeta tal como está.
+
             if not Carrera.objects.filter(nombre__iexact=texto(fila["Carrera"])).exists():
                 Carrera.objects.create(facultad=facultad, nombre=texto(fila["Carrera"]), activo=True)
 
@@ -314,7 +314,7 @@ class Command(BaseCommand):
             periodo = PeriodoAcademico.objects.create(
                 anio=fila["Año"], tipo=texto(fila["Tipo"]), nombre=nombre, estado=texto(fila["Estado"]),
             )
-        # El panel ubica por fecha las respuestas que llegan sin período.
+
         if not periodo.fecha_inicio or not periodo.fecha_fin:
             periodo.fecha_inicio = periodo.fecha_inicio or fecha(fila["Fecha inicio"])
             periodo.fecha_fin = periodo.fecha_fin or fecha(fila["Fecha fin"])
@@ -371,17 +371,17 @@ class Command(BaseCommand):
 
     def cargar_socios(self):
         comunas = {}
-        # Las comunas ya cargadas (p. ej. la lista oficial) se reconocen aunque
-        # el Excel las escriba sin tildes o con otras mayúsculas.
+
+
         por_clave = {clave_comuna(c.nombre): c for c in Comuna.objects.all()}
-        # Primero las comunas correctas, así las corregidas reutilizan su ubicación.
+
         filas = sorted(self.datos["Comunas"], key=lambda f: texto(f["Comuna"]).lower() in CORRECCIONES_COMUNA)
         for fila in filas:
             original = texto(fila["Comuna"])
             nombre, region, lat, lon = CORRECCIONES_COMUNA.get(
                 original.lower(), (original, None, Decimal(str(fila["Latitud"])), Decimal(str(fila["Longitud"]))),
             )
-            # Una comuna ya registrada se reutiliza; solo se completa su ubicación para el mapa.
+
             comuna = por_clave.get(clave_comuna(nombre))
             if comuna is None:
                 comuna = Comuna.objects.create(nombre=nombre, region=region or texto(fila["Región"]), activo=True)
@@ -437,7 +437,7 @@ class Command(BaseCommand):
                 fecha_fin=fecha(fila["Fecha fin"]),
                 origen=ORIGEN_HISTORICO,
             )
-            # El socio existe en el sistema desde su primera participación.
+
             if aware(inicio) < socio.fecha_creacion:
                 socio.fecha_creacion = aware(inicio)
                 socio.save(update_fields=["fecha_creacion"])
@@ -457,7 +457,7 @@ class Command(BaseCommand):
                 defaults={"tipo": texto(unidad_fila["Tipo"]), "carrera": carrera, "facultad": carrera.facultad,
                           "correo_oficial": texto(unidad_fila["Correo"]), "activo": True},
             )
-            # Oferta académica: la carrera se imparte en el campus del enlace (CarreraCampus).
+
             campus = self.campus[texto(unidad_fila["Campus"])]
             carrera.campus.add(campus)
             enviada = texto(unidad_fila["Estado planilla"]) == "FINAL"
@@ -467,7 +467,7 @@ class Command(BaseCommand):
                 destinatario_nombre=texto(unidad_fila["Destinatario"]),
                 destinatario_correo=texto(unidad_fila["Correo"]),
                 fecha_emision=emision,
-                # Una unidad que aún no envía su planilla mantiene el enlace vigente.
+
                 fecha_expiracion=aware(datetime(self.periodo.anio, 8, 7, 23, 59)) if enviada
                 else timezone.now() + timedelta(days=14),
                 activo=True,
@@ -498,9 +498,9 @@ class Command(BaseCommand):
                     capacitado_as=si(fila["YA SE CAPACITÓ ANTERIORMENTE EN A+S"]),
                     correo=texto(fila["CORREO ELECTRÓNICO"]), telefono=texto(fila["CELULAR"]),
                 )
-            # Envío final y revisión. Sin observaciones, el Coordinador la aprobó;
-            # con observaciones queda «Por revisar» con sus filas válidas ya
-            # incorporadas, para mostrar cómo se corrigen las demás.
+
+
+
             revisar_planificacion(planificacion)
             if not planificacion.filas_observadas:
                 aprobar_planificacion(planificacion)
@@ -615,7 +615,7 @@ class Command(BaseCommand):
             participacion, _ = socios_services.asociar_socio_a_equipo(equipo=equipo, socio=socio, request=None)
             ParticipacionSocio.objects.filter(pk=participacion.pk).update(fecha_inicio=fecha(registro))
 
-        # Socios aprobados en la convocatoria que ya trabajan con un equipo.
+
         for socio in SocioComunitario.objects.filter(
             estado_revision="APROBADO", participaciones__fecha_fin__isnull=True,
             participaciones__equipo__seccion__periodo=self.periodo,
@@ -646,9 +646,9 @@ class Command(BaseCommand):
             ])
         self.resumen.append(f"{len(self.datos['Cartas'])} solicitudes de carta")
 
-    # ------------------------------------------------------------------
-    # Respuestas de formularios
-    # ------------------------------------------------------------------
+
+
+
 
     def cargar_respuestas(self):
         enlaces_creados = []
@@ -662,7 +662,7 @@ class Command(BaseCommand):
                 if fila.get("[Contexto] Grupo"):
                     equipo = Equipo.objects.get(seccion=seccion, numero_grupo=int(fila["[Contexto] Grupo"]))
                 clave = (seccion.pk, equipo.pk if equipo else None)
-                # Enlace contextual por sección (y por equipo y socio en la encuesta a socios).
+
                 if clave not in enlaces:
                     contexto = {"seccion": seccion}
                     if equipo:
@@ -678,7 +678,7 @@ class Command(BaseCommand):
                     respuesta.docente = self.docente_de(seccion)
                 respuesta.save(update_fields=["carrera", "docente"])
                 total += 1
-        # Los enlaces por sección quedan cerrados: las encuestas ya se respondieron.
+
         EnlaceFormulario.objects.filter(pk__in=enlaces_creados).update(activo=False, fecha_expiracion=timezone.now())
         self.resumen.append(f"{total} respuestas de encuestas (más {len(self.datos['Postulaciones'])} fichas)")
 

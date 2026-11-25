@@ -6,8 +6,8 @@ from .models import RecursoRepositorio
 from .validators import get_extensiones_permitidas
 
 
-# Categorías del repositorio (RF-PUB-02). Son texto en el modelo, así que
-# agregar una aquí no requiere migración.
+
+
 CATEGORIAS = [
     ("Formatos oficiales", "Formatos oficiales"),
     ("Guías metodológicas", "Guías metodológicas"),
@@ -16,8 +16,8 @@ CATEGORIAS = [
     ("Otros", "Otros"),
 ]
 
-# El repositorio acepta PDF, Word y Excel (RF-PUB-02), dentro de los formatos
-# que permite el almacenamiento privado.
+
+
 EXTENSIONES_REPOSITORIO = ["pdf", "doc", "docx", "xls", "xlsx"]
 
 

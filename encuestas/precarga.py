@@ -28,7 +28,7 @@ FORMALIZACION_ACUERDOS = "FORMALIZACION_ACUERDOS_AS_2026"
 RESUMEN_IMPLEMENTACION = "RESUMEN_IMPLEMENTACION_DOCENTE"
 REGISTRO_REFLEXION = "REGISTRO_REFLEXION_AS"
 
-# código de plantilla -> {texto de la pregunta: dato}
+
 PREGUNTAS = {
     FORMULARIO_PROYECTO: {
         "Nombre de la Asignatura": "asignatura",
@@ -41,8 +41,8 @@ PREGUNTAS = {
         "Nombre del Docente / Profesor formador": "docente_nombre",
         "Nombre de la Asignatura": "asignatura",
         "Nombre del docente firmante": "docente_nombre",
-        # Del equipo (cuando el acuerdo se llena para un grupo): su socio y
-        # contacto, tal como los registraron en la actividad 13.
+
+
         "Nombre del Socio Comunitario o representante": "socio_nombre",
         "Cargo del representante": "socio_cargo",
         "Teléfono del representante": "socio_telefono",
@@ -351,7 +351,7 @@ def _valor_opcion(pregunta, valor):
     for opcion in opciones:
         if _normalizar(opcion.texto) == buscado or _normalizar(opcion.valor) == buscado:
             return opcion.valor
-    # "Campus Providencia" -> "Providencia"; "Ciencias Sociales y Humanidades" exacto ya cubierto.
+
     parciales = [o for o in opciones if len(_normalizar(o.texto)) > 3 and _normalizar(o.texto) in buscado]
     if len(parciales) == 1:
         return parciales[0].valor

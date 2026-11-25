@@ -69,7 +69,7 @@ def _crear_formsets_socios(request, formset_filas):
         if request.method == "POST":
             datos = request.POST
             if f"{prefix}-TOTAL_FORMS" not in datos:
-                # Fila enviada sin la casilla de socios: no trae socios.
+
                 datos = {f"{prefix}-TOTAL_FORMS": "0", f"{prefix}-INITIAL_FORMS": "0"}
             formsets.append(SocioFilaFormSet(datos, prefix=prefix))
         else:
@@ -216,7 +216,7 @@ def formulario_tabular_as(request, token):
         },
     )
 
-    # Editable en borrador o cuando la Coordinación la devolvió para corregir.
+
     editable = vigente and planificacion.estado in PLAN_EDITABLES
 
     queryset = (
@@ -227,7 +227,7 @@ def formulario_tabular_as(request, token):
         .order_by("numero_fila", "id")
     )
 
-    # La facultad la define la unidad del enlace; la carrera se elige entre las suyas.
+
     facultad = facultad_de_enlace(enlace)
 
     if request.method == "POST":
@@ -297,7 +297,7 @@ def formulario_tabular_as(request, token):
             estado_guardado = (
                 PLAN_ENVIADA
                 if enviar
-                # Un borrador de una planificación devuelta sigue «devuelta».
+
                 else planificacion.estado
             )
 
@@ -367,7 +367,7 @@ def formulario_tabular_as(request, token):
                 planificacion.save(update_fields=campos_actualizados)
 
                 if enviar:
-                    # Solo se revisa: lo crea el Coordinador al aprobar.
+
                     revisar_planificacion(planificacion)
 
                     registrar_auditoria(

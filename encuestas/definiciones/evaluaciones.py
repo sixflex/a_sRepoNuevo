@@ -10,7 +10,7 @@ anillos de satisfacción del panel del coordinador (core/indicadores.py).
 from encuestas import constantes as c
 from encuestas.semillas import cuadricula, otras, pregunta, seccion
 
-# Alternativas de horas de dedicación (estudiantes y docentes).
+
 HORAS = ["1-2 horas.", "3-4 horas.", "5-6 horas.", "7 ó más horas."]
 
 ESTUDIANTES = {

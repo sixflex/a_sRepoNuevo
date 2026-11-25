@@ -24,7 +24,7 @@ class Command(BaseCommand):
         destinatario = options["destinatario"]
         codigo_plantilla = options["plantilla"]
 
-        # Crear plantilla de prueba temporal si no existe
+
         plantilla, _ = PlantillaCorreo.objects.get_or_create(
             codigo=codigo_plantilla,
             defaults={

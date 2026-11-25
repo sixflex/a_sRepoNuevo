@@ -49,7 +49,7 @@ def _contexto(equipo, SeccionCarrera):
         "periodo_id": seccion.periodo_id,
         "campus_id": seccion.campus_id,
         "sede_id": seccion.campus.sede_id,
-        # Solo si la sección pertenece a una única carrera.
+
         "carrera_id": carreras[0] if len(carreras) == 1 else None,
     }
 
@@ -78,8 +78,8 @@ def reconstruir_participaciones(apps, schema_editor):
         )
         fecha_registro = _fecha(equipo.fecha_registro)
 
-        # Participaciones cerradas: solo si el equipo aún no tiene ninguna,
-        # para no duplicar al ejecutar de nuevo.
+
+
         if not ParticipacionSocio.objects.filter(equipo_id=equipo.pk).exists():
             for i, evento in enumerate(eventos):
                 if evento.socio_anterior_id is None:
@@ -90,7 +90,7 @@ def reconstruir_participaciones(apps, schema_editor):
                 elif eventos[i - 1].socio_nuevo_id == evento.socio_anterior_id:
                     fecha_inicio = _fecha(eventos[i - 1].fecha_cambio)
                 else:
-                    # La cadena no permite saber desde cuándo estaba.
+
                     fecha_inicio = None
 
                 fecha_fin = _fecha(evento.fecha_cambio)
@@ -106,7 +106,7 @@ def reconstruir_participaciones(apps, schema_editor):
                     **contexto,
                 )
 
-        # Participación vigente según el campo heredado.
+
         if (
             equipo.socio_comunitario_id
             and not ParticipacionSocio.objects.filter(
@@ -128,7 +128,7 @@ def reconstruir_participaciones(apps, schema_editor):
                 **contexto,
             )
 
-    # Copia de los eventos heredados a AUDITORIA_CAMBIO.
+
     ya_copiados = set()
     for valores in AuditoriaCambio.objects.filter(
         entidad=ENTIDAD_EQUIPO, accion=ACCION_CAMBIO_SOCIO_EQUIPO

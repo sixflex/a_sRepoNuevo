@@ -62,11 +62,11 @@ class RepararRutaTests(TestCase):
         seccion_ruta = SeccionRuta.objects.get(seccion=self.seccion)
         self.assertEqual(seccion_ruta.ruta_version, vigente)
         self.assertEqual(seccion_ruta.actividades.count(), 23)
-        # Lo marcado en una actividad con el mismo número y nombre se conserva.
+
         self.assertIsNotNone(seccion_ruta.actividades.get(ruta_actividad__orden=1).fecha_completada)
         self.assertTrue(get_user_model().objects.filter(username="samuel").exists())
 
-        # Repetirlo no crea otra versión.
+
         call_command("cargar_ruta_docente", reparar=True, stdout=StringIO())
         self.assertEqual(RutaVersion.objects.count(), 2)
 

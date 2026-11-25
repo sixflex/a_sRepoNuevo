@@ -85,7 +85,7 @@ class IdentidadInstitucional(models.Model):
 
     entra_oid = models.CharField(max_length=80)
 
-    # Siempre en minúsculas.
+
     correo = models.EmailField(max_length=254, unique=True)
 
     es_principal = models.BooleanField(default=False)

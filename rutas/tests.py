@@ -200,7 +200,7 @@ class RutaDocenteTestCase(TestCase):
         Criterio de aceptación: el porcentaje cuenta solo las obligatorias.
         Las actividades opcionales completadas no alteran el porcentaje.
         """
-        # Configurar 2 obligatorias y 2 opcionales para una versión simplificada
+
         plantilla_test = RutaPlantilla.objects.create(nombre="Ruta Test PV03", activo=True)
         version_test = RutaVersion.objects.create(plantilla=plantilla_test, numero_version=1, estado="BORRADOR")
 
@@ -217,37 +217,37 @@ class RutaDocenteTestCase(TestCase):
             ruta_version=version_test, etapa="E1", nombre="Opcional 2", orden=4, es_obligatoria=False
         )
 
-        # Las actividades se arman en borrador y luego se publica la versión.
+
         version_test.estado = "ACTIVA"
         version_test.save(update_fields=["estado"])
 
         seccion = self.crear_seccion("RUTA_PV03_1")
         seccion_ruta = asignar_ruta_a_seccion(seccion, version_test)
 
-        # Inicialmente 0%
+
         self.assertEqual(recalcular_avance(seccion_ruta), Decimal("0.00"))
 
         sa_ob1 = SeccionActividad.objects.get(seccion_ruta=seccion_ruta, ruta_actividad=act_ob1)
         sa_ob2 = SeccionActividad.objects.get(seccion_ruta=seccion_ruta, ruta_actividad=act_ob2)
         sa_op1 = SeccionActividad.objects.get(seccion_ruta=seccion_ruta, ruta_actividad=act_op1)
 
-        # Completar actividad opcional: el avance sigue en 0%
+
         sa_op1.completada_por_docente = self.docente
         sa_op1.save()
         self.assertEqual(recalcular_avance(seccion_ruta), Decimal("0.00"))
 
-        # Completar una actividad obligatoria: avance es 50% (1 de 2 obligatorias)
+
         sa_ob1.completada_por_docente = self.docente
         sa_ob1.save()
         self.assertEqual(recalcular_avance(seccion_ruta), Decimal("50.00"))
 
-        # Completar la segunda obligatoria: avance es 100% (2 de 2 obligatorias)
+
         sa_ob2.completada_por_docente = self.docente
         sa_ob2.save()
         self.assertEqual(recalcular_avance(seccion_ruta), Decimal("100.00"))
 
-        # Docente puede completar la ruta porque todas las obligatorias están completas,
-        # aunque la opcional 2 permanezca pendiente
+
+
         self.client.force_login(self.user_docente)
         url_completar = reverse("rutas:completar_ruta", kwargs={"seccion_ruta_id": seccion_ruta.id})
         resp = self.client.post(url_completar)
@@ -285,16 +285,16 @@ class RutaDocenteTestCase(TestCase):
         sa1.completada_por_docente = self.docente
         sa1.save()
 
-        # Con 2 obligatorias y 1 completada -> 50%
+
         self.assertEqual(recalcular_avance(seccion_ruta), Decimal("50.00"))
 
-        # La versión publicada no se puede modificar
+
         act2.es_obligatoria = False
         with self.assertRaises(ValidationError):
             act2.save()
 
-        # Se cambia la configuración en BD (sin tocar código) en una versión nueva:
-        # act2 pasa a ser opcional
+
+
         version_nueva = crear_nueva_version_ruta(version_test)
         act2_nueva = RutaActividad.objects.get(ruta_version=version_nueva, orden=2)
         act2_nueva.es_obligatoria = False
@@ -310,7 +310,7 @@ class RutaDocenteTestCase(TestCase):
         sa1_nueva.completada_por_docente = self.docente
         sa1_nueva.save()
 
-        # Al visitar la ruta nueva, hay solo 1 obligatoria completada de 1 -> 100%
+
         self.client.force_login(self.user_docente)
         url_detalle = reverse("rutas:detalle_ruta_docente", kwargs={"seccion_ruta_id": seccion_ruta_nueva.id})
         resp = self.client.get(url_detalle)
@@ -319,7 +319,7 @@ class RutaDocenteTestCase(TestCase):
         seccion_ruta_nueva.refresh_from_db()
         self.assertEqual(seccion_ruta_nueva.porcentaje_final, Decimal("100.00"))
 
-        # La sección que ya usaba la versión anterior conserva su avance
+
         self.assertEqual(recalcular_avance(seccion_ruta), Decimal("50.00"))
 
     def test_subir_evidencia_no_depende_de_ordenes_fijados(self):
@@ -358,8 +358,8 @@ class RutaDocenteTestCase(TestCase):
         Verifica que cargar_ruta_docente configure adecuadamente obligatorias
         y opcionales según PV-03.
         """
-        # setUp ya publicó una ruta con el mismo nombre; se renombra para que
-        # el comando cargue la suya desde cero.
+
+
         self.plantilla.nombre = "Ruta de prueba setUp"
         self.plantilla.save(update_fields=["nombre"])
 
@@ -373,17 +373,17 @@ class RutaDocenteTestCase(TestCase):
         actividades = RutaActividad.objects.filter(ruta_version=version_cargada)
         self.assertEqual(actividades.count(), 23)
 
-        # Actividades opcionales: 10 y 18
+
         ordenes_opcionales = list(
             actividades.filter(es_obligatoria=False).values_list("orden", flat=True).order_by("orden")
         )
         self.assertEqual(ordenes_opcionales, [10, 18])
 
-        # Recurso Canvas en actividad 1
+
         act_1 = actividades.get(orden=1)
         self.assertEqual(act_1.recurso_url, "https://canvas.uautonoma.cl")
 
-        # Volver a correr el comando no modifica la versión publicada
+
         call_command("cargar_ruta_docente")
         self.assertEqual(
             RutaActividad.objects.filter(ruta_version=version_cargada).count(), 23
@@ -832,8 +832,8 @@ class CierreYExpedienteOriginalTestCase(TestCase):
             es_principal=True,
             activo=True,
         )
-        # El socio trabaja con un equipo de la sección (una participación
-        # sin equipo es solo un socio elegido por el docente, RF-SC-03).
+
+
         ParticipacionSocio.objects.create(
             socio=self.socio,
             seccion=self.seccion,
@@ -904,7 +904,7 @@ class CierreYExpedienteOriginalTestCase(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn(f"/rutas/cierre/{invitacion.token}/asistire/", mail.outbox[0].body)
         self.assertIn(f"/rutas/cierre/{invitacion.token}/no-asistire/", mail.outbox[0].body)
-        # La invitación no completa ni bloquea la Ruta.
+
         self.actividad_cierre.refresh_from_db()
         self.assertEqual(self.actividad_cierre.estado, "PENDIENTE")
 
@@ -987,7 +987,7 @@ class CierreYExpedienteOriginalTestCase(TestCase):
         )
 
         contenido = zipfile.ZipFile(io.BytesIO(b"".join(respuesta.streaming_content)))
-        # La Ruta sigue abierta: el ZIP trae las evidencias, todavía sin la ficha.
+
         self.assertEqual(contenido.namelist(), ["1 - Etapa de prueba/01 - Organizar el evento de cierre/acuerdo.pdf"])
 
     @patch("archivos.services.obtener_storage_privado", return_value=InMemoryStorage())
@@ -1086,8 +1086,8 @@ class CierreYExpedienteTestCase(TestCase):
             es_principal=True,
             activo=True,
         )
-        # El socio trabaja con un equipo de la sección (una participación
-        # sin equipo es solo un socio elegido por el docente, RF-SC-03).
+
+
         ParticipacionSocio.objects.create(
             socio=self.socio,
             seccion=self.seccion,
@@ -1137,7 +1137,7 @@ class CierreYExpedienteTestCase(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn(f"/rutas/cierre/{invitacion.token}/asistire/", mail.outbox[0].body)
         self.assertIn(f"/rutas/cierre/{invitacion.token}/no-asistire/", mail.outbox[0].body)
-        # La invitación no completa ni bloquea la Ruta.
+
         self.actividad_cierre.refresh_from_db()
         self.assertEqual(self.actividad_cierre.estado, "PENDIENTE")
 
@@ -1220,7 +1220,7 @@ class CierreYExpedienteTestCase(TestCase):
         )
 
         contenido = zipfile.ZipFile(io.BytesIO(b"".join(respuesta.streaming_content)))
-        # La Ruta sigue abierta: el ZIP trae las evidencias, todavía sin la ficha.
+
         self.assertEqual(contenido.namelist(), ["1 - Etapa de prueba/01 - Organizar el evento de cierre/acuerdo.pdf"])
 
 class VersionadoRutaTestCase(TestCase):
@@ -1394,7 +1394,7 @@ class AuditoriaYPruebasAvanzadasRutaTestCase(SeguimientoRutaTestCase):
         self.client.force_login(self.usuario_docente)
         url = reverse("rutas:completar_actividad", args=[self.actividad_obligatoria.id])
 
-        # Marcar y luego desmarcar: un registro por cada cambio.
+
         self.client.post(url)
         self.client.post(url)
 
@@ -1434,7 +1434,7 @@ class AuditoriaYPruebasAvanzadasRutaTestCase(SeguimientoRutaTestCase):
             desmarcar.valores_nuevos_json.get("fecha_completada")
         )
 
-        # Verificar las fechas de auditoría.
+
         self.assertIsNotNone(marcar.fecha)
         self.assertIsNotNone(desmarcar.fecha)
         self.assertGreaterEqual(desmarcar.fecha, marcar.fecha)
@@ -1442,7 +1442,7 @@ class AuditoriaYPruebasAvanzadasRutaTestCase(SeguimientoRutaTestCase):
     def test_auditoria_al_subir_y_eliminar_evidencia(self, _storage):
         self.client.force_login(self.usuario_docente)
 
-        # 1. Subir evidencia
+
         self.client.post(
             reverse("rutas:subir_evidencia", args=[self.actividad_obligatoria.id]),
             {"archivo": SimpleUploadedFile("informe.pdf", b"%PDF-1.4", content_type="application/pdf")},
@@ -1457,7 +1457,7 @@ class AuditoriaYPruebasAvanzadasRutaTestCase(SeguimientoRutaTestCase):
         ).first()
         self.assertIsNotNone(auditoria_subir)
 
-        # 2. Eliminar evidencia
+
         self.client.post(reverse("rutas:eliminar_evidencia", args=[evidencia.id]))
         auditoria_eliminar = AuditoriaCambio.objects.filter(
             entidad="Evidencia",
@@ -1465,7 +1465,7 @@ class AuditoriaYPruebasAvanzadasRutaTestCase(SeguimientoRutaTestCase):
             accion="ELIMINAR_EVIDENCIA",
         ).first()
         self.assertIsNotNone(auditoria_eliminar)
-        #verificar que exista una sola auditoria por eliminacion.
+
         self.assertEqual(
             AuditoriaCambio.objects.filter(
                 entidad="Evidencia",
@@ -1478,7 +1478,7 @@ class AuditoriaYPruebasAvanzadasRutaTestCase(SeguimientoRutaTestCase):
     def test_auditoria_al_completar_ruta(self):
         self.client.force_login(self.usuario_docente)
 
-        # Marcar actividad obligatoria para permitir el cierre
+
         self.actividad_obligatoria.completada_por_docente = self.docente
         self.actividad_obligatoria.estado = "COMPLETADA"
         self.actividad_obligatoria.save()

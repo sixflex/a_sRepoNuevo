@@ -10,7 +10,7 @@ class Command(BaseCommand):
     help = "Carga el Registro de Socio Comunitario A+S 2026"
 
     def handle(self, *args, **options):
-        # Se busca por código y no por id: los ids cambian en cada base de datos.
+
         version = crear_formulario(DEFINICION)
 
         if version is None:

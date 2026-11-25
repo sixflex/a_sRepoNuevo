@@ -37,7 +37,7 @@ class CorreoConfigurableBackend(BaseEmailBackend):
         if self.configuracion:
             remitente = config.remitente_de(self.configuracion)
             for mensaje in email_messages:
-                # Gmail y Microsoft solo dejan enviar como la cuenta que inició sesión.
+
                 mensaje.from_email = remitente
                 if self.configuracion.responder_a and not mensaje.reply_to:
                     mensaje.reply_to = [self.configuracion.responder_a]

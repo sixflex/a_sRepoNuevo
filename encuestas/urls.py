@@ -5,7 +5,7 @@ from . import views
 app_name = "encuestas"
 
 urlpatterns = [
-    # Coordinación: constructor de formularios (HU-09)
+
     path("", views.lista_formularios, name="lista"),
     path("nuevo/", views.crear_formulario, name="crear"),
     path("version/<int:version_id>/", views.editor, name="editor"),
@@ -28,7 +28,7 @@ urlpatterns = [
     path("pregunta/<int:pregunta_id>/duplicar/", views.duplicar_pregunta, name="duplicar_pregunta"),
     path("pregunta/<int:pregunta_id>/mover/<str:direccion>/", views.mover_pregunta, name="mover_pregunta"),
 
-    # Público: responder por enlace o QR
+
     path("f/<uuid:token>/", views.responder, name="responder"),
     path("f/<uuid:token>/enviado/", views.enviado, name="enviado"),
     path("fondo/<int:plantilla_id>/<str:firma>/", views.fondo_formulario, name="fondo"),

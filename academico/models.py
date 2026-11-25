@@ -82,7 +82,7 @@ class Carrera(models.Model):
     nombre = models.CharField(max_length=180)
     activo = models.BooleanField()
 
-    # Oferta académica: campus donde se imparte la carrera (puede ser más de uno).
+
     campus = models.ManyToManyField(
         Campus,
         through="CarreraCampus",
@@ -376,4 +376,4 @@ class SeccionDocente(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.seccion} - {self.docente}"
+        return f"{self.seccion} - {self.docente}"

@@ -14,8 +14,8 @@ from academico.models import (PeriodoAcademico, Seccion)
 
 from publico.models import Noticia
 
-# Formulario unificado de los centros de negocio (Investigación de Mercados,
-# Consultoría Empresas, Gestión de Procesos): la convocatoria a emprendedores.
+
+
 CODIGO_CONVOCATORIA_CENTROS = "FICHA_EMPRENDEDORES"
 
 
@@ -44,7 +44,7 @@ def inicio(request):
 
     from . import indicadores
 
-    # Qué eligió mostrar el Coordinador (RF-PUB-01); lo apagado ni se calcula.
+
     portal = configuracion_portal()
     filtros = indicadores.filtros_publicos(request.GET)
 
@@ -152,7 +152,7 @@ def panel_coordinacion(request):
         },
     ]
 
-    # El mapa del coordinador sí trae dirección, contacto e intervenciones de cada socio.
+
     mapa = indicadores.mapa(filtros, detalle=True)
 
     return render(
@@ -343,7 +343,7 @@ def panel_docente(request):
     for seccion in secciones:
         seccion.recordatorio_ruta = recordatorios.get(seccion.id)
 
-    # Una tarjeta por asignatura y período, con sus secciones adentro.
+
     grupos = []
     for seccion in secciones:
         clave = (seccion.periodo_id, seccion.asignatura_id)
@@ -423,7 +423,7 @@ def inicio_docente(request):
     total_pendientes = 0
 
     for ruta in rutas:
-        # Recordatorio visible en el panel, sin correo programado (RF-RUT-04).
+
         ruta.recordatorios = []
 
         if ruta.estado != "COMPLETADA":
@@ -462,8 +462,8 @@ def inicio_docente(request):
 
     from cartas.services import avisos_cartas_docente
 
-    # Rutas agrupadas por asignatura (y período), como en Mis secciones:
-    # dos secciones del mismo ramo se ven juntas con su avance promedio.
+
+
     from core.indicadores import nivel_avance
 
     grupos_rutas = []
@@ -492,9 +492,9 @@ def inicio_docente(request):
         grupo["pendientes"] = sum(r.pendientes_obligatorias for r in grupo["rutas"])
         grupo["completadas"] = sum(r.estado == "COMPLETADA" for r in grupo["rutas"])
 
-    # Promedio de sus Rutas (pedido del cliente): cada sección pesa lo mismo.
-    # Se mide en el período vigente para que las Rutas de semestres ya
-    # cerrados no inflen el número; si no tiene Rutas en él, usa todas.
+
+
+
     from rutas.services import promedio_rutas
 
     vigente = PeriodoAcademico.objects.filter(estado="Activo").order_by("-anio", "-id").first()

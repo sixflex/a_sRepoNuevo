@@ -32,34 +32,34 @@ from rutas.services import con_avance, porcentaje_avance
 from socios.models import ClasificacionSocio, Comuna, ParticipacionSocio, SocioComunitario
 
 
-# Parámetros GET del panel de filtros, en el orden en que se muestran los chips.
+
 FILTROS = [
     "sede", "campus", "anio", "periodo", "facultad", "carrera", 
     "asignatura", "docente", "socio", "comuna", "estado"
 ]
 
-# Filtros del mapa del portal público (RF-PUB-01 y RF-IND-03): sin período ni asignatura.
-# "clasificacion" es el tipo de socio: el dato normalizado más cercano al "tipo de
-# actividad" de RF-PUB-01, que no existe en el modelo (CDE-109).
+
+
+
 FILTROS_PUBLICOS = ["sede", "campus", "anio", "facultad", "carrera", "comuna", "clasificacion"]
 
-# Marca que indica que el usuario ya eligió filtros (aunque los haya quitado
-# todos): sin ella el panel parte en el período vigente.
+
+
 MARCA_FILTRADO = "f"
 
-# Semáforo del avance de la Ruta (texto además del color, por accesibilidad).
+
 UMBRAL_MEDIO = 40
 UMBRAL_ALTO = 80
 
-# Encuestas de evaluación A+S (códigos fijos: la Ruta de Cielo depende de ellos).
+
 ENCUESTAS_SATISFACCION = [
     ("EVALUACION_AS_ESTUDIANTES", "Estudiantes"),
     ("EVALUACION_AS_DOCENTES", "Docentes"),
     ("EVALUACION_AS_SOCIOS", "Socios comunitarios"),
 ]
 
-# Dimensiones de las encuestas (configuracion_json["dimension"] de cada fila
-# de las cuadrículas 1 a 5), en el orden de la tabla de promedios.
+
+
 DIMENSIONES = [
     ("aprendizaje", "Aprendizaje"),
     ("reflexion", "Reflexión"),
@@ -68,12 +68,12 @@ DIMENSIONES = [
     ("universidad", "Relación con la Universidad"),
 ]
 
-# Respuestas que cuentan como satisfechas en la valoración general.
+
 SATISFECHO_DESDE = 4
 
-# El ítem de perfil de egreso está en la valoración general de estudiantes y
-# docentes. El cliente dijo que ese dato "no le dice nada" en el dashboard de
-# Talca; por ahora se incluye, y basta con poner False para excluirlo.
+
+
+
 INCLUIR_PERFIL_EGRESO = True
 
 
@@ -82,9 +82,9 @@ def _entero(valor):
     return int(valor) if valor.isdigit() else None
 
 
-# ---------------------------------------------------------------------------
-# Filtros
-# ---------------------------------------------------------------------------
+
+
+
 
 def leer_filtros(get):
     """
@@ -217,11 +217,11 @@ def opciones_filtros():
             .distinct()
             .order_by("nombre")
         ),
-        # 1. Filtramos a los docentes activos y los ordenamos alfabéticamente
+
         "docentes": Docente.objects.filter(activo=True).order_by("nombres", "apellidos"),
-        # 2. Traemos a todos los socios comunitarios
+
         "socios": SocioComunitario.objects.all().order_by("nombre_organizacion"),
-        # 3. Agregamos los estados fijos (cartas o rutas)
+
         "estados": [
             {"id": "PENDIENTE", "nombre": "Pendiente"}, 
             {"id": "APROBADA", "nombre": "Aprobada"},
@@ -304,9 +304,9 @@ def _participaciones(filtros, periodo=None, anio=None):
     return participaciones
 
 
-# ---------------------------------------------------------------------------
-# Tarjetas
-# ---------------------------------------------------------------------------
+
+
+
 
 def _seccion_carreras(filtros, secciones):
     seccion_carreras = SeccionCarrera.objects.filter(seccion__in=secciones)
@@ -408,9 +408,9 @@ def tarjetas(filtros):
     ]
 
 
-# ---------------------------------------------------------------------------
-# Avance de la Ruta A+S por carrera (RF-RUT-03, RF-RUT-05)
-# ---------------------------------------------------------------------------
+
+
+
 
 def nivel_avance(porcentaje):
     if porcentaje >= UMBRAL_ALTO:
@@ -471,16 +471,16 @@ def avance_por_carrera(filtros):
     return sorted(resultado, key=lambda c: (c["porcentaje"], c["carrera"]))
 
 
-# ---------------------------------------------------------------------------
-# Satisfacción (encuestas de evaluación A+S)
-# ---------------------------------------------------------------------------
+
+
+
 
 def _respuestas_escala(codigos, filtros):
     from encuestas.models import RespuestaPregunta
 
-    # La encuesta se busca por la versión de la pregunta (es la misma de la
-    # respuesta): así PostgreSQL parte de las pocas preguntas de escala y usa
-    # el índice de pregunta_id, en vez de recorrer todas las respuestas.
+
+
+
     respuestas = RespuestaPregunta.objects.filter(
         pregunta__version__plantilla__codigo__in=codigos,
         pregunta__tipo="ESCALA",
@@ -493,8 +493,8 @@ def _respuestas_escala(codigos, filtros):
     anio = filtros.get("anio") or (periodo.anio if periodo else None)
 
     if periodo:
-        # Las respuestas por enlace público no siempre traen el período: se
-        # ubican por su fecha (las fechas del período, o al menos su año).
+
+
         if periodo.fecha_inicio and periodo.fecha_fin:
             por_fecha = Q(
                 respuesta__fecha_envio__date__range=(periodo.fecha_inicio, periodo.fecha_fin),
@@ -542,7 +542,7 @@ def satisfaccion(filtros):
     codigo_plantilla = "pregunta__version__plantilla__codigo"
     respuestas = _respuestas_escala([codigo for codigo, _ in ENCUESTAS_SATISFACCION], filtros)
 
-    # Las tres encuestas van en la misma consulta, agrupadas por su código.
+
     generales = respuestas.filter(pregunta__configuracion_json__valoracion_general=True)
     if not INCLUIR_PERFIL_EGRESO:
         generales = generales.exclude(pregunta__configuracion_json__perfil_egreso=True)
@@ -554,7 +554,7 @@ def satisfaccion(filtros):
             personas=Count("respuesta", distinct=True),
         ).order_by()
     }
-    # Número de la pregunta de la primera respuesta de cada encuesta.
+
     numeros = {}
     for fila in (
         generales.values(codigo_plantilla, "pregunta__configuracion_json__numero")
@@ -563,8 +563,8 @@ def satisfaccion(filtros):
     ):
         numeros.setdefault(fila[codigo_plantilla], fila["pregunta__configuracion_json__numero"])
 
-    # Cada ítem de la valoración general por separado. Se agrupa por el texto
-    # (no por la pregunta) para juntar las respuestas de distintas versiones.
+
+
     preguntas = defaultdict(list)
     for fila in (
         generales.values(codigo_plantilla, "pregunta__texto")
@@ -623,9 +623,9 @@ def satisfaccion(filtros):
     }
 
 
-# ---------------------------------------------------------------------------
-# Mapa territorial (RF-IND-03): agregado por comuna, sin direcciones
-# ---------------------------------------------------------------------------
+
+
+
 
 def mapa(filtros, detalle=False):
     """
@@ -635,8 +635,8 @@ def mapa(filtros, detalle=False):
     punto incluye además sus socios con dirección exacta y contacto principal;
     las intervenciones se revisan en el historial del socio. El portal público lo llama sin detalle (RF-IND-03 CA1).
     """
-    # Solo las combinaciones distintas que se usan, no cada participación: con
-    # años de históricos son miles de filas que no hace falta traer completas.
+
+
     combinaciones = (
         _participaciones(filtros)
         .filter(socio__comuna__lat_centro__isnull=False, socio__comuna__lon_centro__isnull=False)
@@ -668,7 +668,7 @@ def mapa(filtros, detalle=False):
         if anio:
             datos["anios"].add(anio)
 
-    # RF-IND-02: además de los socios únicos, cuántas participaciones tuvieron.
+
     participaciones_por_comuna = dict(
         _participaciones(filtros)
         .filter(socio__comuna_id__in=comunas)
@@ -715,8 +715,8 @@ def mapa(filtros, detalle=False):
     }
 
 
-# Campos que el portal público puede mostrar de cada comuna; el Coordinador elige
-# cuáles (publico/portal.py). Nunca incluye el detalle de los socios.
+
+
 CAMPOS_MAPA_PUBLICO = ["socios", "participaciones", "proyectos", "carreras", "anios"]
 
 
@@ -756,9 +756,9 @@ def _agregar_detalle(socios, socio):
     }
 
 
-# ---------------------------------------------------------------------------
-# Portal público (HU-10, RF-PUB-01): cifras y catálogo, solo agregados
-# ---------------------------------------------------------------------------
+
+
+
 
 def cifras_publicas(filtros):
     """
@@ -831,7 +831,7 @@ def catalogo_publico(filtros):
             "asignatura": asignatura,
             "servicio": servicio,
             "socios": len(datos["socios"]),
-            # Primero las comunas con más socios: la tarjeta muestra solo las primeras.
+
             "comunas": sorted(datos["comunas"], key=lambda c: (-len(datos["comunas"][c]), c)),
             "tipos": sorted(datos["tipos"]),
         }
@@ -843,9 +843,9 @@ def catalogo_publico(filtros):
     return catalogo
 
 
-# ---------------------------------------------------------------------------
-# Evolución por año
-# ---------------------------------------------------------------------------
+
+
+
 
 EVOLUCION_INDICADORES = [
     ("asignaturas", "Asignaturas"),
@@ -884,7 +884,7 @@ def _valores_por_anio(filtros, anios):
     secciones = Seccion.objects.filter(pk__in=_secciones(filtros).filter(periodo__anio__in=anios))
     seccion_carreras = _seccion_carreras(filtros, secciones)
 
-    # Las participaciones históricas sin período cuentan por el año de su inicio.
+
     participaciones = _participaciones(filtros).annotate(
         anio_participacion=Coalesce("periodo__anio", ExtractYear("fecha_inicio")),
     ).filter(anio_participacion__in=anios)

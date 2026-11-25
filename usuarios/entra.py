@@ -47,18 +47,18 @@ ROL_COORDINADOR = "Coordinador"
 ROL_DOCENTE = "Docente"
 ROL_ESTUDIANTE = "Estudiante"
 
-# Namespace fijo: el mismo correo siempre genera el mismo entra_oid de prueba.
+
 _NAMESPACE_OID = uuid.UUID("6f1c7b52-3b0e-4a43-9c55-0a5f6a1d2b10")
 
 _PATRON_CORREO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
-# Cuentas de prueba que se ofrecen en la pantalla simulada.
+
 CUENTAS_PRUEBA = (
     {"correo": "coordinador@uautonoma.cl", "nombre": "Coordinador Prueba", "rol": ROL_COORDINADOR},
     {"correo": "docente@uautonoma.cl", "nombre": "Docente Prueba", "rol": ROL_DOCENTE},
     {"correo": "estudiante@uautonoma.cl", "nombre": "Estudiante Prueba", "rol": ROL_ESTUDIANTE},
-    # La misma persona que docente@uautonoma.cl, con su cuenta cloud. No viene
-    # vinculada: sirve para probar "Vincular otra cuenta" en /cuenta/.
+
+
     {"correo": "docente@cloud.uautonoma.cl", "nombre": "Docente Prueba", "rol": ROL_DOCENTE},
     {"correo": "estudiante@cloud.uautonoma.cl", "nombre": "Estudiante Cloud", "rol": ROL_ESTUDIANTE},
 )
@@ -138,7 +138,7 @@ class ConectorEntraSimulado:
             rol = cuenta["rol"]
             nombre, _, apellido = cuenta["nombre"].partition(" ")
         else:
-            # Cuenta institucional sin rol asignado: entra con el rol de menor privilegio.
+
             rol = ROL_ESTUDIANTE
             nombre, apellido = correo.split("@", 1)[0], ""
 
@@ -155,7 +155,7 @@ class ConectorEntraSimulado:
 def configuracion_microsoft():
     """Datos de la app registrada en Entra ID; faltan → EntraError explicativo."""
     def valor(nombre):
-        # Sin espacios, comillas ni los <> de los ejemplos, que se suelen copiar.
+
         return (getattr(settings, nombre, "") or os.getenv(nombre, "") or "").strip().strip("<>\"' ")
 
     datos = {
@@ -181,7 +181,7 @@ class ConectorEntraMicrosoft:
     con un código y aquí se cambia por el id_token con los datos de la persona.
     """
 
-    SCOPES = ["User.Read"]  # openid, profile y email los agrega msal solo.
+    SCOPES = ["User.Read"]
 
     def __init__(self):
         self.config = configuracion_microsoft()
@@ -215,7 +215,7 @@ class ConectorEntraMicrosoft:
         """Cambia el código que devolvió Microsoft por la identidad de la persona."""
         try:
             resultado = self._app().acquire_token_by_auth_code_flow(flow, dict(parametros.items()))
-        except ValueError as exc:  # state distinto, flujo vencido o repetido
+        except ValueError as exc:
             raise EntraError("El inicio de sesión venció o no es válido. Vuelve a intentarlo.") from exc
 
         if "error" in resultado:
@@ -248,7 +248,7 @@ class ConectorEntraMicrosoft:
         if not nombre:
             nombre, _, apellido = (claims.get("name") or correo.split("@", 1)[0]).partition(" ")
 
-        # El rol real lo decide el portal (services.asignar_roles); Microsoft no lo sabe.
+
         return IdentidadEntra(
             oid=oid, correo=correo, nombre=nombre, apellido=apellido,
             rol=ROL_ESTUDIANTE, tenant_id=tenant,

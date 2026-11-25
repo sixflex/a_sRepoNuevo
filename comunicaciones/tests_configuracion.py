@@ -96,7 +96,7 @@ class PantallaCorreoTests(TestCase):
         guardada = ConfiguracionCorreo.objects.get()
         self.assertTrue(guardada.activo)
         self.assertEqual(guardada.remitente_correo, "jorge@cloud.uautonoma.cl")
-        self.assertEqual(guardada.servidor_smtp, "smtp.office365.com")  # completado por el proveedor
+        self.assertEqual(guardada.servidor_smtp, "smtp.office365.com")
         self.assertNotIn("clave-app", guardada.clave_cifrada)
         self.assertEqual(config.descifrar(guardada.clave_cifrada), "clave-app")
         self.assertIsNotNone(guardada.fecha_verificacion)

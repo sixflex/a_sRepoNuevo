@@ -15,7 +15,7 @@ ANTES = "ANTES"
 DURANTE = "DURANTE"
 DESPUES = "DESPUES"
 
-# Momento -> dinámicas sugeridas en el documento de la Ruta.
+
 DINAMICAS = {
     ANTES: [
         "Jenga: propuestas de mejora y competencias",
@@ -34,9 +34,9 @@ DINAMICAS = {
     ],
 }
 
-# Cómo se hace cada dinámica, según «Propuesta de reflexiones» (el PDF que
-# la Ruta de Jorge enlaza en las tres reflexiones): duración, quiénes, qué
-# pedir a Coordinación y dónde está la ficha de evidencia.
+
+
+
 DETALLE_DINAMICA = {
     "Jenga: propuestas de mejora y competencias":
         "30 min · grupal · pide el Jenga a Coordinación · ficha de evidencia: Anexo 1 (pág. 12)",
@@ -58,7 +58,7 @@ DETALLE_DINAMICA = {
         "20 min · todo el curso · pide las pelotas a Coordinación · ficha: Anexo 12 (pág. 38)",
 }
 
-# Orden de la actividad en la Ruta -> momento de la reflexión.
+
 MOMENTO_POR_ORDEN = {12: ANTES, 15: DURANTE, 17: DESPUES}
 
 

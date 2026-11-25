@@ -161,9 +161,9 @@ def pregunta_selector(preguntas):
     return next((p for p in preguntas if p.tipo == c.SELECTOR_PROGRAMA), None)
 
 
-# ---------------------------------------------------------------------------
-# Estados y edición (CDE-100, CDE-105)
-# ---------------------------------------------------------------------------
+
+
+
 
 def tiene_respuestas(version):
     return version.respuestas.exists()
@@ -427,9 +427,9 @@ def enlace_abierto(enlace, ahora=None):
     return version_abierta(enlace.version, ahora)
 
 
-# ---------------------------------------------------------------------------
-# Orden (CDE-100)
-# ---------------------------------------------------------------------------
+
+
+
 
 def siguiente_orden(queryset):
     return (queryset.aggregate(m=Max("orden"))["m"] or 0) + 1
@@ -592,9 +592,9 @@ def guardar_opciones(pregunta, filas):
     return conservadas
 
 
-# ---------------------------------------------------------------------------
-# Respuestas (CDE-106)
-# ---------------------------------------------------------------------------
+
+
+
 
 def _contexto_desde_enlace(enlace):
     contexto = {}
@@ -637,7 +637,7 @@ def datos_respondente(preguntas, valores, visibles):
         if campo and campo not in datos:
             datos[campo] = str(valores[pregunta.id])
     if datos.get("rut"):
-        # Mismo formato que se guarda, para que la búsqueda de duplicados coincida.
+
         datos["rut"] = normalizar_rut(datos["rut"])
     return datos
 
@@ -744,9 +744,9 @@ def guardar_respuesta(version, preguntas, valores, otros, visibles, seleccion,
     return respuesta
 
 
-# ---------------------------------------------------------------------------
-# Filas exportadas desde Google o Microsoft Forms (carga histórica, datos demo)
-# ---------------------------------------------------------------------------
+
+
+
 
 def normalizar_encabezado(texto):
     """
@@ -799,7 +799,7 @@ def valores_desde_celdas(preguntas, celdas, catalogos=None):
     cada aviso es (pregunta, código, mensaje) y el valor que lo causa se omite.
     """
     valores, otros, seleccion, avisos = {}, {}, {}, []
-    # {formato: [nombres]} leído una vez; quien importa muchas filas lo reutiliza.
+
     catalogos = {} if catalogos is None else catalogos
     for pregunta in preguntas:
         celda = celdas.get(pregunta.id)
@@ -983,9 +983,9 @@ def estadisticas(version, valor_programa=None):
     return resultado
 
 
-# ---------------------------------------------------------------------------
-# Eliminar y duplicar en el constructor
-# ---------------------------------------------------------------------------
+
+
+
 
 def _quitar_reglas_que_apuntan_a(version, pregunta_id):
     """Al borrar una pregunta, las condiciones que dependían de ella se quitan."""
@@ -1110,9 +1110,9 @@ def duplicar_pregunta(pregunta):
     return copia
 
 
-# ---------------------------------------------------------------------------
-# Tema del formulario público: color y foto de fondo
-# ---------------------------------------------------------------------------
+
+
+
 
 def firma_fondo(archivo):
     """Parte de la URL de la foto: no se puede adivinar y cambia si cambia la foto."""

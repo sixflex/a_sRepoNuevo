@@ -22,7 +22,7 @@ from django.core.mail.backends.smtp import EmailBackend as SmtpBackend
 
 logger = logging.getLogger(__name__)
 
-# Servidor y puerto de cada proveedor; "OTRO" los escribe el Coordinador.
+
 SERVIDORES = {
     "MICROSOFT": ("smtp.office365.com", 587, True),
     "GMAIL": ("smtp.gmail.com", 587, True),
@@ -67,7 +67,7 @@ def configuracion_activa():
     """(configuración, clave) si hay una cuenta activa y usable; si no, (None, None)."""
     try:
         configuracion = obtener_configuracion()
-    except Exception:  # tabla aún sin migrar, BD caída: nunca bloquear un envío
+    except Exception:
         logger.warning("No se pudo leer la configuración de correo.", exc_info=True)
         return None, None
     if configuracion is None or not configuracion.activo:
@@ -129,11 +129,11 @@ def probar_conexion(configuracion, clave):
     conexion = conexion_smtp(configuracion, clave)
     try:
         conexion.open()
-    except Exception as error:  # noqa: BLE001 - se informa al Coordinador
+    except Exception as error:
         return explicar_error(error)
     finally:
         try:
             conexion.close()
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
     return None

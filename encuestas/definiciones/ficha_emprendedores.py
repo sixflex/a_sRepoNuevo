@@ -73,7 +73,7 @@ DEFINICION = {
                 'Más de 3 personas',
                 opcion('Otras', otras=True, solo_si=solo([CONSULTORIA])),
             ]),
-            # Lista cerrada para poder agrupar por centro (cliente, 2/11/2026); antes era texto libre.
+
             pregunta('Favor indiquemos a que Centro de Negocios de Sercotec esta asociado, si es que lo esta.', c.LISTA, [
                 *CENTROS,
                 'No estoy asociado a un Centro de Negocios',

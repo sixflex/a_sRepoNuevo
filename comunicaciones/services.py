@@ -23,10 +23,10 @@ class EmailService:
         Servicio común para preparar y enviar correos usando PlantillaCorreo.
         Registra el intento en EnvioCorreo indicando éxito o fallo.
         """
-        # Cuenta elegida en Configuración → Correo de envío, o la del servidor.
+
         remitente_final = remitente or remitente_actual()
 
-        # CDE-345: Validación de sintaxis del destinatario
+
         try:
             validate_email(destinatario)
         except ValidationError:
@@ -114,4 +114,4 @@ class EmailService:
             envio.detalle_error = str(ex)
 
         envio.save()
-        return envio
+        return envio

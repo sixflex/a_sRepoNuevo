@@ -8,7 +8,7 @@ def puede_descargar_archivo(user, archivo):
     if user.is_superuser or es_coordinador(user):
         return True
 
-    # Formatos que la Ruta A+S ofrece para descargar (archivo_recurso).
+
     if archivo.actividades_ruta.exists():
         return True
 

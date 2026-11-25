@@ -46,14 +46,14 @@ MESES = (
     "agosto", "septiembre", "octubre", "noviembre", "diciembre",
 )
 
-# Medidas de la planilla Word (márgenes 3 cm, superior 2,5 cm).
+
 LOGO_ANCHO, LOGO_ALTO = 3.2 * cm, 2.5 * cm
 FIRMA_ANCHO, FIRMA_ALTO = 6.2 * cm, 2.6 * cm
 TARJETA_ANCHO, TARJETA_ALTO = 7.6 * cm, 3.6 * cm
 
-# ---------------------------------------------------------------------------
-# Imágenes de la planilla
-# ---------------------------------------------------------------------------
+
+
+
 
 def _rels(zf, parte):
     """{rId: ruta dentro del zip} para una parte de Word (document.xml, header1.xml…)."""
@@ -158,8 +158,8 @@ def _leer_archivo(ruta):
     return archivo.read_bytes()
 
 
-# Imágenes ya leídas de cartas oficiales, por hash del Word: el mismo archivo
-# no se vuelve a abrir en cada carta.
+
+
 _IMAGENES_POR_HASH = {}
 
 
@@ -279,7 +279,7 @@ def _imagen(datos, ancho_max, alto_max, alineacion="CENTER", fondo_transparente=
             BytesIO(datos),
             width=ancho * escala,
             height=alto * escala,
-            # El blanco no tapa lo que hay debajo (la firma va sobre la tarjeta).
+
             mask=[255, 255, 255, 255, 255, 255] if fondo_transparente else None,
         )
     except Exception:
@@ -292,7 +292,7 @@ def _imagen(datos, ancho_max, alto_max, alineacion="CENTER", fondo_transparente=
 class FirmaConTarjeta(Flowable):
     """Firma encima de la tarjeta, montada sobre ella como en la planilla Word."""
 
-    TRASLAPE = 0.35  # parte de la firma que queda sobre la tarjeta
+    TRASLAPE = 0.35
 
     def __init__(self, firma, tarjeta):
         super().__init__()
@@ -311,9 +311,9 @@ class FirmaConTarjeta(Flowable):
         )
 
 
-# ---------------------------------------------------------------------------
-# Texto y PDF
-# ---------------------------------------------------------------------------
+
+
+
 
 def fecha_carta(fecha):
     """'Santiago, 2 de septiembre de 2026'."""
@@ -374,8 +374,8 @@ def construir_pdf(*, fecha, persona_receptora, institucion_receptora, asignatura
     `recursos`: lo que entrega recursos_carta(). Esta función no consulta la
     BD ni lee archivos: solo arma el PDF.
     """
-    # La planilla usa Century Gothic, que no viene en los servidores Linux; se
-    # usa Helvetica en todos lados para que la carta salga igual en cualquier PC.
+
+
     normal, negrita = "Helvetica", "Helvetica-Bold"
 
     cuerpo = ParagraphStyle("Cuerpo", fontName=normal, fontSize=11, leading=14, spaceAfter=7)
@@ -480,11 +480,11 @@ def construir_pdf(*, fecha, persona_receptora, institucion_receptora, asignatura
         bottomMargin=1.25 * cm,
         title="Carta de Presentación",
         author="Coordinación Aprendizaje + Servicio",
-        # La final sale protegida contra cambios; el borrador no hace falta.
+
         encrypt=_proteccion() if proteger and not borrador else None,
     )
-    # La carta oficial ocupa una sola página: si no cabe (nombres muy largos),
-    # se achica un poco en vez de pasar la firma a una segunda hoja.
+
+
     pagina = KeepInFrame(documento.width, documento.height, contenido, mode="shrink")
     pie = _marca_borrador if borrador else (lambda canvas, doc: None)
     documento.build([pagina], onFirstPage=pie, onLaterPages=pie)

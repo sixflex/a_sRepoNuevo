@@ -22,10 +22,10 @@ from .models import IdentidadInstitucional, Rol
 SESION_IDENTIDAD = "identidad_id"
 SESION_AVISO_OCULTO = "aviso_vincular_oculto"
 
-# Entre más arriba, más permisos. Al fusionar se conserva el rol más alto.
+
 _PRIORIDAD_ROL = (entra.ROL_COORDINADOR, entra.ROL_DOCENTE, entra.ROL_ESTUDIANTE)
 
-# Bitácoras: quedan como ocurrieron, no se reasignan al fusionar.
+
 _SIN_REASIGNAR = {("auditoria", "auditoriacambio"), ("admin", "logentry")}
 
 
@@ -45,7 +45,7 @@ def normalizar_correo(correo):
     return (correo or "").strip().lower()
 
 
-# --- Consultas ---------------------------------------------------------------
+
 
 def identidad_principal(usuario):
     return usuario.identidades.filter(es_principal=True).first()
@@ -135,7 +135,7 @@ def duenio_de_cuenta(identidad_entra):
     return _buscar_usuario_antiguo(identidad_entra), None
 
 
-# --- Escritura ----------------------------------------------------------------
+
 
 def sincronizar_principal(usuario):
     """Copia la identidad principal en Usuario.entra_oid / correo_institucional."""
@@ -256,7 +256,7 @@ def enlazar_docente(usuario):
     docente.usuario = usuario
     docente.save(update_fields=["usuario"])
     usuario.groups.add(Group.objects.get_or_create(name=entra.ROL_DOCENTE)[0])
-    # Quien entró por primera vez con la cuenta cloud quedó como Estudiante.
+
     usuario.groups.remove(*usuario.groups.filter(name=entra.ROL_ESTUDIANTE))
     if usuario.rol is None or usuario.rol.nombre == entra.ROL_ESTUDIANTE:
         usuario.rol = Rol.objects.get_or_create(nombre=entra.ROL_DOCENTE)[0]
@@ -302,7 +302,7 @@ def obtener_o_crear_usuario_por_identidad(identidad_entra):
             origen=IdentidadInstitucional.INICIAL, ultimo_acceso=ahora,
         )
     else:
-        # Encontrada por correo: se actualiza al oid/tenant que entrega Entra.
+
         identidad.entra_oid = identidad_entra.oid
         identidad.tenant_id = identidad_entra.tenant_id
         identidad.fecha_ultimo_acceso = ahora
@@ -310,7 +310,7 @@ def obtener_o_crear_usuario_por_identidad(identidad_entra):
 
     sincronizar_principal(usuario)
 
-    # El menú lateral y los decoradores trabajan con grupos de Django.
+
     if not usuario.groups.exists():
         usuario.groups.add(Group.objects.get_or_create(name=identidad_entra.rol)[0])
 
@@ -359,7 +359,7 @@ def marcar_principal(usuario, identidad, request=None):
     anterior = identidad_principal(usuario)
     if anterior and anterior.pk == identidad.pk:
         return identidad
-    # Primero se quita la anterior: solo puede haber una principal.
+
     usuario.identidades.filter(es_principal=True).update(es_principal=False)
     identidad.es_principal = True
     identidad.save(update_fields=["es_principal"])
@@ -391,7 +391,7 @@ def desvincular_identidad(usuario, identidad, identidad_en_uso=None, request=Non
     _auditar(request, usuario, "DESVINCULAR_CUENTA", {"correo": correo}, None)
 
 
-# --- Fusión -------------------------------------------------------------------
+
 
 def _relaciones_con_usuario():
     """Relaciones (FK, OneToOne, M2M) de otros modelos que apuntan a Usuario."""
@@ -474,7 +474,7 @@ def fusionar_usuarios(origen, destino, request=None, cuenta_confirmada=None):
             campo = relacion.field.name
             relacion.related_model._base_manager.filter(**{campo: origen}).update(**{campo: destino})
 
-    # Grupos y permisos: se suman. Si queda con un rol de trabajo, deja de ser Estudiante.
+
     destino.groups.add(*origen.groups.all())
     destino.user_permissions.add(*origen.user_permissions.all())
     if destino.groups.filter(name__in=[entra.ROL_COORDINADOR, entra.ROL_DOCENTE]).exists():
@@ -484,7 +484,7 @@ def fusionar_usuarios(origen, destino, request=None, cuenta_confirmada=None):
 
     origen.identidades.update(usuario=destino, es_principal=False)
 
-    # El origen se libera de sus datos únicos para que el login no lo vuelva a encontrar.
+
     username_origen = origen.username
     origen.activo = False
     origen.is_active = False
@@ -496,7 +496,7 @@ def fusionar_usuarios(origen, destino, request=None, cuenta_confirmada=None):
     if cuenta_confirmada is not None:
         identidad = _buscar_identidad(cuenta_confirmada)
         if identidad is None:
-            # El origen era un usuario antiguo, sin identidades.
+
             _crear_identidad(
                 destino, correo=cuenta_confirmada.correo, oid=cuenta_confirmada.oid,
                 tenant_id=cuenta_confirmada.tenant_id,
@@ -540,7 +540,7 @@ def _auditar(request, usuario, accion, anteriores, nuevos):
     )
 
 
-# --- Aviso en el Inicio -------------------------------------------------------
+
 
 def aviso_vincular_cuenta(request):
     """

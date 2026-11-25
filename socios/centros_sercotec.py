@@ -16,7 +16,7 @@ import unicodedata
 
 PREFIJO = "Centro de Negocios Sercotec"
 
-# Solo el nombre del lugar; el nombre completo es PREFIJO + lugar.
+
 LUGARES = [
     "Curepto",
     "El Bosque",
@@ -39,10 +39,10 @@ LUGARES = [
 
 CENTROS = [f"{PREFIJO} {lugar}" for lugar in LUGARES]
 
-# Para los formularios: lista desplegable con los centros.
+
 OPCIONES = [(centro, centro) for centro in CENTROS]
 
-# Abreviaturas que se ven en los textos libres.
+
 _ABREVIATURAS = {
     "stgo": "santiago",
     "stgo centro": "santiago",
@@ -53,7 +53,7 @@ _ABREVIATURAS = {
     "sjm": "san jose de maipo",
 }
 
-# Palabras que no identifican el centro ("CDN", "Centro de Negocios", "Sercotec"...).
+
 _RUIDO = re.compile(r"\b(centros?|de|del|negocios?|sercotec|cdn|cn|sede|oficina)\b")
 
 

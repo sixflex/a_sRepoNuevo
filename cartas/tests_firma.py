@@ -22,7 +22,7 @@ from cartas import plantilla_oficial
 
 
 def setUpModule():
-    # Sin compresión, el texto de la carta se puede buscar directo en el PDF.
+
     global _COMPRESION
     _COMPRESION = rl_config.pageCompression
     rl_config.pageCompression = 0
@@ -98,7 +98,7 @@ class LeerPlanillaTests(SimpleTestCase):
         imagenes = plantilla_oficial.leer_imagenes_planilla(_planilla_docx())
         self.assertIsNotNone(imagenes["logo"])
         self.assertIsNotNone(imagenes["tarjeta"])
-        # La firma trae un recorte del 10 % a la izquierda, como hace Word.
+
         self.assertEqual(PilImage.open(BytesIO(imagenes["firma"])).size, (360, 150))
         self.assertEqual(PilImage.open(BytesIO(imagenes["tarjeta"])).getpixel((5, 5))[:3], (0, 128, 0))
 
@@ -177,7 +177,7 @@ class PdfCartaTests(SimpleTestCase):
 
     def test_borrador_no_lleva_firma_y_se_marca_como_borrador(self):
         pdf = _pdf(borrador=True, recursos=self.recursos)
-        self.assertEqual(_imagenes_pdf(pdf), 1)  # solo el logo
+        self.assertEqual(_imagenes_pdf(pdf), 1)
         self.assertIn("BORRADOR", _texto_pdf(pdf))
 
     def test_sin_firma_ni_tarjeta_firma_coordinacion_en_texto(self):
@@ -202,7 +202,7 @@ class PdfCartaTests(SimpleTestCase):
     def test_carta_final_queda_protegida_contra_cambios(self):
         pdf = _pdf(borrador=False, recursos=self.recursos, proteger=True)
         self.assertIn(b"/Encrypt", pdf)
-        self.assertNotIn(b"Santiago, 2 de septiembre", pdf)  # el texto va cifrado
+        self.assertNotIn(b"Santiago, 2 de septiembre", pdf)
 
     def test_borrador_no_se_protege(self):
         pdf = _pdf(borrador=True, recursos=self.recursos, proteger=True)

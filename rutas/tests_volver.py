@@ -16,7 +16,7 @@ class VolverRutaDocenteTests(SimpleTestCase):
     def test_desde_inicio_vuelve_al_inicio_aunque_despues_se_recargue(self):
         sesion = SessionStore()
         self.assertEqual(self._volver(sesion, desde="inicio")[1], "Volver al inicio")
-        # Marcar una actividad vuelve a la Ruta sin el parámetro: se recuerda.
+
         url, texto = self._volver(sesion)
         self.assertEqual(texto, "Volver al inicio")
         self.assertEqual(url, views.reverse("core:inicio_docente"))

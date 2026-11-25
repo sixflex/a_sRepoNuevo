@@ -29,7 +29,7 @@ def enviar_correo_planificacion(request, enlace, reenvio=False):
             "académica A+S."
         )
 
-    # La vigencia se muestra en hora de Chile, no en UTC.
+
     expiracion = (
         timezone.localtime(enlace.fecha_expiracion).strftime("%d/%m/%Y %H:%M")
         if enlace.fecha_expiracion

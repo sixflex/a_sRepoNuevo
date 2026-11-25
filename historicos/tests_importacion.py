@@ -108,7 +108,7 @@ class ImportarRegistroSociosTests(TestCase):
         codigos = set(observada.errores.values_list("codigo", flat=True))
         self.assertTrue({"COMUNA_NO_RECONOCIDA", "CARRERA_NO_RECONOCIDA", "FUERA_DE_ESCALA", "NUMERO_INVALIDO"} <= codigos)
         self.assertEqual(carga.filas.get(estado=services.FILA_OMITIDA).errores.get().codigo, "SIN_SOCIO")
-        # Se conserva la fila tal como venía (RF-MIG-01 CA2).
+
         self.assertEqual(carga.filas.get(numero_fila=2).datos_raw_json["Columna extra"], "x")
 
     def test_confirmar_crea_socios_y_participaciones_historicas(self):

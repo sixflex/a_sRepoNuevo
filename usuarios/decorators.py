@@ -13,7 +13,7 @@ def coordinador_required(view_func):
         if not request.user.is_authenticated:
             return redirect_to_login(request.get_full_path())
 
-        # Superusuarios pueden acceder para administración/desarrollo    (temporal)
+
         if request.user.is_superuser:
             return view_func(request, *args, **kwargs)
 

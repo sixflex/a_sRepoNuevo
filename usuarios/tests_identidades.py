@@ -83,7 +83,7 @@ class VincularTests(BaseIdentidades):
         self.seccion = Seccion.objects.create(
             periodo=periodo, campus=campus, asignatura=asignatura, nrc="777", seccion="1", estado="ACTIVA",
         )
-        # Coordinación lo registró con su correo @uautonoma.cl.
+
         self.docente = Docente.objects.create(
             rut="11111111-1", nombres="Docente", apellidos="Prueba", correo_institucional=UA, activo=True,
         )
@@ -118,19 +118,19 @@ class VincularTests(BaseIdentidades):
         self.client.logout()
         self.ingresar(CLOUD)
         self.assertEqual(self.usuario_en_sesion(), usuario)
-        # Mismo panel docente: ve su sección.
+
         panel = self.client.get(reverse("core:inicio_docente"))
         self.assertEqual(panel.status_code, 200)
         self.assertEqual(panel.context["total_secciones"], 1)
 
     def test_vincular_no_se_activa_sin_pedirlo_desde_mi_cuenta(self):
         self.ingresar(UA)
-        self.ingresar(CLOUD)  # cambio de cuenta normal, no vinculación
+        self.ingresar(CLOUD)
         self.assertEqual(self.usuario_en_sesion().correo_institucional, CLOUD)
         self.assertEqual(Usuario.objects.count(), 2)
 
     def test_vincular_cuenta_con_datos_pide_confirmar_y_fusiona(self):
-        # Primero entró con la cloud y quedó como otra persona, con datos.
+
         self.ingresar(CLOUD)
         cloud_usuario = self.usuario_en_sesion()
         archivo = Archivo.objects.create(
@@ -177,7 +177,7 @@ class VincularTests(BaseIdentidades):
         self.assertContains(respuesta, "Principal")
         self.assertContains(respuesta, "En uso ahora")
         self.assertContains(respuesta, "Vincular otra cuenta institucional")
-        self.assertContains(respuesta, "Desvincular", count=1)  # no la que está en uso
+        self.assertContains(respuesta, "Desvincular", count=1)
 
     def test_usar_como_principal_y_desvincular(self):
         self.ingresar(UA)
@@ -190,7 +190,7 @@ class VincularTests(BaseIdentidades):
         usuario.refresh_from_db()
         self.assertEqual(usuario.correo_institucional, CLOUD)
 
-        # La que está en uso no se puede quitar.
+
         self.client.post(reverse("usuarios:cuenta_desvincular", args=[ua.pk]))
         self.assertTrue(IdentidadInstitucional.objects.filter(pk=ua.pk).exists())
 
@@ -279,7 +279,7 @@ class FusionarTests(TestCase):
         self.assertFalse(self.origen.is_active)
         self.assertFalse(self.origen.activo)
         self.assertIsNone(self.origen.correo_institucional)
-        # Docente gana sobre Estudiante.
+
         self.assertEqual(list(self.destino.groups.values_list("name", flat=True)), ["Docente"])
         self.assertTrue(AuditoriaCambio.objects.filter(accion="FUSIONAR_CUENTAS").exists())
         self.assertEqual(services.usuario_por_correo(CLOUD), self.destino)
@@ -332,7 +332,7 @@ class SesionEnRegistrosTests(BaseIdentidades):
         self.docente = Docente.objects.create(
             rut="11111111-1", nombres="D", apellidos="P", correo_institucional="profe@uautonoma.cl", activo=True,
         )
-        # El estudiante tiene sus dos cuentas; la principal es la @uautonoma.cl.
+
         self.ingresar("ana@uautonoma.cl")
         self.vincular("ana@cloud.uautonoma.cl")
         self.client.logout()
@@ -362,7 +362,7 @@ class SesionEnRegistrosTests(BaseIdentidades):
             IdentidadInstitucional.objects.get(correo="ana@cloud.uautonoma.cl").entra_oid,
         )
 
-        # Con la otra cuenta no puede registrar un segundo equipo en la sección.
+
         self.client.logout()
         self.ingresar("ana@uautonoma.cl")
         datos.update(clave_idempotencia=str(uuid.uuid4()), correo_1="ana@uautonoma.cl")

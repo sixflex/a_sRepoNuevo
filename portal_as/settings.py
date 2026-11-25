@@ -40,7 +40,7 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 
 
-# Application definition
+
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -99,8 +99,8 @@ TEMPLATES = [
 WSGI_APPLICATION = "portal_as.wsgi.application"
 
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+
+
 
 if os.getenv('DB_NAME') and os.getenv('DB_USER') and os.getenv('DB_PASSWORD'):
     DATABASES = {
@@ -123,8 +123,8 @@ else:
     }
 
 
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
+
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -142,8 +142,8 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
+
+
 
 LANGUAGE_CODE = 'es'
 
@@ -154,8 +154,8 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
+
+
 
 STATIC_URL = '/static/'
 
@@ -165,8 +165,8 @@ STATICFILES_DIRS = [
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
+
+
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = 'usuarios.Usuario'
@@ -175,8 +175,8 @@ LOGIN_URL = "usuarios:login"
 LOGIN_REDIRECT_URL = "core:inicio"
 LOGOUT_REDIRECT_URL = "usuarios:login"
 
-# Private file storage
-# SP3-T02: los binarios se almacenan fuera de PostgreSQL.
+
+
 PRIVATE_STORAGE_BACKEND = os.getenv(
     "PRIVATE_STORAGE_BACKEND",
     "archivos.storage.PrivateFileSystemStorage",
@@ -196,8 +196,8 @@ PRIVATE_STORAGE_MAX_FILE_SIZE_MB = int(
     os.getenv("PRIVATE_STORAGE_MAX_FILE_SIZE_MB", "20")
 )
 
-# El límite de 20 MB de RNF-ARC-01 es para evidencias. Los documentos que
-# Coordinación sube al repositorio público pueden pesar más.
+
+
 REPOSITORIO_MAX_FILE_SIZE_MB = int(
     os.getenv("REPOSITORIO_MAX_FILE_SIZE_MB", "50")
 )
@@ -230,38 +230,38 @@ PRIVATE_STORAGE_ALLOWED_EXTENSIONS = os.getenv(
 
 PRIVATE_STORAGE_RETENTION_YEARS = int(os.getenv("PRIVATE_STORAGE_RETENTION_YEARS", "5"))
 
-# SP6-T05: firma de prueba para el PDF de la carta de presentación.
-# Ruta a una imagen FUERA del repositorio (se define en el .env). No debe estar
-# en static/ ni en media/: solo se lee en el servidor y se incrusta en el PDF.
+
+
+
 CARTA_FIRMA_PRUEBA_PATH = os.getenv("CARTA_FIRMA_PRUEBA_PATH", "")
 
-# Planilla Word oficial de la Carta de Presentación (la que usa el
-# Coordinador para combinar correspondencia). De ella se toman el logo, la
-# firma y la tarjeta (cartas/plantilla_oficial.py). Trae la firma real, así que
-# va FUERA del repositorio; en Render se sube como "Secret File".
+
+
+
+
 CARTA_PLANTILLA_PATH = os.getenv("CARTA_PLANTILLA_PATH", "")
 
-# Ingreso con Microsoft (usuarios/entra.py, guía en CONECTAR_MICROSOFT.md).
-# ENTRA_MODO: "simulado" (desarrollo/demo), "microsoft" (real) o "desactivado".
-# Vacío = "simulado" con DEBUG=True y "desactivado" sin DEBUG.
+
+
+
 ENTRA_MODO = os.getenv("ENTRA_MODO", "")
 ENTRA_TENANT_ID = os.getenv("ENTRA_TENANT_ID", "")
 ENTRA_CLIENT_ID = os.getenv("ENTRA_CLIENT_ID", "")
 ENTRA_CLIENT_SECRET = os.getenv("ENTRA_CLIENT_SECRET", "")
 ENTRA_REDIRECT_URI = os.getenv("ENTRA_REDIRECT_URI", "")
-# Correos que siempre entran como Coordinador, separados por coma.
+
 COORDINADORES = os.getenv("COORDINADORES", "")
 
-# Configuración de Correo
-# Todos los correos pasan por comunicaciones/backend.py: si el Coordinador
-# activó una cuenta en Configuración → Correo de envío se usa esa; si no, este
-# backend del servidor (EMAIL_BACKEND del .env: SMTP o consola).
+
+
+
+
 EMAIL_BACKEND_RESPALDO = os.getenv(
     "EMAIL_BACKEND",
     "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend"
 )
 EMAIL_BACKEND = "comunicaciones.backend.CorreoConfigurableBackend"
-# Llave para cifrar la clave del correo de envío. Vacía = se deriva de SECRET_KEY.
+
 CORREO_CLAVE_CIFRADO = os.getenv("CORREO_CLAVE_CIFRADO", "")
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.office365.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))

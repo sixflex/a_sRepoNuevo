@@ -110,8 +110,8 @@ def con_porcentaje_reprobacion(filas):
     for texto, valor in filas:
         salida.append((texto, valor))
         if texto.startswith("Cantidad de reprobados"):
-            # Jorge (reunión 2026-11-09): para acreditación importan la tasa
-            # de aprobación y la de reprobación del curso.
+
+
             salida.append(("Porcentaje de aprobación (calculado)", porcentaje(estudiantes - reprobados)))
             salida.append(("Porcentaje de reprobación (calculado)", porcentaje(reprobados)))
     return salida
@@ -161,8 +161,8 @@ def datos_ficha(seccion_ruta):
             "proyecto": equipo.proyecto.nombre if equipo.proyecto_id else "",
             "socio": socio.nombre_organizacion if socio else "Sin socio registrado",
             "integrantes": len(equipo.integrantes.all()),
-            # Lo que el grupo ingresó en el registro (13) y en «Trabajo con
-            # el socio» durante el semestre: la Coordinación lo ve sin pedirlo.
+
+
             "contacto": _contacto(socio),
             "beneficiarios": participacion.beneficiarios_estimados if participacion else None,
             "servicio": (participacion.servicio_realizado or "") if participacion else "",
@@ -183,8 +183,8 @@ def datos_ficha(seccion_ruta):
         for etapa in etapas
     ]
 
-    # Solo los formularios de la Ruta; las encuestas de satisfacción van como
-    # conteo (las de estudiantes son anónimas).
+
+
     formularios = []
     for respuesta in (
         RespuestaFormulario.objects

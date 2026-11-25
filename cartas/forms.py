@@ -55,10 +55,10 @@ class SolicitudCartaForm(forms.ModelForm):
         self.fields["cargo_receptor"].label = "Cargo de la persona receptora"
         self.fields["consideraciones"].label = "Consideraciones"
 
-        # Opciones para no escribir todo a mano: el equipo se muestra por su
-        # grupo y su socio, y la institución sugiere los socios de la sección
-        # con su contacto principal. Sigue siendo texto libre porque la carta
-        # puede ir a otra institución (reunión con el cliente 10-11-2026).
+
+
+
+
         self.fields["equipo"].label_from_instance = _nombre_equipo
         self.fields["equipo"].empty_label = "Sin equipo (carta general)"
         self.fields["institucion_receptora"].widget.attrs.update(

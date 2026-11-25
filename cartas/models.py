@@ -178,8 +178,8 @@ class CartaDocumento(models.Model):
         blank=True,
     )
 
-    # Word oficial (con la firma) con que se armó esta carta. Vacío si se usó
-    # la planilla del servidor o la firma de prueba.
+
+
     plantilla = models.ForeignKey(
         "cartas.PlantillaCarta",
         on_delete=models.PROTECT,

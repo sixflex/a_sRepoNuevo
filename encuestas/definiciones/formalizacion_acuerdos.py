@@ -17,7 +17,7 @@ DEFINICION = {
             pregunta("Correo electrónico del representante", c.CORREO),
         ]),
 
-        # Igual que el Excel de Jorge (Formulario_A_S_de Acuerdo con SC_2026, 3 · Servicio y calendarización).
+
         seccion("Servicio y calendarización", [
             pregunta(
                 "Servicio y/o productos entregables que realizarán los estudiantes",

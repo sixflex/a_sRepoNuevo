@@ -88,7 +88,7 @@ class EquipoRegistradoTests(TestCase):
         pedro = equipo.integrantes.get(correo_institucional="pedro@cloud.uautonoma.cl")
         self.assertEqual(pedro.nombres, "Pedro")
 
-        # Un correo que ya está en la sección no se agrega dos veces.
+
         self.client.post(url, {
             "accion": "agregar_integrante", "rut": "5.555.555-5", "nombres": "Otro",
             "apellidos": "Más", "correo": "pedro@cloud.uautonoma.cl",

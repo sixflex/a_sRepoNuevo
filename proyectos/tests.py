@@ -92,7 +92,7 @@ class RegistroEquiposCDE48Tests(TestCase):
             estado="ACTIVA",
         )
 
-        # Segunda sección para probar aislamiento de contexto.
+
         self.seccion_otra = Seccion.objects.create(
             periodo=self.periodo,
             campus=self.campus,
@@ -192,7 +192,7 @@ class RegistroEquiposCDE48Tests(TestCase):
 
             "cantidad_integrantes": "1",
 
-            # RUT chileno válido de prueba
+
             "rut_1": "12.345.678-5",
 
             "nombres_1": "Estudiante",
@@ -517,9 +517,9 @@ class RegistroEquiposCDE48Tests(TestCase):
             2,
         )
 
-# ---------------------------------------------------------------------------
-# Catálogo de proyectos (menú "Proyectos" del Coordinador)
-# ---------------------------------------------------------------------------
+
+
+
 
 from datetime import date as _date
 
@@ -543,7 +543,7 @@ class CatalogoProyectosTests(DatosPortalMixin, _TestCase):
         respuesta = self.client.get(self.url)
         self.assertEqual(respuesta.context["totales"], {"en_curso": 2, "cerrados": 1})
         self.assertContains(respuesta, "Plan de reciclaje")
-        self.assertContains(respuesta, "Panadería Doña Ana")  # interno: muestra el socio
+        self.assertContains(respuesta, "Panadería Doña Ana")
         self.assertNotContains(respuesta, "Huerto comunitario")
 
         respuesta = self.client.get(self.url, {"estado": "cerrados"})

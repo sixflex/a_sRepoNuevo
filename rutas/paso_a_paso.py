@@ -31,9 +31,9 @@ from encuestas import precarga
 from . import acuerdo
 from .services import formularios_qr_de_proceso, obtener_o_crear_enlace_seccion, url_recurso
 
-# Actividades donde la Ruta de Jorge dice "contacte al Coordinador A+S"
-# (1.2 reunión inicial, 1.3 charla, 2.1 reunión con socios, 2.4 instrumento):
-# orden -> (texto del botón, asunto del correo).
+
+
+
 CONTACTO_COORDINACION = {
     2: ("Escribir a Coordinación", "Reunión inicial A+S"),
     3: ("Invitar a Coordinación", "Charla A+S para mi curso"),
@@ -41,10 +41,10 @@ CONTACTO_COORDINACION = {
     9: ("Pedir apoyo a Coordinación", "Apoyo con el instrumento de evaluación A+S"),
 }
 
-# Días que queda abierto el registro de equipos al crearlo (igual que en proyectos).
+
 DIAS_REGISTRO_EQUIPOS = 7
 
-# Orden de la actividad -> código del formulario que se llena en ella.
+
 FORMULARIO_POR_ORDEN = {
     5: precarga.FORMULARIO_PROYECTO,
     11: precarga.FORMALIZACION_ACUERDOS,
@@ -54,7 +54,7 @@ FORMULARIO_POR_ORDEN = {
     23: precarga.RESUMEN_IMPLEMENTACION,
 }
 
-# Lo que se ve bajo el nombre: qué hacer, en una línea.
+
 QUE_HACER = {
     2: "Escríbele a Coordinación para agendar la visita a tu sala y recibir las instrucciones del período.",
     3: "Presenta A+S a tu curso. Si quieres, invita a Coordinación a dar la charla.",
@@ -74,7 +74,7 @@ QUE_HACER = {
     23: "Llena el resumen final. Lo que el sistema ya sabe viene escrito.",
 }
 
-# Actividades donde el cliente pide un archivo (reunión 10-11-2026).
+
 EVIDENCIA_PEDIDA = {
     9: "Sube el instrumento de evaluación.",
     11: "Sube el acuerdo firmado de cada grupo (uno por grupo).",
@@ -91,8 +91,8 @@ TEXTO_BOTON = {
     23: ("Llenar resumen", "bi-pencil-square"),
 }
 
-# Material de apoyo de la Ruta de la Coordinación (PDF interactivo de Jorge
-# Reino): las tres reflexiones enlazan la misma propuesta de dinámicas.
+
+
 MATERIAL_REFLEXION = [
     {"texto": "Propuesta de reflexiones (PDF)", "icono": "bi-file-earmark-pdf",
      "url": "https://drive.google.com/file/d/1WMAUxPFofsuq83kIBsDYFUiGGc43tmy7/view"},
@@ -101,8 +101,8 @@ MATERIAL_REFLEXION = [
     {"texto": "Actividades de reflexión A+S (UC)", "icono": "bi-box-arrow-up-right",
      "url": "https://cddoc.uc.cl/programas/actividades-de-reflexion-as/"},
 ]
-# La infografía de la carta (10) no va: explicaba el formulario de Microsoft,
-# y la carta ahora se pide en el portal con el botón "Pedir carta".
+
+
 MATERIAL_POR_ORDEN = {
     12: MATERIAL_REFLEXION,
     15: MATERIAL_REFLEXION,
@@ -132,8 +132,8 @@ def _version_formulario(ruta_actividad, cache):
     codigo = FORMULARIO_POR_ORDEN.get(ruta_actividad.orden)
     vinculada = ruta_actividad.formulario_version
     if vinculada is not None and (codigo is None or vinculada.plantilla.codigo == codigo):
-        # Si el formulario tiene una versión más nueva publicada (al publicarla
-        # la vinculada queda cerrada), la Ruta abre la vigente.
+
+
         return _publicada(vinculada.plantilla.codigo, cache) or vinculada
     if codigo is None:
         return None
@@ -328,8 +328,8 @@ def preparar_actividades(request, seccion_ruta, actividades):
         actividad.qr_pantalla_texto = None
         actividad.enlace_formulario = None
 
-        # 13 usa el registro de equipos, no un formulario (aunque una versión
-        # de la Ruta lo tenga vinculado).
+
+
         version = None if orden == 13 else _version_formulario(ruta_actividad, cache)
         enlace = None
         if version is not None:
@@ -337,17 +337,17 @@ def preparar_actividades(request, seccion_ruta, actividades):
         actividad.enlace_formulario = enlace
 
         if orden == 13:
-            # Registrar al socio (Ruta docente.txt: "un estudiante por grupo
-            # completa el formulario oficial"): el Registro de equipo pide los
-            # datos del Registro de Socios Comunitarios y los guarda en el
-            # socio y la participación del equipo, una sola vez.
+
+
+
+
             _registro_equipos(request, seccion, actividad)
         elif enlace is not None:
             url = reverse("encuestas:responder", args=[enlace.token])
             texto, icono = TEXTO_BOTON.get(orden, ("Llenar formulario", "bi-pencil-square"))
             actividad.accion = {"texto": texto, "icono": icono, "url": url, "nueva_pestana": True}
             if version.plantilla.codigo == precarga.FORMALIZACION_ACUERDOS:
-                # Un acuerdo por grupo, precargado con su socio y sus integrantes.
+
                 opciones = _acuerdos_por_grupo(seccion, url)
                 if opciones:
                     actividad.accion["opciones"] = opciones
@@ -362,14 +362,14 @@ def preparar_actividades(request, seccion_ruta, actividades):
                     {"texto": "Mostrar QR para que la pida un estudiante", "modal": f"qr-{actividad.id}"},
                 ]
         elif orden == 6:
-            # Seleccionar Socios Comunitarios: los que elija son los que verán
-            # los estudiantes al registrar su equipo (RF-SC-03, actividad 13).
+
+
             actividad.accion = {
                 "texto": "Elegir socios", "icono": "bi-building",
                 "url": f"{reverse('socios:catalogo_docente')}?seccion={seccion.id}",
             }
         elif orden == 19:
-            # Las encuestas de evaluación A+S (estudiantes y docentes) en un popup.
+
             actividad.qrs = formularios_qr_de_proceso(request, "EVALUACION_AS")
             if actividad.qrs:
                 actividad.accion = {"texto": "Mostrar QR de encuestas", "icono": "bi-qr-code", "modal": f"qr-{actividad.id}"}
@@ -414,7 +414,7 @@ def preparar_actividades(request, seccion_ruta, actividades):
                 for numero, respuesta in enumerate(acuerdo.acuerdos_de(seccion), start=1)
             ]
 
-        # Lo que se abre en la misma pestaña vuelve a la Ruta con su "Volver".
+
         if actividad.accion and actividad.accion.get("url") and not actividad.accion.get("nueva_pestana"):
             actividad.accion["url"] = con_volver(actividad.accion["url"], request)
 
@@ -424,15 +424,15 @@ def preparar_actividades(request, seccion_ruta, actividades):
         ]
         actividad.ejemplo_evidencia = "Ej.: Grupo 2" if orden == 11 else "Descripción (opcional)"
 
-        # Lo que se ve en "¿Cómo se hace?": la descripción y los recursos.
+
         actividad.recurso_extra = (
             actividad.url_recurso
             if actividad.url_recurso and orden not in (1, 10, 19)
             else None
         )
-        # 13: el docente también puede asignar el socio a un grupo él mismo.
+
         actividad.recurso_texto = "Asignar yo el socio a un grupo" if orden == 13 else None
-        # 6 y 9: la Ruta de Jorge ofrece el apoyo de Coordinación.
+
         if orden in (6, 9) and correo_coordinacion and not actividad.recurso_extra:
             texto, asunto = CONTACTO_COORDINACION[orden]
             actividad.recurso_extra = _mailto(correo_coordinacion, asunto, seccion)

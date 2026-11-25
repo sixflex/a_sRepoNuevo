@@ -61,9 +61,9 @@ def generar_pdf_carta(solicitud, usuario, estudiantes=None):
         f"{docente.nombres} {docente.apellidos}"
     ).strip() if docente else ""
 
-    # Formato oficial de Coordinación A+S (cartas/plantilla_oficial.py). Si la
-    # carta oficial activa no se puede leer, la final no se emite
-    # (CartaOficialIlegible es un ValueError: la pantalla muestra el mensaje).
+
+
+
     borrador = solicitud.estado == "BORRADOR"
     recursos = recursos_carta(plantilla_activa(), final=not borrador)
     pdf_bytes = construir_pdf(
@@ -283,7 +283,7 @@ def aprobar_y_enviar_carta(solicitud_id, usuario):
 
         cartas = generar_cartas_agrupadas(solicitud, usuario)["cartas"]
 
-    # Si el envío falla la solicitud sigue aprobada y queda pendiente de envío (RF-CAR-08).
+
     envios = [enviar_carta_docente(carta) for carta in cartas]
     return solicitud, envios
 

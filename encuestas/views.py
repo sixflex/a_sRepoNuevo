@@ -94,9 +94,9 @@ def _contexto_version(version, pestana):
     }
 
 
-# ---------------------------------------------------------------------------
-# Lista y creación (CDE-100)
-# ---------------------------------------------------------------------------
+
+
+
 
 @coordinador_required
 def lista_formularios(request):
@@ -137,9 +137,9 @@ def crear_formulario(request):
     return _redirigir_editor(version)
 
 
-# ---------------------------------------------------------------------------
-# Editor en una sola página (CDE-100 a CDE-103, CDE-105)
-# ---------------------------------------------------------------------------
+
+
+
 
 def _secciones_editor(version):
     """
@@ -293,7 +293,7 @@ def fondo_formulario(request, plantilla_id, firma):
     except FileNotFoundError as error:
         raise Http404("La foto no está disponible.") from error
     respuesta = FileResponse(contenido, content_type=fondo.mime_type)
-    # La firma cambia con la foto, así que el navegador puede guardarla mucho tiempo.
+
     respuesta["Cache-Control"] = "public, max-age=31536000, immutable"
     return respuesta
 
@@ -477,7 +477,7 @@ def _guardar_pregunta(request, version, pregunta=None):
     ids_opciones = []
     if pregunta.tipo in c.TIPOS_CON_OPCIONES:
         for fila in filas:
-            # La carrera solo aplica a las pestañas; "Solo para" solo al resto.
+
             if pregunta.tipo == c.SELECTOR_PROGRAMA:
                 fila["programas"] = []
             else:
@@ -503,7 +503,7 @@ def crear_pregunta(request, version_id):
     if bloqueo:
         return bloqueo
     if request.method == "POST" and _es_fetch(request):
-        # Botón "+ Pregunta" del editor en vivo: la crea y la abre para editar.
+
         bloque = get_object_or_404(version.bloques, pk=request.POST.get("bloque"))
         despues_de = version.preguntas.filter(pk=request.POST.get("despues_de") or None).first()
         pregunta = services.crear_pregunta_rapida(version, bloque, despues_de)
@@ -571,9 +571,9 @@ def ordenar_preguntas(request, version_id):
     return _listo(request, version)
 
 
-# ---------------------------------------------------------------------------
-# Versiones, publicación, enlace y QR (CDE-100, CDE-104, CDE-105)
-# ---------------------------------------------------------------------------
+
+
+
 
 @coordinador_required
 @require_POST
@@ -759,9 +759,9 @@ def exportar_respuestas(request, version_id):
     return excel.respuesta_excel(libro, f"respuestas_{version.id}.xlsx")
 
 
-# ---------------------------------------------------------------------------
-# Público: responder por enlace (CDE-103, CDE-104, CDE-106)
-# ---------------------------------------------------------------------------
+
+
+
 
 def _envios_de_sesion(request):
     return request.session.get(SESION_ENVIOS, {})
@@ -795,11 +795,11 @@ def responder(request, token):
         return render(request, "encuestas/cerrado.html", contexto)
 
     bloques, preguntas = services.cargar_estructura(version)
-    # Un formulario por grupo (p. ej. el Acuerdo de la actividad 11): ?equipo=
-    # trae el socio y los integrantes del equipo y deja la respuesta ligada a él.
+
+
     equipo = _equipo_del_enlace(request, enlace)
     contexto["equipo"] = equipo
-    # Ficha única: lo que el sistema ya sabe de la sección viene escrito.
+
     inicial, precargadas = precarga.precargar(version, preguntas, enlace.seccion, request.user, equipo=equipo)
     form = RespuestaFormularioForm(
         version, bloques, preguntas, request.POST or None, request.FILES or None,
@@ -810,7 +810,7 @@ def responder(request, token):
         clave = request.POST.get("clave_envio", "")
         envios = _envios_de_sesion(request)
         if clave and clave in envios:
-            # Recarga o doble clic: no se crea una segunda respuesta (RNF-DAT-02).
+
             return redirect("encuestas:enviado", token=enlace.token)
 
         if form.is_valid():

@@ -150,7 +150,7 @@ class Command(BaseCommand):
             },
         )
 
-        # Cuenta Microsoft (simulada) de cada usuario, para entrar también por Entra.
+
         asegurar_identidad_principal(usuario_docente1, docente1.correo_institucional)
         asegurar_identidad_principal(usuario_docente2, docente2.correo_institucional)
         asegurar_identidad_principal(usuario_estudiante)

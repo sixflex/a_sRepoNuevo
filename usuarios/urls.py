@@ -21,7 +21,7 @@ urlpatterns = [
         name="entra_login",
     ),
 
-    # Microsoft real vuelve aquí (URL de retorno registrada en Entra ID).
+
     path("auth/callback/", views.entra_callback, name="entra_callback"),
     path("sin-acceso/", views.sin_panel, name="sin_panel"),
 
@@ -31,7 +31,7 @@ urlpatterns = [
         name="logout",
     ),
 
-    # Mi cuenta: cuentas institucionales vinculadas.
+
     path("cuenta/", views.cuenta, name="cuenta"),
     path("cuenta/vincular/", views.cuenta_vincular, name="cuenta_vincular"),
     path("cuenta/vincular/confirmar/", views.cuenta_fusionar, name="cuenta_fusionar"),

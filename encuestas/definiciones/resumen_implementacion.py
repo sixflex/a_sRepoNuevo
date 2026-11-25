@@ -130,8 +130,8 @@ DEFINICION = {
         seccion("Proyectos A+S", [
             pregunta("¿En que consistió o consistieron los Proyectos A+S de este semestre o trimestre? Explíquelo en pocas líneas", c.TEXTO_LARGO),
             pregunta("Nota promedio A+S (Indicar el promedio de nota final de las secciones a su cargo, promedio simple)", c.NUMERO, minimo=1, maximo=7),
-            # La Ruta (etapa 5) pide informar también el promedio final del
-            # curso; el porcentaje de reprobación se calcula en la ficha.
+
+
             pregunta("Promedio final del curso (Indicar el promedio de las notas finales de todos los estudiantes, promedio simple)", c.NUMERO, minimo=1, maximo=7),
             pregunta("Cantidad total de estudiantes (Si tiene más de 1 sección a su cargo, súmelas)", c.NUMERO, minimo=0),
             pregunta("Cantidad de reprobados (Si tienen más de 1 sección, súmelas)", c.NUMERO, minimo=0),

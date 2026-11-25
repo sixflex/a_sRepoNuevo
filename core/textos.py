@@ -13,7 +13,7 @@ PARTICULAS = {"de", "del", "la", "las", "los", "y", "e", "da", "van", "von"}
 def _palabra(palabra, primera):
     if not primera and palabra.lower() in PARTICULAS:
         return palabra.lower()
-    # Respeta los nombres compuestos con guion o apóstrofo (Pérez-Cotapos, O'Higgins).
+
     for separador in ("-", "'"):
         if separador in palabra:
             return separador.join(_palabra(p, True) for p in palabra.split(separador))

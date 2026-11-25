@@ -9,7 +9,7 @@ from openpyxl.utils import get_column_letter
 
 CONTENT_TYPE_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
-# Colores del portal (rojo UA) para los encabezados.
+
 ROJO_UA = "C8232C"
 GRIS_CLARO = "F3F4F6"
 ANCHO_MAXIMO = 60
@@ -97,7 +97,7 @@ def dar_formato(libro):
                 columnas = hoja.max_column
                 hoja.freeze_panes = hoja.cell(encabezado + 1, 1)
                 if ultima > encabezado:
-                    # Excel permite un solo filtro por hoja: va en la tabla principal.
+
                     hoja.auto_filter.ref = f"A{encabezado}:{get_column_letter(columnas)}{ultima}"
 
         for columna in hoja.iter_cols(min_row=1, max_row=hoja.max_row):

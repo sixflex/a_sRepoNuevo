@@ -24,7 +24,7 @@ def _ultima_version(codigo_plantilla):
     )
 
 
-# Ruta docente.txt: 23 actividades en 5 etapas.
+
 TOTAL_ACTIVIDADES = 23
 
 
@@ -58,7 +58,7 @@ class Command(BaseCommand):
             )
             self.cargar_version(version)
             if options.get("reparar"):
-                # Una Ruta de prueba con otro nombre: sus secciones pasan a esta.
+
                 self.mover_secciones(version)
             return
 
@@ -71,7 +71,7 @@ class Command(BaseCommand):
             ))
             return
 
-        # Una Ruta creada a mano (p. ej. de prueba) no se corrige sola.
+
         if not options.get("reparar"):
             self.stdout.write(self.style.WARNING(
                 f"Ojo: la Ruta activa tiene {total} actividades y la Ruta del Docente tiene "
@@ -176,7 +176,7 @@ class Command(BaseCommand):
 
         recursos.setdefault(1, {})["recurso_url"] = "https://canvas.uautonoma.cl"
 
-        # PV-03: actividades opcionales. Todas aceptan evidencias (RF-EVI-02).
+
         opcionales = {10, 18}
 
         nuevas_actividades = [

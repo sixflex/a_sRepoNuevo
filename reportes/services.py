@@ -141,7 +141,7 @@ def libro_centros_sercotec(filtros):
     datos = metadatos(filtros, "Emprendedores por Centro de Negocios SERCOTEC")
     libro, resumen = excel.nuevo_libro("Resumen por centro", datos)
 
-    # (centro, año) -> {socio_id: (socio, participaciones de ese año)}
+
     grupos = defaultdict(dict)
     for p in _participaciones(filtros):
         clave = (_centro(p.socio), _anio(p))

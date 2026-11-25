@@ -20,7 +20,7 @@ class AccesoSimuladoTests(TestCase):
     def sesion_iniciada(self):
         return "_auth_user_id" in self.client.session
 
-    # --- pantalla y botón ---------------------------------------------------
+
 
     def test_login_muestra_boton_de_microsoft(self):
         respuesta = self.client.get(reverse("usuarios:login"))
@@ -35,7 +35,7 @@ class AccesoSimuladoTests(TestCase):
         for cuenta in CUENTAS_PRUEBA:
             self.assertContains(respuesta, cuenta["correo"])
 
-    # --- acceso por rol -----------------------------------------------------
+
 
     def comprobar_acceso(self, correo, rol, destino="core:inicio"):
         respuesta = self.ingresar(correo)
@@ -66,7 +66,7 @@ class AccesoSimuladoTests(TestCase):
         self.assertTrue(self.sesion_iniciada())
         self.assertEqual(Usuario.objects.filter(correo_institucional="docente@uautonoma.cl").count(), 1)
 
-    # --- dominio ------------------------------------------------------------
+
 
     def test_otro_dominio_es_rechazado(self):
         respuesta = self.ingresar("alguien@gmail.com")
@@ -94,7 +94,7 @@ class AccesoSimuladoTests(TestCase):
                 self.assertContains(respuesta, "correo válido")
                 self.assertFalse(self.sesion_iniciada())
 
-    # --- entra_oid y usuarios existentes -----------------------------------
+
 
     def test_segundo_acceso_reutiliza_el_mismo_usuario_y_oid(self):
         self.ingresar("docente@uautonoma.cl")
@@ -129,7 +129,7 @@ class AccesoSimuladoTests(TestCase):
         self.assertContains(respuesta, "desactivada")
         self.assertFalse(self.sesion_iniciada())
 
-    # --- cambio de cuenta ---------------------------------------------------
+
 
     def test_con_sesion_iniciada_se_puede_ver_el_login_y_cambiar_de_cuenta(self):
         self.ingresar("estudiante@uautonoma.cl")
@@ -147,7 +147,7 @@ class AccesoSimuladoTests(TestCase):
         respuesta = self.client.get(reverse("usuarios:login"))
         self.assertContains(respuesta, "Tienes la sesión iniciada como")
 
-    # --- redirección --------------------------------------------------------
+
 
     def test_respeta_next_interno(self):
         respuesta = self.ingresar("docente@uautonoma.cl", next="/socios/catalogo/")

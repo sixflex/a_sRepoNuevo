@@ -20,7 +20,7 @@ from auditoria.services import registrar_auditoria
 from .models import ConfiguracionPortal
 
 
-# (clave, título, descripción, icono, [(grupo, [(opción, etiqueta)])])
+
 BLOQUES = [
     (
         "mapa", "Mapa de impacto territorial",
@@ -85,7 +85,7 @@ BLOQUES = [
     ),
 ]
 
-# Grupos donde debe quedar al menos una opción marcada para que el bloque tenga sentido.
+
 MINIMO_UNA = {("mapa", "Vistas del mapa")}
 
 

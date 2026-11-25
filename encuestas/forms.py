@@ -86,9 +86,9 @@ def indicacion(pregunta, config):
     return ""
 
 
-# ---------------------------------------------------------------------------
-# Formulario que responde la persona (se arma desde la versión)
-# ---------------------------------------------------------------------------
+
+
+
 
 class RespuestaFormularioForm(forms.Form):
     """
@@ -99,7 +99,7 @@ class RespuestaFormularioForm(forms.Form):
 
     def __init__(self, version, bloques, preguntas, *args, precargadas=None, **kwargs):
         super().__init__(*args, **kwargs)
-        # {nombre_campo: origen} de lo que vino precargado desde la sección (encuestas.precarga).
+
         self.precargadas = precargadas or {}
         self.version = version
         self.bloques = bloques
@@ -108,8 +108,8 @@ class RespuestaFormularioForm(forms.Form):
         self.seleccion = {}
         self.valores = {}
         self.otros = {}
-        # Respuestas cortas con formato (comuna, teléfono...) y las listas
-        # que se sugieren al escribir: {formato: [nombres]}.
+
+
         self.formatos = {
             p.id: formatos.formato(p, services.configuracion(p)) for p in preguntas
         }
@@ -170,7 +170,7 @@ class RespuestaFormularioForm(forms.Form):
         for pregunta in self.preguntas:
             nombre = services.nombre_campo(pregunta)
             if pregunta.id not in visibles:
-                # Lo que no aplica al programa elegido no se valida ni se guarda.
+
                 for campo in (nombre, services.nombre_campo_otro(pregunta)):
                     datos.pop(campo, None)
                     self._errors.pop(campo, None)
@@ -303,9 +303,9 @@ class RespuestaFormularioForm(forms.Form):
         return resultado
 
 
-# ---------------------------------------------------------------------------
-# Constructor del Coordinador
-# ---------------------------------------------------------------------------
+
+
+
 
 class EstiloPortalForm(forms.Form):
     """Agrega las clases de Bootstrap del portal a todos los campos."""

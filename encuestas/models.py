@@ -19,8 +19,8 @@ class FormularioPlantilla(models.Model):
 
     activo = models.BooleanField()
 
-    # Apariencia del formulario público: color y foto de fondo (HU-09).
-    # Ej.: {"color": "azul", "fondo_archivo_id": 12}. Vacío = diseño por defecto.
+
+
     tema_json = models.JSONField(
         null=True,
         blank=True,

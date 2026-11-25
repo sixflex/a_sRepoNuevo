@@ -84,7 +84,7 @@ def _un_telefono(texto):
         raise ValidationError(MENSAJE_TELEFONO)
     if digitos[0] in "92":
         return f"+56 {digitos[0]} {digitos[1:5]} {digitos[5:]}"
-    # Fijo de regiones: código de área de 2 dígitos y 7 dígitos.
+
     return f"+56 {digitos[:2]} {digitos[2:5]} {digitos[5:]}"
 
 

@@ -30,10 +30,10 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
 
-# Filas aceptadas que se muestran de ejemplo en la vista previa.
+
 MUESTRA_ACEPTADAS = 5
 
-# Archivo Excel pendiente de selección de hoja.
+
 SESION_EXCEL = "historicos_excel_pendiente"
 CARPETA_TEMPORAL = "historicos/temporales"
 
@@ -214,7 +214,7 @@ def detalle(request, carga_id):
     columnas = list(filas[0].datos_raw_json) if filas else []
 
     campus = Campus.objects.select_related("sede").order_by("sede__nombre", "nombre")
-    # Carga inicial del piloto: Sede Santiago, Campus Providencia (RN-01).
+
     campus_sugerido = campus.filter(nombre__icontains="providencia").first() or campus.first()
 
     return render(request, "historicos/detalle.html", {

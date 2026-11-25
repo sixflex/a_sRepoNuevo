@@ -16,8 +16,8 @@ from .models import IdentidadInstitucional
 from .permissions import es_coordinador, es_docente
 
 
-# Modo "vincular otra cuenta": se guarda en la sesión (no se confía en un
-# parámetro de la URL) y vence a los pocos minutos.
+
+
 SESION_VINCULAR = "vincular_cuenta"
 SESION_FUSION = "fusion_pendiente"
 SESION_FLUJO_MICROSOFT = "flujo_microsoft"
@@ -51,11 +51,11 @@ def _destino_seguro(request, destino, por_defecto):
 
 class LoginTemporalView(LoginView):
     template_name = "usuarios/login.html"
-    # False: quien ya tiene sesión puede ver el login para cambiar de cuenta.
+
     redirect_authenticated_user = False
 
     def get(self, request, *args, **kwargs):
-        # Volver al login cancela un "vincular otra cuenta" a medias.
+
         request.session.pop(SESION_VINCULAR, None)
         return super().get(request, *args, **kwargs)
 
@@ -75,7 +75,7 @@ def _iniciar_sesion(request, usuario, identidad, destino_pedido):
         return redirect(destino)
     if es_coordinador(usuario) or es_docente(usuario) or usuario.is_superuser:
         return redirect(settings.LOGIN_REDIRECT_URL)
-    # Estudiante u otra persona de la U sin rol: no tiene panel.
+
     return redirect("usuarios:sin_panel")
 
 
@@ -161,9 +161,9 @@ class EntraLoginSimuladoView(View):
             return render(request, self.template_name, contexto)
 
 
-# ---------------------------------------------------------------------------
-# Microsoft real (ENTRA_MODO=microsoft)
-# ---------------------------------------------------------------------------
+
+
+
 
 def _error_microsoft(request, mensaje):
     return render(request, "usuarios/microsoft_error.html", {"error": mensaje}, status=400)
@@ -171,15 +171,15 @@ def _error_microsoft(request, mensaje):
 
 def _ir_a_microsoft(request):
     """Paso 1: manda a la persona a la página de Microsoft."""
-    # En desarrollo, Microsoft solo acepta volver a http://localhost (no a
-    # 127.0.0.1). Se cambia ANTES de empezar para no perder la sesión al volver.
+
+
     if settings.DEBUG and request.get_host().split(":")[0] == "127.0.0.1":
         return redirect(request.build_absolute_uri().replace("//127.0.0.1", "//localhost", 1))
     try:
         flujo = entra.get_conector().iniciar(
             request.build_absolute_uri(reverse("usuarios:entra_callback")),
-            # Siempre se elige la cuenta: en un PC compartido o con dos cuentas
-            # de la U (@uautonoma.cl y @cloud) no se entra solo con la última usada.
+
+
             seleccionar_cuenta=True,
         )
     except entra.EntraError as error:
@@ -219,7 +219,7 @@ def sin_panel(request):
 @login_required
 def cuenta(request):
     """Mi cuenta: las cuentas institucionales con las que la persona entra."""
-    # Volver aquí cancela un "vincular otra cuenta" a medias.
+
     request.session.pop(SESION_VINCULAR, None)
     return render(request, "usuarios/cuenta.html", {
         "identidades": request.user.identidades.all(),

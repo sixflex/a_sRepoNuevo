@@ -65,7 +65,7 @@ class IngresoMicrosoftTests(TestCase):
     def usuario_en_sesion(self):
         return Usuario.objects.get(pk=self.client.session["_auth_user_id"])
 
-    # --- pantalla de login ----------------------------------------------------
+
 
     def test_login_muestra_microsoft_y_deja_la_clave_como_respaldo(self):
         respuesta = self.client.get(reverse("usuarios:login"))
@@ -79,7 +79,7 @@ class IngresoMicrosoftTests(TestCase):
                              fetch_redirect_response=False)
         args, kwargs = self.app.initiate_auth_code_flow.call_args
         self.assertEqual(kwargs["redirect_uri"], "http://testserver/usuarios/auth/callback/")
-        self.assertEqual(kwargs["prompt"], "select_account")  # siempre se elige la cuenta
+        self.assertEqual(kwargs["prompt"], "select_account")
         _, opciones = self.msal.ConfidentialClientApplication.call_args
         self.assertEqual(opciones["authority"], f"https://login.microsoftonline.com/{TENANT}")
         self.assertEqual(opciones["client_credential"], "secreto")
@@ -91,7 +91,7 @@ class IngresoMicrosoftTests(TestCase):
         self.assertContains(respuesta, "ENTRA_CLIENT_SECRET", status_code=400)
         self.assertContains(respuesta, "respaldo", status_code=400)
 
-    # --- roles ---------------------------------------------------------------
+
 
     def test_coordinador_de_la_lista_entra_a_su_panel(self):
         respuesta = self.volver_de_microsoft(_claims("JReino@uautonoma.cl"))
@@ -132,7 +132,7 @@ class IngresoMicrosoftTests(TestCase):
         respuesta = self.client.get(reverse("usuarios:entra_callback"), {"code": "c", "state": "abc"})
         self.assertRedirects(respuesta, "/cartas/", fetch_redirect_response=False)
 
-    # --- lo que no se acepta -----------------------------------------------------
+
 
     def comprobar_rechazo(self, respuesta, texto):
         self.assertContains(respuesta, texto, status_code=400)

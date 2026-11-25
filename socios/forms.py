@@ -5,10 +5,10 @@ from core.validators import validar_rut_chileno
 from .centros_sercotec import CENTROS, OPCIONES as OPCIONES_CENTROS, normalizar_centro
 from .models import ClasificacionSocio, Comuna, SocioComunitario
 
-# RF-SC-04 CA2: después de revisar los datos, el coordinador decide si el
-# socio propuesto por un equipo queda disponible para otros grupos (sale del
-# modo provisional) o solo en el historial del equipo (sigue provisional y no
-# aparece en el catálogo del docente).
+
+
+
+
 DECISION_HABILITAR = "habilitar"
 DECISION_SOLO_EQUIPO = "solo_equipo"
 DECISIONES_PROPUESTO = [
@@ -65,8 +65,8 @@ class SocioPropuestoForm(forms.ModelForm):
     def __init__(self, *args, contacto=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.contacto = contacto
-        # Centro SERCOTEC como lista cerrada (cliente, 2/11/2026). Si el socio
-        # trae un texto antiguo que no está en la lista, se conserva como opción.
+
+
         actual = self.instance.centro_servicio if self.instance else None
         opciones = [("", "Sin centro")] + OPCIONES_CENTROS
         if actual and actual not in CENTROS:

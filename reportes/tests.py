@@ -59,7 +59,7 @@ class ReportesTests(TestCase):
         participacion(self.almacen, 2025)
         participacion(self.taller, 2025)
         participacion(self.feria, 2024)
-        # Postuló pero ningún docente lo eligió: no debe aparecer.
+
         socio("Solo postulante", centro_servicio="Santiago")
 
     def test_pagina_de_reportes_solo_para_coordinacion(self):
@@ -76,14 +76,14 @@ class ReportesTests(TestCase):
         filas = [fila for fila in libro["Resumen por centro"].iter_rows(values_only=True)]
         encabezado = filas.index(("Centro SERCOTEC", "Año", "Emprendedores", "Participaciones"))
         resumen = filas[encabezado + 1:]
-        # "STGO" y el nombre oficial quedan juntos; quien no trabajó no cuenta.
+
         self.assertIn(("Centro de Negocios Sercotec Santiago", 2025, 2, 3), resumen)
         self.assertIn(("Sin centro SERCOTEC", 2024, 1, 1), resumen)
 
         detalle = [fila for fila in libro["Emprendedores"].iter_rows(values_only=True)]
         rosa = next(fila for fila in detalle if fila[2] == "Almacén Rosa")
         self.assertEqual(rosa[3], "11111111-1")
-        self.assertEqual(rosa[7], "0912345678")  # teléfono como texto, con su 0
+        self.assertEqual(rosa[7], "0912345678")
         self.assertNotIn("Solo postulante", [fila[2] for fila in detalle])
 
     def test_participaciones_respeta_filtros_y_los_anota(self):

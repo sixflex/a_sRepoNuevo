@@ -16,11 +16,11 @@ from urllib.request import Request, urlopen
 
 from django.utils import timezone
 
-# Solo se leen páginas del sitio institucional: el servidor no visita
-# cualquier dirección que se pegue.
+
+
 DOMINIOS_LEIBLES = ("uautonoma.cl",)
 
-# Búsqueda del sitio UA con las noticias de A+S.
+
 BUSQUEDA_UA = "https://www.uautonoma.cl/?s=aprendizaje+servicio"
 
 FUENTE_UA = "Universidad Autónoma de Chile"
@@ -106,7 +106,7 @@ def leer_noticia(url):
         )
     try:
         html = _descargar(url)
-    except Exception as error:  # red, tiempo de espera, 404…
+    except Exception as error:
         raise NoticiaNoLeida(
             "No pudimos abrir la noticia en este momento. Completa los datos a mano o inténtalo más tarde."
         ) from error

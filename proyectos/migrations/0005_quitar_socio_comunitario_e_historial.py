@@ -36,8 +36,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # Solo actúa al revertir (las operaciones se deshacen en orden
-        # inverso, así que corre después de volver a crear la columna).
+
+
         migrations.RunPython(migrations.RunPython.noop, reponer_socio_comunitario),
         migrations.RemoveField(
             model_name="equipo",

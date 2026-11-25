@@ -15,7 +15,7 @@ from socios.tests import crear_socio
 
 
 class SociosDeLaSeccionTests(TestCase):
-    # Mismos datos que las pruebas del registro de equipos (CDE-48).
+
     setUp = tests_registro.RegistroEquiposCDE48Tests.setUp
     datos_registro_validos = tests_registro.RegistroEquiposCDE48Tests.datos_registro_validos
 
@@ -30,7 +30,7 @@ class SociosDeLaSeccionTests(TestCase):
         socio = crear_socio("Fundación Elegida")
 
         self.elegir(socio)
-        self.elegir(socio)  # repetir no duplica
+        self.elegir(socio)
         self.assertEqual(list(services.socios_elegidos_seccion(self.seccion)), [socio])
         eleccion = ParticipacionSocio.objects.get(socio=socio)
         self.assertIsNone(eleccion.equipo)
@@ -40,7 +40,7 @@ class SociosDeLaSeccionTests(TestCase):
         self.elegir(socio, accion="quitar")
         self.assertFalse(services.socios_elegidos_seccion(self.seccion).exists())
         eleccion.refresh_from_db()
-        self.assertIsNotNone(eleccion.fecha_fin)  # se cierra, no se borra
+        self.assertIsNotNone(eleccion.fecha_fin)
         self.assertEqual(
             set(AuditoriaCambio.objects.filter(entidad="Seccion").values_list("accion", flat=True)),
             {"ELEGIR_SOCIO_SECCION", "QUITAR_SOCIO_SECCION"},

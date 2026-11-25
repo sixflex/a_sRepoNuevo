@@ -74,7 +74,7 @@ def _crear_enlaces_planificacion(request):
         messages.error(request, "Debe completar el período y la fecha límite de vigencia.")
         return volver
 
-    # La fecha elegida se considera vigente hasta el final de ese día.
+
     fecha_expiracion_dt = timezone.make_aware(datetime.combine(fecha_expiracion, time.max))
     if fecha_expiracion_dt <= timezone.now():
         messages.error(request, "La fecha de expiración debe ser posterior al momento actual.")
@@ -314,7 +314,7 @@ def gestionar_enlaces_planificacion(request):
         .select_related("facultad", "carrera__facultad")
         .order_by("tipo", "nombre")
     )
-    # Campus donde opera cada unidad (CarreraCampus), para mostrarlo en el modal.
+
     from planificacion.services import campus_de_unidad
 
     for unidad in unidades:
@@ -361,11 +361,11 @@ def gestionar_registro_equipos(request, seccion_id):
         pk=seccion_id,
     )
 
-    # Verificar que el docente pertenezca a la sección
+
     if not seccion.docentes.filter(pk=docente.pk).exists():
         raise PermissionDenied
 
-    # Obtener el enlace más reciente de la sección
+
     enlace = (
         EnlaceRegistroEquipo.objects
         .filter(seccion=seccion)
@@ -376,7 +376,7 @@ def gestionar_registro_equipos(request, seccion_id):
     if request.method == "POST":
         accion = request.POST.get("accion")
 
-        # HABILITAR FORMULARIO Y CREAR ENLACE
+
         if accion == "habilitar":
 
             if enlace and enlace.activo:
@@ -401,7 +401,7 @@ def gestionar_registro_equipos(request, seccion_id):
                     "El formulario de registro fue habilitado correctamente.",
                 )
 
-        # CERRAR FORMULARIO
+
         elif accion == "cerrar":
 
             if enlace and enlace.activo:
@@ -480,9 +480,9 @@ def acceso_registro_equipos(request, token):
 
     ahora = timezone.now()
 
-    # Primero la cuenta: un integrante vuelve a este mismo enlace durante el
-    # semestre para completar el trabajo con el socio, aunque el registro ya
-    # esté cerrado.
+
+
+
     if not request.user.is_authenticated:
         return redirect_to_login(
             request.get_full_path(),
@@ -511,10 +511,10 @@ def acceso_registro_equipos(request, token):
             status=403,
         )
 
-    # HU-03: el equipo se registra una sola vez. Quien es integrante (lo haya
-    # registrado él o un compañero) ve su equipo, no el formulario. Se busca
-    # por integrante y no por informante: si el docente cambia los
-    # integrantes, el equipo sigue siendo de quienes están en él.
+
+
+
+
     mis_correos = {
         correo.lower()
         for correo in correos_de_usuario(request.user) | {correo_de_sesion(request) or ""}
@@ -561,8 +561,8 @@ def acceso_registro_equipos(request, token):
             status=403,
         )
 
-    # RF-SC-03 / HU-03: solo los socios que eligió el docente para la
-    # sección; si no eligió ninguno, el catálogo completo.
+
+
     socios_disponibles, socios_de_la_seccion = socios_para_registro_equipos(
         enlace.seccion
     )
@@ -656,7 +656,7 @@ def acceso_registro_equipos(request, token):
                     "los 220 caracteres."
                 )
 
-            # Los demás datos del Registro de Socios Comunitarios (RF-SC-04).
+
             socio_nuevo_limpio, errores_socio = registro_socio.validar(socio_nuevo)
             errores.extend(errores_socio)
 
@@ -791,10 +791,10 @@ def acceso_registro_equipos(request, token):
                 )
 
         
-        # La cuenta con que entró en esta sesión (puede tener dos: @uautonoma y @cloud).
+
         correo_informante = correo_de_sesion(request) or ""
 
-        # Para no registrar dos equipos con cuentas distintas de la misma persona.
+
         filtro_mis_equipos = Q(pk__in=[])
         for correo_propio in correos_de_usuario(request.user) | {correo_informante}:
             if correo_propio:
@@ -966,8 +966,8 @@ def acceso_registro_equipos(request, token):
                             )
 
                             
-                            # El socio se asocia con el servicio común,
-                            # en esta misma transacción (RN-09, RF-SC-06).
+
+
                             equipo = Equipo.objects.create(
                                 seccion=seccion_bloqueada,
                                 numero_grupo=numero_grupo,
@@ -1038,7 +1038,7 @@ def acceso_registro_equipos(request, token):
                     ),
                 )
 
-                # POST -> REDIRECT -> GET
+
                 return redirect(
                     "proyectos:acceso_registro_equipos",
                     token=enlace.token,
@@ -1057,7 +1057,7 @@ def acceso_registro_equipos(request, token):
             "datos_formulario": datos_formulario,
             "clave_idempotencia": clave_idempotencia,
 
-            # CDE-46
+
             "socios_disponibles": socios_disponibles,
             "socios_de_la_seccion": socios_de_la_seccion,
             "comunas": nombres_comunas(),
@@ -1073,8 +1073,8 @@ def _mi_equipo(request, enlace, equipo, mis_correos):
     integrante completa o corrige durante el semestre.
     """
     participacion = equipo.participaciones_vigentes[0] if equipo.participaciones_vigentes else None
-    # Solo el formulario del trabajo con el socio guarda aquí; un segundo
-    # envío del registro (otra pestaña, otra cuenta) solo muestra el equipo.
+
+
     guardando = request.method == "POST" and request.POST.get("accion") == "trabajo_socio"
     form = trabajo_socio.formulario(participacion, request.POST if guardando else None)
     if guardando and participacion is not None and form.is_valid():
@@ -1223,14 +1223,14 @@ def gestionar_equipo(request, equipo_id):
                 )
 
             with transaction.atomic():
-                # Eliminar etiquetas que fueron desmarcadas.
+
                 IntegranteEtiqueta.objects.filter(
                     integrante=integrante,
                 ).exclude(
                     etiqueta_id__in=ids_validos,
                 ).delete()
 
-                # Agregar las etiquetas nuevas.
+
                 for etiqueta in etiquetas_validas:
                     IntegranteEtiqueta.objects.get_or_create(
                         integrante=integrante,
@@ -1253,7 +1253,7 @@ def gestionar_equipo(request, equipo_id):
 
         
         elif accion == "agregar_integrante":
-            # RF-EQP-07: el docente corrige el equipo cuando alguien entra.
+
             errores_integrante = integrantes_equipo.agregar(equipo, request.POST, request)
             for error in errores_integrante:
                 messages.error(request, error)
@@ -1262,8 +1262,8 @@ def gestionar_equipo(request, equipo_id):
             return redirect("proyectos:gestionar_equipo", equipo_id=equipo.id)
 
         elif accion == "quitar_integrante":
-            # RF-EQP-07: o cuando alguien sale. El equipo y su socio siguen
-            # siendo del resto de los integrantes.
+
+
             integrante = get_object_or_404(
                 IntegranteEquipo, pk=request.POST.get("integrante_id", "").strip() or 0, equipo=equipo,
             )
@@ -1275,8 +1275,8 @@ def gestionar_equipo(request, equipo_id):
             return redirect("proyectos:gestionar_equipo", equipo_id=equipo.id)
 
         elif accion == "trabajo_socio":
-            # El docente también puede completar o corregir el trabajo con el
-            # socio (en el formulario de la Coordinación lo llenaban estudiantes o docentes).
+
+
             participacion = equipo.participaciones_socios.filter(fecha_fin__isnull=True).first()
             form_trabajo = trabajo_socio.formulario(participacion, request.POST)
             if participacion is None:
@@ -1480,7 +1480,7 @@ def gestionar_equipo(request, equipo_id):
                 )
 
             
-            # Solo los socios elegidos para la sección (el mismo listado del popup).
+
             socios_permitidos, _ = socios_para_registro_equipos(equipo.seccion)
             socio_nuevo = socios_permitidos.filter(pk=socio_nuevo_id).first() if socio_nuevo_id.isdigit() else None
 
@@ -1495,8 +1495,8 @@ def gestionar_equipo(request, equipo_id):
                     equipo_id=equipo.id,
                 )
 
-            # Servicio común (RN-09, RF-EQP-08): cierra la participación
-            # vigente, abre la nueva y deja historial y auditoría.
+
+
             try:
                 _, creada = asociar_socio_a_equipo(
                     equipo=equipo,
@@ -1553,18 +1553,18 @@ def gestionar_equipo(request, equipo_id):
         )
     )
 
-    # RF-SC-03: los socios que el docente eligió para la sección; si no eligió
-    # ninguno, el catálogo completo (igual que en el registro de equipos).
+
+
     socios_disponibles, socios_de_la_seccion = socios_para_registro_equipos(equipo.seccion)
     socio_actual = equipo.socio_vigente
     if socio_actual is not None:
         socios_disponibles = socios_disponibles.exclude(pk=socio_actual.pk)
 
-    # Cambios de socio hechos por docentes, desde AUDITORIA_CAMBIO
-    # (mismas columnas que el antiguo HistorialSocioEquipo).
+
+
     historial_socios = historial_socios_equipo(equipo)
 
-    # Períodos de asociación del equipo (fuente de verdad: ParticipacionSocio).
+
     participaciones_socio = (
         equipo.participaciones_socios
         .select_related("socio")
@@ -1590,9 +1590,9 @@ def gestionar_equipo(request, equipo_id):
         },
     )
 
-# ---------------------------------------------------------------------------
-# Catálogo de proyectos A+S (menú "Proyectos" del Coordinador)
-# ---------------------------------------------------------------------------
+
+
+
 
 @coordinador_required
 def catalogo_proyectos(request):
@@ -1610,7 +1610,7 @@ def catalogo_proyectos(request):
     elegidos, totales = catalogo.proyectos(filtros)
     pagina = Paginator(elegidos, 24).get_page(request.GET.get("pagina"))
 
-    # Parámetros para cambiar de pestaña o de página sin perder los filtros.
+
     otros = {k: v for k, v in filtros.items() if v and k != "estado"}
     anios = sorted(
         set(PeriodoAcademico.objects.values_list("anio", flat=True))

@@ -61,7 +61,7 @@ def opciones_planificacion(facultad=None, campus=None):
     if facultad is not None:
         return {
             "facultades": [(facultad.nombre, facultad.nombre)],
-            # Una sola facultad: lista simple, sin agrupar.
+
             "carreras": carreras.get(facultad.nombre, []),
             "facultad_fija": facultad.nombre,
         }
@@ -158,7 +158,7 @@ class HorarioField(forms.MultiValueField):
             raise forms.ValidationError(
                 "Ingrese la hora de inicio de: " + ", ".join(faltan) + "."
             )
-        # Una hora de un día que se desmarcó no se guarda.
+
         return texto_horario({codigo: hora for codigo, hora in horas.items() if codigo in dias})
 
 
@@ -215,7 +215,7 @@ class FilaPlanificacionForm(forms.ModelForm):
         self.facultad_fija = opciones.get("facultad_fija")
         self.fields["carrera_texto"].widget.choices = [("", "Seleccione"), *opciones["carreras"]]
         if self.facultad_fija:
-            # La facultad la define el enlace (su unidad académica): no se elige.
+
             self.fields["facultad_texto"].widget = forms.HiddenInput()
             self.initial["facultad_texto"] = self.facultad_fija
         else:
@@ -232,7 +232,7 @@ class FilaPlanificacionForm(forms.ModelForm):
 
 class BaseFilaPlanificacionFormSet(BaseModelFormSet):
     def __init__(self, *args, facultad=None, campus=None, **kwargs):
-        # Las opciones se consultan una vez para todas las filas.
+
         kwargs.setdefault("form_kwargs", {"opciones": opciones_planificacion(facultad, campus)})
         super().__init__(*args, **kwargs)
     def clean(self):
@@ -343,7 +343,7 @@ class DocenteFilaForm(forms.Form):
     )
 
     def clean_rut(self):
-        # Formato del RUT (RF-ACA-04): se avisa al tiro y se guarda normalizado.
+
         rut = (self.cleaned_data.get("rut") or "").strip()
         if not rut:
             return ""

@@ -146,7 +146,7 @@ class NavegacionTestCase(TestCase):
         self.assertIsNone(response.context["filtros"]["periodo"])
 
     def test_prototipo_validar_planificacion_eliminado(self):
-        # RF-ACA-04 lo resuelve la app planificacion.
+
         with self.assertRaises(NoReverseMatch):
             reverse("core:validar_planificacion")
 
@@ -155,7 +155,7 @@ class NavegacionTestCase(TestCase):
 
         response = self.client.get(reverse("core:coordinacion"))
 
-        # Las cartas pendientes van en la franja de arriba, no como tarjeta.
+
         for nombre in [
             "core:planificacion_coordinacion",
             "socios:lista_postulaciones",
@@ -169,7 +169,7 @@ class NavegacionTestCase(TestCase):
         response = self.client.get(reverse("core:coordinacion"))
 
         self.assertNotContains(response, 'href="#"')
-        # La validación real (RF-ACA-04) está en Planificaciones recibidas
+
         self.assertContains(response, reverse("core:planificacion_coordinacion"))
     
 class FiltroPeriodoDocenteTestCase(TestCase):
@@ -434,7 +434,7 @@ class PanelIndicadoresTestCase(TestCase):
             ruta = SeccionRuta.objects.create(
                 seccion=seccion, ruta_version=version, estado="EN_PROGRESO", porcentaje_final=Decimal("0"),
             )
-            # La opcional completada no debe subir el avance (RF-RUT-03).
+
             for indice, actividad in enumerate(obligatorias):
                 SeccionActividad.objects.create(
                     seccion_ruta=ruta, ruta_actividad=actividad, estado="PENDIENTE",
@@ -483,7 +483,7 @@ class PanelIndicadoresTestCase(TestCase):
     def test_inicio_muestra_solo_el_periodo_vigente(self):
         response = self.inicio(periodo=self.otono.id, carrera=self.industrial.id)
 
-        # El Inicio ignora los filtros del Panel de indicadores.
+
         self.assertEqual(response.context["filtros"]["periodo"], self.primavera.id)
         self.assertIsNone(response.context["filtros"]["carrera"])
         self.assertContains(response, "Período actual: <strong>Primavera 2026 (2º semestre)</strong>")
@@ -502,7 +502,7 @@ class PanelIndicadoresTestCase(TestCase):
     def test_inicio_cuenta_rutas_con_avance_bajo(self):
         pendientes = {p["label"]: p for p in self.inicio().context["pendientes"]}
 
-        # Informática va en 25 % (bajo); Industrial en 100 %; la de Otoño no es del período.
+
         self.assertEqual(pendientes["Docentes con Ruta bajo 40 %"]["value"], 1)
 
     def test_sin_filtros_parte_en_el_periodo_vigente(self):
@@ -518,11 +518,11 @@ class PanelIndicadoresTestCase(TestCase):
         self.assertEqual(tarjetas["Asignaturas A+S"]["valor"], 2)
         self.assertEqual(tarjetas["Docentes participantes"]["valor"], 2)
         self.assertEqual(tarjetas["Carreras participantes"]["valor"], 2)
-        # Integrantes registrados en equipos, no los planificados.
+
         self.assertEqual(tarjetas["Estudiantes participantes"]["valor"], 3)
         self.assertEqual(tarjetas["Socios comunitarios"]["valor"], 2)
         self.assertIn("2 participaciones", tarjetas["Socios comunitarios"]["detalle"])
-        # Otoño tenía 1 asignatura: +1 vs período anterior.
+
         self.assertEqual(tarjetas["Asignaturas A+S"]["detalle"], "+1 vs período anterior")
 
     def test_quitar_todos_los_filtros_muestra_todo(self):
@@ -618,18 +618,18 @@ class PanelIndicadoresTestCase(TestCase):
 
         satisfaccion = self.panel().context["satisfaccion"]
         docentes = satisfaccion["anillos"][1]
-        # 9 de 12 respuestas con 4 o 5.
+
         self.assertEqual(docentes["porcentaje"], 75.0)
         self.assertEqual(docentes["personas"], 2)
         self.assertEqual(docentes["pregunta"], 18)
         self.assertIsNone(satisfaccion["anillos"][0]["porcentaje"])
-        # Un gráfico por pregunta: la primera tuvo 5 y 5, la quinta 2 y 5.
+
         por_pregunta = docentes["preguntas"]
         self.assertEqual(len(por_pregunta), 6)
         self.assertEqual(por_pregunta[0]["porcentaje"], 100.0)
         self.assertEqual(por_pregunta[4]["porcentaje"], 50.0)
         self.assertEqual(por_pregunta[0]["respuestas"], 2)
-        # La dimensión también es % de 4 y 5, no el promedio.
+
         self.assertEqual(satisfaccion["tabla"][0]["valores"], [None, 100.0, None])
 
 
@@ -669,7 +669,7 @@ class PanelDocenteFiltroPeriodoTestCase(TestCase):
 
         self.grupo_docente, _ = Group.objects.get_or_create(name="Docente")
 
-        # Docente 1
+
         self.user_docente1 = User.objects.create_user(
             username="docente1",
             password="DocentePassword1",
@@ -685,7 +685,7 @@ class PanelDocenteFiltroPeriodoTestCase(TestCase):
             activo=True,
         )
 
-        # Docente 2
+
         self.user_docente2 = User.objects.create_user(
             username="docente2",
             password="DocentePassword2",
@@ -701,13 +701,13 @@ class PanelDocenteFiltroPeriodoTestCase(TestCase):
             activo=True,
         )
 
-        # Infraestructura básica
+
         self.sede = Sede.objects.create(nombre="Sede Central", activo=True)
         self.campus = Campus.objects.create(sede=self.sede, nombre="Campus Central", activo=True)
         self.asignatura1 = Asignatura.objects.create(codigo="ASIG1", nombre="Asignatura 1", activo=True)
         self.asignatura2 = Asignatura.objects.create(codigo="ASIG2", nombre="Asignatura 2", activo=True)
 
-        # Períodos
+
         self.periodo_2026_1 = PeriodoAcademico.objects.create(
             anio=2026,
             tipo="Primer semestre",
@@ -727,7 +727,7 @@ class PanelDocenteFiltroPeriodoTestCase(TestCase):
             estado="Cerrado",
         )
 
-        # Secciones Docente 1 en 2026-1
+
         self.sec_d1_p1 = Seccion.objects.create(
             periodo=self.periodo_2026_1,
             campus=self.campus,
@@ -738,7 +738,7 @@ class PanelDocenteFiltroPeriodoTestCase(TestCase):
         )
         SeccionDocente.objects.create(seccion=self.sec_d1_p1, docente=self.docente1)
 
-        # Secciones Docente 1 en 2026-2
+
         self.sec_d1_p2 = Seccion.objects.create(
             periodo=self.periodo_2026_2,
             campus=self.campus,
@@ -749,7 +749,7 @@ class PanelDocenteFiltroPeriodoTestCase(TestCase):
         )
         SeccionDocente.objects.create(seccion=self.sec_d1_p2, docente=self.docente1)
 
-        # Sección Docente 2 en 2026-1 (para verificar aislamiento)
+
         self.sec_d2_p1 = Seccion.objects.create(
             periodo=self.periodo_2026_1,
             campus=self.campus,
@@ -784,7 +784,7 @@ class PanelDocenteFiltroPeriodoTestCase(TestCase):
     def test_filtro_por_periodo_muestra_solo_secciones_del_periodo_seleccionado(self):
         self.client.force_login(self.user_docente1)
 
-        # Filtrar por período 2026-1
+
         response = self.client.get(self.url, {"periodo": self.periodo_2026_1.id})
         self.assertEqual(response.status_code, 200)
 
@@ -797,8 +797,8 @@ class PanelDocenteFiltroPeriodoTestCase(TestCase):
         self.assertEqual(response.context["periodo_seleccionado"], str(self.periodo_2026_1.id))
         self.assertTrue(response.context["filtros_activos"])
 
-        # Año y período se filtran por separado (RNF-DAT-01): año + período
-        # combinados siguen mostrando solo las secciones del período elegido.
+
+
         response_combinado = self.client.get(
             self.url, {"anio": 2026, "periodo": self.periodo_2026_1.id}
         )
@@ -806,7 +806,7 @@ class PanelDocenteFiltroPeriodoTestCase(TestCase):
         self.assertEqual(len(secciones_combinado), 1)
         self.assertIn(self.sec_d1_p1, secciones_combinado)
 
-        # Filtrar por período 2026-2
+
         response_p2 = self.client.get(self.url, {"periodo": self.periodo_2026_2.id})
         self.assertEqual(response_p2.status_code, 200)
 
@@ -817,13 +817,13 @@ class PanelDocenteFiltroPeriodoTestCase(TestCase):
         self.assertNotIn(self.sec_d2_p1, secciones_p2)
 
     def test_filtro_aisla_secciones_entre_docentes(self):
-        # Ambos tienen secciones en 2026-1, pero Docente 1 no debe ver las del Docente 2
+
         self.client.force_login(self.user_docente1)
         response = self.client.get(self.url, {"periodo": self.periodo_2026_1.id})
         secciones = response.context["secciones"]
         self.assertNotIn(self.sec_d2_p1, secciones)
 
-        # Docente 2 solo debe ver su propia sección en 2026-1
+
         self.client.force_login(self.user_docente2)
         response_d2 = self.client.get(self.url, {"periodo": self.periodo_2026_1.id})
         secciones_d2 = response_d2.context["secciones"]
@@ -834,7 +834,7 @@ class PanelDocenteFiltroPeriodoTestCase(TestCase):
     def test_periodo_sin_secciones_muestra_estado_vacio(self):
         self.client.force_login(self.user_docente1)
 
-        # Docente 1 no tiene secciones en 2025-2
+
         response = self.client.get(self.url, {"periodo": self.periodo_2025_2.id})
         self.assertEqual(response.status_code, 200)
 
@@ -849,17 +849,17 @@ class PanelDocenteFiltroPeriodoTestCase(TestCase):
     def test_periodo_invalido_se_maneja_correctamente(self):
         self.client.force_login(self.user_docente1)
 
-        # Parámetro no numérico: no se cae y no muestra secciones de otro período
+
         response = self.client.get(self.url, {"periodo": "invalido"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.context["secciones"]), 0)
 
-        # Año no numérico: mismo tratamiento
+
         response_anio = self.client.get(self.url, {"anio": "invalido"})
         self.assertEqual(response_anio.status_code, 200)
         self.assertEqual(len(response_anio.context["secciones"]), 0)
 
-        # Parámetro numérico que no existe
+
         response_inexistente = self.client.get(self.url, {"periodo": "999999"})
         self.assertEqual(response_inexistente.status_code, 200)
         self.assertEqual(len(response_inexistente.context["secciones"]), 0)
@@ -1040,7 +1040,7 @@ class IndicadoresUnicosTests(TestCase):
         from academico.models import Carrera, Facultad, PeriodoAcademico, Sede
         from socios.models import Comuna, ParticipacionSocio, SocioComunitario
         
-        # 1. Crear configuración básica obligatoria
+
         cls.sede = Sede.objects.create(nombre="Santiago", activo=True)
         cls.periodo = PeriodoAcademico.objects.create(
             anio=2026, tipo="Semestral", nombre="2026-2", estado="Activo"
@@ -1051,7 +1051,7 @@ class IndicadoresUnicosTests(TestCase):
         cls.facultad = Facultad.objects.create(nombre="Ingeniería", activo=True)
         cls.carrera = Carrera.objects.create(facultad=cls.facultad, nombre="Informática", activo=True)
         
-        # 2. Crear exactamente 1 Socio (Organización) con sus campos requeridos
+
         cls.socio = SocioComunitario.objects.create(
             nombre_organizacion="Junta de Vecinos El Abrazo",
             comuna=cls.comuna,
@@ -1061,7 +1061,7 @@ class IndicadoresUnicosTests(TestCase):
             fecha_creacion=timezone.now()
         )
         
-        # 3. Crear 3 participaciones distintas para el MISMO socio
+
         for _ in range(3):
             ParticipacionSocio.objects.create(
                 socio=cls.socio, 

@@ -1,6 +1,6 @@
 """Valores fijos del módulo de formularios configurables (HU-09)."""
 
-# Tipos de pregunta (RF-FOR-02). El valor se guarda en PreguntaFormulario.tipo.
+
 TEXTO_CORTO = "TEXTO_CORTO"
 TEXTO_LARGO = "TEXTO_LARGO"
 NUMERO = "NUMERO"
@@ -14,7 +14,7 @@ ESCALA = "ESCALA"
 ARCHIVO = "ARCHIVO"
 SELECTOR_PROGRAMA = "SELECTOR_PROGRAMA"
 
-# Nombres como los de Google o Microsoft Forms, para que el cambio sea familiar.
+
 TIPOS_PREGUNTA = [
     (TEXTO_CORTO, "Respuesta corta"),
     (TEXTO_LARGO, "Párrafo"),
@@ -30,7 +30,7 @@ TIPOS_PREGUNTA = [
     (SELECTOR_PROGRAMA, "Pestañas de programa o carrera"),
 ]
 
-# Ícono de Bootstrap Icons para cada tipo en el constructor.
+
 ICONOS_TIPO = {
     TEXTO_CORTO: "bi-text-left",
     TEXTO_LARGO: "bi-text-paragraph",
@@ -48,14 +48,14 @@ ICONOS_TIPO = {
 
 NOMBRES_TIPO = dict(TIPOS_PREGUNTA)
 
-# Tipos cuyas respuestas se eligen entre OpcionPregunta.
+
 TIPOS_CON_OPCIONES = {ALTERNATIVA_UNICA, SELECCION_MULTIPLE, LISTA, SELECTOR_PROGRAMA}
 
-# Tipos que pueden servir de condición en una regla de visibilidad
-# (respuesta única y elegida de una lista cerrada).
+
+
 TIPOS_CONDICIONANTES = {ALTERNATIVA_UNICA, LISTA, SELECTOR_PROGRAMA}
 
-# Estados de FormularioVersion (RF-FOR-01).
+
 BORRADOR = "BORRADOR"
 PUBLICADA = "PUBLICADA"
 CERRADA = "CERRADA"
@@ -70,7 +70,7 @@ ESTADOS_VERSION = [
 
 NOMBRES_ESTADO = dict(ESTADOS_VERSION)
 
-# Datos del respondente que una pregunta puede alimentar en RespuestaFormulario.
+
 DATOS_RESPONDENTE = [
     ("", "No"),
     ("nombre", "Nombre del respondente"),
@@ -78,23 +78,23 @@ DATOS_RESPONDENTE = [
     ("rut", "RUT del respondente"),
 ]
 
-# Escala por defecto: de 1 a 5 estrellas, como el forms del cliente.
+
 ESCALA_MINIMO_DEFECTO = 1
 ESCALA_MAXIMO_DEFECTO = 5
 ESCALA_MAXIMO_PERMITIDO = 10
 
-# Texto con que nace una pregunta agregada desde el constructor.
+
 PREGUNTA_NUEVA = "Pregunta sin título"
 OPCION_NUEVA = "Opción 1"
 
 ORIGEN_ENLACE = "ENLACE"
-# Respuestas importadas desde exportaciones de Forms (RF-MIG-01).
+
 ORIGEN_HISTORICO = "HISTORICO"
 ESTADO_REGISTRO_COMPLETO = "COMPLETO"
 
-# Temas del formulario público (como en Google o Microsoft Forms). Cada color
-# reemplaza el rojo del portal en botones, pestañas y bordes, y todos cumplen
-# contraste AA con texto blanco.
+
+
+
 TEMA_POR_DEFECTO = "rojo"
 TEMAS = {
     "rojo": {"nombre": "Rojo UA", "base": "#C8232C", "hover": "#A71C23", "suave": "#FDEDEE", "rgb": "200, 35, 44"},
@@ -104,6 +104,6 @@ TEMAS = {
     "grafito": {"nombre": "Grafito", "base": "#374151", "hover": "#1F2937", "suave": "#F3F4F6", "rgb": "55, 65, 81"},
 }
 
-# Foto de fondo: formatos y tamaño aceptados.
+
 FONDO_EXTENSIONES = ("jpg", "jpeg", "png")
 FONDO_MAX_MB = 5

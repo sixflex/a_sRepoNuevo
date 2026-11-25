@@ -38,7 +38,7 @@ class RutaDeJorgeTests(FichaUnicaBase):
         self.assertContains(pagina, reverse("cartas:solicitar_carta_estudiante", args=[enlace.token]))
         self.assertContains(pagina, f'data-bs-target="#qr-{actividad.id}"')
         self.assertContains(pagina, reverse("cartas:solicitar_carta_docente", args=[self.seccion.id]))
-        # Volver a abrir la Ruta usa el mismo enlace.
+
         self.ver_ruta()
         self.assertEqual(EnlaceSolicitudCarta.objects.filter(seccion=self.seccion).count(), 1)
 

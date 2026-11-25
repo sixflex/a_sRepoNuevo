@@ -48,7 +48,7 @@ def validar_rut_chileno(rut_str):
     if not cuerpo.isdigit():
         raise ValidationError("El cuerpo del RUT solo debe contener números.", code="rut_invalido")
 
-    # Algoritmo estándar Módulo 11 (Chile)
+
     factores = cycle([2, 3, 4, 5, 6, 7])
     suma = sum(int(digito) * factor for digito, factor in zip(reversed(cuerpo), factores))
     resto = suma % 11

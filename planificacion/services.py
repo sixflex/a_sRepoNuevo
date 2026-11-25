@@ -22,21 +22,21 @@ from .models import (FilaPlanificacion,PlanificacionError,)
 from rutas.services import asignar_ruta_as_si_corresponde
 from core.validators import normalizar_rut, validar_rut_chileno
 
-# Estado de cada fila. PENDIENTE = sin errores, espera la aprobación del Coordinador.
+
 ESTADO_PENDIENTE = "PENDIENTE"
 ESTADO_ACEPTADA = "ACEPTADA"
 ESTADO_OBSERVADA = "OBSERVADA"
 
-# Estado de la planificación (texto, sin migración). FINAL es el valor que ya
-# se guardaba al enviar la versión final: ahora significa "por revisar".
+
+
 PLAN_BORRADOR = "BORRADOR"
 PLAN_ENVIADA = "FINAL"
 PLAN_APROBADA = "APROBADA"
 PLAN_DEVUELTA = "DEVUELTA"
-# Dirección puede editar el enlace mientras está en borrador o devuelta.
+
 PLAN_EDITABLES = (PLAN_BORRADOR, PLAN_DEVUELTA)
 
-# Días que se reabre un enlace vencido al devolver la planificación.
+
 DIAS_REAPERTURA = 7
 
 
@@ -258,7 +258,7 @@ def _validar_nrc(fila):
         )
         return False
 
-    # El mismo NRC en una fila anterior de esta planificación.
+
     anterior = (
         fila.planificacion.filas
         .filter(nrc__iexact=nrc, numero_fila__lt=fila.numero_fila)
@@ -285,9 +285,9 @@ def _resolver_docente(docente_fila):
     docente = None
 
     if rut:
-        # El RUT se compara normalizado (sin puntos, con guion), igual que
-        # se guarda en Gestión académica; se mantiene el texto original
-        # por si quedan docentes antiguos guardados con otro formato.
+
+
+
         docente = Docente.objects.filter(
             Q(rut__iexact=normalizar_rut(rut)) | Q(rut__iexact=rut)
         ).first()
@@ -298,8 +298,8 @@ def _resolver_docente(docente_fila):
         ).first()
 
     if docente is None and correo:
-        # La persona puede tener dos cuentas (@uautonoma.cl y @cloud.uautonoma.cl):
-        # se busca al docente registrado con cualquiera de sus correos vinculados.
+
+
         from usuarios.services import correos_de_usuario, usuario_por_correo
 
         usuario = usuario_por_correo(correo)
@@ -450,7 +450,7 @@ def validar_fila(fila):
     if not _validar_docentes(fila):
         valido = False
 
-    # Sin errores la fila queda lista para que el Coordinador la apruebe.
+
     fila.estado_validacion = (
         ESTADO_PENDIENTE
         if valido
@@ -474,8 +474,8 @@ def _asignatura_para_aprobar(fila):
     asignatura = buscar_asignatura(fila.asignatura_texto, fila.carrera_resuelta)
     creada = False
     if asignatura is None:
-        # El código de asignatura es institucional: no se inventa, el
-        # Coordinador lo puede agregar después en Gestión académica.
+
+
         asignatura = Asignatura.objects.create(
             nombre=" ".join(_texto(fila.asignatura_texto).split()),
             codigo=None,
@@ -637,8 +637,8 @@ def aprobar_planificacion(planificacion, request=None):
             "Corríjalas con «Editar» o devuelva la planificación a Dirección."
         )
 
-    # La revisión queda guardada aunque no se apruebe (filas observadas);
-    # lo que se crea al aprobar va todo o nada.
+
+
     with transaction.atomic():
         return _incorporar_planificacion(planificacion, request)
 
@@ -657,7 +657,7 @@ def _incorporar_planificacion(planificacion, request):
                 if consolidar_fila(fila, creados):
                     secciones += 1
         except IntegrityError:
-            # Otro proceso creó el mismo NRC entre la revisión y la aprobación.
+
             raise PlanificacionNoAprobable(
                 f"No fue posible incorporar la fila {fila.numero_fila}: "
                 "sus datos chocan con una sección ya registrada. Revise el NRC."

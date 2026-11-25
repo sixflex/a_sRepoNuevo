@@ -50,7 +50,7 @@ class FichaUnicaBase(TestCase):
             socio=self.socio, nombre="Contacto", correo="socio@example.com",
             es_principal=True, activo=True,
         )
-        # Trabaja con un equipo (sin equipo sería solo un socio elegido, RF-SC-03).
+
         equipo = Equipo.objects.create(
             seccion=self.seccion, numero_grupo=1, informante_nombre="Estudiante",
             informante_correo="estudiante@cloud.uautonoma.cl", estado="Registrado",
@@ -278,9 +278,9 @@ class PromedioPorDocenteTests(TestCase):
         from .services import promedio_rutas
 
         rutas = [
-            SimpleNamespace(completadas_obligatorias=10, total_obligatorias=20),  # 50 %
-            SimpleNamespace(completadas_obligatorias=20, total_obligatorias=20),  # 100 %
-            SimpleNamespace(completadas_obligatorias=0, total_obligatorias=0),    # 0 %
+            SimpleNamespace(completadas_obligatorias=10, total_obligatorias=20),
+            SimpleNamespace(completadas_obligatorias=20, total_obligatorias=20),
+            SimpleNamespace(completadas_obligatorias=0, total_obligatorias=0),
         ]
         self.assertEqual(promedio_rutas(rutas), 50)
         self.assertIsNone(promedio_rutas([]))

@@ -24,7 +24,7 @@ from .models import ConfiguracionPortal
 from .portal import BLOQUES, configuracion_portal
 
 
-# Datos personales que nunca pueden salir en el portal (RNF-PRI-01).
+
 RUT_SOCIO = "76.543.210-K"
 CORREO_SOCIO = "contacto.privado@junta.cl"
 TELEFONO_SOCIO = "+56 9 8765 4321"
@@ -79,7 +79,7 @@ class DatosPortalMixin:
         )
         self.socio_emprendedor = self.socio("Panadería Doña Ana", self.emprendedor, self.maipu)
 
-        # La junta participa dos veces (una del sistema y una histórica de 2024).
+
         self.participacion(self.socio_junta, servicio="Plan de reciclaje", periodo=self.periodo)
         self.participacion(
             self.socio_junta, servicio="Huerto comunitario", periodo=None,
@@ -166,7 +166,7 @@ class ConfigurarPortalTests(DatosPortalMixin, TestCase):
         ))
         self.assertEqual(respuesta.status_code, 200)
         self.assertContains(respuesta, "marca al menos una opción")
-        # No se guardó nada, pero lo que marcó sigue marcado en pantalla.
+
         self.assertTrue(configuracion_portal()["cifras"]["carreras"])
         self.assertNotContains(respuesta, 'name="cifras__carreras"\n                                                       checked')
         self.assertFalse(ConfiguracionPortal.objects.filter(opciones_json__has_key="mapa").exists())
@@ -193,7 +193,7 @@ class PortalRespetaConfiguracionTests(DatosPortalMixin, TestCase):
         ConfiguracionPortal.objects.update_or_create(pk=1, defaults={"opciones_json": _normalizar(opciones)})
 
     def test_por_defecto_muestra_todos_los_bloques(self):
-        # Las noticias salen solo si hay alguna real (ya no hay tarjetas de relleno).
+
         Noticia.objects.create(
             titulo="Noticia A+S", url_fuente="https://uautonoma.cl/n/0", fuente="UA",
             fecha_publicacion=timezone.now(), estado="PUBLICADA",
@@ -211,7 +211,7 @@ class PortalRespetaConfiguracionTests(DatosPortalMixin, TestCase):
         self.assertIsNone(respuesta.context["mapa"])
         self.assertNotContains(respuesta, 'id="mapaTerritorial"')
         self.assertNotContains(respuesta, "Mapa de Impacto Territorial")
-        # El catálogo sigue, con sus filtros.
+
         self.assertContains(respuesta, 'id="catalogo"')
         self.assertContains(respuesta, 'name="comuna"')
 
@@ -220,7 +220,7 @@ class PortalRespetaConfiguracionTests(DatosPortalMixin, TestCase):
         respuesta = self.inicio()
         for punto in respuesta.context["mapa"]["puntos"]:
             self.assertEqual(set(punto), {"comuna", "lat", "lon", "proyectos", "participaciones"})
-        # Con una sola vista no se ofrece el selector Proyectos/Socios.
+
         self.assertNotContains(respuesta, 'data-mapa-modo="socios"')
         self.assertContains(respuesta, 'data-mapa-modo-inicial="proyectos"')
 
@@ -277,7 +277,7 @@ class PortalRespetaConfiguracionTests(DatosPortalMixin, TestCase):
         respuesta = self.inicio()
         self.assertNotContains(respuesta, "ACCEDER AL REPOSITORIO PÚBLICO A+S")
         self.assertNotContains(respuesta, reverse("archivos:repositorio_publico"))
-        # El aviso para estudiantes no se pierde.
+
         self.assertContains(respuesta, "¿Eres estudiante?")
         self.assertEqual(self.client.get(reverse("archivos:repositorio_publico")).status_code, 404)
 
@@ -325,7 +325,7 @@ class PrivacidadYAgregadosTests(DatosPortalMixin, TestCase):
         self.crear_datos()
 
     def test_portal_completo_no_expone_datos_personales(self):
-        # Con todo encendido y con cada filtro aplicado.
+
         variantes = [{}, {"clasificacion": self.junta.pk}, {"comuna": self.providencia.pk}, {"anio": 2024}]
         for parametros in variantes:
             with self.subTest(parametros=parametros):
@@ -373,7 +373,7 @@ class RendimientoPortalTests(DatosPortalMixin, TestCase):
             self.participacion(socio, servicio=f"Servicio {n % 15}", periodo=self.periodo)
 
     def consultas(self, **parametros):
-        self.inicio(**parametros)  # calienta cachés (ContentType, sesión)
+        self.inicio(**parametros)
         with CaptureQueriesContext(connection) as contexto:
             self.inicio(**parametros)
         return len(contexto.captured_queries)

@@ -165,7 +165,7 @@ def enviar(periodo, request, reenviar=False):
             resumen["enviados"] += 1
         else:
             if nuevo:
-                # Si el correo no salió, el socio sigue como "por enviar".
+
                 enlace.delete()
             resumen["errores"].append(socio.nombre_organizacion)
     return resumen

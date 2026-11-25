@@ -6,7 +6,7 @@ quede marcado en todas las páginas de su sección (listados, detalles y
 formularios) sin repetir listas de nombres de URL en la plantilla.
 """
 
-# Páginas del espacio de nombres "core" que pertenecen a un ítem del menú.
+
 MENU_CORE = {
     "coordinacion": "inicio",
     "inicio_docente": "inicio",
@@ -16,7 +16,7 @@ MENU_CORE = {
     "detalle_planificacion_coordinacion": "planificaciones",
 }
 
-# Apps cuyo espacio de nombres corresponde completo a un ítem del menú.
+
 MENU_POR_APP = {
     "rutas": "rutas",
     "cartas": "cartas",
@@ -36,7 +36,7 @@ def _menu_activo(match):
     if namespace == "core":
         return MENU_CORE.get(nombre, "")
 
-    # Configuración → Carta oficial vive en la app cartas.
+
     if namespace == "cartas" and "plantilla_carta" in nombre:
         return "configuracion"
 
@@ -54,7 +54,7 @@ def _menu_activo(match):
     if namespace == "proyectos" and nombre == "catalogo":
         return "proyectos"
 
-    # Las URLs de academico no tienen espacio de nombres.
+
     if match.route.startswith("academico/"):
         if nombre.startswith("seccion_"):
             return "secciones"

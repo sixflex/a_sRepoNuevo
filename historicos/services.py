@@ -55,15 +55,15 @@ FILA_OMITIDA = "OMITIDA"
 
 EXTENSIONES = {"xlsx"}
 
-# Columnas que Forms agrega solo (Google: «Marca temporal»; Microsoft: «Hora de finalización»).
+
 ENCABEZADOS_FECHA = ["marca temporal", "timestamp", "hora de finalizacion", "completion time", "fecha de envio"]
 
-# Un socio importado ya trabajó con la Universidad: el Coordinador decide
-# después si vuelve a quedar disponible (RF-SC-04 CA2).
+
+
 ESTADO_SOCIO_HISTORICO = "TRABAJO_TERMINADO"
 
-# Columnas del Registro de Socios Comunitarios, reconocidas por fragmentos del
-# encabezado normalizado (sin tildes). El orden importa: el primero que calza gana.
+
+
 CAMPOS_REGISTRO_SOCIOS = [
     ("fecha", ENCABEZADOS_FECHA),
     ("informante_rut", ["rut"]),
@@ -115,7 +115,7 @@ ETIQUETAS_REGISTRO_SOCIOS = {
     "comentario": "Comentario",
 }
 
-# Semestre del Registro de Socios -> (mes de inicio, mes de término) de la participación.
+
 MESES_SEMESTRE = {"otono": (3, 7), "primavera": (8, 12)}
 
 
@@ -131,9 +131,9 @@ def _texto(valor):
     return str(valor).strip()
 
 
-# ---------------------------------------------------------------------------
-# Tipos de origen
-# ---------------------------------------------------------------------------
+
+
+
 
 def _version_publicada(codigo):
     return (
@@ -188,9 +188,9 @@ def obtener_hojas_excel(archivo):
         libro.close()
         archivo.seek(0)
 
-# ---------------------------------------------------------------------------
-# Lectura del archivo
-# ---------------------------------------------------------------------------
+
+
+
 
 
 def leer_tabla(archivo, nombre_hoja=None):
@@ -303,9 +303,9 @@ def _columna_fecha(encabezados):
     return None
 
 
-# ---------------------------------------------------------------------------
-# Paso 1: análisis y vista previa
-# ---------------------------------------------------------------------------
+
+
+
 
 def analizar_archivo(*, archivo, tipo, usuario, nombre_hoja=None):
     """Guarda el archivo y deja la carga en estado PREVIA con cada fila clasificada."""
@@ -343,7 +343,7 @@ def analizar_archivo(*, archivo, tipo, usuario, nombre_hoja=None):
             CargaMapeo(carga=carga, columna_origen=columna[:180], campo_destino=campo[:180])
             for columna, campo in mapeo.items()
         ])
-        # Filas y errores en dos inserciones en lote, no dos consultas por fila.
+
         filas = CargaFila.objects.bulk_create([
             CargaFila(
                 carga=carga,
@@ -371,7 +371,7 @@ def _resultado(numero, fila, errores, omitir=False):
     return {"numero": numero, "raw": _raw(fila), "errores": errores, "estado": estado}
 
 
-# --- Formularios configurables ----------------------------------------------
+
 
 def _analizar_formulario(codigo, encabezados, filas):
     version = _version_publicada(codigo)
@@ -389,7 +389,7 @@ def _analizar_formulario(codigo, encabezados, filas):
         .values_list("fecha_envio", "respondente_correo", "respondente_rut", "respondente_nombre")
     )
     resultados = []
-    listas = {}  # catálogos de comunas, carreras... leídos una sola vez
+    listas = {}
     for numero, fila in filas:
         resultado = _analizar_fila_formulario(
             numero, fila, bloques, preguntas, columnas, columna_fecha, ya_importadas, listas,
@@ -433,7 +433,7 @@ def _analizar_fila_formulario(numero, fila, bloques, preguntas, columnas, column
     return _resultado(numero, fila, errores)
 
 
-# --- Registro de Socios Comunitarios ----------------------------------------
+
 
 def _columnas_registro_socios(encabezados):
     """{campo: encabezado}: cada columna se asigna al primer campo que calza."""
@@ -557,9 +557,9 @@ def _analizar_registro_socios(encabezados, filas):
     return mapeo, resultados
 
 
-# ---------------------------------------------------------------------------
-# Paso 2: confirmar o cancelar
-# ---------------------------------------------------------------------------
+
+
+
 
 def cancelar_carga(carga):
     if carga.estado != ESTADO_PREVIA:

@@ -17,7 +17,7 @@ from core.validators import es_rut_valido, normalizar_rut
 
 from .models import IntegranteEquipo
 
-MAXIMO = 6  # el mismo tope del registro de equipos
+MAXIMO = 6
 
 
 def _nombre(texto):

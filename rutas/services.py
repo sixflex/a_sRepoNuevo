@@ -22,9 +22,9 @@ from academico.models import Seccion
 from .models import RutaActividad, RutaVersion, SeccionActividad, SeccionRuta
 
 
-# ---------------------------------------------------------------------------
-# Gestión de Enlaces y Asignación de Rutas
-# ---------------------------------------------------------------------------
+
+
+
 
 @transaction.atomic
 def obtener_o_crear_enlace_seccion(version_formulario, seccion, usuario=None):
@@ -185,9 +185,9 @@ def formularios_qr_de_proceso(request, proceso):
     return formularios
 
 
-# ---------------------------------------------------------------------------
-# Recordatorios y Avance de Ruta
-# ---------------------------------------------------------------------------
+
+
+
 
 def obtener_recordatorios_ruta(secciones):
     seccion_ids = [seccion.id for seccion in secciones]
@@ -320,9 +320,9 @@ def url_recurso(seccion_actividad):
     )
 
 
-# ---------------------------------------------------------------------------
-# Gestión de Cierres e Invitaciones a Socios
-# ---------------------------------------------------------------------------
+
+
+
 
 RECORDATORIO_INVITACION_CIERRE = "invitacion_cierre"
 OBSERVACION_SIN_CIERRE = "No habrá actividad de cierre."
@@ -524,9 +524,9 @@ def recordatorios_cierre(seccion_ruta):
     return recordatorios
 
 
-# ---------------------------------------------------------------------------
-# Generación de ZIP y Expedientes
-# ---------------------------------------------------------------------------
+
+
+
 
 def nombre_zip_expediente(seccion):
     partes = [
@@ -613,9 +613,9 @@ def generar_zip_expediente(expediente, destino, seccion_ruta=None):
     return faltantes
 
 
-# ---------------------------------------------------------------------------
-# Creación de Nuevas Versiones de Ruta
-# ---------------------------------------------------------------------------
+
+
+
 
 @transaction.atomic
 def crear_nueva_version_ruta(ruta_version_origen, usuario=None):

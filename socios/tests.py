@@ -68,8 +68,8 @@ class DatosBase(TestCase):
             clasificacion=cls.clasif_fundacion, comuna=cls.comuna_a,
             estado_revision="APROBADO",
         )
-        # Propuesto por un equipo y aprobado solo para el historial de ese
-        # equipo: sigue provisional. Los Recibidos se revisan en Postulaciones.
+
+
         cls.norte = crear_socio(
             "Junta Norte", rut="65.987.654-3",
             clasificacion=cls.clasif_junta, comuna=cls.comuna_b,
@@ -181,7 +181,7 @@ class CatalogoDocenteTests(DatosBase):
         self.url = reverse("socios:catalogo_docente")
 
     def test_muestra_aprobados_disponibles_y_asignados(self):
-        # RN-09: un socio asignado puede trabajar con varios equipos.
+
         resp = self.client.get(self.url)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(nombres(resp), {"Fundación Esperanza", "Centro Disponible", "Club Asignado"})
@@ -307,7 +307,7 @@ class CambioEstadoTests(DatosBase):
 
     def setUp(self):
         self.client.force_login(self.coordinador)
-        # Socio propuesto por un equipo que aún no se revisa.
+
         self.norte = crear_socio(
             "Junta Sur Propuesta", rut="66.111.222-4", estado_revision="RECIBIDO", es_provisional=True,
         )
@@ -335,7 +335,7 @@ class CambioEstadoTests(DatosBase):
         self.assertEqual(self.esperanza.estado_revision, "APROBADO")
 
     def test_ciclo_del_socio_aprobado_queda_auditado(self):
-        # RF-SC-02: Disponible -> Asignado -> Trabajo terminado, y puede volver.
+
         for estado in ("ASIGNADO", "TRABAJO_TERMINADO", "DISPONIBLE"):
             self.client.post(self.url_cambio(self.disponible), {"estado_revision": estado})
 
@@ -444,14 +444,14 @@ class PostulacionPublicaTests(TestCase):
             estado="PUBLICADA",
         )
 
-    # CDE-52: Validación de RUT chileno (Módulo 11)
+
     def test_cde_52_validador_rut_chileno(self):
-        # Casos válidos matemáticos reales: numérico, con K y con 0
+
         self.assertEqual(validar_rut_chileno("11.111.111-1"), "11111111-1")
         self.assertEqual(validar_rut_chileno("11.111.112-k"), "11111112-K")
         self.assertEqual(validar_rut_chileno("60.805.000-0"), "60805000-0")
 
-        # Casos inválidos
+
         with self.assertRaises(ValidationError):
             validar_rut_chileno("11.111.111-9")
         with self.assertRaises(ValidationError):
@@ -459,7 +459,7 @@ class PostulacionPublicaTests(TestCase):
         with self.assertRaises(ValidationError):
             validar_rut_chileno("")
 
-    # CDE-49 / CDE-50: Formulario público y aviso de cierre
+
     def test_cde_50_convocatoria_expirada_muestra_aviso_cierre(self):
         url = reverse("socios:postular_convocatoria", args=[self.convocatoria_expirada.id])
         response = self.client.get(url)
@@ -474,7 +474,7 @@ class PostulacionPublicaTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "navbar-sistema")
 
-    # CDE-49, CDE-51, CDE-52, CDE-53, CDE-56: Postulación válida y confirmación
+
     def test_cde_53_postulacion_exitosa_crea_folio_y_auditoria_correo(self):
         url = reverse("socios:postular_convocatoria", args=[self.convocatoria_activa.id])
         data = {
@@ -505,7 +505,7 @@ class PostulacionPublicaTests(TestCase):
         self.assertEqual(registro_correo.destinatario, "marta.gomez@vecinos.cl")
         self.assertEqual(registro_correo.resultado, "OK")
 
-    # CDE-52: Bloqueo de postulaciones duplicadas
+
     def test_cde_52_bloquea_postulacion_duplicada_mismo_rut(self):
         url = reverse("socios:postular_convocatoria", args=[self.convocatoria_activa.id])
         data = {
@@ -515,15 +515,15 @@ class PostulacionPublicaTests(TestCase):
             "correo": "carlos@fundacion.cl",
             "linea_servicio": "SALUD",
         }
-        # Primer envío
+
         self.client.post(url, data)
 
-        # Segundo envío con mismo RUT
+
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Ya existe una postulación registrada para el RUT 11111111-1")
 
-    # CDE-54, CDE-55, CDE-56: Revisión, motivo de rechazo y auditoría
+
     def test_cde_54_y_55_revision_postulacion_coordinador(self):
         socio = SocioComunitario.objects.create(
             nombre_organizacion="Club Adulto Mayor",
@@ -553,7 +553,7 @@ class PostulacionPublicaTests(TestCase):
         self.client.force_login(self.coordinador)
         url_revisar = reverse("socios:revisar_postulacion", args=[postulacion.id])
 
-        # Caso A: Rechazar sin motivo falla
+
         response_rechazo_vacio = self.client.post(url_revisar, {
             "estado": "RECHAZADA",
             "motivo_rechazo": "",
@@ -562,7 +562,7 @@ class PostulacionPublicaTests(TestCase):
         self.assertEqual(postulacion.estado, "RECIBIDA")
         self.assertContains(response_rechazo_vacio, "Debes indicar un motivo de rechazo.")
 
-        # Caso B: Rechazar con motivo registra estado y auditoría
+
         response_rechazo_ok = self.client.post(url_revisar, {
             "estado": "RECHAZADA",
             "motivo_rechazo": "Cupos completos para la línea de trabajo.",
@@ -717,7 +717,7 @@ class SincronizacionEstadosTests(TestCase):
         self.assertNotIn(pendiente.nombre_organizacion, listados)
         self.assertNotIn(rechazado.nombre_organizacion, listados)
 
-        # El propuesto por un equipo se revisa en su pestaña de Postulaciones.
+
         propuestos = self.client.get(reverse("socios:lista_postulaciones"), {"origen": "equipos"})
         self.assertEqual([s.nombre_organizacion for s in propuestos.context["propuestos"]], ["Grupo del Equipo"])
 
@@ -726,7 +726,7 @@ class SincronizacionEstadosTests(TestCase):
         url = reverse("socios:revisar_socio_propuesto", args=[socio.id])
         self.assertEqual(self.client.get(url).status_code, 200)
 
-        # Guardar sin decidir solo corrige los datos.
+
         self.client.post(url, {"nombre_organizacion": "Grupo Vecinal Sur", "rut": "",
                                "contacto_nombre": "Ana Soto", "contacto_correo": "ana@grupo.cl"})
         socio.refresh_from_db()
@@ -802,10 +802,10 @@ class SincronizacionEstadosTests(TestCase):
         self.assertFalse(historial_estados_socio(socio).exists())
 
 
-# ---------------------------------------------------------------------------
-# Asociación socio <-> equipo con ParticipacionSocio como fuente de verdad
-# (RN-09, RF-EQP-08, RF-SC-04, RF-SC-06, RF-IND-02, RF-MIG-02)
-# ---------------------------------------------------------------------------
+
+
+
+
 
 import importlib
 import threading
@@ -926,7 +926,7 @@ class ServicioAsociacionSocioTests(TestCase):
         auditoria = AuditoriaCambio.objects.filter(
             entidad="Equipo", entidad_id=str(self.equipo.pk), accion="CAMBIO_SOCIO_EQUIPO",
         ).latest("id")
-        # La auditoría guarda todo lo que tenía el antiguo HistorialSocioEquipo.
+
         self.assertEqual(auditoria.valores_anteriores_json["socio_comunitario_id"], self.socio_a.pk)
         self.assertEqual(auditoria.valores_anteriores_json["socio_nombre"], "Org A")
         self.assertEqual(auditoria.valores_nuevos_json["socio_comunitario_id"], self.socio_b.pk)
@@ -1060,7 +1060,7 @@ class VistasAsociacionSocioTests(TestCase):
         disponibles = list(self.client.get(url).context["socios_disponibles"])
         self.assertEqual(disponibles, [self.socio_b])
 
-        # Un socio no elegido no se acepta aunque se mande a mano.
+
         self.client.post(url, {"accion": "cambiar_socio", "socio_comunitario": socio_c.id, "motivo": "Otro"})
         self.assertEqual(abiertas(equipo).get().socio, self.socio_a)
 
@@ -1083,9 +1083,9 @@ class VistasAsociacionSocioTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(len(response.context["participaciones_socio"]), 2)
         self.assertContains(response, "Vigente")
-        # Historial de cambios (desde auditoría) con las mismas columnas.
+
         historial = response.context["historial_socios"]
-        self.assertEqual(len(historial), 1)  # la asociación inicial no la hizo un docente
+        self.assertEqual(len(historial), 1)
         self.assertEqual(historial[0].socio_nuevo, self.socio_b)
         self.assertEqual(historial[0].socio_anterior, self.socio_a)
         self.assertContains(response, "Nuevo socio")
@@ -1203,7 +1203,7 @@ class RegistroEquipoParticipacionTests(TestCase):
         self.assertEqual(auditoria.usuario, self.estudiante)
         self.assertIsNone(auditoria.valores_anteriores_json["socio_comunitario_id"])
         self.assertIsNone(auditoria.valores_nuevos_json["docente_id"])
-        # Como antes, el registro estudiantil no aparece en el historial de cambios del docente.
+
         self.assertEqual(socios_services.historial_socios_equipo(equipo), [])
 
     def test_registro_con_socio_provisional_sigue_funcionando(self):
@@ -1219,7 +1219,7 @@ class RegistroEquipoParticipacionTests(TestCase):
         self.assertEqual(socio.estado_revision, "RECIBIDO")
         self.assertEqual(equipo.socio_vigente, socio)
         self.assertEqual(abiertas(equipo).get().socio, socio)
-        # Los datos del Registro de Socios quedan normalizados en el socio y su contacto.
+
         self.assertEqual(socio.comuna.nombre, "Providencia")
         self.assertEqual(socio.clasificacion_otra, "Junta de vecinos")
         contacto = socio.contactos.get()
@@ -1246,7 +1246,7 @@ class FichaEIndicadoresParticipacionTests(DatosBase):
         self.seccion, _ = crear_contexto_academico("IND")
 
     def test_organizaciones_unicas_frente_a_participaciones(self):
-        # RF-IND-02 CA1: participa tres veces = 1 organización, 3 participaciones.
+
         for anio in (2019, 2020, 2021):
             ParticipacionSocio.objects.create(
                 socio=self.esperanza, origen=ORIGEN_HISTORICO, fecha_inicio=date(anio, 3, 1),
@@ -1358,8 +1358,8 @@ class LectoresSocioVigenteTests(TestCase):
         self.assertEqual(fila.motivo, "M")
 
 
-# Estado del esquema justo antes de socios.0005 / proyectos.0005: Equipo aún
-# tiene socio_comunitario y existe HistorialSocioEquipo.
+
+
 ESTADO_ANTERIOR = [
     ("socios", "0004_participacionsocio_equipo_opcional_restricciones"),
     ("proyectos", "0004_historialsocioequipo"),
@@ -1376,7 +1376,7 @@ class MigracionReconstruirParticipacionesTests(TransactionTestCase):
     def setUp(self):
         executor = MigrationExecutor(connection)
         executor.migrate(ESTADO_ANTERIOR)
-        # Mismo estado histórico que recibe la RunPython al migrar.
+
         self.apps_antiguas = executor.loader.project_state(
             ("socios", "0005_reconstruir_participaciones_equipos"), at_end=False,
         ).apps
@@ -1420,7 +1420,7 @@ class MigracionReconstruirParticipacionesTests(TransactionTestCase):
         self.EquipoAntiguo.objects.filter(pk=equipo.pk).update(fecha_registro=self._fecha(cuando))
 
     def ejecutar(self):
-        # La función RunPython de socios.0005 con el estado histórico.
+
         migracion_participaciones.reconstruir_participaciones(self.apps_antiguas, None)
 
     def test_reconstruye_cadena_y_vigente(self):
@@ -1465,7 +1465,7 @@ class MigracionReconstruirParticipacionesTests(TransactionTestCase):
 
         vigente = abiertas(equipo.pk).get()
         self.assertEqual((vigente.socio, vigente.fecha_inicio), (self.a, date(2026, 3, 15)))
-        self.assertIsNone(vigente.carrera)  # sección con dos carreras
+        self.assertIsNone(vigente.carrera)
 
     def test_usa_la_fecha_local_del_cambio(self):
         equipo = self.equipo_antiguo(self.seccion, socio=self.b)
@@ -1494,7 +1494,7 @@ class MigracionReconstruirParticipacionesTests(TransactionTestCase):
         equipo = self.equipo_antiguo(self.seccion, socio=self.c)
         self._registrado(equipo, date(2026, 3, 1))
         self._evento(equipo, self.a, self.b, date(2026, 4, 1))
-        self._evento(equipo, self.c, self.c, date(2026, 5, 1))  # el anterior no coincide con el previo
+        self._evento(equipo, self.c, self.c, date(2026, 5, 1))
 
         self.ejecutar()
 
@@ -1505,7 +1505,7 @@ class MigracionReconstruirParticipacionesTests(TransactionTestCase):
         equipo = self.equipo_antiguo(self.seccion, socio=self.b)
         self._evento(equipo, self.a, self.b, date(2026, 4, 1))
         otro = self.equipo_antiguo(self.seccion, numero=2, socio=self.a)
-        ParticipacionSocio.objects.create(socio=self.a, equipo_id=otro.pk, origen=ORIGEN_OPERATIVO)  # ya tiene
+        ParticipacionSocio.objects.create(socio=self.a, equipo_id=otro.pk, origen=ORIGEN_OPERATIVO)
 
         self.ejecutar()
         self.ejecutar()
@@ -1525,14 +1525,14 @@ class MigracionReconstruirParticipacionesTests(TransactionTestCase):
 
         self.migrar_hasta_el_final()
 
-        # Esquema final: sin columna ni tabla heredadas.
+
         with connection.cursor() as cursor:
             columnas = [c.name for c in connection.introspection.get_table_description(cursor, "proyectos_equipo")]
             tablas = connection.introspection.table_names(cursor)
         self.assertNotIn("socio_comunitario_id", columnas)
         self.assertNotIn("proyectos_historialsocioequipo", tablas)
 
-        # Datos: participaciones y auditoría antes de borrar.
+
         self.assertEqual(
             list(ParticipacionSocio.objects.filter(equipo_id=equipo.pk).order_by("fecha_inicio").values_list("socio_id", "fecha_fin")),
             [(self.a.pk, date(2026, 4, 10)), (self.b.pk, None)],
@@ -1541,7 +1541,7 @@ class MigracionReconstruirParticipacionesTests(TransactionTestCase):
         self.assertEqual(actual.socio_vigente, self.b)
         self.assertIsNone(Equipo.objects.get(pk=sin_socio.pk).socio_vigente)
 
-        # La pantalla del docente muestra el mismo historial (fecha, socios, docente, motivo).
+
         self.client.force_login(self.usuario_docente)
         response = self.client.get(reverse("proyectos:gestionar_equipo", args=[equipo.pk]))
         self.assertEqual(response.status_code, 200)
@@ -1553,7 +1553,7 @@ class MigracionReconstruirParticipacionesTests(TransactionTestCase):
         self.assertContains(response, "Cambio de foco")
         self.assertContains(response, "10/04/2026")
 
-        # Reversa de proyectos.0005: repone la columna desde la participación abierta.
+
         executor = MigrationExecutor(connection)
         executor.migrate([("proyectos", "0004_historialsocioequipo")])
         apps_revertidas = executor.loader.project_state([("proyectos", "0004_historialsocioequipo")]).apps
@@ -1575,7 +1575,7 @@ class ConcurrenciaAsociacionPostgresTests(TransactionTestCase):
             try:
                 barrera.wait()
                 socios_services.asociar_socio_a_equipo(equipo=Equipo.objects.get(pk=equipo.pk), socio=socio)
-            except Exception as error:  # pragma: no cover - se informa abajo
+            except Exception as error:
                 errores.append(error)
             finally:
                 connection.close()

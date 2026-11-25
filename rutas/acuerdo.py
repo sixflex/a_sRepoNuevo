@@ -31,7 +31,7 @@ GRIS = colors.HexColor("#F2F4F7")
 BORDE = colors.HexColor("#D0D5DD")
 FILAS_ESTUDIANTES_EN_BLANCO = 6
 
-# Preguntas del bloque de firmas: van en los recuadros de firma, no en la tabla.
+
 FIRMANTES = {
     "nombre del docente firmante": "docente",
     "nombre del socio comunitario firmante": "socio",

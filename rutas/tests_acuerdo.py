@@ -16,7 +16,7 @@ from .tests_ficha_unica import FichaUnicaBase, publicar
 
 
 def setUpModule():
-    # Sin compresión, el texto del PDF se puede buscar directo.
+
     global _COMPRESION
     _COMPRESION = rl_config.pageCompression
     rl_config.pageCompression = 0
@@ -62,7 +62,7 @@ class AcuerdoFormalTests(FichaUnicaBase):
         self.assertContains(pagina, f"{url}?respuesta={respuesta.id}")
         self.assertContains(pagina, "Acuerdo 1")
         self.assertContains(pagina, "Descarga el acuerdo en blanco")
-        # Ficha única: no se ofrece el Excel para no llenar el acuerdo dos veces.
+
         self.assertNotContains(pagina, "1rKRBmLowWN_1RZuNRAB9IhvYnx8J9NXz")
 
     def test_pdf_del_acuerdo_trae_lo_llenado_y_los_firmantes(self):
@@ -207,11 +207,11 @@ class VolverSegunOrigenTests(FichaUnicaBase):
         desde_ruta = self.client.get(url_carta, {"volver": url_ruta})
         self.assertContains(desde_ruta, "Volver a la Ruta")
 
-        # Recargar la misma página (filtros, formulario con errores) mantiene el origen.
+
         recarga = self.client.get(url_carta, HTTP_REFERER=f"http://testserver{url_carta}")
         self.assertContains(recarga, "Volver a la Ruta")
 
-        # Entrar desde la sección, sin ?volver, vuelve a la sección.
+
         url_seccion = reverse("core:detalle_seccion", args=[self.seccion.id])
         desde_seccion = self.client.get(url_carta, HTTP_REFERER=f"http://testserver{url_seccion}")
         self.assertContains(desde_seccion, "Volver a la sección")

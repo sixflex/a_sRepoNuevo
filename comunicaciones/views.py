@@ -71,7 +71,7 @@ def correo_envio(request):
 
         error = None
         if nueva.activo:
-            # Nunca se activa una cuenta que no funciona: los correos seguirían saliendo mal.
+
             error = "Escribe la clave de aplicación otra vez." if not clave else config.probar_conexion(nueva, clave)
         if error:
             form.add_error(None, f"No se guardó: {error}")
@@ -114,7 +114,7 @@ def correo_envio(request):
             ).send(fail_silently=False)
             envio.resultado, envio.fecha_envio = "OK", timezone.now()
             messages.success(request, f"Correo de prueba enviado a {destinatario}. Revisa también la carpeta de spam.")
-        except Exception as error:  # noqa: BLE001 - se muestra al Coordinador
+        except Exception as error:
             envio.resultado, envio.detalle_error = "ERROR", str(error)
             messages.error(request, f"No se pudo enviar la prueba. {config.explicar_error(error)}")
         envio.save()

@@ -28,8 +28,8 @@ from .constantes import (
 from .forms import DECISION_SOLO_EQUIPO
 from .models import ContactoSocio, ParticipacionSocio, SocioComunitario
 
-# Responsable y fecha de cada cambio (RF-SC-02 CA2) se registran en
-# AUDITORIA_CAMBIO, como indica el modelo de BD aprobado.
+
+
 ENTIDAD_SOCIO = "SocioComunitario"
 ACCION_CAMBIO_ESTADO_SOCIO = "CAMBIO_ESTADO_SOCIO"
 ACCION_EDICION_SOCIO = "EDICION_SOCIO"
@@ -38,13 +38,13 @@ ACCION_REVISION_POSTULACION = "REVISION_POSTULACION"
 ENTIDAD_EQUIPO = "Equipo"
 ACCION_CAMBIO_SOCIO_EQUIPO = "CAMBIO_SOCIO_EQUIPO"
 
-# Decisión sobre la postulación -> estado del socio (RF-SC-02)
+
 ESTADO_SOCIO_SEGUN_DECISION = {
     "APROBADA": "APROBADO",
     "RECHAZADA": "RECHAZADO",
 }
 
-# Estados del socio desde los que la decisión lo mueve
+
 ESTADOS_EN_REVISION = {
     "APROBADA": ("RECIBIDO", "RECHAZADO"),
     "RECHAZADA": ("RECIBIDO",),
@@ -63,7 +63,7 @@ def correo_contacto_principal(socio):
     return contacto.correo if contacto and contacto.correo else None
 
 
-# Preguntas de la postulación que describen qué hace el socio (Ficha de emprendedores).
+
 PREGUNTAS_QUE_HACE = ("Producto o servicio", "Rubro")
 
 
@@ -277,7 +277,7 @@ def revisar_socio_propuesto(request, socio, form):
     el historial del equipo (RF-SC-04 CA2, RN-10). La revisión no cambia la
     asociación con el equipo: el grupo sigue trabajando con él.
     """
-    # El formulario ya copió los datos nuevos a la instancia: los anteriores se leen de la BD.
+
     anteriores = SocioComunitario.objects.values(*CAMPOS_FICHA_SOCIO).get(pk=socio.pk)
 
     with transaction.atomic():
@@ -302,7 +302,7 @@ def revisar_socio_propuesto(request, socio, form):
                 valores_nuevos=nuevos,
             )
 
-        # La decisión se toma una sola vez; después solo se corrigen datos.
+
         decision = datos.get("decision") if socio.estado_revision == "RECIBIDO" else None
         if decision:
             cambiar_estado_socio(
@@ -334,9 +334,9 @@ def contexto_academico_equipo(equipo):
     return {"proyecto_id": equipo.proyecto_id, **contexto_academico_seccion(equipo.seccion)}
 
 
-# ---------------------------------------------------------------------------
-# Socios elegidos por el Docente para su sección (RF-SC-03)
-# ---------------------------------------------------------------------------
+
+
+
 ENTIDAD_SECCION = "Seccion"
 ACCION_ELEGIR_SOCIO_SECCION = "ELEGIR_SOCIO_SECCION"
 ACCION_QUITAR_SOCIO_SECCION = "QUITAR_SOCIO_SECCION"
@@ -512,7 +512,7 @@ def asociar_socio_a_equipo(*, equipo, socio, docente=None, motivo=None, request=
             "mientras se guardaba. Inténtalo nuevamente."
         ) from error
 
-    # El objeto del llamador muestra de inmediato el socio nuevo.
+
     equipo.__dict__["socio_vigente"] = socio
     return nueva, True
 
@@ -607,10 +607,10 @@ def revisar_postulacion(request, postulacion, decision, motivo=""):
         )
 
         socio = postulacion.socio
-        # Solo se mueve al socio que sigue en revisión: un socio ya disponible
-        # que postula a otra convocatoria conserva su estado.
+
+
         if socio and socio.estado_revision in ESTADOS_EN_REVISION[decision]:
-            # Aprobar deja al socio como definitivo; rechazar no cambia esa marca.
+
             extra = {"origen": f"postulacion #{postulacion.pk}"}
             if decision == "RECHAZADA":
                 extra["motivo_rechazo"] = motivo

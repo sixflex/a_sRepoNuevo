@@ -407,7 +407,7 @@ class CicloDeVidaTests(FormularioBaseTestCase):
         self.client.post(self.url_responder, self.datos("A"))
         nueva = services.crear_nueva_version(self.version)
         services.publicar(nueva)
-        # Mismo enlace, ahora con las preguntas de la versión 2.
+
         ids = {p.texto: p.id for p in nueva.preguntas.all()}
         self.client.post(self.url_responder, {
             f"p{ids['Programa']}": "A",
@@ -428,7 +428,7 @@ class CicloDeVidaTests(FormularioBaseTestCase):
 
     def test_transiciones_invalidas(self):
         with self.assertRaises(services.TransicionInvalida):
-            services.archivar(self.version)  # publicada: hay que cerrarla antes
+            services.archivar(self.version)
         services.cerrar(self.version)
         with self.assertRaises(services.TransicionInvalida):
             services.cerrar(self.version)
@@ -470,7 +470,7 @@ class ConstructorVistasTests(FormularioBaseTestCase):
 
     def test_solo_coordinacion_entra_al_constructor(self):
         url = reverse("encuestas:lista")
-        self.assertEqual(self.client.get(url).status_code, 302)  # sin sesión: al login
+        self.assertEqual(self.client.get(url).status_code, 302)
         self.client.force_login(self.docente)
         self.assertEqual(self.client.get(url).status_code, 403)
         self.client.force_login(self.coordinador)
@@ -619,7 +619,7 @@ class ConstructorEnVivoTests(FormularioBaseTestCase):
         primera = self.client.post(url, datos, **self.FETCH).json()
         self.assertTrue(primera["ok"])
         self.assertEqual(len(primera["opciones"]), 2)
-        # El siguiente guardado envía esos ids: las opciones no se recrean.
+
         datos["opcion_id"] = [str(i) for i in primera["opciones"]]
         datos["opcion_texto"] = ["Uno", "Dos personas"]
         segunda = self.client.post(url, datos, **self.FETCH).json()
@@ -647,7 +647,7 @@ class ConstructorEnVivoTests(FormularioBaseTestCase):
         self.assertEqual((personas.bloque_id, personas.orden), (bloque_a.id, 1))
 
     def test_no_se_puede_dejar_una_condicion_antes_de_su_pregunta(self):
-        # "Personas" tiene una opción que depende de "Programa": no puede quedar sobre ella.
+
         personas = self.preguntas["Personas"]
         url = reverse("encuestas:mover_pregunta", args=[personas.id, "arriba"])
         self.assertEqual(self.client.post(url, **self.FETCH).status_code, 200)
@@ -767,7 +767,7 @@ class FormulariosDelClienteTests(TestCase):
         self.assertNotIn(primavera.id, visibles)
         self.assertEqual(otono.tipo, c.LISTA)
         self.assertEqual(primavera.tipo, c.ALTERNATIVA_UNICA)
-        # Las opciones repetidas del txt quedaron una sola vez.
+
         textos = list(otono.opciones.values_list("texto", flat=True))
         self.assertEqual(len(textos), len(set(textos)))
 
@@ -797,7 +797,7 @@ class FormulariosDelClienteTests(TestCase):
         self.assertTrue(all(p.tipo == c.ESCALA for p in generales))
         self.assertTrue(all(p.configuracion_json["valoracion_general"] for p in generales))
         self.assertTrue(generales[0].texto.startswith("A) "))
-        # La fila D es la del perfil de egreso (se puede excluir del panel).
+
         self.assertTrue(generales[3].configuracion_json.get("perfil_egreso"))
         self.assertEqual(
             version.preguntas.filter(configuracion_json__dimension="reflexion").count(), 3,
@@ -825,10 +825,10 @@ class FormulariosDelClienteTests(TestCase):
         enlace.refresh_from_db()
         self.assertEqual(nueva.estado, c.PUBLICADA)
         self.assertEqual(anterior.estado, c.CERRADA)
-        # RN-17: la versión anterior conserva sus preguntas y respuestas.
+
         self.assertEqual(anterior.respuestas.count(), 1)
         self.assertEqual(anterior.preguntas.count(), 5)
-        # El enlace ya repartido (y la Ruta docente) siguen funcionando.
+
         self.assertEqual(enlace.version, nueva)
 
         call_command("cargar_formularios", "EVALUACION_AS_DOCENTES", "--actualizar", stdout=StringIO())
@@ -861,7 +861,7 @@ class FormulariosDelClienteTests(TestCase):
         self.assertEqual(valores, {filas[0].id: 4, filas[1].id: 5})
 
     def test_formulario_por_secciones_un_solo_envio(self):
-        # Cada sección es una página (Atrás / Siguiente) y todo se envía junto al final.
+
         call_command("cargar_formularios", "EVALUACION_AS_SOCIOS", stdout=StringIO())
         version = FormularioPlantilla.objects.get(codigo="EVALUACION_AS_SOCIOS").versiones.get()
         enlace = version.enlaces.get(activo=True)
@@ -959,7 +959,7 @@ class TemaTests(FormularioBaseTestCase):
         self.version.plantilla.refresh_from_db()
         copia = services.copiar_formulario(self.version)
         self.assertEqual(services.tema(copia.plantilla)["color"], "verde")
-        # Quitar la foto del original no la borra mientras la copia la use.
+
         self.guardar({"quitar_fondo": "1"})
         self.assertEqual(Archivo.objects.count(), 1)
         self.assertTrue(services.tema(copia.plantilla)["fondo_url"])

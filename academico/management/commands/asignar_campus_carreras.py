@@ -1,11 +1,3 @@
-"""
-Marca un campus en las carreras activas que todavía no tienen ninguno
-(CarreraCampus). Sirve para dejar lista una base existente después de la
-migración 0005; las carreras que ya tienen campus no se tocan.
-
-    python manage.py asignar_campus_carreras --campus "Campus Providencia"
-"""
-
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 

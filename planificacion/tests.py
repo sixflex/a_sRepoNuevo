@@ -62,7 +62,7 @@ class PlanificacionHU01TestCase(TestCase):
             nombre="Ingeniería Civil Informática",
             activo=True,
         )
-        # Oferta académica: la carrera se imparte en el campus del enlace.
+
         self.carrera.campus.add(self.campus)
 
         self.asignatura = Asignatura.objects.create(
@@ -357,18 +357,18 @@ class PlanificacionHU01TestCase(TestCase):
         DEFAULT_FROM_EMAIL="portal-as@uautonoma.cl",
     )
     def test_formulario_tabular_usa_listas(self):
-        # RNF-USA-03: facultad, carrera, nivel, jornada y tipo de contrato
-        # se eligen de una lista; se sigue enviando el mismo texto.
+
+
         response = self.client.get(
             reverse("planificacion:formulario_tabular_as", kwargs={"token": self.enlace.token})
         )
 
-        # La facultad la fija el enlace; la carrera se elige entre las suyas.
+
         self.assertContains(response, '<span class="plan-facultad-fija" title="Definida por el enlace">Facultad de Ingeniería</span>')
         self.assertContains(response, '<option value="Ingeniería Civil Informática"')
         self.assertContains(response, '<option value="Vespertina TECH">')
         self.assertContains(response, '<option value="Adjunto">')
-        # Formulario público: sin la barra superior del portal.
+
         self.assertNotContains(response, "navbar-sistema")
 
     def test_formulario_tabular_conserva_valores_fuera_de_la_lista(self):
@@ -587,7 +587,7 @@ class PlanificacionHU01TestCase(TestCase):
 
         self.planificacion.refresh_from_db()
 
-        # El envío final queda por revisar: todavía no se crea nada.
+
         self.assertEqual(self.planificacion.estado, "FINAL")
         self.assertIsNotNone(self.planificacion.fecha_envio_final)
         self.assertEqual(self.planificacion.filas_recibidas, 1)
@@ -605,11 +605,11 @@ class PlanificacionHU01TestCase(TestCase):
             ).exists()
         )
 
-        # Enviada, Dirección ya no puede volver a enviarla.
+
         self.client.post(url, data=datos)
         self.assertEqual(self.planificacion.filas.count(), 1)
 
-        # El Coordinador aprueba: recién ahí se crea la sección.
+
         coordinador = get_user_model().objects.create_superuser("coord_hu01", "coord@uautonoma.cl", "Prueba1234")
         self.client.force_login(coordinador)
         self.client.post(reverse("core:aprobar_planificacion_coordinacion", args=[self.planificacion.id]))
@@ -629,7 +629,7 @@ class PlanificacionHU01TestCase(TestCase):
             ).exists()
         )
 
-        # Aprobar dos veces no duplica nada.
+
         self.client.post(reverse("core:aprobar_planificacion_coordinacion", args=[self.planificacion.id]))
         self.assertEqual(Seccion.objects.filter(periodo=self.periodo, nrc="HU01-100").count(), 1)
 
@@ -694,7 +694,7 @@ class HorarioYSociosPlanificacionTestCase(TestCase):
             "Martes 17:00, Jueves 20:00",
         )
         self.assertEqual(leer_horario("Martes 17:00, Jueves 20:00"), {"Ma": "17:00", "Ju": "20:00"})
-        # Formato anterior (una hora para todos los días) se sigue leyendo.
+
         self.assertEqual(leer_horario("Lunes, Miércoles 08:30"), {"Lu": "08:30", "Mi": "08:30"})
         self.assertEqual(leer_horario("Lu, Mi 08:30"), {"Lu": "08:30", "Mi": "08:30"})
         self.assertIsNone(leer_horario("Lunes 10:00 - 12:00"))
@@ -707,7 +707,7 @@ class HorarioYSociosPlanificacionTestCase(TestCase):
             leer_socios("Fundación antigua"),
             [{"nombre": "Fundación antigua", "correo": "", "rubro": "", "direccion": ""}],
         )
-        # Las líneas guardadas antes de la dirección se siguen leyendo.
+
         self.assertEqual(leer_socios("Almacén | a@b.cl | Comercio")[0]["direccion"], "")
         self.assertEqual(
             texto_socios([{"nombre": "Almacén", "correo": "", "rubro": "Comercio", "direccion": "Av. Siempre Viva 742"}]),
@@ -1038,7 +1038,7 @@ class CarreraPorCampusPlanificacionTestCase(TestCase):
         self.industrial.campus.add(self.el_llano)
 
     def test_planilla_de_el_llano_solo_ofrece_sus_carreras(self):
-        # Unidad de facultad: la planilla no trae una carrera precargada.
+
         self.unidad.carrera = None
         self.unidad.save()
         enlace = PlanificacionEnlace.objects.create(
@@ -1072,7 +1072,7 @@ class EnlacesVariasUnidadesTestCase(TestCase):
 
     def setUp(self):
         self.setUp_base()
-        # Derecho se imparte en Providencia y El Llano; Informática solo en Providencia.
+
         self.el_llano = Campus.objects.create(sede=self.sede, nombre="Campus El Llano", activo=True)
         facultad_derecho = Facultad.objects.create(codigo="FADER", nombre="Facultad de Derecho", activo=True)
         self.carrera_derecho = Carrera.objects.create(facultad=facultad_derecho, nombre="Derecho", activo=True)
@@ -1128,7 +1128,7 @@ class EnlacesVariasUnidadesTestCase(TestCase):
             set(PlanificacionEnlace.objects.filter(unidad_academica=self.derecho).values_list("campus__nombre", flat=True)),
             {"Campus Providencia", "Campus El Llano"},
         )
-        # Informática solo se imparte en Providencia: no recibe enlace de El Llano.
+
         self.assertFalse(PlanificacionEnlace.objects.filter(unidad_academica=self.unidad, campus=self.el_llano).exists())
         self.assertEqual(len(mail.outbox), 3)
 

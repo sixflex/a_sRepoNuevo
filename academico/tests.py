@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
+from django.templatetags.static import static
 
 from .services import codigo_unico, normalizar_codigo, sugerir_codigo
 
@@ -24,6 +25,7 @@ from .models import (
     Sede,
     UnidadAcademica,
 )
+
 
 
 class PlanificacionAcademicaTestCase(TestCase):
@@ -63,7 +65,7 @@ class PlanificacionAcademicaTestCase(TestCase):
             self.grupo_docente
         )
 
-        # SEDES / CAMPUS
+
         self.sede_santiago = Sede.objects.create(
             nombre="Sede Santiago",
             ciudad="Santiago",
@@ -88,7 +90,7 @@ class PlanificacionAcademicaTestCase(TestCase):
             activo=True,
         )
 
-        # FACULTAD / CARRERAS
+
         self.facultad = Facultad.objects.create(
             codigo="ING",
             nombre="Ingeniería",
@@ -109,7 +111,7 @@ class PlanificacionAcademicaTestCase(TestCase):
             activo=True,
         )
 
-        # ASIGNATURAS
+
         self.consultoria = Asignatura.objects.create(
             codigo="CONS",
             nombre="Consultoría de Empresas",
@@ -137,7 +139,7 @@ class PlanificacionAcademicaTestCase(TestCase):
             carrera=self.carrera_informatica,
         )
 
-        # PERIODOS
+
         self.primavera = PeriodoAcademico.objects.create(
             anio=2026,
             tipo="Primavera",
@@ -152,7 +154,7 @@ class PlanificacionAcademicaTestCase(TestCase):
             estado="Activo",
         )
 
-        # DOCENTES
+
         self.docente1 = Docente.objects.create(
             usuario=self.usuario_docente1,
             rut="11111111-1",
@@ -171,8 +173,8 @@ class PlanificacionAcademicaTestCase(TestCase):
             activo=True,
         )
 
-        # SECCIÓN A:
-        # multicarrera + multidocente
+
+
         self.seccion_a = Seccion.objects.create(
             periodo=self.primavera,
             campus=self.campus_providencia,
@@ -209,7 +211,7 @@ class PlanificacionAcademicaTestCase(TestCase):
             docente=self.docente2,
         )
 
-        # SECCIÓN B
+
         self.seccion_b = Seccion.objects.create(
             periodo=self.primavera,
             campus=self.campus_providencia,
@@ -230,7 +232,7 @@ class PlanificacionAcademicaTestCase(TestCase):
             docente=self.docente1,
         )
 
-        # SECCIÓN C: otro período y otra sede
+
         self.seccion_c = Seccion.objects.create(
             periodo=self.otono,
             campus=self.campus_talca,
@@ -499,7 +501,7 @@ class PlanificacionAcademicaTestCase(TestCase):
 
 
     def test_docente_no_puede_ver_detalle_de_seccion_ajena(self):
-        # docente2 no dicta la sección B.
+
         self.client.force_login(
             self.usuario_docente2
         )
@@ -526,8 +528,8 @@ class PlanificacionAcademicaTestCase(TestCase):
             },
         )
 
-        # Los nombres de campus también aparecen en el filtro, por eso
-        # se compara el resultado y no el HTML completo.
+
+
         self.assertEqual(
             self.ids_resultado(response),
             {
@@ -594,7 +596,7 @@ class PlanificacionAcademicaTestCase(TestCase):
 
 
     def test_detalle_coordinador_sin_botones_del_docente(self):
-        # El coordinador no debe ver enlaces a páginas que le dan 403.
+
         self.client.force_login(
             self.coordinador
         )
@@ -672,7 +674,7 @@ class PlanificacionAcademicaTestCase(TestCase):
         )
         self.client.force_login(self.coordinador)
 
-        # Se quita Ingeniería Civil Industrial y a María; se agrega a Ana.
+
         response = self.client.post(
             reverse("seccion_update", args=[self.seccion_a.id]),
             self.datos_seccion(
@@ -801,7 +803,7 @@ class GestionAcademicaTestCase(TestCase):
         self.assertContains(response, "fue eliminado")
 
     def test_error_en_formulario_conserva_lo_escrito(self):
-        # Correo inválido: se muestra el error y no se pierde lo escrito (RNF-USA-02).
+
         response = self.client.post(
             reverse("docente_create"),
             {
@@ -913,12 +915,12 @@ class GestionAcademicaTestCase(TestCase):
             },
         )
 
-        # Sin facultad elegida, se toma la de la carrera.
+
         unidad = UnidadAcademica.objects.get()
         self.assertEqual(unidad.facultad, self.facultad)
 
     def test_periodo_tipo_es_la_duracion(self):
-        # RF-ACA-01: anual, semestral, trimestral o bimestral.
+
         response = self.client.post(
             reverse("periodo_create"),
             {"anio": "2026", "tipo": "Primer semestre", "nombre": "Otoño 2026", "estado": "Activo"},
@@ -962,7 +964,7 @@ class GestionAcademicaTestCase(TestCase):
         primavera = PeriodoAcademico.objects.create(
             anio=2025, tipo="Segundo semestre", nombre="Primavera 2025", estado="Finalizado",
         )
-        # Ya existe el mismo año y nombre como Semestral: se conserva el valor antiguo.
+
         PeriodoAcademico.objects.create(
             anio=2024, tipo="Semestral", nombre="Primavera 2024", estado="Finalizado",
         )
@@ -975,13 +977,13 @@ class GestionAcademicaTestCase(TestCase):
         for periodo in (otono, primavera, choque):
             periodo.refresh_from_db()
         self.assertEqual((otono.tipo, primavera.tipo), ("Semestral", "Semestral"))
-        # El nombre conserva en qué semestre se sitúa.
+
         self.assertEqual(otono.nombre, "Otoño 2025 (1er semestre)")
         self.assertEqual(primavera.nombre, "Primavera 2025 (2º semestre)")
         self.assertEqual(choque.nombre, "Primavera 2024")
         self.assertEqual(choque.tipo, "Segundo semestre")
 
-        # Al editarlo, el tipo antiguo se sigue mostrando.
+
         response = self.client.get(reverse("periodo_update", args=[choque.pk]))
         self.assertContains(response, '<option value="Segundo semestre"')
 
@@ -1079,7 +1081,7 @@ class GestionAcademicaTestCase(TestCase):
         self.assertContains(response, "js/codigo_sugerido.js")
         self.assertContains(response, '<script id="codigos-usados" type="application/json">["ICI"]</script>')
 
-        # Al editar se respeta el código guardado: no se sugiere otro.
+
         response = self.client.get(reverse("carrera_update", args=[self.carrera.id]))
         self.assertNotContains(response, "js/codigo_sugerido.js")
 
